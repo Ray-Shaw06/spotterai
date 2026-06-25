@@ -31,6 +31,10 @@ that answers questions about your program and training in general.
 | --- | --- |
 | ![Form check](docs/screenshot-formcheck.png) | ![Coach chat](docs/screenshot-chat.png) |
 
+| Gamified dashboard (track, rank up, nutrition) |
+| --- |
+| ![Dashboard](docs/screenshot-dashboard.png) |
+
 > _Captured from the running app. Re-shoot anytime and overwrite the files in `docs/`._
 
 ---
@@ -159,11 +163,39 @@ load, or true 3D depth, so it's a mirror, not a judge.
 ### 💬 Coach chatbot
 
 A floating assistant ([`chat.js`](chat.js) + [`api/chat.js`](api/chat.js)) answers
-questions about your plan and general training. It is **plan-aware** — your
-generated program is attached as context, so it can explain *your* rep ranges or
-suggest a swap — and **safety-first by system prompt**: it defers to professionals
-for anything clinical and never diagnoses or prescribes. It reuses the same
-hardened Gemini client and the 429 / timeout fallbacks as the generator.
+questions about your plan and general training. It is **plan-aware** *and*
+**tracker-aware** — your generated program and a summary of your logged progress
+are attached as context — and **safety-first by system prompt**: it defers to
+professionals for anything clinical and never diagnoses or prescribes. It reuses
+the same hardened Gemini client and the 429 / timeout fallbacks as the generator.
+
+---
+
+## Dashboard: track, gamify, level up
+
+A persistent, gamified tracker that turns SpotterAI into something you come back
+to — **entirely client-side** (`localStorage`), no account, no backend.
+
+- **Workout logging** — log sessions freeform, or one-click load a day from your
+  generated plan. Volume and XP are computed per session.
+- **Rank ladder & XP** — earn XP per workout (scaled by volume), level up, and
+  climb tiers **Newcomer → Bronze → Silver → Gold → Platinum → Diamond →
+  Champion**. All the game design lives in [`gamify.js`](gamify.js).
+- **Streaks & achievements** — daily streaks and unlockable badges, with
+  celebratory toasts when you earn them.
+- **Nutrition tracking** — log food, set calorie/protein targets, and watch the
+  target rings fill; plus a 7-day calorie history.
+- **Progress charts** — weekly-volume bars and a bodyweight trend line, drawn with
+  hand-rolled **SVG (no chart library)** in [`charts.js`](charts.js).
+- **The coach sees all of it.** The tracker is summarized by
+  [`tracker-store.js`](tracker-store.js) (`getContext()`) and passed to the
+  chatbot, so **"summarize my week"**, "am I hitting protein?", and "what should I
+  focus on next?" answer with your *real* numbers.
+
+> **Honest scope:** "rankings" here is a **personal** XP ladder, not a global
+> multiplayer leaderboard — a shared leaderboard needs a database, which this
+> $0 / no-backend project deliberately avoids. Tracker data lives only in the
+> browser that created it.
 
 ---
 
@@ -184,6 +216,9 @@ hardened Gemini client and the 429 / timeout fallbacks as the generator.
   loaded from a free CDN and run entirely in the browser for the real-time form
   check — no server, no key, nothing uploaded.
 - **Hosting:** Vercel free tier (also runs on Netlify free tier).
+- **Client-side persistence:** the gamified tracker (workouts, nutrition,
+  bodyweight, XP, achievements) is stored in the browser's `localStorage` — no
+  database, no account.
 - **No database, no auth, no payments.** All state is client-side.
 
 **Total cost to build, host, and run: $0.**
@@ -202,6 +237,10 @@ spotterai/
 ├─ form-coach.js          # webcam + MediaPipe Pose + skeleton overlay
 ├─ chat.js                # floating coach chatbot (UI)
 ├─ store.js               # tiny shared state (latest plan → chatbot context)
+├─ gamify.js              # ranks, XP rules, achievement definitions
+├─ charts.js              # dependency-free SVG line/bar/ring charts
+├─ tracker-store.js       # localStorage tracker + derived stats + chat context
+├─ tracker-ui.js          # gamified dashboard (rank, streak, nutrition, charts)
 ├─ api/
 │  ├─ generate.js         # serverless Gemini proxy — plan generation (holds key)
 │  └─ chat.js             # serverless Gemini proxy — coach chatbot
@@ -304,6 +343,9 @@ git push -u origin main
   hurts. It runs entirely on-device and uploads/stores nothing.
 - **The chatbot is educational.** It can be wrong or out of date and is not a
   substitute for a qualified coach, dietitian, or clinician.
+- **Tracker data is local and unsynced.** Workouts, nutrition, and progress live
+  only in the browser that created them — clearing site data wipes them, and
+  there's no cross-device sync or global leaderboard (both would need a backend).
 
 ---
 

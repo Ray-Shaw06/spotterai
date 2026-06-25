@@ -19,10 +19,11 @@ const { callGemini } = require("../lib/gemini.js");
 const MAX_MESSAGES = 16; // most recent turns kept for context
 const MAX_MESSAGE_CHARS = 4000; // per message
 const MAX_PLAN_CHARS = 6000; // truncated plan JSON
+const MAX_TRACKER_CHARS = 6000; // truncated tracker summary JSON
 const MAX_OUTPUT_TOKENS = 1024;
 
-/** Build the system instruction, optionally embedding the user's current plan. */
-function buildSystemInstruction(plan) {
+/** Build the system instruction, embedding the user's plan and tracker data. */
+function buildSystemInstruction(plan, tracker) {
   let s = `You are SpotterAI's in-app fitness coach assistant. You are knowledgeable, encouraging, and SAFETY-FIRST.
 
 Guidelines:
@@ -30,14 +31,20 @@ Guidelines:
 - Be concise and practical. Prefer short paragraphs and bullet points. Plain language.
 - You are an EDUCATIONAL tool, not a doctor, physiotherapist, or licensed professional. For pain, injury, medical conditions, medication, or anything clinical, clearly tell the user to consult a qualified professional — do not diagnose or prescribe.
 - Encourage good form, adequate recovery, and gradual progression. Never encourage unsafe maximal effort, crash dieting, or training through sharp pain.
-- If the user asks about "my plan" or "this program", reference the specific plan provided below.
+- If the user asks about "my plan" or "this program", reference the specific plan provided.
+- The user has a tracker (workouts, nutrition, streak, rank, bodyweight). When they ask to "summarize my week", review their progress, or how they're doing, use the TRACKER data: comment on sessions vs target, streak, weekly volume trend, protein vs target, and bodyweight trend. Be specific with their numbers, celebrate wins, and give one or two concrete next steps.
 - If you don't know or it's outside fitness, say so briefly.`;
 
   if (plan && typeof plan === "object") {
-    const planStr = JSON.stringify(plan).slice(0, MAX_PLAN_CHARS);
-    s += `\n\nThe user's CURRENT generated plan (JSON) — reference it when relevant:\n${planStr}`;
+    s += `\n\nThe user's CURRENT generated plan (JSON):\n${JSON.stringify(plan).slice(0, MAX_PLAN_CHARS)}`;
   } else {
     s += `\n\nThe user has not generated a plan yet. If they ask about "my plan", invite them to generate one first.`;
+  }
+
+  if (tracker && typeof tracker === "object") {
+    s += `\n\nThe user's TRACKER summary (JSON) — their logged progress; reference these real numbers:\n${JSON.stringify(tracker).slice(0, MAX_TRACKER_CHARS)}`;
+  } else {
+    s += `\n\nThe user hasn't logged any workouts or nutrition yet. If they ask to summarize their week, encourage them to start logging on the dashboard.`;
   }
   return s;
 }
@@ -84,7 +91,7 @@ module.exports = async (req, res) => {
     const reply = await callGemini({
       apiKey,
       contents,
-      systemInstruction: buildSystemInstruction(payload.plan),
+      systemInstruction: buildSystemInstruction(payload.plan, payload.tracker),
       generationConfig: { temperature: 0.7, maxOutputTokens: MAX_OUTPUT_TOKENS },
       timeoutMs: 25000,
     });

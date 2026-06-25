@@ -48,7 +48,7 @@
         <span class="wordmark__text">Spotter<span class="wordmark__accent">AI</span></span>
       </a>
       <nav class="site-header__nav" aria-label="Primary">
-        <a href="#how-it-works" class="nav-link">How it works</a>
+        <a href="#dashboard" class="nav-link">Dashboard</a>
         <a href="#form-check" class="nav-link">Form check</a>
         <a href="#generator" class="btn btn--ghost btn--sm">Build a plan</a>
       </nav>
@@ -347,6 +347,102 @@
       </div>
     </section>
 
+    <!-- ===================== DASHBOARD (gamified tracker) ===================== -->
+    <section id="dashboard" class="section section--alt">
+      <div class="container">
+        <header class="section-head">
+          <p class="eyebrow eyebrow--center"><span class="eyebrow__dot" aria-hidden="true"></span> Your progress · saved on this device</p>
+          <h2 class="section-title section-title--lg">Train, track, rank up</h2>
+          <p class="section-subtitle section-subtitle--center">
+            Log workouts and nutrition, build a streak, and climb the rank ladder. Everything
+            stays in your browser — and your coach can see all of it (try “summarize my week”).
+          </p>
+        </header>
+
+        <div class="dash-grid">
+          <!-- Rank card -->
+          <div class="card dash-rankcard">
+            <div id="dash-rank"></div>
+            <div id="dash-stats" class="dash-stats"></div>
+          </div>
+
+          <!-- Log a workout -->
+          <div class="card dash-card">
+            <h3 class="card-title">Log a workout</h3>
+            <div id="log-from-plan" class="log-from-plan" hidden>
+              <label class="sr-only" for="plan-day-pick">Plan day</label>
+              <select id="plan-day-pick" class="form-select"></select>
+              <button type="button" id="plan-day-load" class="btn btn--ghost btn--sm">Load from plan</button>
+            </div>
+            <form id="log-workout-form" class="dash-form">
+              <div class="field-inline">
+                <input id="lw-name" class="input" placeholder="Workout name (e.g. Upper A)" autocomplete="off" />
+                <input id="lw-focus" class="input" placeholder="Focus (optional)" autocomplete="off" />
+              </div>
+              <div id="lw-exercises" class="ex-rows"></div>
+              <div class="dash-actions">
+                <button type="button" id="lw-add" class="btn btn--ghost btn--sm">+ Add exercise</button>
+                <button type="submit" class="btn btn--primary btn--sm">Log workout</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Nutrition -->
+          <div class="card dash-card">
+            <h3 class="card-title">Nutrition today</h3>
+            <div id="dash-nutrition" class="macros"></div>
+            <form id="add-food-form" class="dash-form field-inline">
+              <input name="name" class="input" placeholder="Food" autocomplete="off" />
+              <input name="kcal" class="input input--sm" type="number" min="0" inputmode="numeric" placeholder="kcal" />
+              <input name="protein" class="input input--sm" type="number" min="0" inputmode="numeric" placeholder="protein" />
+              <button type="submit" class="btn btn--primary btn--sm">Add</button>
+            </form>
+            <ul id="nutrition-today-list" class="entry-list"></ul>
+            <div class="dash-subchart"><span class="dash-subchart__label">Last 7 days (kcal)</span><div id="chart-nutrition"></div></div>
+          </div>
+
+          <!-- Weekly volume -->
+          <div class="card dash-card">
+            <h3 class="card-title">Weekly volume</h3>
+            <div id="chart-weekly"></div>
+            <p class="dash-hint">Total weight moved per week (last 8 weeks).</p>
+          </div>
+
+          <!-- Bodyweight -->
+          <div class="card dash-card">
+            <h3 class="card-title">Bodyweight</h3>
+            <div id="chart-bodyweight"></div>
+            <p id="bodyweight-meta" class="dash-hint"></p>
+            <form id="add-weight-form" class="dash-form field-inline">
+              <input name="value" class="input" type="number" step="0.1" min="0" inputmode="decimal" placeholder="Today's weight" />
+              <button type="submit" class="btn btn--ghost btn--sm">Log</button>
+            </form>
+          </div>
+
+          <!-- Achievements -->
+          <div class="card dash-card dash-achievements-card">
+            <h3 class="card-title">Achievements</h3>
+            <div id="dash-achievements" class="badges"></div>
+          </div>
+
+          <!-- Targets / settings -->
+          <div class="card dash-card">
+            <h3 class="card-title">Targets</h3>
+            <form id="targets-form" class="dash-form">
+              <label class="field-label-sm">Daily calories<input name="kcal" class="input" type="number" min="0" inputmode="numeric" /></label>
+              <label class="field-label-sm">Daily protein (g)<input name="protein" class="input" type="number" min="0" inputmode="numeric" /></label>
+              <label class="field-label-sm">Workouts / week<input name="weekly" class="input" type="number" min="0" max="14" inputmode="numeric" /></label>
+              <div class="dash-actions">
+                <button type="submit" class="btn btn--ghost btn--sm">Save targets</button>
+                <button type="button" id="dash-reset" class="btn-link-danger">Reset all data</button>
+              </div>
+            </form>
+            <p class="dash-hint">Stored only in this browser (localStorage). A global leaderboard would need a backend — out of scope for this $0 build.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ===================== FORM CHECK (camera) ===================== -->
     <section id="form-check" class="section">
       <div class="container">
@@ -515,5 +611,6 @@
   <script type="module" src="app.js"></script>
   <script type="module" src="chat.js"></script>
   <script type="module" src="form-coach.js"></script>
+  <script type="module" src="tracker-ui.js"></script>
 </body>
 </html>

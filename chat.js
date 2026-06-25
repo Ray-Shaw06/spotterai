@@ -10,6 +10,7 @@
  */
 
 import { store } from "./store.js";
+import { getContext as getTrackerContext } from "./tracker-store.js";
 
 const fab = document.getElementById("chat-fab");
 const panel = document.getElementById("chat-panel");
@@ -39,6 +40,11 @@ const SUGGESTIONS_WITH_PLAN = [
   "Why these rep ranges for my goal?",
   "Swap an exercise I can't do",
   "Is the weekly volume right for me?",
+];
+const SUGGESTIONS_WITH_TRACKER = [
+  "Summarize my week",
+  "Am I hitting my protein target?",
+  "What should I focus on next week?",
 ];
 
 // ----------------------------------------------------------------------------
@@ -106,7 +112,7 @@ function hideTyping() {
 
 function renderSuggestions() {
   if (!suggestions) return;
-  const items = store.plan ? SUGGESTIONS_WITH_PLAN : SUGGESTIONS_NO_PLAN;
+  const items = getTrackerContext() ? SUGGESTIONS_WITH_TRACKER : store.plan ? SUGGESTIONS_WITH_PLAN : SUGGESTIONS_NO_PLAN;
   suggestions.innerHTML = items
     .map((s) => `<button type="button" class="chat-suggestion">${escapeHtml(s)}</button>`)
     .join("");
@@ -121,9 +127,12 @@ function renderSuggestions() {
 
 function renderContextHint() {
   if (!contextHint) return;
-  if (store.plan) {
+  const bits = [];
+  if (store.plan) bits.push(store.plan.program_name || "your plan");
+  if (getTrackerContext()) bits.push("your tracker");
+  if (bits.length) {
     contextHint.hidden = false;
-    contextHint.textContent = `Context: ${store.plan.program_name || "your generated plan"}`;
+    contextHint.textContent = `Sees: ${bits.join(" + ")}`;
   } else {
     contextHint.hidden = true;
   }
@@ -178,7 +187,7 @@ async function send() {
     const res = await fetch("api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages, plan: store.plan }),
+      body: JSON.stringify({ messages, plan: store.plan, tracker: getTrackerContext() }),
     });
     hideTyping();
 
@@ -236,10 +245,12 @@ if (fab && panel && form && input) {
     if (e.key === "Escape" && panel.classList.contains("is-open")) closePanel();
   });
 
-  // Keep suggestions/context in sync when a plan is generated.
-  window.addEventListener("spotter:plan", () => {
+  // Keep suggestions/context in sync when a plan is generated or the tracker changes.
+  const refresh = () => {
     renderSuggestions();
     renderContextHint();
     if (suggestions) suggestions.hidden = false;
-  });
+  };
+  window.addEventListener("spotter:plan", refresh);
+  window.addEventListener("spotter:tracker", refresh);
 }
