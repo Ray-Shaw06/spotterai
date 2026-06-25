@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpotterAI — AI workout coach that audits its own safety</title>
+  <meta
+    name="description"
+    content="SpotterAI generates a personalized weekly training program with AI, then runs a code-based safety evaluator that scores it and flags risky advice before you trust it."
+  />
+  <meta name="theme-color" content="#0a0b0d" />
+
+  <!-- Open Graph (nice link previews; all text, no paid assets) -->
+  <meta property="og:title" content="SpotterAI — the AI coach that audits itself" />
+  <meta property="og:description" content="An AI workout coach, plus a code-based system that audits the AI's plans for unsafe advice." />
+  <meta property="og:type" content="website" />
+
+  <!-- Favicon: an inline SVG shield-check in the brand red (zero external assets) -->
+  <link
+    rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0b0d'/%3E%3Cpath d='M16 5l8 3v7c0 5-3.4 8.8-8 11-4.6-2.2-8-6-8-11V8l8-3z' fill='none' stroke='%23ff3b3b' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M12 16l3 3 5-6' fill='none' stroke='%23ff3b3b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+  />
+
+  <!-- Fonts: Space Grotesk (display) + Inter (body) — both free via Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <a class="skip-link" href="#generator">Skip to the workout generator</a>
+
+  <!-- ===================== SITE HEADER ===================== -->
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="wordmark" href="/" aria-label="SpotterAI home">
+        <!-- Pure-SVG wordmark glyph: a shield with a check -->
+        <span class="wordmark__glyph" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="26" height="26">
+            <path d="M16 4l9 3.4v7.8c0 5.6-3.8 9.8-9 12.2-5.2-2.4-9-6.6-9-12.2V7.4L16 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+            <path d="M11.5 16l3.2 3.2L21 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <span class="wordmark__text">Spotter<span class="wordmark__accent">AI</span></span>
+      </a>
+      <nav class="site-header__nav" aria-label="Primary">
+        <a href="#how-it-works" class="nav-link">How it works</a>
+        <a href="#generator" class="btn btn--ghost btn--sm">Build a plan</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- ===================== HERO ===================== -->
+    <section class="hero">
+      <div class="container hero__inner">
+        <p class="eyebrow">
+          <span class="eyebrow__dot" aria-hidden="true"></span>
+          AI generation · code-based safety audit
+        </p>
+        <h1 class="hero__title">
+          An AI coach that <span class="accent-text">audits its own advice</span>.
+        </h1>
+        <p class="hero__lede">
+          SpotterAI writes you a personalized weekly training program — then runs that
+          plan through a code-based safety evaluator that scores it and flags risky or
+          low-quality programming before you ever trust it.
+        </p>
+        <div class="hero__actions">
+          <a href="#generator" class="btn btn--primary">Build my plan</a>
+          <a href="#how-it-works" class="btn btn--ghost">See how it works</a>
+        </div>
+
+        <!-- Three quick value props -->
+        <ul class="hero__stats" aria-label="What SpotterAI does">
+          <li class="hero__stat">
+            <span class="hero__stat-value">6</span>
+            <span class="hero__stat-label">automated safety &amp; quality checks</span>
+          </li>
+          <li class="hero__stat">
+            <span class="hero__stat-value">0–100</span>
+            <span class="hero__stat-label">transparent, rubric-based score</span>
+          </li>
+          <li class="hero__stat">
+            <span class="hero__stat-value">100%</span>
+            <span class="hero__stat-label">heuristic — flags concerns, never certifies</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <div class="container">
+      <!-- Persistent disclaimer -->
+      <aside class="disclaimer" role="note">
+        <svg class="disclaimer__icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <p>
+          <strong>Educational tool, not medical or professional advice.</strong>
+          The safety score is a heuristic, not a guarantee. Always consult a qualified
+          coach or clinician — especially if you have injuries or medical conditions.
+        </p>
+      </aside>
+    </div>
+
+    <!-- ===================== GENERATOR ===================== -->
+    <section id="generator" class="section">
+      <div class="container generator">
+        <!-- Left: the input form -->
+        <form id="plan-form" class="card form" novalidate>
+          <div class="form__head">
+            <h2 class="section-title">Build your program</h2>
+            <p class="section-subtitle">Tell SpotterAI about you. Takes about 20 seconds.</p>
+          </div>
+
+          <!-- Goal -->
+          <fieldset class="field">
+            <legend class="field__label">Primary goal</legend>
+            <div class="chips" role="radiogroup" aria-label="Primary goal">
+              <label class="chip"><input type="radio" name="goal" value="Strength" /><span>Strength</span></label>
+              <label class="chip"><input type="radio" name="goal" value="Hypertrophy" checked /><span>Hypertrophy</span></label>
+              <label class="chip"><input type="radio" name="goal" value="Fat loss" /><span>Fat loss</span></label>
+              <label class="chip"><input type="radio" name="goal" value="General" /><span>General</span></label>
+            </div>
+          </fieldset>
+
+          <!-- Experience -->
+          <fieldset class="field">
+            <legend class="field__label">Experience level</legend>
+            <div class="chips" role="radiogroup" aria-label="Experience level">
+              <label class="chip"><input type="radio" name="experience" value="Beginner" checked /><span>Beginner</span></label>
+              <label class="chip"><input type="radio" name="experience" value="Intermediate" /><span>Intermediate</span></label>
+              <label class="chip"><input type="radio" name="experience" value="Advanced" /><span>Advanced</span></label>
+            </div>
+          </fieldset>
+
+          <div class="field-row">
+            <!-- Days per week -->
+            <fieldset class="field">
+              <legend class="field__label">Training days / week</legend>
+              <div class="chips chips--compact" role="radiogroup" aria-label="Training days per week">
+                <label class="chip chip--square"><input type="radio" name="daysPerWeek" value="2" /><span>2</span></label>
+                <label class="chip chip--square"><input type="radio" name="daysPerWeek" value="3" /><span>3</span></label>
+                <label class="chip chip--square"><input type="radio" name="daysPerWeek" value="4" checked /><span>4</span></label>
+                <label class="chip chip--square"><input type="radio" name="daysPerWeek" value="5" /><span>5</span></label>
+                <label class="chip chip--square"><input type="radio" name="daysPerWeek" value="6" /><span>6</span></label>
+              </div>
+            </fieldset>
+
+            <!-- Session length -->
+            <fieldset class="field">
+              <legend class="field__label">Session length</legend>
+              <div class="chips chips--compact" role="radiogroup" aria-label="Session length in minutes">
+                <label class="chip chip--square"><input type="radio" name="sessionLength" value="30" /><span>30m</span></label>
+                <label class="chip chip--square"><input type="radio" name="sessionLength" value="45" /><span>45m</span></label>
+                <label class="chip chip--square"><input type="radio" name="sessionLength" value="60" checked /><span>60m</span></label>
+                <label class="chip chip--square"><input type="radio" name="sessionLength" value="90" /><span>90m</span></label>
+              </div>
+            </fieldset>
+          </div>
+
+          <!-- Equipment (multi) -->
+          <fieldset class="field">
+            <legend class="field__label">Available equipment <span class="field__hint">select all that apply</span></legend>
+            <div class="chips" role="group" aria-label="Available equipment">
+              <label class="chip"><input type="checkbox" name="equipment" value="full gym" checked /><span>Full gym</span></label>
+              <label class="chip"><input type="checkbox" name="equipment" value="dumbbells" /><span>Dumbbells</span></label>
+              <label class="chip"><input type="checkbox" name="equipment" value="barbell" /><span>Barbell</span></label>
+              <label class="chip"><input type="checkbox" name="equipment" value="bodyweight" /><span>Bodyweight</span></label>
+              <label class="chip"><input type="checkbox" name="equipment" value="bands" /><span>Bands</span></label>
+            </div>
+          </fieldset>
+
+          <!-- Injuries -->
+          <fieldset class="field">
+            <legend class="field__label">Injuries or limitations <span class="field__hint">helps the safety audit</span></legend>
+            <div class="chips" role="group" aria-label="Injuries or limitations">
+              <label class="chip chip--caution"><input type="checkbox" name="injuries" value="lower_back" data-exclusive-off /><span>Lower back</span></label>
+              <label class="chip chip--caution"><input type="checkbox" name="injuries" value="knee" data-exclusive-off /><span>Knee</span></label>
+              <label class="chip chip--caution"><input type="checkbox" name="injuries" value="shoulder" data-exclusive-off /><span>Shoulder</span></label>
+              <label class="chip chip--caution"><input type="checkbox" name="injuries" value="wrist" data-exclusive-off /><span>Wrist</span></label>
+              <label class="chip"><input type="checkbox" name="injuries" value="none" data-exclusive checked /><span>None</span></label>
+            </div>
+            <label class="sr-only" for="injuryNotes">Describe any other injuries or limitations</label>
+            <textarea
+              id="injuryNotes"
+              name="injuryNotes"
+              class="textarea"
+              rows="2"
+              placeholder="Optional: anything else we should know (e.g. “tweaky right shoulder, avoid heavy overhead”)."
+            ></textarea>
+          </fieldset>
+
+          <button type="submit" class="btn btn--primary btn--block" id="generate-btn">
+            <span class="btn__label">Generate &amp; audit my plan</span>
+            <svg class="btn__icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <p class="form__foot">Free to use · powered by Google Gemini · your inputs never leave the request.</p>
+        </form>
+
+        <!-- Right: results area (swaps between empty / loading / error / results) -->
+        <div class="results" id="results" aria-live="polite">
+          <!-- EMPTY STATE -->
+          <div class="state state--empty" id="state-empty">
+            <div class="empty-art" aria-hidden="true">
+              <svg viewBox="0 0 120 120" width="96" height="96">
+                <circle cx="60" cy="60" r="46" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="6 10" stroke-linecap="round" opacity="0.5" />
+                <path d="M44 60l11 11 22-26" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <h3 class="state__title">Your audited plan appears here</h3>
+            <p class="state__text">
+              Fill in the form and hit generate. You'll get a full weekly program plus a
+              transparent safety score with every flagged concern explained.
+            </p>
+          </div>
+
+          <!-- LOADING STATE (branded skeleton) -->
+          <div class="state state--loading" id="state-loading" hidden>
+            <div class="loading-head">
+              <span class="spinner" aria-hidden="true"></span>
+              <div>
+                <p class="loading-title" id="loading-title">Generating your program…</p>
+                <p class="loading-step" id="loading-step">Asking the coach for a draft</p>
+              </div>
+            </div>
+            <div class="skeleton-gauge" aria-hidden="true"></div>
+            <div class="skeleton-rows" aria-hidden="true">
+              <span class="skeleton-row"></span>
+              <span class="skeleton-row"></span>
+              <span class="skeleton-row"></span>
+            </div>
+            <p class="sr-only">Generating and auditing your plan, please wait.</p>
+          </div>
+
+          <!-- ERROR STATE -->
+          <div class="state state--error" id="state-error" hidden>
+            <div class="state__icon state__icon--danger" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="34" height="34"><path d="M12 8v5m0 3h.01M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            </div>
+            <h3 class="state__title">Couldn't generate a plan</h3>
+            <p class="state__text" id="error-text">Something went wrong. Please try again.</p>
+            <button type="button" class="btn btn--ghost" id="retry-btn">Try again</button>
+          </div>
+
+          <!-- SUCCESS STATE -->
+          <div class="state state--results" id="state-results" hidden>
+            <!-- Fallback notice (only when showing a saved example) -->
+            <div class="notice" id="fallback-notice" hidden role="status">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 8v4m0 4h.01M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              <span>Live generation was unavailable, so we're <strong>showing a saved example</strong>. The safety audit below still runs on it in full.</span>
+            </div>
+
+            <!-- Safety score gauge -->
+            <div class="card score-card">
+              <div class="score-card__gauge">
+                <svg class="gauge" viewBox="0 0 200 200" role="img" aria-labelledby="score-aria">
+                  <title id="score-aria">Automated safety and quality score</title>
+                  <circle class="gauge__track" cx="100" cy="100" r="84" />
+                  <circle class="gauge__progress" id="gauge-progress" cx="100" cy="100" r="84" transform="rotate(-90 100 100)" />
+                </svg>
+                <div class="gauge__center">
+                  <span class="gauge__value" id="score-value">0</span>
+                  <span class="gauge__max">/ 100</span>
+                </div>
+              </div>
+              <div class="score-card__meta">
+                <p class="score-card__eyebrow">Automated audit</p>
+                <h3 class="score-card__title" id="score-band">Scoring…</h3>
+                <p class="score-card__text">
+                  A code-based evaluator — no AI — scored this plan against a fixed rubric.
+                  It <strong>flags potential concerns</strong>; it does not certify the plan as safe.
+                </p>
+                <ul class="score-legend" id="score-legend">
+                  <li><span class="dot dot--pass"></span><span id="count-pass">0</span> passed</li>
+                  <li><span class="dot dot--warn"></span><span id="count-warn">0</span> to review</li>
+                  <li><span class="dot dot--fail"></span><span id="count-fail">0</span> flagged</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Check list -->
+            <div class="card checks-card">
+              <h3 class="card-title">Automated checks</h3>
+              <ul class="checks" id="checks-list"></ul>
+            </div>
+
+            <!-- The plan itself -->
+            <div class="plan" id="plan-output"></div>
+
+            <button type="button" class="btn btn--ghost btn--block" id="regenerate-btn">
+              Start over
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== HOW IT WORKS ===================== -->
+    <section id="how-it-works" class="section section--alt">
+      <div class="container">
+        <header class="section-head">
+          <p class="eyebrow eyebrow--center"><span class="eyebrow__dot" aria-hidden="true"></span> The method</p>
+          <h2 class="section-title section-title--lg">Generate, then audit</h2>
+          <p class="section-subtitle section-subtitle--center">
+            The interesting part isn't the AI writing a workout — anyone can do that.
+            It's the second system that checks the first one's work.
+          </p>
+        </header>
+
+        <ol class="steps">
+          <li class="card step">
+            <span class="step__num">1</span>
+            <h3 class="step__title">You describe your training</h3>
+            <p class="step__text">Goal, experience, days, equipment, session length, and any injuries — captured in a fast, fully custom form.</p>
+          </li>
+          <li class="card step">
+            <span class="step__num">2</span>
+            <h3 class="step__title">Gemini drafts a program</h3>
+            <p class="step__text">A serverless function (holding the API key) prompts Gemini for a <em>strict-JSON</em> weekly plan, validating and retrying on malformed output.</p>
+          </li>
+          <li class="card step">
+            <span class="step__num">3</span>
+            <h3 class="step__title">Code audits the plan</h3>
+            <p class="step__text">A pure-code evaluator estimates volume, balance, recovery, and injury risk — then scores the plan 0–100 and explains every flag.</p>
+          </li>
+        </ol>
+
+        <div class="card method-note">
+          <h3 class="card-title">What the evaluator checks</h3>
+          <ul class="method-list">
+            <li><strong>Recovery</strong> — flags a week with no rest day.</li>
+            <li><strong>Weekly volume</strong> — estimates sets per muscle group; flags overtraining or under-stimulation for the goal.</li>
+            <li><strong>Push / pull balance</strong> — flags lopsided programming (e.g. all push, no pull).</li>
+            <li><strong>Injury contraindications</strong> — maps stated injuries to risky movements and suggests regressions.</li>
+            <li><strong>Beginner load sanity</strong> — flags advanced intensity or volume prescribed to a beginner.</li>
+            <li><strong>Goal fit</strong> — checks rep ranges and structure against the stated goal.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <div class="site-footer__brand">
+        <span class="wordmark wordmark--sm">
+          <span class="wordmark__glyph" aria-hidden="true">
+            <svg viewBox="0 0 32 32" width="20" height="20">
+              <path d="M16 4l9 3.4v7.8c0 5.6-3.8 9.8-9 12.2-5.2-2.4-9-6.6-9-12.2V7.4L16 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+              <path d="M11.5 16l3.2 3.2L21 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <span class="wordmark__text">Spotter<span class="wordmark__accent">AI</span></span>
+        </span>
+        <p class="site-footer__tag">An AI fitness coach that audits its own safety.</p>
+      </div>
+      <p class="site-footer__disclaimer">
+        SpotterAI is an educational, heuristic tool — <strong>not</strong> medical or professional
+        fitness advice, and the safety score is not a guarantee. The evaluator flags potential
+        concerns; it never certifies a plan as safe. Consult a qualified professional before
+        starting any program, especially with injuries or medical conditions.
+      </p>
+    </div>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

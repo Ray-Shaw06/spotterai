@@ -1,0 +1,151 @@
+{
+  "plans": [
+    {
+      "match": { "goal": "Hypertrophy" },
+      "plan": {
+        "program_name": "Hypertrophy Upper / Lower Split",
+        "goal": "Hypertrophy",
+        "days_per_week": 4,
+        "days": [
+          {
+            "day": "Day 1",
+            "focus": "Upper Body (Strength Emphasis)",
+            "exercises": [
+              { "name": "Barbell Bench Press", "sets": 4, "reps": "6-8", "rpe": 8, "notes": "Control the descent; keep shoulder blades retracted." },
+              { "name": "Chest-Supported Row", "sets": 4, "reps": "8-10", "rpe": 8, "notes": "Squeeze the shoulder blades; balances pressing volume." },
+              { "name": "Seated Dumbbell Shoulder Press", "sets": 3, "reps": "8-12", "rpe": 8, "notes": "Stop just shy of lockout to keep tension on the delts." },
+              { "name": "Lat Pulldown", "sets": 3, "reps": "10-12", "rpe": 9, "notes": "Drive elbows down and back." },
+              { "name": "EZ-Bar Biceps Curl", "sets": 3, "reps": "10-12", "rpe": 9, "notes": "No swinging; full range." },
+              { "name": "Triceps Rope Pushdown", "sets": 3, "reps": "12-15", "rpe": 9, "notes": "Spread the rope at the bottom." }
+            ]
+          },
+          {
+            "day": "Day 2",
+            "focus": "Lower Body (Strength Emphasis)",
+            "exercises": [
+              { "name": "Back Squat", "sets": 4, "reps": "6-8", "rpe": 8, "notes": "Brace before each rep; depth to comfortable parallel." },
+              { "name": "Romanian Deadlift", "sets": 3, "reps": "8-10", "rpe": 8, "notes": "Push hips back; feel the hamstring stretch." },
+              { "name": "Leg Press", "sets": 3, "reps": "10-12", "rpe": 9, "notes": "Don't let the lower back round at the bottom." },
+              { "name": "Seated Leg Curl", "sets": 3, "reps": "10-12", "rpe": 9, "notes": "Pause briefly at peak contraction." },
+              { "name": "Standing Calf Raise", "sets": 4, "reps": "12-15", "rpe": 9, "notes": "Full stretch and squeeze each rep." },
+              { "name": "Hanging Knee Raise", "sets": 3, "reps": "12-15", "rpe": 8, "notes": "Curl the pelvis; avoid swinging." }
+            ]
+          },
+          {
+            "day": "Day 3",
+            "focus": "Upper Body (Hypertrophy Emphasis)",
+            "exercises": [
+              { "name": "Incline Dumbbell Press", "sets": 4, "reps": "10-12", "rpe": 9, "notes": "Slight incline to bias upper chest." },
+              { "name": "Seated Cable Row", "sets": 4, "reps": "10-12", "rpe": 9, "notes": "Lead with the elbows; control the negative." },
+              { "name": "Dumbbell Lateral Raise", "sets": 4, "reps": "12-15", "rpe": 9, "notes": "Lead with the elbows, soft bend." },
+              { "name": "Face Pull", "sets": 3, "reps": "15-20", "rpe": 8, "notes": "Great for shoulder health and posture." },
+              { "name": "Incline Dumbbell Curl", "sets": 3, "reps": "10-12", "rpe": 9, "notes": "Let the arms hang back for a full stretch." },
+              { "name": "Overhead Triceps Extension", "sets": 3, "reps": "12-15", "rpe": 9, "notes": "Keep elbows pointed forward." }
+            ]
+          },
+          {
+            "day": "Day 4",
+            "focus": "Lower Body (Hypertrophy Emphasis)",
+            "exercises": [
+              { "name": "Hip Thrust", "sets": 4, "reps": "8-12", "rpe": 8, "notes": "Full hip extension; ribs down." },
+              { "name": "Bulgarian Split Squat", "sets": 3, "reps": "10-12", "rpe": 8, "notes": "Stay tall; control the descent." },
+              { "name": "Leg Extension", "sets": 3, "reps": "12-15", "rpe": 9, "notes": "Pause at the top for a hard quad squeeze." },
+              { "name": "Lying Leg Curl", "sets": 3, "reps": "12-15", "rpe": 9, "notes": "Slow eccentric." },
+              { "name": "Seated Calf Raise", "sets": 4, "reps": "15-20", "rpe": 9, "notes": "Full range; pause at the stretch." },
+              { "name": "Cable Crunch", "sets": 3, "reps": "12-15", "rpe": 8, "notes": "Round the spine; crunch with the abs, not the hips." }
+            ]
+          }
+        ],
+        "progression": "Use double progression: stay at the same load until you hit the top of the rep range on all sets with good form, then add ~2.5-5% load and return to the bottom of the range. Repeat weekly.",
+        "general_notes": "Warm up with 5-10 minutes of light cardio plus 1-2 ramp-up sets on the first exercise of each session. Aim for 7-9 hours of sleep and adequate protein (~1.6-2.2 g/kg). Deload every 5-6 weeks by cutting volume roughly in half."
+      }
+    },
+    {
+      "match": { "goal": "Strength" },
+      "plan": {
+        "program_name": "3-Day Full-Body Strength",
+        "goal": "Strength",
+        "days_per_week": 3,
+        "days": [
+          {
+            "day": "Day 1",
+            "focus": "Full Body (Squat Focus)",
+            "exercises": [
+              { "name": "Back Squat", "sets": 4, "reps": "4-6", "rpe": 8, "notes": "Primary lift; rest 3 minutes between sets." },
+              { "name": "Barbell Bench Press", "sets": 4, "reps": "4-6", "rpe": 8, "notes": "Keep tension; full lockout." },
+              { "name": "Chest-Supported Row", "sets": 3, "reps": "6-8", "rpe": 8, "notes": "Balances the bench pressing volume." },
+              { "name": "Plank", "sets": 3, "reps": "30s", "rpe": null, "notes": "Brace hard; neutral spine." }
+            ]
+          },
+          {
+            "day": "Day 2",
+            "focus": "Full Body (Deadlift Focus)",
+            "exercises": [
+              { "name": "Trap-Bar Deadlift", "sets": 4, "reps": "3-5", "rpe": 8, "notes": "Joint-friendly deadlift variation; reset each rep." },
+              { "name": "Standing Overhead Press", "sets": 4, "reps": "5-6", "rpe": 8, "notes": "Squeeze glutes; don't over-arch the lower back." },
+              { "name": "Lat Pulldown", "sets": 3, "reps": "8-10", "rpe": 8, "notes": "Full stretch at the top." },
+              { "name": "Hanging Knee Raise", "sets": 3, "reps": "10-12", "rpe": 8, "notes": "Controlled tempo." }
+            ]
+          },
+          {
+            "day": "Day 3",
+            "focus": "Full Body (Bench Focus)",
+            "exercises": [
+              { "name": "Barbell Bench Press", "sets": 4, "reps": "4-6", "rpe": 8, "notes": "Repeat exposure builds the pressing pattern." },
+              { "name": "Front Squat", "sets": 3, "reps": "5-6", "rpe": 7, "notes": "Lighter than back squat; keep elbows high." },
+              { "name": "Seated Cable Row", "sets": 4, "reps": "8-10", "rpe": 8, "notes": "Squeeze the mid-back." },
+              { "name": "Face Pull", "sets": 3, "reps": "15-20", "rpe": 7, "notes": "Shoulder health accessory." }
+            ]
+          }
+        ],
+        "progression": "Linear progression: add a small amount of load (about 2.5 kg lower body, 1-2.5 kg upper body) each week as long as you hit all prescribed reps at the target RPE. When a lift stalls twice, reduce it by 10% and build back up.",
+        "general_notes": "Warm up thoroughly with ramp-up sets before each main lift. Rest 2-3 minutes on compound lifts so strength, not fatigue, is the limiter. Keep the bar path tight and prioritize technique over adding weight."
+      }
+    },
+    {
+      "match": { "goal": "Fat loss" },
+      "plan": {
+        "program_name": "3-Day Full-Body Fat-Loss Circuit",
+        "goal": "Fat loss",
+        "days_per_week": 3,
+        "days": [
+          {
+            "day": "Day 1",
+            "focus": "Full Body Circuit A",
+            "exercises": [
+              { "name": "Goblet Squat", "sets": 3, "reps": "12-15", "rpe": 8, "notes": "Keep the torso tall; controlled tempo." },
+              { "name": "Dumbbell Bench Press", "sets": 3, "reps": "10-12", "rpe": 8, "notes": "Full range; steady pace." },
+              { "name": "One-Arm Dumbbell Row", "sets": 3, "reps": "10-12", "rpe": 8, "notes": "Square the hips; pull to the hip." },
+              { "name": "Dumbbell Romanian Deadlift", "sets": 3, "reps": "12-15", "rpe": 8, "notes": "Hinge at the hips; feel the hamstrings." },
+              { "name": "Plank", "sets": 3, "reps": "40s", "rpe": null, "notes": "Brace the whole time." }
+            ]
+          },
+          {
+            "day": "Day 2",
+            "focus": "Full Body Circuit B",
+            "exercises": [
+              { "name": "Reverse Lunge", "sets": 3, "reps": "10-12", "rpe": 8, "notes": "Per leg; knee-friendly over walking lunges." },
+              { "name": "Seated Dumbbell Shoulder Press", "sets": 3, "reps": "10-12", "rpe": 8, "notes": "Controlled; no excessive arch." },
+              { "name": "Lat Pulldown", "sets": 3, "reps": "10-12", "rpe": 8, "notes": "Drive the elbows down." },
+              { "name": "Hip Thrust", "sets": 3, "reps": "12-15", "rpe": 8, "notes": "Full hip extension." },
+              { "name": "Dead Bug", "sets": 3, "reps": "10-12", "rpe": null, "notes": "Keep the lower back flat on the floor." }
+            ]
+          },
+          {
+            "day": "Day 3",
+            "focus": "Full Body Circuit C",
+            "exercises": [
+              { "name": "Leg Press", "sets": 3, "reps": "12-15", "rpe": 8, "notes": "Smooth, controlled reps." },
+              { "name": "Incline Dumbbell Press", "sets": 3, "reps": "10-12", "rpe": 8, "notes": "Bias the upper chest." },
+              { "name": "Seated Cable Row", "sets": 3, "reps": "10-12", "rpe": 8, "notes": "Lead with the elbows." },
+              { "name": "Dumbbell Lateral Raise", "sets": 3, "reps": "15-20", "rpe": 8, "notes": "Light weight, strict form." },
+              { "name": "Cable Crunch", "sets": 3, "reps": "15-20", "rpe": 8, "notes": "Crunch with the abs." }
+            ]
+          }
+        ],
+        "progression": "Keep rest periods short (45-75 seconds) to keep the heart rate elevated. Progress by adding reps within the range, then load. Pair training with a modest calorie deficit and daily step target for fat loss; let nutrition drive the deficit, not punishing workouts.",
+        "general_notes": "Warm up with 5 minutes of easy cardio and some dynamic mobility. Strength training preserves muscle in a deficit — keep the loads challenging. Prioritize protein and sleep to support recovery while dieting."
+      }
+    }
+  ]
+}
