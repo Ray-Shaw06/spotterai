@@ -29,6 +29,17 @@ const MAX_RETRIES = 2;
 // Sampling temperature. Low-ish for structured, reliable output.
 const TEMPERATURE = 0.6;
 
+// Cap the response so generation stays fast and bounded. A full weekly plan is
+// well under this; capping avoids runaway latency.
+const MAX_OUTPUT_TOKENS = 4096;
+
+// Time budgets (ms). The serverless platform has a hard timeout (see
+// vercel.json `maxDuration`). We abort our own calls comfortably before it so
+// the browser always gets a clean JSON error and can fall back to a saved
+// example — never a raw 504 gateway page.
+const PER_CALL_TIMEOUT_MS = 20000; // abort a single Gemini call after this
+const OVERALL_BUDGET_MS = 50000; // stop retrying once this much time is used
+
 // The exact JSON shape we want back, shown to the model in the prompt. We
 // deliberately enforce JSON via `responseMimeType: "application/json"` (which is
 // broadly supported) plus this explicit schema in the prompt, rather than the
@@ -185,20 +196,43 @@ function normalizePlan(plan, inputs) {
 }
 
 /** One round-trip to Gemini. Returns the raw model text, or throws on HTTP error. */
-async function callGemini(apiKey, prompt) {
-  const response = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: TEMPERATURE,
-        // Force syntactically valid JSON. The exact shape is specified in the
-        // prompt; we validate + retry below to catch any drift.
-        responseMimeType: "application/json",
-      },
-    }),
-  });
+async function callGemini(apiKey, prompt, timeoutMs) {
+  // Abort a single call if it runs long, so one slow request can't consume the
+  // whole function budget and trigger a platform 504.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response;
+  try {
+    response = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: TEMPERATURE,
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
+          // Force syntactically valid JSON. The exact shape is specified in the
+          // prompt; we validate + retry below to catch any drift.
+          responseMimeType: "application/json",
+          // Disable "thinking" on Gemini 2.5 Flash. We don't need a chain of
+          // thought to fill a JSON template, and leaving it on roughly triples
+          // latency — which was overrunning the function time limit (HTTP 504).
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      }),
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    if (err.name === "AbortError") {
+      const e = new Error("Gemini request timed out");
+      e.status = 504;
+      throw e;
+    }
+    throw err;
+  }
+  clearTimeout(timer);
 
   // Surface rate limiting distinctly so the client can fall back to a sample.
   if (response.status === 429) {
@@ -253,11 +287,15 @@ module.exports = async (req, res) => {
   const prompt = buildPrompt(inputs);
 
   let lastError = "Unknown error";
+  const deadline = Date.now() + OVERALL_BUDGET_MS;
 
-  // Try once, then retry up to MAX_RETRIES more times on malformed JSON.
+  // Try once, then retry up to MAX_RETRIES more times on malformed JSON —
+  // but never start an attempt we don't have time to finish.
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const remaining = deadline - Date.now();
+    if (remaining < 3000) break; // not enough time for another round-trip
     try {
-      const raw = await callGemini(apiKey, prompt);
+      const raw = await callGemini(apiKey, prompt, Math.min(PER_CALL_TIMEOUT_MS, remaining));
       const parsed = extractJson(raw);
 
       if (parsed && isValidPlan(parsed)) {

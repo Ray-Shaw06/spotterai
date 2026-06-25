@@ -3,7 +3,7 @@
   "cleanUrls": true,
   "functions": {
     "api/generate.js": {
-      "maxDuration": 30
+      "maxDuration": 60
     }
   }
 }
