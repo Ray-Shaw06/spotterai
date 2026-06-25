@@ -129,19 +129,32 @@ A webcam-based form auditor — the physical-world twin of the plan evaluator.
 [`form-coach.js`](form-coach.js) runs **MediaPipe Pose** entirely in the browser
 to track 33 body landmarks, and [`form-evaluator.js`](form-evaluator.js) — pure
 code, the same style as `evaluator.js` — turns those landmarks into **joint
-angles**, applies rule-based heuristics, **counts reps automatically**, and shows
-**live form cues**:
+angles**, **counts reps automatically**, and shows **live form cues**.
 
-- **Squat** — flags shallow depth (above parallel) and excessive forward lean.
-- **Push-up** — flags incomplete elbow depth and a sagging or piking hip line.
-- All thresholds live in the `FORM_THRESHOLDS` constant, mirroring the
-  evaluator's tunable-rubric style; reps are tracked by a small joint-angle state
-  machine (`RepCounter`).
+**Coverage:** form cues for **squat, push-up, lunge, overhead press, biceps curl,
+Romanian deadlift / hinge, and hip thrust**, plus an **"Other" mode** — an
+adaptive rep counter that auto-detects the working joint and counts reps for *any*
+movement (no form cues, because I won't pretend to coach a lift there are no rules
+for).
+
+**What makes it more precise:**
+
+- **3D angles, not pixels.** Segment angles (knee/elbow/hip flexion) are computed
+  from MediaPipe's **3D world landmarks** — far less sensitive to camera angle
+  than 2D pixel angles. Gravity-relative cues (torso lean, "overhead", hip line)
+  use the 2D landmarks, whose Y axis tracks gravity for an upright camera.
+- **The "full" pose model** (more accurate than "lite").
+- **One-Euro jitter filtering** on every angle, so reps and cues don't flicker.
+- **Robust rep counting** — hysteresis + a minimum range-of-motion + a debounce
+  reject twitches and double-counts.
+- All thresholds live in the `FORM_THRESHOLDS` constant, mirroring the evaluator's
+  tunable-rubric style.
 
 It is **100% on-device**: the pose model is lazy-loaded from a free CDN only when
 you start the camera, and **the video never leaves your browser** — no upload, no
-recording, no server call. Honest framing, as everywhere else: these are
-*heuristic cues from a single 2D camera, not a coach or physiotherapist.*
+recording, no server call. Honest framing, as everywhere else: a single 2D camera
+gives *heuristic cues, not a coach or physiotherapist* — it can't see your spine,
+load, or true 3D depth, so it's a mirror, not a judge.
 
 ### 💬 Coach chatbot
 

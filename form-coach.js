@@ -2,23 +2,29 @@
  * SpotterAI — Form Coach (camera orchestration)
  * ============================================================================
  * Runs an on-device, real-time form check:
- *   webcam → MediaPipe Pose (landmarks) → form-evaluator.js (angles + cues) → UI
+ *   webcam → MediaPipe Pose → form-evaluator.js (angles + cues) → UI
  *
- * Everything runs in the browser. The video never leaves the device — there is
- * no server call and no recording. The heavy pose model is loaded lazily (only
- * when the user starts the camera) from a free CDN, so it never slows the
- * initial page load or affects users who don't use this feature.
+ * Everything runs in the browser. The video never leaves the device — no server
+ * call, no recording. The pose model is loaded lazily (only when the camera
+ * starts) from a free CDN.
  *
- * This is a "beta" assist from a single 2D camera — helpful cues, not a coach.
+ * Accuracy pipeline:
+ *   • "full" pose model (more accurate landmarks than "lite").
+ *   • Segment angles from 3D world landmarks; gravity cues from 2D landmarks.
+ *   • Per-metric One-Euro smoothing removes jitter before the rules run.
+ *   • Curated exercises get form cues; "Other" uses an adaptive rep counter.
+ *
+ * A single 2D camera gives heuristic cues, not a coach's eye.
  */
 
-import { EXERCISES, RepCounter } from "./form-evaluator.js";
+import { EXERCISES, RepCounter, AdaptiveRepCounter, OneEuroFilter } from "./form-evaluator.js";
 
-// Pinned MediaPipe Tasks Vision build + a free, hosted pose model (lite = fast).
+// Pinned MediaPipe Tasks Vision build + a free, hosted pose model.
 const TASKS_VISION_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
 const WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
+// "full" model — noticeably more accurate than "lite" (a bit larger to download).
 const POSE_MODEL_URL =
-  "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+  "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task";
 
 // Skeleton connections (MediaPipe Pose indices) we draw.
 const CONNECTIONS = [
@@ -26,6 +32,9 @@ const CONNECTIONS = [
   [11, 23], [12, 24], [23, 24],
   [23, 25], [25, 27], [24, 26], [26, 28],
 ];
+
+// Friendly labels for the adaptive counter's auto-detected joint.
+const JOINT_LABEL = { knee: "legs", elbow: "arms", hip: "hips", shoulderAbd: "shoulders" };
 
 // ----------------------------------------------------------------------------
 // Element references (added in index.html). Bail out quietly if absent.
@@ -42,6 +51,7 @@ const el = {
   status: document.getElementById("form-status"),
   setup: document.getElementById("form-setup"),
   lastRep: document.getElementById("form-lastrep"),
+  select: document.getElementById("form-exercise"),
 };
 
 const hasUI = el.video && el.canvas && el.start;
@@ -55,6 +65,7 @@ let running = false;
 let rafId = null;
 let counter = null;
 let currentExercise = EXERCISES.squat;
+let smoothers = new Map(); // metric key -> OneEuroFilter
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // ----------------------------------------------------------------------------
@@ -75,9 +86,37 @@ function setStatus(text, tone = "muted") {
 }
 
 function selectedExercise() {
-  const checked = document.querySelector('input[name="formExercise"]:checked');
-  const id = checked ? checked.value : "squat";
+  const id = el.select ? el.select.value : "squat";
   return EXERCISES[id] || EXERCISES.squat;
+}
+
+function makeCounter(ex) {
+  return ex.adaptive ? new AdaptiveRepCounter() : new RepCounter(ex);
+}
+
+/** Smooth every numeric metric with its own One-Euro filter (kills jitter). */
+function smoothMetrics(metrics, tMs) {
+  if (!metrics) return metrics;
+  const out = {};
+  for (const k in metrics) {
+    const v = metrics[k];
+    if (typeof v === "number" && Number.isFinite(v)) {
+      let f = smoothers.get(k);
+      if (!f) { f = new OneEuroFilter(); smoothers.set(k, f); }
+      out[k] = f.filter(v, tMs);
+    } else {
+      out[k] = v; // booleans / arrays pass through
+    }
+  }
+  return out;
+}
+
+function resetForExercise() {
+  currentExercise = selectedExercise();
+  counter = makeCounter(currentExercise);
+  smoothers = new Map();
+  if (el.setup) el.setup.textContent = currentExercise.setup;
+  resetReadout();
 }
 
 // ----------------------------------------------------------------------------
@@ -87,7 +126,6 @@ function selectedExercise() {
 async function ensureModel() {
   if (poseLandmarker) return poseLandmarker;
   setStatus("Loading the pose model… (first time only)");
-  // Dynamic import so MediaPipe is only fetched when the camera is used.
   const vision = await import(/* @vite-ignore */ TASKS_VISION_URL);
   const { PoseLandmarker, FilesetResolver } = vision;
   const fileset = await FilesetResolver.forVisionTasks(WASM_URL);
@@ -95,6 +133,9 @@ async function ensureModel() {
     baseOptions: { modelAssetPath: POSE_MODEL_URL, delegate: "GPU" },
     runningMode: "VIDEO",
     numPoses: 1,
+    minPoseDetectionConfidence: 0.6,
+    minPosePresenceConfidence: 0.6,
+    minTrackingConfidence: 0.6,
   });
   return poseLandmarker;
 }
@@ -106,20 +147,17 @@ async function ensureModel() {
 async function start() {
   if (running) return;
 
-  // Camera requires a secure context (HTTPS or localhost).
   if (!navigator.mediaDevices?.getUserMedia) {
     setStatus("Camera needs HTTPS or localhost to run.", "warn");
     return;
   }
 
-  currentExercise = selectedExercise();
-  counter = new RepCounter(currentExercise);
-  if (el.setup) el.setup.textContent = currentExercise.setup;
+  resetForExercise();
 
   el.start.disabled = true;
   try {
     await ensureModel();
-  } catch (err) {
+  } catch {
     setStatus("Couldn't load the pose model — check your connection and try again.", "warn");
     el.start.disabled = false;
     return;
@@ -145,7 +183,6 @@ async function start() {
   el.video.srcObject = stream;
   await el.video.play().catch(() => {});
 
-  // Match the canvas resolution to the video for crisp overlays.
   el.canvas.width = el.video.videoWidth || 1280;
   el.canvas.height = el.video.videoHeight || 720;
 
@@ -155,7 +192,7 @@ async function start() {
   el.start.disabled = false;
   if (el.placeholder) el.placeholder.hidden = true;
   if (el.overlay) el.overlay.hidden = false;
-  resetReadout();
+  if (el.select) el.select.disabled = true;
   setStatus("Camera active — start your set.", "good");
   loop();
 }
@@ -175,6 +212,7 @@ function stop() {
   el.stop.hidden = true;
   if (el.overlay) el.overlay.hidden = true;
   if (el.placeholder) el.placeholder.hidden = false;
+  if (el.select) el.select.disabled = false;
   setStatus("Camera stopped.");
 }
 
@@ -193,20 +231,38 @@ function loop() {
 
   if (el.video.readyState >= 2 && el.video.videoWidth > 0) {
     let result = null;
+    const t = performance.now();
     try {
-      result = poseLandmarker.detectForVideo(el.video, performance.now());
+      result = poseLandmarker.detectForVideo(el.video, t);
     } catch {
       /* transient detection hiccup — skip this frame */
     }
 
-    const landmarks = result?.landmarks?.[0] || null;
-    const metrics = landmarks ? currentExercise.metrics(landmarks) : null;
-    const cues = metrics ? currentExercise.liveCues(metrics) : [];
+    const image = result?.landmarks?.[0] || null;
+    const world = result?.worldLandmarks?.[0] || image; // 3D preferred; fall back to 2D
 
-    if (landmarks) {
-      const { justCompleted } = counter.update(metrics);
-      draw(landmarks, metrics, cues);
-      renderReadout(cues, justCompleted);
+    if (image && world) {
+      const metrics = smoothMetrics(currentExercise.metrics(image, world), t);
+
+      let cues;
+      let justCompleted = false;
+      let lastRep = null;
+
+      if (currentExercise.adaptive) {
+        const r = counter.update(metrics, t);
+        justCompleted = r.justCompleted;
+        cues = r.calibrating
+          ? [{ level: "warn", text: "Calibrating — do a few full reps" }]
+          : [{ level: "good", text: `Counting via ${JOINT_LABEL[r.dominant] || "motion"} — pick a lift for form cues` }];
+      } else {
+        cues = currentExercise.cues(metrics);
+        const upd = counter.update(metrics, t);
+        justCompleted = upd.justCompleted;
+        lastRep = counter.lastRep;
+      }
+
+      draw(image, metrics, cues);
+      renderReadout(cues, justCompleted, lastRep);
     } else {
       const ctx = el.canvas.getContext("2d");
       ctx.clearRect(0, 0, el.canvas.width, el.canvas.height);
@@ -218,7 +274,7 @@ function loop() {
 }
 
 // ----------------------------------------------------------------------------
-// Drawing the skeleton
+// Drawing the skeleton (uses 2D image landmarks)
 // ----------------------------------------------------------------------------
 
 function draw(landmarks, metrics, cues) {
@@ -227,11 +283,10 @@ function draw(landmarks, metrics, cues) {
   const h = el.canvas.height;
   ctx.clearRect(0, 0, w, h);
 
-  const warnActive = cues.some((c) => c.level === "warn");
+  const warnActive = cues.some((c) => c.level === "warn" && c.joints);
   const focus = new Set(metrics?.focusJoints || []);
   const warnJoints = new Set(cues.flatMap((c) => c.joints || []));
 
-  // Connectors
   ctx.lineWidth = Math.max(2, w * 0.004);
   ctx.lineCap = "round";
   ctx.strokeStyle = warnActive ? "rgba(255, 90, 90, 0.85)" : "rgba(255, 255, 255, 0.55)";
@@ -245,7 +300,6 @@ function draw(landmarks, metrics, cues) {
     ctx.stroke();
   }
 
-  // Joints
   const r = Math.max(4, w * 0.007);
   for (let i = 0; i < landmarks.length; i++) {
     if (!focus.has(i) && !warnJoints.has(i)) continue;
@@ -270,7 +324,7 @@ function badge(level, text) {
   return `<span class="cue cue--${level === "good" ? "good" : "warn"}">${esc(text)}</span>`;
 }
 
-function renderReadout(cues, justCompleted) {
+function renderReadout(cues, justCompleted, lastRep) {
   if (el.repCount) el.repCount.textContent = String(counter.reps);
 
   if (el.liveCues) {
@@ -279,13 +333,12 @@ function renderReadout(cues, justCompleted) {
       : badge("good", "Looking good — keep going");
   }
 
-  if (justCompleted && counter.lastRep && el.lastRep) {
-    const { rep, depth } = counter.lastRep;
+  if (justCompleted && lastRep && el.lastRep) {
+    const { rep, depth } = lastRep;
     el.lastRep.innerHTML = `<span class="form-lastrep__label">Rep ${rep}</span> ${badge(depth.level, depth.text)}`;
     if (!reducedMotion) {
       el.lastRep.classList.remove("pulse");
-      // restart the pulse animation
-      void el.lastRep.offsetWidth;
+      void el.lastRep.offsetWidth; // restart the pulse animation
       el.lastRep.classList.add("pulse");
     }
   }
@@ -299,19 +352,12 @@ if (hasUI) {
   el.start.addEventListener("click", start);
   el.stop.addEventListener("click", stop);
 
-  // Switching exercise resets the rep count + setup hint.
-  document.querySelectorAll('input[name="formExercise"]').forEach((input) =>
-    input.addEventListener("change", () => {
-      currentExercise = selectedExercise();
-      if (el.setup) el.setup.textContent = currentExercise.setup;
-      if (counter) counter.reset();
-      resetReadout();
-    })
-  );
+  // Switching exercise rebuilds the counter, smoothers, and setup hint.
+  el.select?.addEventListener("change", resetForExercise);
 
   // Free the camera if the user navigates away.
   window.addEventListener("pagehide", stop);
 
-  // Initialize the setup hint.
-  if (el.setup) el.setup.textContent = EXERCISES.squat.setup;
+  // Initialize from the current selection.
+  resetForExercise();
 }

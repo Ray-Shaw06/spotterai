@@ -393,9 +393,22 @@
             </div>
 
             <div class="camera__controls">
-              <div class="chips chips--compact" role="radiogroup" aria-label="Exercise to check">
-                <label class="chip"><input type="radio" name="formExercise" value="squat" checked /><span>Squat</span></label>
-                <label class="chip"><input type="radio" name="formExercise" value="pushup" /><span>Push-up</span></label>
+              <div class="form-pick">
+                <label class="sr-only" for="form-exercise">Exercise to check</label>
+                <select id="form-exercise" class="form-select" aria-label="Exercise to check">
+                  <optgroup label="Form cues + rep counting">
+                    <option value="squat">Squat</option>
+                    <option value="pushup">Push-up</option>
+                    <option value="lunge">Lunge</option>
+                    <option value="ohp">Overhead press</option>
+                    <option value="curl">Biceps curl</option>
+                    <option value="rdl">Romanian deadlift / hinge</option>
+                    <option value="hipthrust">Glute bridge / hip thrust</option>
+                  </optgroup>
+                  <optgroup label="Anything else">
+                    <option value="general">Other — auto rep counter</option>
+                  </optgroup>
+                </select>
               </div>
               <div class="camera__buttons">
                 <button type="button" id="form-start" class="btn btn--primary btn--sm">Start camera</button>
@@ -421,15 +434,16 @@
             <div class="form-side__block">
               <h3 class="form-side__heading">What it checks</h3>
               <ul class="form-side__list">
-                <li><strong>Squat</strong> — squat depth (parallel) and excessive forward lean.</li>
-                <li><strong>Push-up</strong> — elbow depth and a sagging or piking hip line.</li>
-                <li>Counts reps automatically from joint angles.</li>
+                <li>Auto rep counting from 3D joint angles, smoothed to cut jitter.</li>
+                <li>Form cues for squat, push-up, lunge, overhead press, biceps curl, RDL/hinge, and hip thrust.</li>
+                <li>“Other” counts reps for any movement (no form cues).</li>
               </ul>
             </div>
 
             <p class="form-side__disclaimer">
               Heuristic cues from a single 2D camera — not a coach or physiotherapist.
-              Estimates can be wrong; stop if anything hurts.
+              It can't see your spine, load, or true 3D depth, so it can be wrong.
+              Treat it as a mirror, not a judge; stop if anything hurts.
             </p>
           </aside>
         </div>
