@@ -17,7 +17,11 @@ SpotterAI then goes a step further with two features built on the same
 transparent, safety-first philosophy: a **real-time form check** that uses
 on-device pose estimation to count reps and flag form issues live through your
 webcam (the video never leaves your device), and a **plan-aware coach chatbot**
-that answers questions about your program and training in general.
+that answers questions about your program and training in general. The app is
+organized into clean, separate **pages** (Plan · Dashboard · Nutrition ·
+Progress · Form check) via a tiny client-side router, with optional local
+**profiles** so different people can keep separate data on the same browser —
+all still backend-free.
 
 ---
 
@@ -31,9 +35,9 @@ that answers questions about your program and training in general.
 | --- | --- |
 | ![Form check](docs/screenshot-formcheck.png) | ![Coach chat](docs/screenshot-chat.png) |
 
-| Gamified dashboard (track, rank up, nutrition) |
-| --- |
-| ![Dashboard](docs/screenshot-dashboard.png) |
+| Gamified dashboard (track, rank up) | Local profiles ("accounts") |
+| --- | --- |
+| ![Dashboard](docs/screenshot-dashboard.png) | ![Account](docs/screenshot-account.png) |
 
 > _Captured from the running app. Re-shoot anytime and overwrite the files in `docs/`._
 
@@ -192,10 +196,24 @@ to — **entirely client-side** (`localStorage`), no account, no backend.
   chatbot, so **"summarize my week"**, "am I hitting protein?", and "what should I
   focus on next?" answer with your *real* numbers.
 
-> **Honest scope:** "rankings" here is a **personal** XP ladder, not a global
-> multiplayer leaderboard — a shared leaderboard needs a database, which this
-> $0 / no-backend project deliberately avoids. Tracker data lives only in the
-> browser that created it.
+### Pages & local profiles
+
+- **Separate pages.** A tiny hash-based router ([`router.js`](router.js)) turns
+  the app into focused pages — **Plan, Dashboard, Nutrition, Progress, Form
+  check** — with no build step and no full-page reloads. The chatbot floats
+  across all of them, and the camera auto-stops when you navigate away.
+- **Local "accounts."** [`profile-store.js`](profile-store.js) lets you create
+  named **profiles** (with an optional PIN), switch between them, and **export /
+  import** a JSON backup. Each profile's tracker data is stored under its own
+  namespaced `localStorage` key, so multiple people can use the same browser
+  without mixing data.
+
+> **Honest scope:** "rankings" is a **personal** XP ladder, not a global
+> multiplayer leaderboard, and "accounts" are **local profiles**, not real auth —
+> a PIN is light protection on a shared browser, and there's no cross-device
+> sync. Global leaderboards and real accounts both need a backend/database, which
+> this $0 / no-backend project deliberately avoids. Use Export to back up or move
+> your data.
 
 ---
 
@@ -203,6 +221,9 @@ to — **entirely client-side** (`localStorage`), no account, no backend.
 
 - **Frontend:** plain HTML + CSS + vanilla JavaScript (ES modules). No framework,
   **no build step** — it deploys as static files.
+- **Navigation:** a ~40-line hash-based **client-side router** splits the app into
+  pages with no reloads. **Local profiles** ("accounts") namespace each user's
+  data in `localStorage`, with JSON export/import — no backend, no real auth.
 - **Design:** a hand-built design-token system (color, spacing, radius, shadow,
   type scale) in CSS variables; [Space Grotesk + Inter](https://fonts.google.com)
   via Google Fonts; an animated, pure-SVG safety-score ring. No UI kit, no paid
@@ -241,6 +262,9 @@ spotterai/
 ├─ charts.js              # dependency-free SVG line/bar/ring charts
 ├─ tracker-store.js       # localStorage tracker + derived stats + chat context
 ├─ tracker-ui.js          # gamified dashboard (rank, streak, nutrition, charts)
+├─ router.js              # hash-based page router (Plan/Dashboard/Nutrition/…)
+├─ profile-store.js       # local profiles + per-profile namespacing + export/import
+├─ auth-ui.js             # profile button + account modal
 ├─ api/
 │  ├─ generate.js         # serverless Gemini proxy — plan generation (holds key)
 │  └─ chat.js             # serverless Gemini proxy — coach chatbot

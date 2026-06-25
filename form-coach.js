@@ -355,8 +355,11 @@ if (hasUI) {
   // Switching exercise rebuilds the counter, smoothers, and setup hint.
   el.select?.addEventListener("change", resetForExercise);
 
-  // Free the camera if the user navigates away.
+  // Free the camera if the user navigates away (tab hidden or route change).
   window.addEventListener("pagehide", stop);
+  window.addEventListener("spotter:route", (e) => {
+    if (e.detail?.route !== "form-check") stop();
+  });
 
   // Initialize from the current selection.
   resetForExercise();

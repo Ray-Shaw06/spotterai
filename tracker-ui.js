@@ -27,6 +27,7 @@ const els = {
   bwChart: $("chart-bodyweight"),
   bwMeta: $("bodyweight-meta"),
   achievements: $("dash-achievements"),
+  recent: $("recent-workouts"),
   // forms
   logForm: $("log-workout-form"),
   lwName: $("lw-name"),
@@ -105,6 +106,25 @@ function render() {
   renderCharts(s);
   renderNutrition(s);
   renderAchievements(s);
+  renderRecent(s);
+}
+
+function renderRecent(s) {
+  if (!els.recent) return;
+  els.recent.innerHTML = s.recentWorkouts.length
+    ? s.recentWorkouts
+        .map(
+          (w) => `<li class="workout-row">
+            <div class="workout-row__main">
+              <span class="workout-row__name">${esc(w.name)}</span>
+              ${w.focus ? `<span class="workout-row__focus">${esc(w.focus)}</span>` : ""}
+            </div>
+            <span class="workout-row__meta">${esc(w.date)}${w.volume ? ` · ${(w.volume / 1000).toFixed(1)}k vol` : ""} · +${w.xp} XP</span>
+            <button type="button" class="entry-del" data-id="${w.id}" aria-label="Delete workout">×</button>
+          </li>`
+        )
+        .join("")
+    : `<li class="muted">No workouts logged yet — log your first above.</li>`;
 }
 
 function renderRank(s) {
@@ -307,6 +327,11 @@ function init() {
   els.nutritionList?.addEventListener("click", (e) => {
     const btn = e.target.closest(".entry-del");
     if (btn) removeEntry(btn.dataset.kind, btn.dataset.id);
+  });
+  // Delete logged workouts
+  els.recent?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".entry-del");
+    if (btn) removeEntry("workouts", btn.dataset.id);
   });
 
   // Reset

@@ -11,8 +11,7 @@
  */
 
 import { ACHIEVEMENTS, RANKS, XP, achievementXp, levelFor, rankFor, workoutXp } from "./gamify.js";
-
-const KEY = "spotterai.tracker.v1";
+import { trackerKey } from "./profile-store.js";
 
 const DEFAULTS = {
   workouts: [], // { id, date 'YYYY-MM-DD', name, focus, exercises:[{name,sets,reps,weight}], volume, xp }
@@ -28,7 +27,7 @@ const DEFAULTS = {
 // ----------------------------------------------------------------------------
 function load() {
   try {
-    const raw = JSON.parse(localStorage.getItem(KEY) || "{}");
+    const raw = JSON.parse(localStorage.getItem(trackerKey()) || "{}");
     return { ...DEFAULTS, ...raw, targets: { ...DEFAULTS.targets, ...(raw.targets || {}) } };
   } catch {
     return structuredClone(DEFAULTS);
@@ -37,9 +36,15 @@ function load() {
 
 let state = load();
 
+// Switch data when the active profile changes (re-render via spotter:tracker).
+window.addEventListener("spotter:profile", () => {
+  state = load();
+  window.dispatchEvent(new CustomEvent("spotter:tracker"));
+});
+
 function persist() {
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
+    localStorage.setItem(trackerKey(), JSON.stringify(state));
   } catch {
     /* storage full / disabled — keep working in-memory */
   }
@@ -48,6 +53,30 @@ function persist() {
 
 export function getState() {
   return state;
+}
+
+/** Serialize the active profile's data for a downloadable backup. */
+export function exportData() {
+  return JSON.stringify({ app: "spotterai", version: 1, exportedAt: new Date().toISOString(), data: state }, null, 2);
+}
+
+/** Replace the active profile's data from a parsed backup object. Returns ok. */
+export function importData(obj) {
+  const incoming = obj && obj.data && typeof obj.data === "object" ? obj.data : obj;
+  if (!incoming || typeof incoming !== "object" || (!Array.isArray(incoming.workouts) && !Array.isArray(incoming.nutrition))) {
+    return false;
+  }
+  state = {
+    ...structuredClone(DEFAULTS),
+    ...incoming,
+    targets: { ...DEFAULTS.targets, ...(incoming.targets || {}) },
+    workouts: Array.isArray(incoming.workouts) ? incoming.workouts : [],
+    nutrition: Array.isArray(incoming.nutrition) ? incoming.nutrition : [],
+    bodyweight: Array.isArray(incoming.bodyweight) ? incoming.bodyweight : [],
+    achievements: Array.isArray(incoming.achievements) ? incoming.achievements : [],
+  };
+  persist();
+  return true;
 }
 
 // ----------------------------------------------------------------------------
