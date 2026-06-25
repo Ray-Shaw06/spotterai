@@ -180,8 +180,11 @@ the same hardened Gemini client and the 429 / timeout fallbacks as the generator
 A persistent, gamified tracker that turns SpotterAI into something you come back
 to — **entirely client-side** (`localStorage`), no account, no backend.
 
-- **Workout logging** — log sessions freeform, or one-click load a day from your
-  generated plan. Volume and XP are computed per session.
+- **Workout logging (Hevy-style)** — start a live **session**, add exercises from
+  a searchable library, log each **set** (weight × reps) with a "previous"
+  reference and a running duration timer, then finish for XP. Save **routines**,
+  start a session from your AI plan, and browse an expandable **history**. An
+  auto-saved draft means a refresh mid-workout doesn't lose your sets.
 - **Rank ladder & XP** — earn XP per workout (scaled by volume), level up, and
   climb tiers **Newcomer → Bronze → Silver → Gold → Platinum → Diamond →
   Champion**. All the game design lives in [`gamify.js`](gamify.js).
@@ -270,6 +273,9 @@ spotterai/
 ├─ charts.js              # dependency-free SVG line/bar/ring charts
 ├─ tracker-store.js       # localStorage tracker + derived stats + chat context
 ├─ tracker-ui.js          # gamified dashboard (rank, streak, nutrition, charts)
+├─ workout-ui.js          # Hevy-style workout session (per-set logging, routines, history)
+├─ exercises.js           # searchable exercise library
+
 ├─ router.js              # hash-based page router (Plan/Dashboard/Nutrition/…)
 ├─ profile-store.js       # local profiles + per-profile namespacing + export/import
 ├─ auth-ui.js             # profile button + account modal

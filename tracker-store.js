@@ -19,6 +19,7 @@ const DEFAULTS = {
   bodyweight: [], // { id, date, value }
   targets: { kcal: 2200, protein: 140, weeklyWorkouts: 4 },
   achievements: [], // unlocked ids
+  routines: [], // saved workout templates
   unit: "kg",
 };
 
@@ -77,6 +78,7 @@ export function importData(obj) {
     nutrition: Array.isArray(incoming.nutrition) ? incoming.nutrition : [],
     bodyweight: Array.isArray(incoming.bodyweight) ? incoming.bodyweight : [],
     achievements: Array.isArray(incoming.achievements) ? incoming.achievements : [],
+    routines: Array.isArray(incoming.routines) ? incoming.routines : [],
     updatedAt: incoming.updatedAt || Date.now(),
   };
   persist(false); // preserve the incoming timestamp
@@ -109,23 +111,69 @@ function uid() {
 }
 
 // ----------------------------------------------------------------------------
+// Workout normalization — supports both the new per-set model
+// (ex.sets = [{ weight, reps, ... }]) and the legacy one (ex.sets = count).
+// ----------------------------------------------------------------------------
+/** An exercise's sets as an array of { weight, reps, ...optional cardio fields }. */
+export function setsOf(ex) {
+  if (Array.isArray(ex.sets)) {
+    return ex.sets.map((s) => ({
+      weight: Number(s.weight) || 0,
+      reps: Number(s.reps) || 0,
+      ...(s.durationMin != null ? { durationMin: Number(s.durationMin) || 0 } : {}),
+      ...(s.distance != null ? { distance: Number(s.distance) || 0 } : {}),
+    }));
+  }
+  // Legacy: sets = count, with single reps/weight.
+  const count = Number(ex.sets) || 0;
+  const reps = Number(ex.reps) || 0;
+  const weight = Number(ex.weight) || 0;
+  return Array.from({ length: count }, () => ({ weight, reps }));
+}
+
+const setHasWork = (s) => s.weight > 0 || s.reps > 0 || s.durationMin > 0 || s.distance > 0;
+
+/** Total volume (Σ weight × reps) of a workout, across either model. */
+export function workoutVolume(w) {
+  let v = 0;
+  for (const ex of w.exercises || []) for (const s of setsOf(ex)) v += s.weight * s.reps;
+  return Math.round(v);
+}
+
+/** One-line summary of an exercise (top set), for the chatbot context. */
+function exerciseSummary(ex) {
+  const sets = setsOf(ex).filter(setHasWork);
+  if (!sets.length) return ex.name;
+  const top = sets.reduce((b, s) => (s.weight > (b.weight || 0) ? s : b), sets[0]);
+  const w = top.weight ? ` @ ${top.weight}${state.unit}` : "";
+  return `${ex.name}: ${sets.length} set${sets.length > 1 ? "s" : ""}, top ${top.reps}${w}`;
+}
+
+// ----------------------------------------------------------------------------
 // Mutations
 // ----------------------------------------------------------------------------
-export function addWorkout({ name, focus, exercises = [], date } = {}) {
+export function addWorkout({ name, focus, exercises = [], date, durationSec } = {}) {
   const clean = exercises
-    .map((e) => ({
-      name: String(e.name || "Exercise"),
-      sets: Number(e.sets) || 0,
-      reps: Number(e.reps) || 0,
-      weight: Number(e.weight) || 0,
-    }))
-    .filter((e) => e.name);
-  const volume = clean.reduce((v, e) => v + e.sets * e.reps * e.weight, 0);
+    .map((e) => {
+      const sets = setsOf(e)
+        .map((s) => ({
+          weight: Number(s.weight) || 0,
+          reps: Number(s.reps) || 0,
+          ...(s.durationMin ? { durationMin: Number(s.durationMin) || 0 } : {}),
+          ...(s.distance ? { distance: Number(s.distance) || 0 } : {}),
+        }))
+        .filter(setHasWork); // only keep completed sets
+      return { name: String(e.name || "Exercise"), muscle: e.muscle || "", notes: String(e.notes || ""), sets };
+    })
+    .filter((e) => e.name && e.sets.length);
+
+  const volume = clean.reduce((v, e) => v + e.sets.reduce((sv, s) => sv + s.weight * s.reps, 0), 0);
   const workout = {
     id: uid(),
     date: date || today(),
     name: String(name || "Workout"),
     focus: String(focus || ""),
+    durationSec: Number(durationSec) || 0,
     exercises: clean,
     volume: Math.round(volume),
     xp: workoutXp(volume),
@@ -134,6 +182,43 @@ export function addWorkout({ name, focus, exercises = [], date } = {}) {
   const unlocked = unlockAchievements();
   persist();
   return { workout, newAchievements: unlocked };
+}
+
+// --- Routines (saved workout templates) -------------------------------------
+export function addRoutine({ name, exercises = [] } = {}) {
+  const routine = {
+    id: uid(),
+    name: String(name || "Routine").slice(0, 40),
+    exercises: exercises.map((e) => ({
+      name: String(e.name || "Exercise"),
+      muscle: e.muscle || "",
+      sets: setsOf(e).map((s) => ({ weight: Number(s.weight) || 0, reps: Number(s.reps) || 0 })),
+    })),
+  };
+  state.routines.push(routine);
+  persist();
+  return routine;
+}
+export function removeRoutine(id) {
+  state.routines = (state.routines || []).filter((r) => r.id !== id);
+  persist();
+}
+export function getRoutines() {
+  return state.routines || [];
+}
+
+/** Most recent logged sets for an exercise (the "Previous" reference). */
+export function lastSetFor(name) {
+  const key = String(name || "").toLowerCase();
+  for (let i = state.workouts.length - 1; i >= 0; i--) {
+    const ex = (state.workouts[i].exercises || []).find((e) => String(e.name).toLowerCase() === key);
+    if (!ex) continue;
+    const sets = setsOf(ex).filter(setHasWork);
+    if (!sets.length) continue;
+    const top = sets.reduce((b, s) => (s.weight > (b.weight || 0) ? s : b), sets[0]);
+    return { date: state.workouts[i].date, sets, top };
+  }
+  return null;
 }
 
 export function addNutrition({ name, kcal, protein, date } = {}) {
@@ -226,7 +311,7 @@ function baseStats() {
 
   // PRs (best weight per exercise)
   const prs = {};
-  for (const w of workouts) for (const e of w.exercises) if (e.weight > 0) prs[e.name] = Math.max(prs[e.name] || 0, e.weight);
+  for (const w of workouts) for (const e of w.exercises) for (const s of setsOf(e)) if (s.weight > 0) prs[e.name] = Math.max(prs[e.name] || 0, s.weight);
 
   return { workoutCount, maxSessionVolume, streakDays, nutritionDays, proteinTargetDays, bodyweightCount: state.bodyweight.length, thisWeek, byDay, prs };
 }
@@ -330,7 +415,7 @@ export function getContext() {
       name: w.name,
       focus: w.focus,
       volume: w.volume,
-      exercises: w.exercises.map((e) => `${e.name} ${e.sets}x${e.reps}${e.weight ? ` @${e.weight}${state.unit}` : ""}`),
+      exercises: w.exercises.map((e) => exerciseSummary(e)),
     })),
     nutritionToday: { kcal: d.nutritionToday.kcal, protein: d.nutritionToday.protein, targetKcal: d.nutritionToday.targetKcal, targetProtein: d.nutritionToday.targetProtein },
     proteinTargetDays: d.proteinTargetDays,

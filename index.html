@@ -380,31 +380,37 @@
             <div id="dash-stats" class="dash-stats"></div>
           </div>
 
-          <!-- Log a workout -->
-          <div class="card dash-card">
-            <h3 class="card-title">Log a workout</h3>
-            <div id="log-from-plan" class="log-from-plan" hidden>
-              <label class="sr-only" for="plan-day-pick">Plan day</label>
-              <select id="plan-day-pick" class="form-select"></select>
-              <button type="button" id="plan-day-load" class="btn btn--ghost btn--sm">Load from plan</button>
+          <!-- Workout session (Hevy-style) -->
+          <div class="card dash-card dash-workout-card">
+            <div id="workout-idle">
+              <div class="workout-idle__head">
+                <h3 class="card-title">Workout</h3>
+                <button type="button" id="start-empty" class="btn btn--primary btn--sm">Start workout</button>
+              </div>
+              <div id="routine-list" class="routine-list"></div>
             </div>
-            <form id="log-workout-form" class="dash-form">
-              <div class="field-inline">
-                <input id="lw-name" class="input" placeholder="Workout name (e.g. Upper A)" autocomplete="off" />
-                <input id="lw-focus" class="input" placeholder="Focus (optional)" autocomplete="off" />
+
+            <div id="workout-session" hidden>
+              <div class="session-head">
+                <input id="session-name" class="input session-name" aria-label="Workout name" autocomplete="off" />
+                <span id="session-timer" class="session-timer" aria-label="Duration">0:00</span>
               </div>
-              <div id="lw-exercises" class="ex-rows"></div>
-              <div class="dash-actions">
-                <button type="button" id="lw-add" class="btn btn--ghost btn--sm">+ Add exercise</button>
-                <button type="submit" class="btn btn--primary btn--sm">Log workout</button>
+              <div id="session-exercises" class="session-exercises"></div>
+              <button type="button" id="session-add-exercise" class="btn btn--ghost btn--sm session-add">+ Add exercise</button>
+              <div class="session-actions">
+                <button type="button" id="session-discard" class="btn-link-danger">Discard</button>
+                <div class="session-actions__right">
+                  <button type="button" id="session-save-routine" class="btn btn--ghost btn--sm">Save as routine</button>
+                  <button type="button" id="session-finish" class="btn btn--primary btn--sm">Finish</button>
+                </div>
               </div>
-            </form>
+            </div>
           </div>
 
-          <!-- Recent workouts -->
-          <div class="card dash-card dash-recent-card">
-            <h3 class="card-title">Recent workouts</h3>
-            <ul id="recent-workouts" class="entry-list workout-list"></ul>
+          <!-- History -->
+          <div class="card dash-card dash-workout-card">
+            <h3 class="card-title">History</h3>
+            <ul id="workout-history" class="entry-list workout-list"></ul>
           </div>
 
           <!-- Achievements -->
@@ -613,6 +619,19 @@
     </div>
   </footer>
 
+  <!-- ===================== EXERCISE PICKER ===================== -->
+  <div id="exercise-picker" class="picker-modal" role="dialog" aria-modal="true" aria-label="Add exercise" aria-hidden="true">
+    <div class="picker-dialog">
+      <div class="picker-head">
+        <input id="exercise-search" class="input" type="search" placeholder="Search exercises…" autocomplete="off" aria-label="Search exercises" />
+        <button id="exercise-picker-close" class="icon-btn" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+        </button>
+      </div>
+      <ul id="exercise-results" class="exercise-results"></ul>
+    </div>
+  </div>
+
   <!-- ===================== ACCOUNT MODAL ===================== -->
   <div id="account-modal" class="account-modal" role="dialog" aria-modal="true" aria-label="Your profile" aria-hidden="true">
     <div class="account-dialog">
@@ -699,5 +718,6 @@
   <script type="module" src="chat.js"></script>
   <script type="module" src="form-coach.js"></script>
   <script type="module" src="tracker-ui.js"></script>
+  <script type="module" src="workout-ui.js"></script>
 </body>
 </html>
