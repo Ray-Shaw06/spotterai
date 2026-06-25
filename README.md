@@ -208,12 +208,17 @@ to — **entirely client-side** (`localStorage`), no account, no backend.
   namespaced `localStorage` key, so multiple people can use the same browser
   without mixing data.
 
+- **Optional Google sync.** Local profiles work with zero setup, but you can also
+  **Sign in with Google** to sync your data across devices via a free Firebase
+  project — see [Cross-device sync](#cross-device-sync-google--firebase--optional)
+  below. The app is **local-first**: sign-in is hidden until you configure it, and
+  nothing breaks if you skip it.
+
 > **Honest scope:** "rankings" is a **personal** XP ladder, not a global
-> multiplayer leaderboard, and "accounts" are **local profiles**, not real auth —
-> a PIN is light protection on a shared browser, and there's no cross-device
-> sync. Global leaderboards and real accounts both need a backend/database, which
-> this $0 / no-backend project deliberately avoids. Use Export to back up or move
-> your data.
+> multiplayer leaderboard. Local profiles are **local** (a PIN is light protection
+> on a shared browser); for true cross-device data, use either Export/Import or
+> the optional Google sync. A global leaderboard would still need a shared
+> database, which the core app deliberately avoids.
 
 ---
 
@@ -223,7 +228,10 @@ to — **entirely client-side** (`localStorage`), no account, no backend.
   **no build step** — it deploys as static files.
 - **Navigation:** a ~40-line hash-based **client-side router** splits the app into
   pages with no reloads. **Local profiles** ("accounts") namespace each user's
-  data in `localStorage`, with JSON export/import — no backend, no real auth.
+  data in `localStorage`, with JSON export/import.
+- **Optional sync:** **Firebase Auth (Google sign-in) + Cloud Firestore** for
+  cross-device sync, lazy-loaded from Google's CDN and fully optional (local-first;
+  off until you add a free config). $0 Spark tier, no credit card.
 - **Design:** a hand-built design-token system (color, spacing, radius, shadow,
   type scale) in CSS variables; [Space Grotesk + Inter](https://fonts.google.com)
   via Google Fonts; an animated, pure-SVG safety-score ring. No UI kit, no paid
@@ -265,6 +273,8 @@ spotterai/
 ├─ router.js              # hash-based page router (Plan/Dashboard/Nutrition/…)
 ├─ profile-store.js       # local profiles + per-profile namespacing + export/import
 ├─ auth-ui.js             # profile button + account modal
+├─ sync.js                # optional Firebase (Google) cross-device sync
+├─ firebase-config.js     # public Firebase config (paste yours to enable sync)
 ├─ api/
 │  ├─ generate.js         # serverless Gemini proxy — plan generation (holds key)
 │  └─ chat.js             # serverless Gemini proxy — coach chatbot
@@ -343,6 +353,59 @@ git push -u origin main
   and `PENALTY` constants at the top of [`evaluator.js`](evaluator.js).
 - **Form rubric:** all form-check angle thresholds are in the `FORM_THRESHOLDS`
   constant in [`form-evaluator.js`](form-evaluator.js).
+
+---
+
+## Cross-device sync (Google + Firebase) — optional
+
+By default SpotterAI is local-only. To sync across devices with a real **"Sign in
+with Google"**, connect a **free Firebase** project (Spark plan — **no credit
+card**). The app stays local-first: sign-in is hidden until you configure this,
+and nothing breaks if you skip it.
+
+**It's $0, and the config is not a secret** — a Firebase web `apiKey` is a public
+project identifier, not a credential. Your data is protected by the Firestore
+security rules below (each user can read/write only their own document), so
+[`firebase-config.js`](firebase-config.js) is safe to commit.
+
+**1. Create the project**
+1. [Firebase console](https://console.firebase.google.com) → **Add project** (any
+   name; Analytics optional).
+2. Click the **Web** icon (`</>`) to **register a web app**, then copy the
+   `firebaseConfig` values it shows.
+
+**2. Turn on Google sign-in**
+3. **Build → Authentication → Get started → Sign-in method → Google → Enable →
+   Save.**
+4. **Authentication → Settings → Authorized domains → Add domain** — add your
+   Vercel domain (e.g. `spotterai-xxxx.vercel.app`); `localhost` is already there.
+
+**3. Create the database + rules**
+5. **Build → Firestore Database → Create database → Production mode →** pick a
+   location.
+6. Open the **Rules** tab, paste this, and **Publish**:
+
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /users/{uid} {
+         allow read, write: if request.auth != null && request.auth.uid == uid;
+       }
+     }
+   }
+   ```
+
+**4. Paste your config**
+7. Replace the placeholders in [`firebase-config.js`](firebase-config.js) with your
+   web app's values (`apiKey`, `authDomain`, `projectId`, `appId`).
+8. Commit + push (or run locally). The account modal now shows **Sign in with
+   Google**, and your data syncs to `users/<your-uid>` in Firestore — sign in with
+   the same Google account on any device to see the same data.
+
+> Sync is **last-write-wins** by a timestamp on the whole document — ideal for one
+> person across their own devices, not designed for simultaneous multi-user edits.
+> The Firebase SDK is lazy-loaded from Google's CDN only when sync is configured.
 
 ---
 

@@ -42,7 +42,10 @@ window.addEventListener("spotter:profile", () => {
   window.dispatchEvent(new CustomEvent("spotter:tracker"));
 });
 
-function persist() {
+function persist(bump = true) {
+  // `updatedAt` powers last-write-wins cloud sync. Real edits bump it; importing
+  // remote/backup data (bump=false) preserves the incoming timestamp.
+  if (bump) state.updatedAt = Date.now();
   try {
     localStorage.setItem(trackerKey(), JSON.stringify(state));
   } catch {
@@ -74,8 +77,9 @@ export function importData(obj) {
     nutrition: Array.isArray(incoming.nutrition) ? incoming.nutrition : [],
     bodyweight: Array.isArray(incoming.bodyweight) ? incoming.bodyweight : [],
     achievements: Array.isArray(incoming.achievements) ? incoming.achievements : [],
+    updatedAt: incoming.updatedAt || Date.now(),
   };
-  persist();
+  persist(false); // preserve the incoming timestamp
   return true;
 }
 

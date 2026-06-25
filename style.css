@@ -2484,3 +2484,56 @@ table {
   .nav-link.is-active::after { display: none; }
   .nav-link.is-active { color: var(--accent); }
 }
+
+/* ----------------------------------------------------------------------------
+   19. Cloud sync (Google) UI
+---------------------------------------------------------------------------- */
+.google-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.6rem 1rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: #1f1f1f;
+  background: #fff;
+  border: 1px solid #dadce0;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.google-btn:hover { background: #f5f6f7; box-shadow: var(--shadow-sm); }
+.google-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.sync-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.sync-user__photo {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-full);
+  object-fit: cover;
+}
+.sync-user__meta { flex: 1; min-width: 0; font-size: var(--fs-small); overflow: hidden; }
+.sync-user__meta strong { color: var(--text); }
+.sync-user__meta .muted { font-size: 0.74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.sync-status {
+  flex: none;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: var(--r-full);
+}
+.sync-status--synced { color: var(--success); background: var(--success-soft); }
+.sync-status--syncing { color: var(--warn); background: var(--warn-soft); }
+.sync-status--error { color: var(--danger); background: var(--danger-soft); }

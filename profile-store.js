@@ -101,6 +101,21 @@ export async function createProfile(name, pin) {
   return { id, name: clean };
 }
 
+/** Create-or-update a profile with an explicit id (used by Google sync) and activate it. */
+export function upsertProfile({ id, name, google = false }) {
+  let p = meta.profiles.find((x) => x.id === id);
+  if (!p) {
+    p = { id, name: name || "Account", pinHash: null, createdAt: Date.now(), google };
+    meta.profiles.push(p);
+  } else if (name) {
+    p.name = name;
+  }
+  meta.activeId = id;
+  saveMeta();
+  emit();
+  return p;
+}
+
 /** Switch to a profile, verifying the PIN if one is set. */
 export async function signIn(id, pin) {
   const p = meta.profiles.find((x) => x.id === id);
