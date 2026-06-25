@@ -18,10 +18,9 @@
 // Configuration — change the model in ONE place.
 // ----------------------------------------------------------------------------
 
-// Current free "Flash" model on Google AI Studio. If Google renames the free
-// model, update this single constant.
-const GEMINI_MODEL = "gemini-2.5-flash";
-const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+// Model name + endpoint live in one shared place (lib/gemini.js) so both
+// serverless functions stay in sync. Change the model there.
+const { GEMINI_ENDPOINT } = require("../lib/gemini.js");
 
 // How many extra times we re-ask Gemini if it returns unparseable JSON.
 const MAX_RETRIES = 2;

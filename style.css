@@ -1314,3 +1314,518 @@ table {
     transform: none;
   }
 }
+
+/* ----------------------------------------------------------------------------
+   14. Form check (camera)
+---------------------------------------------------------------------------- */
+.form-check {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.camera {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.camera__stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+/* Mirror video + overlay canvas for a natural selfie view (they stay aligned). */
+.camera__stage video,
+.camera__stage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+.camera__stage canvas {
+  pointer-events: none;
+}
+
+/* Live overlay: rep count + cues (NOT mirrored, so text reads normally). */
+.cam-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-4);
+  pointer-events: none;
+}
+.cam-overlay__reps {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(10, 11, 13, 0.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.cam-overlay__count {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+}
+.cam-overlay__reps-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+.cam-overlay__cues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Cue badges — bright fills with dark ink so they read over any video frame.
+   Brand red is avoided here so cues don't clash with "good/warn" semantics. */
+.cue {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--r-full);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.cue--good {
+  background: var(--success);
+  color: #04261a;
+}
+.cue--warn {
+  background: var(--warn);
+  color: #3a2a05;
+}
+
+.cam-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  text-align: center;
+  color: var(--text-muted);
+}
+.cam-placeholder svg {
+  color: var(--text-faint);
+  margin-bottom: var(--space-1);
+}
+.cam-placeholder__title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.cam-placeholder__text {
+  max-width: 36ch;
+  font-size: var(--fs-small);
+}
+.cam-placeholder__privacy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+.camera__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.camera__buttons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Side readout panel */
+.form-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.form-side__status {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.form-side__status[data-tone="good"] {
+  color: var(--success);
+  border-color: rgba(52, 211, 153, 0.35);
+}
+.form-side__status[data-tone="warn"] {
+  color: var(--warn);
+  border-color: rgba(251, 191, 36, 0.35);
+}
+.form-side__block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.form-side__heading {
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-faint);
+}
+.form-side__setup,
+.form-side__list {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+}
+.form-side__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: 1.1em;
+  list-style: disc;
+}
+.form-side__muted {
+  font-size: var(--fs-small);
+  color: var(--text-faint);
+}
+.form-side__disclaimer {
+  padding-top: var(--space-3);
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  border-top: 1px solid var(--border-soft);
+}
+.form-lastrep {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.form-lastrep__label {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--text);
+}
+.form-lastrep.pulse {
+  animation: lastrep-pulse 600ms ease;
+}
+@keyframes lastrep-pulse {
+  0% { transform: scale(0.96); opacity: 0.35; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@media (max-width: 900px) {
+  .form-check {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   15. Coach chatbot (floating widget)
+---------------------------------------------------------------------------- */
+.chat-fab {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: 90;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--r-full);
+  cursor: pointer;
+  box-shadow: var(--glow-accent), var(--shadow-md);
+  transition: transform var(--transition), background var(--transition);
+}
+.chat-fab:hover {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+}
+.chat-fab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.chat-panel {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: 91;
+  width: min(390px, calc(100vw - 2 * var(--space-4)));
+  height: min(620px, calc(100vh - 2 * var(--space-5)));
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(16px) scale(0.98);
+  pointer-events: none;
+  transition: opacity var(--transition), transform var(--transition);
+}
+.chat-panel.is-open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.chat-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.chat-panel__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.chat-panel__avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-full);
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid rgba(255, 59, 59, 0.3);
+}
+.chat-panel__name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--text);
+}
+.chat-panel__context {
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.74rem;
+  color: var(--text-faint);
+}
+.chat-panel__close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.chat-panel__close:hover {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--border);
+}
+.chat-panel__close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.chat-log {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  overflow-y: auto;
+}
+.chat-msg {
+  max-width: 85%;
+  padding: var(--space-3);
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  border-radius: var(--r-md);
+}
+.chat-msg p {
+  margin: 0 0 0.5em;
+}
+.chat-msg p:last-child {
+  margin-bottom: 0;
+}
+.chat-msg ul {
+  margin: 0.3em 0;
+  padding-left: 1.1em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+}
+.chat-msg code {
+  padding: 0.1em 0.35em;
+  font-size: 0.85em;
+  background: var(--bg);
+  border-radius: 4px;
+}
+.chat-msg--assistant {
+  align-self: flex-start;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: var(--r-sm);
+}
+.chat-msg--user {
+  align-self: flex-end;
+  font-weight: 500;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-bottom-right-radius: var(--r-sm);
+}
+
+.chat-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.chat-typing .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  animation: chat-typing 1s infinite ease-in-out;
+}
+.chat-typing .dot:nth-child(2) { animation-delay: 0.15s; }
+.chat-typing .dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes chat-typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-3);
+}
+.chat-suggestion {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8rem;
+  text-align: left;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.chat-suggestion:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.chat-suggestion:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.chat-form {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.chat-input {
+  flex: 1;
+  min-height: 42px;
+  max-height: 120px;
+  padding: 0.65rem 0.8rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-small);
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  resize: none;
+  transition: var(--transition);
+}
+.chat-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.chat-input::placeholder {
+  color: var(--text-faint);
+}
+.chat-send {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.chat-send:hover {
+  background: var(--accent-hover);
+}
+.chat-send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.chat-send:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.chat-foot {
+  padding: 0 var(--space-4) var(--space-3);
+  font-size: 0.72rem;
+  text-align: center;
+  color: var(--text-faint);
+}
+
+@media (max-width: 480px) {
+  .chat-panel {
+    right: var(--space-3);
+    left: var(--space-3);
+    bottom: var(--space-3);
+    width: auto;
+    height: min(76vh, 560px);
+  }
+  .chat-fab__label {
+    display: none;
+  }
+  .chat-fab {
+    padding: var(--space-3);
+  }
+}

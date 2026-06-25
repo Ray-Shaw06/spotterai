@@ -14,6 +14,7 @@
  */
 
 import { evaluatePlan } from "./evaluator.js";
+import { setPlan } from "./store.js";
 
 // ----------------------------------------------------------------------------
 // Element references
@@ -230,6 +231,9 @@ async function generate() {
 
 function renderResults(plan, inputs, usedFallback) {
   fallbackNotice.hidden = !usedFallback;
+
+  // Publish the plan so the coach chatbot can answer questions about it.
+  setPlan(plan, inputs);
 
   // Run the pure-code audit.
   const audit = evaluatePlan(plan, inputs);

@@ -13,6 +13,12 @@ that. It's the second system that checks the first one's work, which is exactly
 the kind of evaluation and AI-safety thinking that matters when you ship LLM
 features to real users.
 
+SpotterAI then goes a step further with two features built on the same
+transparent, safety-first philosophy: a **real-time form check** that uses
+on-device pose estimation to count reps and flag form issues live through your
+webcam (the video never leaves your device), and a **plan-aware coach chatbot**
+that answers questions about your program and training in general.
+
 ---
 
 ## Screenshots
@@ -20,6 +26,10 @@ features to real users.
 | Landing / hero | Safety score, checks & plan | Mobile |
 | --- | --- | --- |
 | ![Generator](docs/screenshot-generator.png) | ![Score](docs/screenshot-score.png) | ![Mobile](docs/screenshot-mobile.png) |
+
+| Real-time form check | Coach chatbot |
+| --- | --- |
+| ![Form check](docs/screenshot-formcheck.png) | ![Coach chat](docs/screenshot-chat.png) |
 
 > _Captured from the running app. Re-shoot anytime and overwrite the files in `docs/`._
 
@@ -108,6 +118,42 @@ explains *why* it flagged so the user can make an informed decision.
 
 ---
 
+## Beyond the plan: form check + coach chat
+
+Two further features extend the same idea — transparent, safety-first coaching —
+past the written program.
+
+### 🎥 Real-time form check (100% on-device)
+
+A webcam-based form auditor — the physical-world twin of the plan evaluator.
+[`form-coach.js`](form-coach.js) runs **MediaPipe Pose** entirely in the browser
+to track 33 body landmarks, and [`form-evaluator.js`](form-evaluator.js) — pure
+code, the same style as `evaluator.js` — turns those landmarks into **joint
+angles**, applies rule-based heuristics, **counts reps automatically**, and shows
+**live form cues**:
+
+- **Squat** — flags shallow depth (above parallel) and excessive forward lean.
+- **Push-up** — flags incomplete elbow depth and a sagging or piking hip line.
+- All thresholds live in the `FORM_THRESHOLDS` constant, mirroring the
+  evaluator's tunable-rubric style; reps are tracked by a small joint-angle state
+  machine (`RepCounter`).
+
+It is **100% on-device**: the pose model is lazy-loaded from a free CDN only when
+you start the camera, and **the video never leaves your browser** — no upload, no
+recording, no server call. Honest framing, as everywhere else: these are
+*heuristic cues from a single 2D camera, not a coach or physiotherapist.*
+
+### 💬 Coach chatbot
+
+A floating assistant ([`chat.js`](chat.js) + [`api/chat.js`](api/chat.js)) answers
+questions about your plan and general training. It is **plan-aware** — your
+generated program is attached as context, so it can explain *your* rep ranges or
+suggest a swap — and **safety-first by system prompt**: it defers to professionals
+for anything clinical and never diagnoses or prescribes. It reuses the same
+hardened Gemini client and the 429 / timeout fallbacks as the generator.
+
+---
+
 ## Tech stack
 
 - **Frontend:** plain HTML + CSS + vanilla JavaScript (ES modules). No framework,
@@ -116,9 +162,14 @@ explains *why* it flagged so the user can make an informed decision.
   type scale) in CSS variables; [Space Grotesk + Inter](https://fonts.google.com)
   via Google Fonts; an animated, pure-SVG safety-score ring. No UI kit, no paid
   assets.
-- **Backend:** one Node.js serverless function (`api/generate.js`) that proxies
-  Google **Gemini** (free Flash model) and holds the API key. Uses native `fetch`
-  — **zero dependencies**.
+- **Backend:** two Node.js serverless functions — `api/generate.js` (plan
+  generation) and `api/chat.js` (coach chatbot) — that proxy Google **Gemini**
+  (free Flash model) and hold the API key. They share one hardened Gemini client
+  (`lib/gemini.js`) with the model name in a single place. Native `fetch`,
+  **zero dependencies**.
+- **On-device computer vision:** **MediaPipe Tasks Vision** (pose estimation),
+  loaded from a free CDN and run entirely in the browser for the real-time form
+  check — no server, no key, nothing uploaded.
 - **Hosting:** Vercel free tier (also runs on Netlify free tier).
 - **No database, no auth, no payments.** All state is client-side.
 
@@ -133,11 +184,19 @@ spotterai/
 ├─ index.html             # markup + semantic structure
 ├─ style.css              # design tokens + all components
 ├─ app.js                 # controller: form → API → evaluator → render
-├─ evaluator.js           # ⭐ pure-code safety & quality auditor
+├─ evaluator.js           # ⭐ pure-code safety & quality auditor (the plan)
+├─ form-evaluator.js      # ⭐ pure-code form auditor (joint angles → cues, reps)
+├─ form-coach.js          # webcam + MediaPipe Pose + skeleton overlay
+├─ chat.js                # floating coach chatbot (UI)
+├─ store.js               # tiny shared state (latest plan → chatbot context)
 ├─ api/
-│  └─ generate.js         # serverless Gemini proxy (holds the key)
+│  ├─ generate.js         # serverless Gemini proxy — plan generation (holds key)
+│  └─ chat.js             # serverless Gemini proxy — coach chatbot
+├─ lib/
+│  └─ gemini.js           # shared, hardened Gemini client (model name lives here)
 ├─ data/
 │  └─ sample-plans.json   # offline fallback plans (429 / offline demo)
+├─ docs/                  # screenshots
 ├─ .env.example           # GEMINI_API_KEY=...
 ├─ .gitignore             # ignores .env and node_modules
 ├─ vercel.json            # function config
@@ -202,10 +261,12 @@ git push -u origin main
 ## Configuration
 
 - **Model:** the Gemini model name is a single constant — `GEMINI_MODEL` at the
-  top of [`api/generate.js`](api/generate.js). Free Flash models change over time;
-  update it in that one place.
-- **Rubric:** all evaluator thresholds and penalties are in the `THRESHOLDS` and
-  `PENALTY` constants at the top of [`evaluator.js`](evaluator.js).
+  top of [`lib/gemini.js`](lib/gemini.js), shared by both serverless functions.
+  Free Flash models change over time; update it in that one place.
+- **Plan rubric:** all evaluator thresholds and penalties are in the `THRESHOLDS`
+  and `PENALTY` constants at the top of [`evaluator.js`](evaluator.js).
+- **Form rubric:** all form-check angle thresholds are in the `FORM_THRESHOLDS`
+  constant in [`form-evaluator.js`](form-evaluator.js).
 
 ---
 
@@ -224,6 +285,12 @@ git push -u origin main
 - **AI output is imperfect.** Generated plans can contain mistakes the evaluator
   doesn't catch — which is precisely why the audit layer exists, and why it's
   framed as a second opinion rather than the final word.
+- **The form check is experimental.** It infers movement from a single 2D webcam,
+  so rep counts and cues can be wrong, and it can't judge load, tempo, or true 3D
+  joint positions. Treat it as a rough mirror, not a judge — and stop if anything
+  hurts. It runs entirely on-device and uploads/stores nothing.
+- **The chatbot is educational.** It can be wrong or out of date and is not a
+  substitute for a qualified coach, dietitian, or clinician.
 
 ---
 
