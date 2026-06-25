@@ -15,10 +15,10 @@
  */
 
 export const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyBPWVAO-rqb18BD7vM8wK5mMT31ZnCJZfU",
+  authDomain: "spotterai-c02c6.firebaseapp.com",
+  projectId: "spotterai-c02c6",
+  appId: "1:254561575776:web:641fc68013f30c05607405",
 };
 
 // Sync turns on only once the placeholder apiKey is replaced.
