@@ -184,11 +184,18 @@ async function send() {
   showTyping();
 
   try {
-    const res = await fetch("api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages, plan: store.plan, tracker: getTrackerContext() }),
-    });
+    // The server already retries + falls back to a lighter model; if it still
+    // reports an overload (503), wait briefly and try once more from the client.
+    let res;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      res = await fetch("api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages, plan: store.plan, tracker: getTrackerContext() }),
+      });
+      if (res.status !== 503) break;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
     hideTyping();
 
     if (!res.ok) {
@@ -196,6 +203,8 @@ async function send() {
       const msg =
         res.status === 429
           ? "I'm rate-limited right now (free-tier limits). Give it a moment and try again."
+          : res.status === 503
+          ? "The AI's a bit overloaded at the moment — give it a few seconds and ask again."
           : data.error || "I couldn't reach the coach service just now. Please try again shortly.";
       addBubble("assistant", msg);
     } else {

@@ -104,6 +104,11 @@ module.exports = async (req, res) => {
     if (err.status === 429) {
       return res.status(429).json({ error: "The coach is rate-limited right now. Try again shortly." });
     }
-    return res.status(502).json({ error: `The coach is unavailable right now. ${err.message || ""}`.trim() });
+    // Transient overload (all retries + fallback model exhausted) — let the client retry.
+    const overloaded = err.status === 503 || /\b503\b|overload|UNAVAILABLE/i.test(err.message || "");
+    if (overloaded) {
+      return res.status(503).json({ error: "The AI is briefly overloaded. Please try again in a few seconds." });
+    }
+    return res.status(502).json({ error: "The coach is unavailable right now. Please try again shortly." });
   }
 };
