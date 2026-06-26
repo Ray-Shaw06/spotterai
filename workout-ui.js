@@ -11,7 +11,7 @@
  * re-rendering, so inputs never lose focus; structural changes re-render.
  */
 
-import { addRoutine, addWorkout, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, subscribe } from "./tracker-store.js";
+import { addCustomExercise, addRoutine, addWorkout, getCustomExercises, getLoggedExerciseNames, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, subscribe } from "./tracker-store.js";
 import { findExercise, isCardio, searchExercises } from "./exercises.js";
 import { store } from "./store.js";
 
@@ -168,7 +168,23 @@ function finishSession() {
 // ----------------------------------------------------------------------------
 // Exercises within a session
 // ----------------------------------------------------------------------------
+// Custom exercises + anything you've logged, merged into the picker search so
+// any movement stays findable (and gets remembered).
+function exerciseExtras() {
+  const out = [];
+  const seen = new Set();
+  for (const e of [...getCustomExercises(), ...getLoggedExerciseNames()]) {
+    const k = e.name.toLowerCase();
+    if (seen.has(k) || findExercise(e.name)) continue;
+    seen.add(k);
+    out.push({ name: e.name, muscle: e.muscle || "" });
+  }
+  return out;
+}
+
 function addExercise(name, muscle) {
+  // Persist anything not in the built-in library so it's searchable next time.
+  if (!findExercise(name)) addCustomExercise({ name, muscle });
   const prev = lastSetFor(name);
   const first = prev ? { weight: "", reps: "", done: false } : { weight: "", reps: "", done: false };
   const cardio = isCardio(name);
@@ -331,7 +347,7 @@ function closePicker() {
   el.picker.setAttribute("aria-hidden", "true");
 }
 function renderResults(q) {
-  const list = searchExercises(q, 40);
+  const list = searchExercises(q, 40, exerciseExtras());
   let html = list
     .map((e) => `<li><button type="button" class="exercise-opt" data-name="${esc(e.name)}" data-muscle="${esc(e.muscle)}"><span>${esc(e.name)}</span><span class="exercise-opt__muscle">${esc(e.muscle)}</span></button></li>`)
     .join("");

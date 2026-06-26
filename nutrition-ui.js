@@ -9,7 +9,7 @@
  * Display areas re-render on change; inputs in the food picker are short-lived.
  */
 
-import { addNutrition, addWater, getRecentFoods, getState, getWater, removeEntry, resetAll, setTargets, subscribe } from "./tracker-store.js";
+import { addCustomFood, addNutrition, addWater, getCustomFoods, getRecentFoods, getState, getWater, removeEntry, resetAll, setTargets, subscribe } from "./tracker-store.js";
 import { searchFoods, searchOpenFoodFacts } from "./foods.js";
 import { ring } from "./charts.js";
 
@@ -187,7 +187,7 @@ function foodOptHtml(f, source) {
 }
 
 function renderResults(q) {
-  const builtin = searchFoods(q, 25);
+  const builtin = searchFoods(q, 25, getCustomFoods());
   let html = "";
   if (!q.trim()) {
     const recent = getRecentFoods(8);
@@ -313,9 +313,13 @@ function init() {
       const f = detailFood;
       const meal = $("detail-meal").value;
       addNutrition({ name: f.name, meal, qty, unit: f.serving || "serving", kcal: f.kcal * qty, protein: f.protein * qty, carbs: f.carbs * qty, fat: f.fat * qty, date: selected });
+      if (f.source === "off") addCustomFood(f); // remember online foods for offline reuse
       closePicker();
     } else if (e.target.closest('[data-act="quick-save"]')) {
-      addNutrition({ name: $("qa-name").value.trim() || "Quick add", meal: $("detail-meal").value, kcal: $("qa-kcal").value, protein: $("qa-protein").value, carbs: $("qa-carbs").value, fat: $("qa-fat").value, date: selected });
+      const name = $("qa-name").value.trim() || "Quick add";
+      const macros = { kcal: $("qa-kcal").value, protein: $("qa-protein").value, carbs: $("qa-carbs").value, fat: $("qa-fat").value };
+      addNutrition({ name, meal: $("detail-meal").value, ...macros, date: selected });
+      if ($("qa-name").value.trim()) addCustomFood({ name, serving: "1 serving", ...macros }); // save to your foods
       closePicker();
     }
   });

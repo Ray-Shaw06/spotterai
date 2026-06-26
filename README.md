@@ -181,7 +181,8 @@ A persistent, gamified tracker that turns SpotterAI into something you come back
 to — **entirely client-side** (`localStorage`), no account, no backend.
 
 - **Workout logging (Hevy-style)** — start a live **session**, add exercises from
-  a searchable library, log each **set** (weight × reps) with a "previous"
+  a searchable library (or type **any custom exercise** — it's saved to your
+  library and reappears in search), log each **set** (weight × reps) with a "previous"
   reference and a running duration timer, then finish for XP. Save **routines**,
   start a session from your AI plan, and browse an expandable **history**. An
   auto-saved draft means a refresh mid-workout doesn't lose your sets.
@@ -195,7 +196,8 @@ to — **entirely client-side** (`localStorage`), no account, no backend.
   carbs / fat) shown as a calories-remaining ring + macro bars, a **food search**
   (built-in common foods + free **Open Food Facts** online lookup) with
   servings/quantity, **recent foods**, **quick add**, **water tracking**, and
-  day-to-day navigation.
+  day-to-day navigation. Anything you log — a **custom food** or an online pick —
+  is saved to your foods and stays searchable (and syncs).
 - **Progress charts** — weekly-volume bars and a bodyweight trend line, drawn with
   hand-rolled **SVG (no chart library)** in [`charts.js`](charts.js).
 - **The coach sees all of it.** The tracker is summarized by

@@ -20,6 +20,8 @@ const DEFAULTS = {
   targets: { kcal: 2200, protein: 140, carbs: 250, fat: 70, weeklyWorkouts: 4, waterMl: 2500 },
   achievements: [], // unlocked ids
   routines: [], // saved workout templates
+  customExercises: [], // user-added exercises { name, muscle }
+  customFoods: [], // user-added foods { name, serving, kcal, protein, carbs, fat }
   water: {}, // { 'YYYY-MM-DD': ml }
   unit: "kg",
 };
@@ -82,6 +84,8 @@ export function importData(obj) {
     bodyweight: Array.isArray(incoming.bodyweight) ? incoming.bodyweight : [],
     achievements: Array.isArray(incoming.achievements) ? incoming.achievements : [],
     routines: Array.isArray(incoming.routines) ? incoming.routines : [],
+    customExercises: Array.isArray(incoming.customExercises) ? incoming.customExercises : [],
+    customFoods: Array.isArray(incoming.customFoods) ? incoming.customFoods : [],
     water: incoming.water && typeof incoming.water === "object" ? incoming.water : {},
     updatedAt: incoming.updatedAt || Date.now(),
   };
@@ -269,6 +273,50 @@ export function getRecentFoods(limit = 8) {
     if (out.length >= limit) break;
   }
   return out;
+}
+
+// --- Custom library (exercises + foods you add stick around, synced) --------
+export function addCustomExercise({ name, muscle } = {}) {
+  const n = String(name || "").trim();
+  if (!n || state.customExercises.some((e) => e.name.toLowerCase() === n.toLowerCase())) return;
+  state.customExercises.push({ name: n, muscle: muscle || "" });
+  persist();
+}
+export function getCustomExercises() {
+  return state.customExercises || [];
+}
+
+/** Distinct exercise names from logged workouts (so anything logged stays findable). */
+export function getLoggedExerciseNames() {
+  const seen = new Set();
+  const out = [];
+  for (let i = state.workouts.length - 1; i >= 0; i--) {
+    for (const e of state.workouts[i].exercises || []) {
+      const k = String(e.name).toLowerCase();
+      if (!seen.has(k)) {
+        seen.add(k);
+        out.push({ name: e.name, muscle: e.muscle || "" });
+      }
+    }
+  }
+  return out;
+}
+
+export function addCustomFood(food = {}) {
+  const n = String(food.name || "").trim();
+  if (!n || state.customFoods.some((f) => f.name.toLowerCase() === n.toLowerCase())) return;
+  state.customFoods.push({
+    name: n,
+    serving: food.serving || "1 serving",
+    kcal: Math.max(0, Math.round(Number(food.kcal) || 0)),
+    protein: Math.max(0, Number(food.protein) || 0),
+    carbs: Math.max(0, Number(food.carbs) || 0),
+    fat: Math.max(0, Number(food.fat) || 0),
+  });
+  persist();
+}
+export function getCustomFoods() {
+  return state.customFoods || [];
 }
 
 export function addBodyweight({ value, date } = {}) {

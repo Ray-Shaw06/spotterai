@@ -101,16 +101,121 @@ const RAW = [
   ["Orange juice", "250 ml", 112, 1.7, 26, 0.5],
   ["Beer", "1 can (355 ml)", 153, 1.6, 13, 0],
   ["Soda, cola", "1 can (355 ml)", 140, 0, 39, 0],
+
+  // --- Extended list ---
+  // Protein
+  ["Ground turkey, cooked", "100 g", 203, 27, 0, 10],
+  ["Ham, deli", "1 slice", 30, 5, 1, 1],
+  ["Sausage, pork", "1 link", 180, 9, 1, 16],
+  ["Tilapia, cooked", "100 g", 128, 26, 0, 3],
+  ["Mackerel, cooked", "100 g", 262, 24, 0, 18],
+  ["Sardines, canned", "100 g", 208, 25, 0, 11],
+  ["Scallops, cooked", "100 g", 137, 24, 6, 1],
+  ["Seitan", "100 g", 143, 25, 14, 2],
+  ["Edamame", "100 g", 122, 11, 10, 5],
+  ["Kidney beans, cooked", "100 g", 127, 9, 23, 0.5],
+  ["Falafel", "1 piece", 57, 2, 5, 3],
+  ["Protein yogurt", "150 g", 110, 15, 9, 2],
+  ["Beef jerky", "30 g", 116, 9, 7, 7],
+  // Grains / carbs
+  ["Ramen noodles", "1 pack", 380, 8, 52, 14],
+  ["Naan", "1 piece", 262, 9, 45, 5],
+  ["Pita bread", "1 piece", 165, 6, 33, 1],
+  ["English muffin", "1 muffin", 134, 5, 26, 1],
+  ["Croissant", "1 medium", 231, 5, 26, 12],
+  ["Pancake", "1 medium", 90, 2.5, 11, 4],
+  ["Waffle", "1 waffle", 218, 6, 25, 11],
+  ["Rice cake", "1 cake", 35, 0.7, 7, 0.3],
+  ["Crackers", "5 crackers", 80, 1, 11, 3.5],
+  ["Popcorn, air-popped", "30 g", 110, 3, 22, 1.3],
+  ["Gnocchi", "100 g", 130, 3, 27, 1],
+  // Fruit
+  ["Pear", "1 medium", 101, 0.6, 27, 0.2],
+  ["Peach", "1 medium", 59, 1.4, 14, 0.4],
+  ["Kiwi", "1 medium", 42, 0.8, 10, 0.4],
+  ["Cherries", "100 g", 63, 1, 16, 0.2],
+  ["Raspberries", "100 g", 52, 1.2, 12, 0.7],
+  ["Dates", "1 date", 66, 0.4, 18, 0],
+  ["Raisins", "30 g", 90, 1, 22, 0.1],
+  ["Cantaloupe", "100 g", 34, 0.8, 8, 0.2],
+  ["Grapefruit", "1/2 medium", 52, 1, 13, 0.2],
+  ["Pomegranate", "100 g", 83, 1.7, 19, 1.2],
+  // Vegetables
+  ["Zucchini", "100 g", 17, 1.2, 3, 0.3],
+  ["Cauliflower", "100 g", 25, 1.9, 5, 0.3],
+  ["Asparagus", "100 g", 20, 2.2, 4, 0.1],
+  ["Mushrooms", "100 g", 22, 3.1, 3, 0.3],
+  ["Onion", "100 g", 40, 1.1, 9, 0.1],
+  ["Kale", "100 g", 49, 4.3, 9, 0.9],
+  ["Brussels sprouts", "100 g", 43, 3.4, 9, 0.3],
+  ["Peas, cooked", "100 g", 84, 5.4, 16, 0.4],
+  ["Beets, cooked", "100 g", 44, 1.7, 10, 0.2],
+  // Dairy
+  ["Skyr", "150 g", 95, 17, 6, 0.3],
+  ["Ricotta, part-skim", "100 g", 138, 11, 5, 8],
+  ["Parmesan", "1 tbsp", 22, 2, 0.2, 1.4],
+  ["Feta", "30 g", 79, 4, 1, 6],
+  ["Cream cheese", "1 tbsp", 51, 1, 0.8, 5],
+  ["Ice cream, vanilla", "100 g", 207, 3.5, 24, 11],
+  ["Almond milk, unsweetened", "250 ml", 30, 1, 1, 2.5],
+  ["Soy milk", "250 ml", 100, 7, 8, 4],
+  ["Oat milk", "250 ml", 120, 3, 16, 5],
+  // Fats / nuts / spreads
+  ["Pistachios", "30 g", 159, 6, 8, 13],
+  ["Pecans", "30 g", 196, 2.6, 4, 20],
+  ["Sunflower seeds", "30 g", 165, 5.5, 7, 14],
+  ["Pumpkin seeds", "30 g", 151, 9, 5, 13],
+  ["Flaxseed, ground", "1 tbsp", 37, 1.3, 2, 3],
+  ["Tahini", "1 tbsp", 89, 2.6, 3, 8],
+  ["Coconut oil", "1 tbsp", 121, 0, 0, 14],
+  ["Mayonnaise", "1 tbsp", 94, 0.1, 0.1, 10],
+  // Meals / snacks
+  ["Mac and cheese", "1 cup", 376, 13, 47, 15],
+  ["Lasagna", "1 serving", 336, 19, 30, 16],
+  ["Chicken curry", "1 serving", 293, 22, 12, 18],
+  ["Pad thai", "1 serving", 400, 17, 47, 17],
+  ["Burrito, bean & cheese", "1 burrito", 380, 14, 55, 12],
+  ["Caesar salad", "1 serving", 280, 9, 12, 22],
+  ["Scrambled eggs (2)", "2 eggs", 180, 12, 2, 14],
+  ["French toast", "1 slice", 149, 5, 16, 7],
+  ["Smoothie, fruit", "1 medium", 220, 4, 48, 2],
+  ["Donut, glazed", "1 donut", 240, 4, 27, 14],
+  ["Muffin, blueberry", "1 muffin", 265, 4, 37, 11],
+  ["Cookie, chocolate chip", "1 cookie", 78, 0.9, 10, 4],
+  ["Brownie", "1 piece", 132, 1.7, 18, 6],
+  ["Cheesecake", "1 slice", 321, 6, 26, 22],
+  ["Energy drink", "1 can (250 ml)", 110, 0, 28, 0],
+  ["Sports drink", "500 ml", 125, 0, 35, 0],
+  ["Wine, red", "1 glass (150 ml)", 125, 0, 4, 0],
+  ["Cappuccino", "1 medium", 120, 6, 12, 4],
+  ["Green tea", "1 cup", 2, 0, 0.5, 0],
 ];
 
 export const FOODS = RAW.map(([name, serving, kcal, protein, carbs, fat]) => ({ name, serving, kcal, protein, carbs, fat, source: "builtin" }));
 
-/** Search the built-in foods (ranked: prefix > word-start > substring). */
-export function searchFoods(query, limit = 25) {
+function dedupeFoods(list) {
+  const seen = new Set();
+  const out = [];
+  for (const f of list) {
+    const k = f.name.toLowerCase();
+    if (!seen.has(k)) {
+      seen.add(k);
+      out.push(f);
+    }
+  }
+  return out;
+}
+
+/**
+ * Search foods, optionally merging in `extra` (the user's saved custom foods)
+ * so anything logged once stays searchable. Ranked: prefix > word-start > substring.
+ */
+export function searchFoods(query, limit = 25, extra = []) {
+  const pool = extra && extra.length ? dedupeFoods([...extra, ...FOODS]) : FOODS;
   const q = String(query || "").trim().toLowerCase();
-  if (!q) return FOODS.slice(0, limit);
+  if (!q) return pool.slice(0, limit);
   const scored = [];
-  for (const f of FOODS) {
+  for (const f of pool) {
     const n = f.name.toLowerCase();
     let score = -1;
     if (n.startsWith(q)) score = 0;
