@@ -80,7 +80,7 @@ function renderRank(s) {
         <span class="rank-streak" title="Day streak">${icon("flame")} ${s.streakDays}-day streak</span>
       </div>
       <div class="rank-bar"><span style="width:${(progress * 100).toFixed(1)}%; background:${tier.color}"></span></div>
-      <p class="rank-next">${next ? `${xpForNext.toLocaleString()} XP to <strong>${esc(next.name)}</strong>` : "Top rank reached — Champion 🏆"}</p>
+      <p class="rank-next">${next ? `${xpForNext.toLocaleString()} XP to <strong>${esc(next.name)}</strong>` : "Top rank reached — Champion"}</p>
     </div>`;
 }
 
@@ -143,7 +143,7 @@ function renderDeload() {
   }
   els.deload.hidden = false;
   els.deload.innerHTML = `
-    <span class="deload-flag__icon" aria-hidden="true">⚠️</span>
+    <span class="deload-flag__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4m0 4h.01" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     <p class="deload-flag__text">${esc(d.reason)}</p>
     <button type="button" class="deload-flag__dismiss" data-act="deload-dismiss" aria-label="Dismiss">×</button>`;
 }

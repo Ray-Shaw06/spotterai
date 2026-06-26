@@ -69,6 +69,7 @@
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
       </button>
       <nav id="primary-nav" class="site-header__nav" aria-label="Primary">
+        <span class="nav-pill" aria-hidden="true"></span>
         <a href="#/" data-nav="home" class="nav-link">Plan</a>
         <a href="#/dashboard" data-nav="dashboard" class="nav-link">Dashboard</a>
         <a href="#/nutrition" data-nav="nutrition" class="nav-link">Nutrition</a>
@@ -262,17 +263,23 @@
           <!-- LOADING STATE (branded skeleton) -->
           <div class="state state--loading" id="state-loading" hidden>
             <div class="loading-head">
-              <span class="spinner" aria-hidden="true"></span>
               <div>
                 <p class="loading-title" id="loading-title">Generating your program…</p>
                 <p class="loading-step" id="loading-step">Asking the coach for a draft</p>
               </div>
             </div>
-            <div class="skeleton-gauge" aria-hidden="true"></div>
-            <div class="skeleton-rows" aria-hidden="true">
-              <span class="skeleton-row"></span>
-              <span class="skeleton-row"></span>
-              <span class="skeleton-row"></span>
+            <div class="card skel-card skel-score" aria-hidden="true">
+              <div class="skel-ring"></div>
+              <div class="skel-lines">
+                <span class="skel-line" style="width: 35%"></span>
+                <span class="skel-line" style="width: 80%"></span>
+                <span class="skel-line" style="width: 62%"></span>
+              </div>
+            </div>
+            <div class="skel-days" aria-hidden="true">
+              <div class="card skel-card skel-day"><span class="skel-line skel-line--head"></span><span class="skel-line"></span><span class="skel-line"></span><span class="skel-line" style="width: 70%"></span></div>
+              <div class="card skel-card skel-day"><span class="skel-line skel-line--head"></span><span class="skel-line"></span><span class="skel-line"></span><span class="skel-line" style="width: 58%"></span></div>
+              <div class="card skel-card skel-day"><span class="skel-line skel-line--head"></span><span class="skel-line"></span><span class="skel-line"></span><span class="skel-line" style="width: 76%"></span></div>
             </div>
             <p class="sr-only">Generating and auditing your plan, please wait.</p>
           </div>
@@ -430,7 +437,9 @@
           </div>
           <form id="quicklog-form" class="quicklog__form">
             <input id="quicklog-input" class="input quicklog__input" placeholder="Log a workout or a meal…" autocomplete="off" />
-            <button type="button" id="quicklog-mic" class="quicklog__mic" aria-label="Log by voice" title="Log by voice">🎤</button>
+            <button type="button" id="quicklog-mic" class="quicklog__mic" aria-label="Log by voice" title="Log by voice">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            </button>
             <button type="submit" id="quicklog-send" class="btn btn--primary btn--sm">Log</button>
           </form>
           <div id="quicklog-result" class="quicklog__result" hidden></div>
@@ -441,7 +450,7 @@
           <div class="card dash-rankcard">
             <div id="dash-rank"></div>
             <div id="dash-stats" class="dash-stats"></div>
-            <button type="button" id="share-progress" class="btn btn--ghost btn--sm dash-share">📤 Share progress card</button>
+            <button type="button" id="share-progress" class="btn btn--ghost btn--sm dash-share">Share progress card</button>
           </div>
 
           <!-- Workout session (Hevy-style) -->
@@ -472,7 +481,7 @@
 
               <div id="session-exercises" class="session-exercises"></div>
               <button type="button" id="session-add-exercise" class="btn btn--ghost btn--sm session-add">+ Add exercise</button>
-              <button type="button" id="session-tools-toggle" class="btn btn--ghost btn--sm session-add">🧮 Tools — plate &amp; 1RM</button>
+              <button type="button" id="session-tools-toggle" class="btn btn--ghost btn--sm session-add">Tools — plate &amp; 1RM</button>
 
               <!-- Lifting tools (plate calculator + 1RM estimate) -->
               <div id="session-tools" class="session-tools" hidden>
@@ -879,6 +888,7 @@
   </section>
 
   <script type="module" src="router.js"></script>
+  <script type="module" src="nav-pill.js"></script>
   <script type="module" src="auth-ui.js"></script>
   <script type="module" src="app.js"></script>
   <script type="module" src="chat.js"></script>
