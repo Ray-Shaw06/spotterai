@@ -217,6 +217,11 @@ the same hardened Gemini client and the 429 / timeout fallbacks as the generator
 A persistent, gamified tracker that turns SpotterAI into something you come back
 to — **entirely client-side** (`localStorage`), no account, no backend.
 
+- **Quick log (natural language + voice)** — type or **speak** a plain-English note
+  like *"bench 3×5 at 60kg"* or *"ate a chicken burrito and a banana"* and it's
+  parsed ([`/api/parse`](api/parse.js)) into a structured workout or meal (with
+  macros estimated for food). You **confirm a preview** before anything is saved —
+  the AI proposes, you approve. Voice uses the browser's Web Speech API.
 - **Workout logging (Hevy-style)** — start a live **session**, add exercises from
   a searchable library (or type **any custom exercise** — machine, dumbbell, or
   barbell — and the AI auto-tags its **muscle group** and whether it's cardio so it
@@ -287,12 +292,13 @@ to — **entirely client-side** (`localStorage`), no account, no backend.
   type scale) in CSS variables; [Space Grotesk + Inter](https://fonts.google.com)
   via Google Fonts; an animated, pure-SVG safety-score ring. No UI kit, no paid
   assets.
-- **Backend:** four Node.js serverless functions — `api/generate.js` (plan
+- **Backend:** five Node.js serverless functions — `api/generate.js` (plan
   generation), `api/adapt.js` (re-tune a plan from logged training), `api/chat.js`
-  (coach chatbot), and `api/estimate.js` (AI food-macro + exercise-classification
-  estimates) — that proxy Google **Gemini** (free Flash model) and hold the API
-  key. They share one hardened Gemini client (`lib/gemini.js`) and one plan schema
-  (`lib/plan.js`), each with their defining concern in a single place. Native `fetch`,
+  (coach chatbot), `api/estimate.js` (AI food-macro/photo + exercise-classification
+  estimates), and `api/parse.js` (natural-language quick-log → structured entry) —
+  that proxy Google **Gemini** (free Flash model) and hold the API key. They share
+  one hardened Gemini client (`lib/gemini.js`) and one plan schema (`lib/plan.js`),
+  each with their defining concern in a single place. Native `fetch`,
   **zero dependencies**.
 - **On-device computer vision:** **MediaPipe Tasks Vision** (pose estimation),
   loaded from a free CDN and run entirely in the browser for the real-time form
@@ -328,6 +334,7 @@ spotterai/
 ├─ nutrition-ui.js        # MyFitnessPal-style food diary (meals, macros, water)
 ├─ foods.js               # built-in food DB + Open Food Facts search
 ├─ ai.js                  # client for /api/estimate (AI food macros + exercise tags)
+├─ quick-log.js           # natural-language + voice quick logging (→ /api/parse)
 ├─ demo-data.js           # one-click "Load demo data" (isolated Demo profile)
 
 ├─ router.js              # hash-based page router (Plan/Dashboard/Nutrition/…)
@@ -339,7 +346,8 @@ spotterai/
 │  ├─ generate.js         # serverless Gemini proxy — plan generation (holds key)
 │  ├─ adapt.js            # serverless Gemini proxy — re-tune plan from training
 │  ├─ chat.js             # serverless Gemini proxy — coach chatbot
-│  └─ estimate.js         # serverless Gemini proxy — food macros (text or photo) + exercise tags
+│  ├─ estimate.js         # serverless Gemini proxy — food macros (text or photo) + exercise tags
+│  └─ parse.js            # serverless Gemini proxy — natural-language quick-log parser
 ├─ lib/
 │  ├─ gemini.js           # shared, hardened Gemini client (model name lives here)
 │  └─ plan.js             # shared plan schema + parse/validate/normalize

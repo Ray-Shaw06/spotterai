@@ -10,6 +10,9 @@
     },
     "api/adapt.js": {
       "maxDuration": 60
+    },
+    "api/parse.js": {
+      "maxDuration": 30
     }
   }
 }

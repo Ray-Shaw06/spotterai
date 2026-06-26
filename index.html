@@ -397,6 +397,20 @@
           </p>
         </header>
 
+        <!-- Quick log (natural language + voice) -->
+        <div class="card quicklog" id="quicklog">
+          <div class="quicklog__head">
+            <h3 class="card-title">Quick log <span class="quicklog__badge">AI</span></h3>
+            <p class="quicklog__hint">Type or say it in plain English — e.g. “bench 3×5 at 60kg” or “ate a chicken burrito and a banana”. You confirm before it's saved.</p>
+          </div>
+          <form id="quicklog-form" class="quicklog__form">
+            <input id="quicklog-input" class="input quicklog__input" placeholder="Log a workout or a meal…" autocomplete="off" />
+            <button type="button" id="quicklog-mic" class="quicklog__mic" aria-label="Log by voice" title="Log by voice">🎤</button>
+            <button type="submit" id="quicklog-send" class="btn btn--primary btn--sm">Log</button>
+          </form>
+          <div id="quicklog-result" class="quicklog__result" hidden></div>
+        </div>
+
         <div class="dash-grid">
           <!-- Rank card -->
           <div class="card dash-rankcard">
@@ -782,6 +796,7 @@
   <script type="module" src="tracker-ui.js"></script>
   <script type="module" src="workout-ui.js"></script>
   <script type="module" src="nutrition-ui.js"></script>
+  <script type="module" src="quick-log.js"></script>
 
   <!-- Register the service worker (installable PWA + offline). Non-fatal. -->
   <script>
