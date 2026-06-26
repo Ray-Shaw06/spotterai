@@ -28,6 +28,7 @@ const els = {
   importInput: $("account-import"),
   syncBody: $("sync-body"),
   demo: $("account-demo"),
+  heroDemo: $("hero-demo"),
 };
 
 function esc(t) {
@@ -172,6 +173,24 @@ function flash(near, msg) {
   setTimeout(() => note.remove(), 3000);
 }
 
+// Seed the isolated "Demo" profile, then jump to the dashboard.
+async function runDemo(btn) {
+  if (!btn) return;
+  const prev = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Loading demo…";
+  try {
+    await seedDemo();
+    closeModal();
+    location.hash = "#/dashboard";
+  } catch {
+    flash(btn, "Couldn't load the demo. Please try again.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prev;
+  }
+}
+
 // ----------------------------------------------------------------------------
 // Wiring
 // ----------------------------------------------------------------------------
@@ -228,20 +247,9 @@ function init() {
   });
 
   // Load demo data into an isolated "Demo" profile, then jump to the dashboard.
-  els.demo?.addEventListener("click", async () => {
-    els.demo.disabled = true;
-    els.demo.textContent = "Loading demo…";
-    try {
-      await seedDemo();
-      closeModal();
-      location.hash = "#/dashboard";
-    } catch {
-      flash(els.demo, "Couldn't load the demo. Please try again.");
-    } finally {
-      els.demo.disabled = false;
-      els.demo.textContent = "Load demo data";
-    }
-  });
+  // Triggerable from the account modal AND the hero "Try the live demo" button.
+  els.demo?.addEventListener("click", () => runDemo(els.demo));
+  els.heroDemo?.addEventListener("click", () => runDemo(els.heroDemo));
 
   // Keep header + modal in sync when the profile changes.
   subscribe(() => {

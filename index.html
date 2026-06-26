@@ -17,10 +17,21 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta name="apple-mobile-web-app-title" content="SpotterAI" />
 
-  <!-- Open Graph (nice link previews; all text, no paid assets) -->
-  <meta property="og:title" content="SpotterAI — the AI coach that audits itself" />
-  <meta property="og:description" content="An AI workout coach, plus a code-based system that audits the AI's plans for unsafe advice." />
+  <!-- Open Graph + Twitter — rich link previews. NOTE: if your deployed domain
+       isn't spotterai.vercel.app, update the two absolute URLs below. -->
+  <meta property="og:site_name" content="SpotterAI" />
   <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://spotterai.vercel.app/" />
+  <meta property="og:title" content="SpotterAI — an AI coach that audits its own safety" />
+  <meta property="og:description" content="It writes your training plan, then a code-based evaluator scores it for safety — flagging risky or low-quality programming before you trust it. $0, no signup, runs on-device." />
+  <meta property="og:image" content="https://spotterai.vercel.app/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="1200" />
+  <meta property="og:image:alt" content="SpotterAI — an AI coach that audits its own safety, showing a plan safety score of 86 out of 100." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="SpotterAI — an AI coach that audits its own safety" />
+  <meta name="twitter:description" content="AI writes your plan; code-based evals score it for safety before you trust it. $0, no signup, on-device." />
+  <meta name="twitter:image" content="https://spotterai.vercel.app/og-image.png" />
 
   <!-- Favicon: an inline SVG shield-check in the brand red (zero external assets) -->
   <link
@@ -65,6 +76,9 @@
         <a href="#/form-check" data-nav="form-check" class="nav-link">Form check</a>
         <a href="#/evals" data-nav="evals" class="nav-link">Evals</a>
       </nav>
+      <a class="header-gh" href="https://github.com/Ray-Shaw06/spotterai" target="_blank" rel="noopener" aria-label="View source on GitHub" title="View source on GitHub">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.7 18 5 18 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z" /></svg>
+      </a>
       <button id="profile-btn" class="profile-btn" aria-haspopup="dialog" aria-expanded="false">
         <span id="profile-avatar" class="profile-btn__avatar" aria-hidden="true">G</span>
         <span id="profile-name" class="profile-btn__name">Guest</span>
@@ -92,9 +106,12 @@
           low-quality programming before you ever trust it.
         </p>
         <div class="hero__actions">
-          <a href="#generator" class="btn btn--primary">Build my plan</a>
-          <a href="#how-it-works" class="btn btn--ghost">See how it works</a>
+          <button type="button" id="hero-demo" class="btn btn--primary">Try the live demo</button>
+          <a href="#generator" class="btn btn--ghost">Build my own plan</a>
         </div>
+        <p class="hero__trust">
+          <span>✓ $0 to run</span><span>✓ no signup</span><span>✓ runs on your device</span><span>✓ <a href="#/evals" data-nav="evals">see the safety evals</a></span>
+        </p>
 
         <!-- Three quick value props -->
         <ul class="hero__stats" aria-label="What SpotterAI does">

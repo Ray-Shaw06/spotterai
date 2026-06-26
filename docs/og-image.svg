@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+  <defs>
+    <radialGradient id="glow" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#ff3b3b" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ff3b3b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="1200" fill="#0a0b0d"/>
+  <rect width="1200" height="1200" fill="url(#glow)"/>
+  <rect x="24" y="24" width="1152" height="1152" rx="36" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
+
+  <!-- Wordmark -->
+  <g transform="translate(84,96)">
+    <path d="M22 2l20 7.5v17.5c0 12.5-8.5 21.5-20 26C10.5 48.5 2 39.5 2 27V9.5L22 2z" fill="none" stroke="#ff3b3b" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M12 27l7 7 13-16" fill="none" stroke="#ff3b3b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="62" y="40" fill="#ffffff" font-size="42" font-weight="700" letter-spacing="-0.5">Spotter<tspan fill="#ff3b3b">AI</tspan></text>
+  </g>
+
+  <!-- Eyebrow -->
+  <text x="86" y="300" fill="#9aa4b2" font-size="26" font-weight="600" letter-spacing="2.5">AI GENERATION · CODE-BASED SAFETY AUDIT</text>
+
+  <!-- Headline -->
+  <text x="82" y="400" fill="#ffffff" font-size="92" font-weight="700" letter-spacing="-2">An AI coach that</text>
+  <text x="82" y="500" fill="#ff3b3b" font-size="92" font-weight="700" letter-spacing="-2">audits its own safety</text>
+
+  <!-- Subtitle -->
+  <text x="86" y="586" fill="#b6bcc6" font-size="33" font-weight="400">It writes your training plan — then code-based evals</text>
+  <text x="86" y="632" fill="#b6bcc6" font-size="33" font-weight="400">score it for safety before you ever trust it.</text>
+
+  <!-- Gauge -->
+  <g transform="translate(300,860)">
+    <circle r="150" fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="26"/>
+    <path d="M 0 -150 A 150 150 0 1 1 -115.6 -95.6" fill="none" stroke="#34d399" stroke-width="26" stroke-linecap="round"/>
+    <text x="-72" y="42" fill="#ffffff" font-size="132" font-weight="700">86</text>
+    <text x="-118" y="100" fill="#9aa4b2" font-size="30" font-weight="500">/ 100 · plan safety</text>
+  </g>
+
+  <!-- What the auditor checks -->
+  <g transform="translate(560,770)" fill="#d4d8df" font-size="34" font-weight="500">
+    <text x="38" y="0">Rest &amp; recovery</text>
+    <text x="38" y="62">Weekly volume sanity</text>
+    <text x="38" y="124">Push / pull balance</text>
+    <text x="38" y="186">Injury contraindications</text>
+    <path d="M0 -11 l8 8 14 -16 M0 51 l8 8 14 -16 M0 113 l8 8 14 -16 M0 175 l8 8 14 -16"
+      fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Trust strip -->
+  <text x="86" y="1086" fill="#7a828e" font-size="29" font-weight="500">$0 to run  ·  no signup  ·  runs on-device  ·  open source</text>
+</svg>
