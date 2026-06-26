@@ -20,7 +20,7 @@ const DEFAULTS = {
   targets: { kcal: 2200, protein: 140, carbs: 250, fat: 70, weeklyWorkouts: 4, waterMl: 2500 },
   achievements: [], // unlocked ids
   routines: [], // saved workout templates
-  customExercises: [], // user-added exercises { name, muscle }
+  customExercises: [], // user-added exercises { name, muscle, cardio }
   customFoods: [], // user-added foods { name, serving, kcal, protein, carbs, fat }
   water: {}, // { 'YYYY-MM-DD': ml }
   unit: "kg",
@@ -276,10 +276,10 @@ export function getRecentFoods(limit = 8) {
 }
 
 // --- Custom library (exercises + foods you add stick around, synced) --------
-export function addCustomExercise({ name, muscle } = {}) {
+export function addCustomExercise({ name, muscle, cardio } = {}) {
   const n = String(name || "").trim();
   if (!n || state.customExercises.some((e) => e.name.toLowerCase() === n.toLowerCase())) return;
-  state.customExercises.push({ name: n, muscle: muscle || "" });
+  state.customExercises.push({ name: n, muscle: muscle || "", cardio: cardio === true });
   persist();
 }
 export function getCustomExercises() {

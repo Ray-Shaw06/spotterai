@@ -11,6 +11,7 @@
 
 import { addCustomFood, addNutrition, addWater, getCustomFoods, getRecentFoods, getState, getWater, removeEntry, resetAll, setTargets, subscribe } from "./tracker-store.js";
 import { searchFoods, searchOpenFoodFacts } from "./foods.js";
+import { estimateFood } from "./ai.js";
 import { ring } from "./charts.js";
 
 const $ = (id) => document.getElementById(id);
@@ -55,6 +56,7 @@ function ymd(d) {
 let selected = ymd(new Date());
 let pickerMeal = "breakfast";
 let offController = null;
+let aiController = null;
 
 // ----------------------------------------------------------------------------
 // Day data
@@ -177,6 +179,7 @@ function closePicker() {
   el.picker.classList.remove("is-open");
   el.picker.setAttribute("aria-hidden", "true");
   if (offController) offController.abort();
+  if (aiController) aiController.abort();
 }
 
 function foodOptHtml(f, source) {
@@ -188,8 +191,14 @@ function foodOptHtml(f, source) {
 
 function renderResults(q) {
   const builtin = searchFoods(q, 25, getCustomFoods());
+  const query = q.trim();
   let html = "";
-  if (!q.trim()) {
+  // Estimate-anything: turn whatever the user typed into macros via the AI.
+  if (query) {
+    html += `<li><button type="button" class="food-opt food-opt--ai" data-act="ai-estimate">
+      <span class="food-opt__main"><span class="food-opt__name">Estimate “${esc(query)}” with AI</span><span class="food-opt__sub">calories &amp; macros for anything you type</span></span>
+      <span class="food-opt__tag food-opt__tag--ai">AI</span></button></li>`;
+  } else {
     const recent = getRecentFoods(8);
     if (recent.length) html += `<li class="food-grouplabel">Recent</li>` + recent.map((f) => foodOptHtml({ ...f, serving: f.unit || "1 serving" }, "recent")).join("");
     html += `<li class="food-grouplabel">Common foods</li>`;
@@ -199,7 +208,38 @@ function renderResults(q) {
   el.results.innerHTML = html;
 
   // Online lookup (debounced via the input handler; this just kicks it off).
-  if (q.trim().length >= 2) searchOnline(q.trim());
+  if (query.length >= 2) searchOnline(query);
+}
+
+// AI estimate: ask the server to turn the free-text food into macros, then show
+// the normal serving detail (editable by servings). Falls back to manual quick
+// add if the AI is unavailable (e.g. static preview with no backend).
+async function aiEstimate(query) {
+  if (!query) return;
+  if (aiController) aiController.abort();
+  if (offController) offController.abort();
+  aiController = new AbortController();
+  showDetailLoading(query);
+  try {
+    const food = await estimateFood(query, aiController.signal);
+    showDetail(food);
+  } catch (e) {
+    if (e.name === "AbortError") return;
+    showDetail(null, true, { name: query, note: "Couldn't reach the AI — enter the macros yourself, or try again." });
+  }
+}
+
+function showDetailLoading(query) {
+  el.search.parentElement.hidden = true;
+  el.results.hidden = true;
+  el.detail.hidden = false;
+  el.detail.innerHTML = `
+    <button type="button" class="detail-back" data-act="detail-back">← Back</button>
+    <div class="detail-loading">
+      <span class="spinner" aria-hidden="true"></span>
+      <p>Estimating <strong>${esc(query)}</strong>…</p>
+      <p class="muted">Asking the AI for calories &amp; macros.</p>
+    </div>`;
 }
 
 let onlineTimer = null;
@@ -226,7 +266,7 @@ function searchOnline(q) {
 
 // Food detail (quantity + meal + macro preview)
 let detailFood = null;
-function showDetail(food, quick = false) {
+function showDetail(food, quick = false, opts = {}) {
   detailFood = food;
   el.search.parentElement.hidden = true;
   el.results.hidden = true;
@@ -235,7 +275,8 @@ function showDetail(food, quick = false) {
   if (quick) {
     el.detail.innerHTML = `
       <button type="button" class="detail-back" data-act="detail-back">← Back</button>
-      <input id="qa-name" class="input" placeholder="Food name" autocomplete="off" />
+      ${opts.note ? `<p class="detail-note">${esc(opts.note)}</p>` : ""}
+      <input id="qa-name" class="input" placeholder="Food name" autocomplete="off" value="${esc(opts.name || "")}" />
       <div class="detail-grid">
         <label class="field-label-sm">Calories<input id="qa-kcal" class="input" type="number" inputmode="numeric" /></label>
         <label class="field-label-sm">Protein (g)<input id="qa-protein" class="input" type="number" inputmode="decimal" /></label>
@@ -244,7 +285,7 @@ function showDetail(food, quick = false) {
       </div>
       <label class="field-label-sm">Meal<select id="detail-meal" class="form-select">${mealOpts}</select></label>
       <button type="button" class="btn btn--primary btn--block" data-act="quick-save">Add</button>`;
-    setTimeout(() => $("qa-name")?.focus(), 0);
+    setTimeout(() => (opts.name ? $("qa-kcal") : $("qa-name"))?.focus(), 0);
     return;
   }
   el.detail.innerHTML = `
@@ -299,12 +340,14 @@ function init() {
   });
   el.search?.addEventListener("input", () => renderResults(el.search.value));
   el.results?.addEventListener("click", (e) => {
+    if (e.target.closest('[data-act="ai-estimate"]')) return aiEstimate(el.search.value.trim());
     if (e.target.closest('[data-act="quick-add"]')) return showDetail(null, true);
     const opt = e.target.closest(".food-opt");
     if (opt?.dataset.food) showDetail(JSON.parse(opt.dataset.food));
   });
   el.detail?.addEventListener("click", (e) => {
     if (e.target.closest('[data-act="detail-back"]')) {
+      if (aiController) aiController.abort();
       el.detail.hidden = true;
       el.results.hidden = false;
       el.search.parentElement.hidden = false;
@@ -313,7 +356,7 @@ function init() {
       const f = detailFood;
       const meal = $("detail-meal").value;
       addNutrition({ name: f.name, meal, qty, unit: f.serving || "serving", kcal: f.kcal * qty, protein: f.protein * qty, carbs: f.carbs * qty, fat: f.fat * qty, date: selected });
-      if (f.source === "off") addCustomFood(f); // remember online foods for offline reuse
+      if (f.source === "off" || f.source === "ai") addCustomFood(f); // remember online/AI foods for instant reuse
       closePicker();
     } else if (e.target.closest('[data-act="quick-save"]')) {
       const name = $("qa-name").value.trim() || "Quick add";

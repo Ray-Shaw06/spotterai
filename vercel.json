@@ -4,6 +4,9 @@
   "functions": {
     "api/generate.js": {
       "maxDuration": 60
+    },
+    "api/estimate.js": {
+      "maxDuration": 30
     }
   }
 }

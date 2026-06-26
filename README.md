@@ -181,11 +181,13 @@ A persistent, gamified tracker that turns SpotterAI into something you come back
 to — **entirely client-side** (`localStorage`), no account, no backend.
 
 - **Workout logging (Hevy-style)** — start a live **session**, add exercises from
-  a searchable library (or type **any custom exercise** — it's saved to your
-  library and reappears in search), log each **set** (weight × reps) with a "previous"
-  reference and a running duration timer, then finish for XP. Save **routines**,
-  start a session from your AI plan, and browse an expandable **history**. An
-  auto-saved draft means a refresh mid-workout doesn't lose your sets.
+  a searchable library (or type **any custom exercise** — machine, dumbbell, or
+  barbell — and the AI auto-tags its **muscle group** and whether it's cardio so it
+  logs correctly; it's saved to your library and reappears in search), log each
+  **set** (weight × reps) with a "previous" reference and a running duration timer,
+  then finish for XP. Save **routines**, start a session from your AI plan, and
+  browse an expandable **history**. An auto-saved draft means a refresh
+  mid-workout doesn't lose your sets.
 - **Rank ladder & XP** — earn XP per workout (scaled by volume), level up, and
   climb tiers **Newcomer → Bronze → Silver → Gold → Platinum → Diamond →
   Champion**. All the game design lives in [`gamify.js`](gamify.js).
@@ -196,8 +198,10 @@ to — **entirely client-side** (`localStorage`), no account, no backend.
   carbs / fat) shown as a calories-remaining ring + macro bars, a **food search**
   (built-in common foods + free **Open Food Facts** online lookup) with
   servings/quantity, **recent foods**, **quick add**, **water tracking**, and
-  day-to-day navigation. Anything you log — a **custom food** or an online pick —
-  is saved to your foods and stays searchable (and syncs).
+  day-to-day navigation. Type **anything** — e.g. "2 egg & cheese omelettes" — and
+  **Estimate with AI** returns calories + macros for it instantly. Anything you log
+  — a **custom food**, an online pick, or an AI estimate — is saved to your foods
+  and stays searchable (and syncs).
 - **Progress charts** — weekly-volume bars and a bodyweight trend line, drawn with
   hand-rolled **SVG (no chart library)** in [`charts.js`](charts.js).
 - **The coach sees all of it.** The tracker is summarized by
@@ -245,8 +249,9 @@ to — **entirely client-side** (`localStorage`), no account, no backend.
   type scale) in CSS variables; [Space Grotesk + Inter](https://fonts.google.com)
   via Google Fonts; an animated, pure-SVG safety-score ring. No UI kit, no paid
   assets.
-- **Backend:** two Node.js serverless functions — `api/generate.js` (plan
-  generation) and `api/chat.js` (coach chatbot) — that proxy Google **Gemini**
+- **Backend:** three Node.js serverless functions — `api/generate.js` (plan
+  generation), `api/chat.js` (coach chatbot), and `api/estimate.js` (AI food-macro
+  + exercise-classification estimates) — that proxy Google **Gemini**
   (free Flash model) and hold the API key. They share one hardened Gemini client
   (`lib/gemini.js`) with the model name in a single place. Native `fetch`,
   **zero dependencies**.
@@ -283,6 +288,7 @@ spotterai/
 ├─ exercises.js           # searchable exercise library
 ├─ nutrition-ui.js        # MyFitnessPal-style food diary (meals, macros, water)
 ├─ foods.js               # built-in food DB + Open Food Facts search
+├─ ai.js                  # client for /api/estimate (AI food macros + exercise tags)
 
 ├─ router.js              # hash-based page router (Plan/Dashboard/Nutrition/…)
 ├─ profile-store.js       # local profiles + per-profile namespacing + export/import
@@ -291,7 +297,8 @@ spotterai/
 ├─ firebase-config.js     # public Firebase config (paste yours to enable sync)
 ├─ api/
 │  ├─ generate.js         # serverless Gemini proxy — plan generation (holds key)
-│  └─ chat.js             # serverless Gemini proxy — coach chatbot
+│  ├─ chat.js             # serverless Gemini proxy — coach chatbot
+│  └─ estimate.js         # serverless Gemini proxy — food macros + exercise tags
 ├─ lib/
 │  └─ gemini.js           # shared, hardened Gemini client (model name lives here)
 ├─ data/

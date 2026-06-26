@@ -13,6 +13,7 @@
 
 import { addCustomExercise, addRoutine, addWorkout, getCustomExercises, getLoggedExerciseNames, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, subscribe } from "./tracker-store.js";
 import { findExercise, isCardio, searchExercises } from "./exercises.js";
+import { classifyExercise } from "./ai.js";
 import { store } from "./store.js";
 
 const $ = (id) => document.getElementById(id);
@@ -177,23 +178,24 @@ function exerciseExtras() {
     const k = e.name.toLowerCase();
     if (seen.has(k) || findExercise(e.name)) continue;
     seen.add(k);
-    out.push({ name: e.name, muscle: e.muscle || "" });
+    out.push({ name: e.name, muscle: e.muscle || "", cardio: e.cardio === true });
   }
   return out;
 }
 
-function addExercise(name, muscle) {
+// `cardioOverride` (true/false) wins when known (library lookup or AI). Otherwise
+// we fall back to the built-in cardio check.
+function addExercise(name, muscle, cardioOverride) {
+  const cardio = typeof cardioOverride === "boolean" ? cardioOverride : isCardio(name);
   // Persist anything not in the built-in library so it's searchable next time.
-  if (!findExercise(name)) addCustomExercise({ name, muscle });
+  if (!findExercise(name)) addCustomExercise({ name, muscle, cardio });
   const prev = lastSetFor(name);
-  const first = prev ? { weight: "", reps: "", done: false } : { weight: "", reps: "", done: false };
-  const cardio = isCardio(name);
   session.exercises.push({
     name,
     muscle: muscle || findExercise(name)?.muscle || "",
     cardio,
     prev,
-    sets: [cardio ? { durationMin: "", distance: "", done: false } : first],
+    sets: [cardio ? { durationMin: "", distance: "", done: false } : { weight: "", reps: "", done: false }],
   });
   renderSession();
   saveDraft();
@@ -349,11 +351,14 @@ function closePicker() {
 function renderResults(q) {
   const list = searchExercises(q, 40, exerciseExtras());
   let html = list
-    .map((e) => `<li><button type="button" class="exercise-opt" data-name="${esc(e.name)}" data-muscle="${esc(e.muscle)}"><span>${esc(e.name)}</span><span class="exercise-opt__muscle">${esc(e.muscle)}</span></button></li>`)
+    .map((e) => {
+      const cardioAttr = e.cardio === true ? "1" : e.cardio === false ? "0" : "";
+      return `<li><button type="button" class="exercise-opt" data-name="${esc(e.name)}" data-muscle="${esc(e.muscle)}" data-cardio="${cardioAttr}"><span>${esc(e.name)}</span><span class="exercise-opt__muscle">${esc(e.muscle)}</span></button></li>`;
+    })
     .join("");
   const trimmed = q.trim();
   if (trimmed && !list.some((e) => e.name.toLowerCase() === trimmed.toLowerCase())) {
-    html += `<li><button type="button" class="exercise-opt exercise-opt--custom" data-name="${esc(trimmed)}" data-muscle=""><span>Add "${esc(trimmed)}"</span><span class="exercise-opt__muscle">custom</span></button></li>`;
+    html += `<li><button type="button" class="exercise-opt exercise-opt--custom" data-name="${esc(trimmed)}" data-muscle=""><span>Add "${esc(trimmed)}"</span><span class="exercise-opt__muscle">custom · AI tags it</span></button></li>`;
   }
   el.results.innerHTML = html || `<li class="muted exercise-empty">No matches.</li>`;
 }
@@ -442,10 +447,24 @@ function init() {
     if (e.target === el.picker) closePicker();
   });
   el.search?.addEventListener("input", () => renderResults(el.search.value));
-  el.results?.addEventListener("click", (e) => {
+  el.results?.addEventListener("click", async (e) => {
     const opt = e.target.closest(".exercise-opt");
-    if (!opt) return;
-    addExercise(opt.dataset.name, opt.dataset.muscle);
+    if (!opt || !session || opt.classList.contains("is-loading")) return;
+    const name = opt.dataset.name;
+    const cardioAttr = opt.dataset.cardio;
+    const cardio = cardioAttr === "1" ? true : cardioAttr === "0" ? false : undefined;
+
+    // A brand-new custom movement: ask the AI to tag its muscle group + whether
+    // it's cardio, so any machine/dumbbell/barbell exercise logs correctly.
+    // (Non-fatal: if the AI is unavailable it's added as a plain custom entry.)
+    if (opt.classList.contains("exercise-opt--custom")) {
+      opt.classList.add("is-loading");
+      const info = await classifyExercise(name).catch(() => null);
+      addExercise(name, info?.muscle || "", info ? info.cardio : cardio);
+      closePicker();
+      return;
+    }
+    addExercise(name, opt.dataset.muscle, cardio);
     closePicker();
   });
   document.addEventListener("keydown", (e) => {
