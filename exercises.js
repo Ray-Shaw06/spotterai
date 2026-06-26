@@ -262,26 +262,42 @@ function dedupeByName(list) {
   return out;
 }
 
+// Split a string into lowercase word tokens (drops punctuation/connectors).
+function tokenize(s) {
+  return String(s || "").toLowerCase().split(/[\s,/()&-]+/).filter(Boolean);
+}
+// Does query token `qt` match haystack word `w`? Prefix match either direction,
+// so partial typing ("preach") and simple plurals ("curls" vs "curl") both hit.
+function wordMatch(w, qt) {
+  return w === qt || w.startsWith(qt) || (qt.startsWith(w) && w.length >= 3);
+}
+
 /**
  * Search the library, optionally merging in `extra` entries (the user's custom
- * exercises + anything they've logged) so any exercise stays findable. Returns
- * ranked matches (prefix > word-start > substring). Empty query = starter set.
+ * exercises + anything they've logged) so any exercise stays findable.
+ *
+ * Token-based AND search: every word you type must match somewhere in the
+ * exercise's name, muscle, OR equipment — so "machine preacher curls" finds
+ * "Preacher Curl" (Biceps · Machine) regardless of word order, equipment
+ * prefixes, or plurals. Ranked: full-name prefix > name-word match > anywhere.
  */
 export function searchExercises(query, limit = 30, extra = []) {
   const pool = extra && extra.length ? dedupeByName([...extra, ...EXERCISES]) : EXERCISES;
   const q = String(query || "").trim().toLowerCase();
   if (!q) return pool.slice(0, limit);
+  const qTokens = tokenize(q);
   const scored = [];
   for (const e of pool) {
-    const n = e.name.toLowerCase();
-    const m = (e.muscle || "").toLowerCase();
-    let score = -1;
-    if (n.startsWith(q)) score = 0;
-    else if (n.split(/[\s-]+/).some((w) => w.startsWith(q))) score = 1;
-    else if (n.includes(q)) score = 2;
-    else if (m.includes(q)) score = 3;
-    if (score >= 0) scored.push({ e, score });
+    const name = e.name.toLowerCase();
+    const nameWords = tokenize(e.name);
+    const allWords = [...nameWords, ...tokenize(e.muscle), ...tokenize(e.equipment)];
+    // Match only if EVERY typed token is found somewhere (name/muscle/equipment).
+    if (!qTokens.every((qt) => allWords.some((w) => wordMatch(w, qt)))) continue;
+    let score = 2;
+    if (name.startsWith(q)) score = 0;
+    else if (qTokens.every((qt) => nameWords.some((w) => wordMatch(w, qt)))) score = 1;
+    scored.push({ e, score });
   }
-  scored.sort((a, b) => a.score - b.score || a.e.name.localeCompare(b.e.name));
+  scored.sort((a, b) => a.score - b.score || a.e.name.length - b.e.name.length || a.e.name.localeCompare(b.e.name));
   return scored.slice(0, limit).map((s) => s.e);
 }

@@ -206,24 +206,36 @@ function dedupeFoods(list) {
   return out;
 }
 
+// Split a string into lowercase word tokens (drops punctuation/connectors).
+function tokenize(s) {
+  return String(s || "").toLowerCase().split(/[\s,/()&-]+/).filter(Boolean);
+}
+// Prefix match either direction, so partial typing and simple plurals both hit.
+function wordMatch(w, qt) {
+  return w === qt || w.startsWith(qt) || (qt.startsWith(w) && w.length >= 3);
+}
+
 /**
  * Search foods, optionally merging in `extra` (the user's saved custom foods)
- * so anything logged once stays searchable. Ranked: prefix > word-start > substring.
+ * so anything logged once stays searchable. Token-based AND search: every word
+ * you type must appear in the food name (any order) — "greek yogurt" and
+ * "yogurt greek" both find "Greek yogurt, plain 0%". Ranked: full-name prefix >
+ * name-word match.
  */
 export function searchFoods(query, limit = 25, extra = []) {
   const pool = extra && extra.length ? dedupeFoods([...extra, ...FOODS]) : FOODS;
   const q = String(query || "").trim().toLowerCase();
   if (!q) return pool.slice(0, limit);
+  const qTokens = tokenize(q);
   const scored = [];
   for (const f of pool) {
-    const n = f.name.toLowerCase();
-    let score = -1;
-    if (n.startsWith(q)) score = 0;
-    else if (n.split(/[\s,]+/).some((w) => w.startsWith(q))) score = 1;
-    else if (n.includes(q)) score = 2;
-    if (score >= 0) scored.push({ f, score });
+    const name = f.name.toLowerCase();
+    const words = tokenize(f.name);
+    if (!qTokens.every((qt) => words.some((w) => wordMatch(w, qt)))) continue;
+    const score = name.startsWith(q) ? 0 : 1;
+    scored.push({ f, score });
   }
-  scored.sort((a, b) => a.score - b.score || a.f.name.localeCompare(b.f.name));
+  scored.sort((a, b) => a.score - b.score || a.f.name.length - b.f.name.length || a.f.name.localeCompare(b.f.name));
   return scored.slice(0, limit).map((s) => s.f);
 }
 

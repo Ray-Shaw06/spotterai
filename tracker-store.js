@@ -286,6 +286,22 @@ export function getCustomExercises() {
   return state.customExercises || [];
 }
 
+/** Fill in a custom exercise's muscle/cardio later (e.g. after AI classifies it). */
+export function updateCustomExercise(name, muscle, cardio) {
+  const e = state.customExercises.find((x) => x.name.toLowerCase() === String(name || "").toLowerCase());
+  if (!e) return;
+  let changed = false;
+  if (muscle && e.muscle !== muscle) {
+    e.muscle = muscle;
+    changed = true;
+  }
+  if (typeof cardio === "boolean" && e.cardio !== cardio) {
+    e.cardio = cardio;
+    changed = true;
+  }
+  if (changed) persist();
+}
+
 /** Distinct exercise names from logged workouts (so anything logged stays findable). */
 export function getLoggedExerciseNames() {
   const seen = new Set();

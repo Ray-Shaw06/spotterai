@@ -11,7 +11,7 @@
  * re-rendering, so inputs never lose focus; structural changes re-render.
  */
 
-import { addCustomExercise, addRoutine, addWorkout, getCustomExercises, getLoggedExerciseNames, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, subscribe } from "./tracker-store.js";
+import { addCustomExercise, addRoutine, addWorkout, getCustomExercises, getLoggedExerciseNames, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, subscribe, updateCustomExercise } from "./tracker-store.js";
 import { findExercise, isCardio, searchExercises } from "./exercises.js";
 import { classifyExercise } from "./ai.js";
 import { store } from "./store.js";
@@ -199,6 +199,40 @@ function addExercise(name, muscle, cardioOverride) {
   });
   renderSession();
   saveDraft();
+}
+
+// After a custom exercise is added, ask the AI to tag its muscle group + whether
+// it's cardio, then patch the stored entry and the live session. Runs in the
+// background so the add itself is instant and never blocks on the network.
+async function enrichExercise(name) {
+  let info;
+  try {
+    info = await classifyExercise(name);
+  } catch {
+    return; // AI unavailable — it stays a plain custom entry
+  }
+  if (!info) return;
+  updateCustomExercise(name, info.muscle, info.cardio);
+
+  let changed = false;
+  for (const ex of session?.exercises || []) {
+    if (ex.name.toLowerCase() !== name.toLowerCase()) continue;
+    if (info.muscle && !ex.muscle) {
+      ex.muscle = info.muscle;
+      changed = true;
+    }
+    // Switch to cardio (time/distance) only if nothing's been logged yet, so we
+    // never wipe sets the user already typed.
+    if (info.cardio && !ex.cardio && ex.sets.every((s) => !setHasWork(s))) {
+      ex.cardio = true;
+      ex.sets = [{ durationMin: "", distance: "", done: false }];
+      changed = true;
+    }
+  }
+  if (changed) {
+    renderSession();
+    saveDraft();
+  }
 }
 
 function renderSession() {
@@ -447,25 +481,22 @@ function init() {
     if (e.target === el.picker) closePicker();
   });
   el.search?.addEventListener("input", () => renderResults(el.search.value));
-  el.results?.addEventListener("click", async (e) => {
+  el.results?.addEventListener("click", (e) => {
     const opt = e.target.closest(".exercise-opt");
-    if (!opt || !session || opt.classList.contains("is-loading")) return;
+    if (!opt || !session) return;
     const name = opt.dataset.name;
     const cardioAttr = opt.dataset.cardio;
     const cardio = cardioAttr === "1" ? true : cardioAttr === "0" ? false : undefined;
+    const isNewCustom = opt.classList.contains("exercise-opt--custom") && !findExercise(name);
 
-    // A brand-new custom movement: ask the AI to tag its muscle group + whether
-    // it's cardio, so any machine/dumbbell/barbell exercise logs correctly.
-    // (Non-fatal: if the AI is unavailable it's added as a plain custom entry.)
-    if (opt.classList.contains("exercise-opt--custom")) {
-      opt.classList.add("is-loading");
-      const info = await classifyExercise(name).catch(() => null);
-      addExercise(name, info?.muscle || "", info ? info.cardio : cardio);
-      closePicker();
-      return;
-    }
+    // Register the exercise immediately so it ALWAYS lands in the session.
     addExercise(name, opt.dataset.muscle, cardio);
     closePicker();
+
+    // For a brand-new custom movement, classify it (muscle + cardio) in the
+    // background so any machine/dumbbell/barbell exercise gets tagged correctly
+    // without making the add wait on the network.
+    if (isNewCustom) enrichExercise(name);
   });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && el.picker.classList.contains("is-open")) closePicker();
