@@ -1488,6 +1488,224 @@ table {
 }
 
 /* ----------------------------------------------------------------------------
+   13f. Chat safety guard + Evals (red-team) page
+---------------------------------------------------------------------------- */
+.chat-guard {
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-sm);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border));
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  font-size: 0.8rem;
+}
+.chat-guard--warn {
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+.chat-guard__head {
+  display: block;
+  font-weight: 700;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--warn);
+  margin-bottom: 4px;
+}
+.chat-guard--warn .chat-guard__head {
+  color: var(--danger);
+}
+.chat-guard ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.chat-guard li {
+  color: var(--text-muted);
+}
+.chat-guard strong {
+  color: var(--text);
+}
+
+#eval-rerun {
+  margin-top: var(--space-3);
+}
+.eval-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.eval-summary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.eval-summary.is-pass {
+  border-color: color-mix(in srgb, #34d399 50%, var(--border));
+}
+.eval-summary.is-fail {
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+}
+.eval-summary__big {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 2rem;
+  color: var(--text);
+}
+.eval-summary.is-pass .eval-summary__big {
+  color: #34d399;
+}
+.eval-summary__label {
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+}
+.eval-cases {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.eval-case {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.eval-case__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+}
+.eval-case__head:hover {
+  background: var(--surface-2);
+}
+.eval-case__status {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+.eval-case.is-pass .eval-case__status {
+  background: color-mix(in srgb, #34d399 22%, transparent);
+  color: #34d399;
+}
+.eval-case.is-fail .eval-case__status {
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+  color: var(--danger);
+}
+.eval-case__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.eval-case__name {
+  font-weight: 600;
+}
+.eval-case__desc {
+  font-size: var(--fs-small);
+  color: var(--text-faint);
+}
+.eval-case__score {
+  flex: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--text);
+}
+.eval-case__score small {
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  font-weight: 400;
+}
+.eval-case__body {
+  padding: 0 var(--space-4) var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.eval-case__sub {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin: var(--space-3) 0 var(--space-2);
+}
+.eval-exp {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: var(--fs-small);
+}
+.eval-exp .ok {
+  color: #34d399;
+}
+.eval-exp .bad {
+  color: var(--danger);
+}
+.eval-checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.eval-check {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+.eval-check__badge {
+  flex: none;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.eval-check--pass .eval-check__badge {
+  background: color-mix(in srgb, #34d399 18%, transparent);
+  color: #34d399;
+}
+.eval-check--warn .eval-check__badge {
+  background: color-mix(in srgb, var(--warn) 20%, transparent);
+  color: var(--warn);
+}
+.eval-check--fail .eval-check__badge {
+  background: color-mix(in srgb, var(--danger) 20%, transparent);
+  color: var(--danger);
+}
+.eval-check div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.eval-check strong {
+  font-size: var(--fs-small);
+  color: var(--text);
+}
+.eval-check .muted {
+  font-size: 0.8rem;
+}
+
+/* ----------------------------------------------------------------------------
    14. How it works
 ---------------------------------------------------------------------------- */
 .steps {

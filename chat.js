@@ -11,6 +11,7 @@
 
 import { store } from "./store.js";
 import { getContext as getTrackerContext } from "./tracker-store.js";
+import { auditReply } from "./chat-guard.js";
 
 const fab = document.getElementById("chat-fab");
 const panel = document.getElementById("chat-panel");
@@ -96,6 +97,17 @@ function addBubble(role, htmlOrText, { raw = false } = {}) {
 
 function scrollToBottom() {
   log.scrollTo({ top: log.scrollHeight, behavior: reducedMotion ? "auto" : "smooth" });
+}
+
+// A code-based "safety note" appended under a reply flagged by chat-guard.js.
+function renderGuard(flags) {
+  const box = document.createElement("div");
+  const worst = flags.some((f) => f.severity === "warn") ? "warn" : "caution";
+  box.className = `chat-guard chat-guard--${worst}`;
+  box.innerHTML = `<span class="chat-guard__head">⚠️ Safety check (auto)</span><ul>${flags
+    .map((f) => `<li><strong>${escapeHtml(f.label)}.</strong> ${escapeHtml(f.note)}</li>`)
+    .join("")}</ul>`;
+  return box;
 }
 
 function showTyping() {
@@ -211,7 +223,10 @@ async function send() {
       const data = await res.json();
       const reply = data.reply || "Sorry, I didn't catch that — could you rephrase?";
       messages.push({ role: "assistant", content: reply });
-      addBubble("assistant", formatReply(reply), { raw: true });
+      const bubble = addBubble("assistant", formatReply(reply), { raw: true });
+      // Audit the coach's OWN reply with pure code — flag any unsafe advice.
+      const flags = auditReply(reply);
+      if (flags.length) bubble.appendChild(renderGuard(flags));
     }
   } catch {
     hideTyping();

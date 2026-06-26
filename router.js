@@ -7,13 +7,14 @@
  * react (e.g. the form-check stops the camera when you navigate away).
  */
 
-const ROUTES = ["home", "dashboard", "nutrition", "progress", "form-check"];
+const ROUTES = ["home", "dashboard", "nutrition", "progress", "form-check", "evals"];
 const TITLES = {
   home: "SpotterAI — AI workout coach that audits its own safety",
   dashboard: "Dashboard · SpotterAI",
   nutrition: "Nutrition · SpotterAI",
   progress: "Progress · SpotterAI",
   "form-check": "Form check · SpotterAI",
+  evals: "Safety evals · SpotterAI",
 };
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

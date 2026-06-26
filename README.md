@@ -148,18 +148,25 @@ explains *why* it flagged so the user can make an informed decision.
 > under-flag. That's an honest reflection of what a lightweight automated auditor
 > can and can't do — which is itself part of the lesson.
 
-### Tested + CI
+### Tested + CI, and a live "red-team" page
 
 Because the evaluator is the trust centerpiece, it's covered by a unit-test
-suite (the search logic too). It uses **Node's built-in test runner** — still
-**zero dependencies** — and runs on every push via **GitHub Actions** (the badge
-up top). The tests assert the auditor actually catches what it claims: missing
-rest days, RPE 10 for a beginner, all-push/no-pull imbalance, injury
-contraindications, excessive volume, and that a malformed plan never throws.
+suite (plus the search, progression, and chat-guard logic). It uses **Node's
+built-in test runner** — still **zero dependencies** — and runs on every push via
+**GitHub Actions** (the badge up top). The tests assert the auditor actually
+catches what it claims: missing rest days, RPE 10 for a beginner, all-push/no-pull
+imbalance, injury contraindications, excessive volume, and that a malformed plan
+never throws.
 
 ```bash
 npm test          # or: node --test
 ```
+
+The same battery is also a **page in the app** — **Evals** ([`eval-suite.js`](eval-suite.js)
++ [`eval-ui.js`](eval-ui.js)) — that runs the evaluator against good and
+intentionally-bad plans and renders a model-eval-style **pass/fail report** you
+can click into. One source of truth powers both the page and the CI gate, so the
+auditor can't silently regress.
 
 ---
 
@@ -209,6 +216,13 @@ questions about your plan and general training. It is **plan-aware** *and*
 are attached as context — and **safety-first by system prompt**: it defers to
 professionals for anything clinical and never diagnoses or prescribes. It reuses
 the same hardened Gemini client and the 429 / timeout fallbacks as the generator.
+
+**The coach's own replies are audited too.** A second pure-code guardrail
+([`chat-guard.js`](chat-guard.js)) scans every reply for red flags — training
+through pain, crash-diet calories, maxing out constantly, dehydration cuts, PEDs,
+dismissing professionals — and appends a visible **"safety check" note** when it
+finds one. The same "code audits the AI" idea, applied to a *second* AI surface
+(and unit-tested).
 
 ---
 
@@ -332,6 +346,9 @@ spotterai/
 ├─ style.css              # design tokens + all components
 ├─ app.js                 # controller: form → API → evaluator → render
 ├─ evaluator.js           # ⭐ pure-code safety & quality auditor (the plan)
+├─ eval-suite.js          # ⭐ red-team fixtures + runner (powers Evals page + CI)
+├─ eval-ui.js             # Evals page renderer (live pass/fail report)
+├─ chat-guard.js          # ⭐ pure-code auditor for the chatbot's own replies
 ├─ form-evaluator.js      # ⭐ pure-code form auditor (joint angles → cues, reps)
 ├─ form-coach.js          # webcam + MediaPipe Pose + skeleton overlay
 ├─ chat.js                # floating coach chatbot (UI)

@@ -63,6 +63,7 @@
         <a href="#/nutrition" data-nav="nutrition" class="nav-link">Nutrition</a>
         <a href="#/progress" data-nav="progress" class="nav-link">Progress</a>
         <a href="#/form-check" data-nav="form-check" class="nav-link">Form check</a>
+        <a href="#/evals" data-nav="evals" class="nav-link">Evals</a>
       </nav>
       <button id="profile-btn" class="profile-btn" aria-haspopup="dialog" aria-expanded="false">
         <span id="profile-avatar" class="profile-btn__avatar" aria-hidden="true">G</span>
@@ -589,6 +590,23 @@
       </div>
     </section>
 
+    <!-- ============================ EVALS PAGE ============================ -->
+    <section id="evals" class="view section section--alt" data-view="evals" hidden>
+      <div class="container">
+        <header class="section-head">
+          <p class="eyebrow eyebrow--center"><span class="eyebrow__dot" aria-hidden="true"></span> Auditing the auditor</p>
+          <h2 class="section-title section-title--lg">Safety evals</h2>
+          <p class="section-subtitle section-subtitle--center">
+            The same code-based evaluator, run against a battery of good and intentionally-bad plans — a live
+            “red-team” report. Each case lists what it should catch and whether it did. This exact suite also
+            runs in CI, so the auditor can't silently regress.
+          </p>
+          <button type="button" id="eval-rerun" class="btn btn--ghost btn--sm">Re-run suite</button>
+        </header>
+        <div id="eval-page" class="eval-page"></div>
+      </div>
+    </section>
+
     <!-- ============================ FORM CHECK PAGE ============================ -->
     <section id="form-check" class="view section" data-view="form-check" hidden>
       <div class="container">
@@ -850,6 +868,7 @@
   <script type="module" src="quick-log.js"></script>
   <script type="module" src="share-card.js"></script>
   <script type="module" src="reminders.js"></script>
+  <script type="module" src="eval-ui.js"></script>
 
   <!-- Register the service worker (installable PWA + offline). Non-fatal. -->
   <script>
