@@ -14,7 +14,8 @@
  */
 
 import { evaluatePlan } from "./evaluator.js";
-import { setPlan } from "./store.js";
+import { setPlan, store } from "./store.js";
+import { getContext as getTrackerContext } from "./tracker-store.js";
 
 // ----------------------------------------------------------------------------
 // Element references
@@ -43,6 +44,12 @@ const countWarn = document.getElementById("count-warn");
 const countFail = document.getElementById("count-fail");
 const checksList = document.getElementById("checks-list");
 const planOutput = document.getElementById("plan-output");
+
+// Adaptive coach loop (re-tune the plan from logged training, then re-audit).
+const adaptCard = document.getElementById("adapt-card");
+const adaptBtn = document.getElementById("adapt-btn");
+const adaptHint = document.getElementById("adapt-hint");
+const adaptChanges = document.getElementById("adapt-changes");
 
 // Respect the user's motion preference for every animation.
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -222,6 +229,7 @@ async function generate() {
 
   stopLoadingSteps();
   generateBtn.disabled = false;
+  publishPlan(plan, inputs);
   renderResults(plan, inputs, usedFallback);
 }
 
@@ -229,26 +237,33 @@ async function generate() {
 // Rendering: results
 // ----------------------------------------------------------------------------
 
-function renderResults(plan, inputs, usedFallback) {
+function renderResults(plan, inputs, usedFallback, { focus = true } = {}) {
   fallbackNotice.hidden = !usedFallback;
-
-  // Publish the plan so the coach chatbot can answer questions about it.
-  setPlan(plan, inputs);
 
   // Run the pure-code audit.
   const audit = evaluatePlan(plan, inputs);
 
   renderChecks(audit.checks);
   renderPlan(plan);
+
+  // Reveal the "adapt from your training" control; clear any stale change log.
+  if (adaptCard) {
+    adaptCard.hidden = false;
+    if (adaptChanges) adaptChanges.hidden = true;
+    updateAdaptHint();
+  }
+
   showState("results");
 
   // Animate the gauge once the panel is visible.
   renderScore(audit.score);
 
-  // Move focus to the results for keyboard + screen-reader users.
-  states.results.setAttribute("tabindex", "-1");
-  states.results.focus({ preventScroll: true });
-  states.results.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "start" });
+  if (focus) {
+    // Move focus to the results for keyboard + screen-reader users.
+    states.results.setAttribute("tabindex", "-1");
+    states.results.focus({ preventScroll: true });
+    states.results.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "start" });
+  }
 }
 
 /** Map a score to a band: color class + plain-language label (never "safe"). */
@@ -396,6 +411,102 @@ function renderPlan(plan) {
 }
 
 // ----------------------------------------------------------------------------
+// Adaptive coach loop: re-tune the plan from logged training, then re-audit.
+// ----------------------------------------------------------------------------
+
+// When app.js itself sets the plan (generate/adapt), it re-renders directly —
+// so the spotter:plan listener (which handles EXTERNAL changes like a profile
+// switch) must not also render. This flag suppresses that during self-updates.
+let suppressPlanRender = false;
+
+/** Persist + broadcast the plan without triggering our own re-render. */
+function publishPlan(plan, inputs) {
+  suppressPlanRender = true;
+  setPlan(plan, inputs);
+  suppressPlanRender = false;
+}
+
+/** Enable/disable the adapt button based on whether there's logged training. */
+function updateAdaptHint() {
+  if (!adaptBtn) return;
+  const hasData = !!getTrackerContext();
+  adaptBtn.disabled = !hasData;
+  if (adaptHint) {
+    adaptHint.hidden = hasData;
+    adaptHint.classList.remove("adapt-hint--error");
+    if (!hasData) adaptHint.textContent = "Log a workout or two on the Dashboard first — then I'll tailor this plan to what you've actually been doing.";
+  }
+}
+
+function showAdaptError(msg) {
+  if (!adaptHint) return;
+  adaptHint.hidden = false;
+  adaptHint.classList.add("adapt-hint--error");
+  adaptHint.textContent = msg;
+}
+
+function renderAdaptChanges(summary, changes) {
+  if (!adaptChanges) return;
+  const items = (changes || []).map((c) => `<li>${esc(c)}</li>`).join("");
+  adaptChanges.innerHTML = `
+    <div class="adapt-changes__head">
+      <span class="adapt-changes__badge">Adapted from your training</span>
+      ${summary ? `<p class="adapt-changes__summary">${esc(summary)}</p>` : ""}
+    </div>
+    ${items ? `<p class="adapt-changes__label">What changed &amp; why</p><ul class="adapt-changes__list">${items}</ul>` : ""}`;
+  adaptChanges.hidden = false;
+}
+
+async function adapt() {
+  const tracker = getTrackerContext();
+  if (!tracker) {
+    updateAdaptHint();
+    return;
+  }
+  if (!store.plan) return;
+
+  adaptBtn.disabled = true;
+  adaptBtn.classList.add("is-loading");
+  const label = adaptBtn.textContent;
+  adaptBtn.textContent = "Adapting from your training…";
+  if (adaptHint) adaptHint.hidden = true;
+
+  try {
+    const res = await fetch("api/adapt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan: store.plan, tracker, inputs: store.inputs }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const msg =
+        res.status === 429
+          ? "Rate-limited right now (free-tier limits). Give it a moment and try again."
+          : res.status === 503
+          ? "The AI's briefly overloaded — give it a few seconds and try again."
+          : data.error || "Couldn't adapt the plan just now. Please try again shortly.";
+      showAdaptError(msg);
+      return;
+    }
+
+    const data = await res.json();
+    const adapted = data.plan;
+    // Replace the current plan (persist + let chat/workout see it), re-audit,
+    // re-render, then surface what changed and why.
+    publishPlan(adapted, store.inputs);
+    renderResults(adapted, store.inputs, false);
+    renderAdaptChanges(data.summary, data.changes);
+  } catch {
+    showAdaptError("Couldn't reach the adapt service. It needs the live backend (deployed, or `vercel dev`) — same as plan generation.");
+  } finally {
+    adaptBtn.classList.remove("is-loading");
+    adaptBtn.textContent = label;
+    adaptBtn.disabled = false;
+  }
+}
+
+// ----------------------------------------------------------------------------
 // Events
 // ----------------------------------------------------------------------------
 
@@ -407,8 +518,33 @@ form.addEventListener("submit", (e) => {
 retryBtn.addEventListener("click", () => generate());
 
 regenerateBtn.addEventListener("click", () => {
+  if (adaptCard) adaptCard.hidden = true;
   showState("empty");
   form.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "start" });
 });
 
+adaptBtn?.addEventListener("click", adapt);
+
+// External plan changes (e.g. switching profile) — render that plan, or the
+// empty state if the new profile has none. Self-updates are suppressed above.
+window.addEventListener("spotter:plan", (e) => {
+  if (suppressPlanRender) return;
+  const plan = e.detail?.plan;
+  if (plan) {
+    renderResults(plan, e.detail.inputs, false, { focus: false });
+  } else {
+    if (adaptCard) adaptCard.hidden = true;
+    showState("empty");
+  }
+});
+
+// Logging a workout enables the adapt button live (if results are on screen).
+window.addEventListener("spotter:tracker", () => {
+  if (adaptCard && !adaptCard.hidden) updateAdaptHint();
+});
+
 wireInjuryExclusivity();
+
+// Restore a saved plan for this profile (survives refresh) without yanking
+// scroll/focus, so the adaptive loop works across sessions.
+if (store.plan) renderResults(store.plan, store.inputs, false, { focus: false });

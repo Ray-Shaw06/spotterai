@@ -7,6 +7,9 @@
     },
     "api/estimate.js": {
       "maxDuration": 30
+    },
+    "api/adapt.js": {
+      "maxDuration": 60
     }
   }
 }

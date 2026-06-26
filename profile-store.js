@@ -15,6 +15,7 @@
 
 const META_KEY = "spotterai.profiles.v1";
 const TRACKER_BASE = "spotterai.tracker.v1";
+const PLAN_BASE = "spotterai.plan.v1";
 
 function loadMeta() {
   try {
@@ -75,6 +76,11 @@ async function hashPin(pin) {
 // ----------------------------------------------------------------------------
 export function trackerKey(id = getActiveId()) {
   return `${TRACKER_BASE}::${id}`;
+}
+
+/** Storage key for the active profile's current generated/adapted plan. */
+export function planKey(id = getActiveId()) {
+  return `${PLAN_BASE}::${id}`;
 }
 
 export function listProfiles() {
@@ -148,6 +154,7 @@ export function deleteProfile(id) {
   meta.profiles = meta.profiles.filter((p) => p.id !== id);
   try {
     localStorage.removeItem(trackerKey(id));
+    localStorage.removeItem(planKey(id));
   } catch {
     /* ignore */
   }

@@ -77,6 +77,28 @@ all still backend-free.
    the app gracefully shows a saved example plan with a small notice — and the
    evaluator still runs on it, so the demo always works at $0.
 
+### The closed loop: adapt from real training
+
+The plan isn't a dead end. Once you've logged a few sessions, **Adapt my plan
+from my training** ([`/api/adapt`](api/adapt.js)) sends your current plan *plus a
+compact summary of what you've actually logged* (sessions vs target, weekly
+volume trend, PRs, adherence, protein) back to Gemini, which **revises the
+program** — progressing lifts you're beating, pulling back where adherence is
+low, rebalancing neglected muscles — and returns a short, data-cited **"what
+changed & why"** list. The **same `evaluator.js` then re-audits the new plan**,
+so every adaptation gets its own safety score.
+
+```
+   generate ──▶ plan ──▶ evaluator (score) ──▶ you train + log
+       ▲                                              │
+       └──────────  /api/adapt  ◀── tracker summary ──┘
+                   (revise plan, then RE-AUDIT)
+```
+
+`/api/generate` and `/api/adapt` share one plan schema + validation
+([`lib/plan.js`](lib/plan.js)), and the revised plan is persisted per profile so
+the loop spans days, not just one session.
+
 ---
 
 ## Evaluation methodology
@@ -249,11 +271,12 @@ to — **entirely client-side** (`localStorage`), no account, no backend.
   type scale) in CSS variables; [Space Grotesk + Inter](https://fonts.google.com)
   via Google Fonts; an animated, pure-SVG safety-score ring. No UI kit, no paid
   assets.
-- **Backend:** three Node.js serverless functions — `api/generate.js` (plan
-  generation), `api/chat.js` (coach chatbot), and `api/estimate.js` (AI food-macro
-  + exercise-classification estimates) — that proxy Google **Gemini**
-  (free Flash model) and hold the API key. They share one hardened Gemini client
-  (`lib/gemini.js`) with the model name in a single place. Native `fetch`,
+- **Backend:** four Node.js serverless functions — `api/generate.js` (plan
+  generation), `api/adapt.js` (re-tune a plan from logged training), `api/chat.js`
+  (coach chatbot), and `api/estimate.js` (AI food-macro + exercise-classification
+  estimates) — that proxy Google **Gemini** (free Flash model) and hold the API
+  key. They share one hardened Gemini client (`lib/gemini.js`) and one plan schema
+  (`lib/plan.js`), each with their defining concern in a single place. Native `fetch`,
   **zero dependencies**.
 - **On-device computer vision:** **MediaPipe Tasks Vision** (pose estimation),
   loaded from a free CDN and run entirely in the browser for the real-time form
@@ -297,10 +320,12 @@ spotterai/
 ├─ firebase-config.js     # public Firebase config (paste yours to enable sync)
 ├─ api/
 │  ├─ generate.js         # serverless Gemini proxy — plan generation (holds key)
+│  ├─ adapt.js            # serverless Gemini proxy — re-tune plan from training
 │  ├─ chat.js             # serverless Gemini proxy — coach chatbot
 │  └─ estimate.js         # serverless Gemini proxy — food macros + exercise tags
 ├─ lib/
-│  └─ gemini.js           # shared, hardened Gemini client (model name lives here)
+│  ├─ gemini.js           # shared, hardened Gemini client (model name lives here)
+│  └─ plan.js             # shared plan schema + parse/validate/normalize
 ├─ data/
 │  └─ sample-plans.json   # offline fallback plans (429 / offline demo)
 ├─ docs/                  # screenshots

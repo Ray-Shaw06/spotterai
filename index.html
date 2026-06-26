@@ -307,6 +307,23 @@
             <!-- The plan itself -->
             <div class="plan" id="plan-output"></div>
 
+            <!-- Adaptive coach loop: re-tune from logged training, then re-audit -->
+            <div class="card adapt-card" id="adapt-card" hidden>
+              <div class="adapt-card__head">
+                <p class="adapt-card__eyebrow">Closed loop</p>
+                <h3 class="card-title">Adapt from your training</h3>
+                <p class="adapt-card__text">
+                  Re-tune this program using what you've actually logged — progress where you're succeeding,
+                  pull back where you're not — then <strong>re-run the safety audit</strong> on the new plan.
+                </p>
+              </div>
+              <div class="adapt-changes" id="adapt-changes" hidden></div>
+              <p class="adapt-hint" id="adapt-hint" hidden></p>
+              <button type="button" class="btn btn--primary btn--block" id="adapt-btn">
+                Adapt my plan from my training
+              </button>
+            </div>
+
             <button type="button" class="btn btn--ghost btn--block" id="regenerate-btn">
               Start over
             </button>
