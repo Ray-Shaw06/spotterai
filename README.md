@@ -236,9 +236,10 @@ to — **entirely client-side** (`localStorage`), no account, no backend.
   (built-in common foods + free **Open Food Facts** online lookup) with
   servings/quantity, **recent foods**, **quick add**, **water tracking**, and
   day-to-day navigation. Type **anything** — e.g. "2 egg & cheese omelettes" — and
-  **Estimate with AI** returns calories + macros for it instantly. Anything you log
-  — a **custom food**, an online pick, or an AI estimate — is saved to your foods
-  and stays searchable (and syncs).
+  **Estimate with AI** returns calories + macros for it instantly, or **📷 Snap a
+  meal** to estimate a whole plate from a **photo** (Gemini vision, on the free
+  tier). Anything you log — a **custom food**, an online pick, or an AI estimate —
+  is saved to your foods and stays searchable (and syncs).
 - **Progress charts** — weekly-volume bars and a bodyweight trend line, drawn with
   hand-rolled **SVG (no chart library)** in [`charts.js`](charts.js).
 - **The coach sees all of it.** The tracker is summarized by
@@ -338,7 +339,7 @@ spotterai/
 │  ├─ generate.js         # serverless Gemini proxy — plan generation (holds key)
 │  ├─ adapt.js            # serverless Gemini proxy — re-tune plan from training
 │  ├─ chat.js             # serverless Gemini proxy — coach chatbot
-│  └─ estimate.js         # serverless Gemini proxy — food macros + exercise tags
+│  └─ estimate.js         # serverless Gemini proxy — food macros (text or photo) + exercise tags
 ├─ lib/
 │  ├─ gemini.js           # shared, hardened Gemini client (model name lives here)
 │  └─ plan.js             # shared plan schema + parse/validate/normalize

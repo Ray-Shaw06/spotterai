@@ -11,7 +11,7 @@
 
 import { addCustomFood, addNutrition, addWater, getCustomFoods, getRecentFoods, getState, getWater, removeEntry, resetAll, setTargets, subscribe } from "./tracker-store.js";
 import { searchFoods, searchOpenFoodFacts } from "./foods.js";
-import { estimateFood } from "./ai.js";
+import { estimateFood, estimateMealPhoto } from "./ai.js";
 import { ring } from "./charts.js";
 
 const $ = (id) => document.getElementById(id);
@@ -193,6 +193,10 @@ function renderResults(q) {
   const builtin = searchFoods(q, 25, getCustomFoods());
   const query = q.trim();
   let html = "";
+  // Snap a meal: estimate macros from a photo (Gemini vision).
+  html += `<li><button type="button" class="food-opt food-opt--ai" data-act="snap-meal">
+    <span class="food-opt__main"><span class="food-opt__name">📷 Snap a meal → macros</span><span class="food-opt__sub">estimate calories from a photo</span></span>
+    <span class="food-opt__tag food-opt__tag--ai">AI</span></button></li>`;
   // Estimate-anything: turn whatever the user typed into macros via the AI.
   if (query) {
     html += `<li><button type="button" class="food-opt food-opt--ai" data-act="ai-estimate">
@@ -240,6 +244,53 @@ function showDetailLoading(query) {
       <p>Estimating <strong>${esc(query)}</strong>…</p>
       <p class="muted">Asking the AI for calories &amp; macros.</p>
     </div>`;
+}
+
+// Snap a meal: estimate macros from a photo. Downscale client-side first so the
+// upload stays small, then reuse the normal serving detail (or fall back to a
+// manual quick add if the AI is unavailable).
+async function handlePhoto(file) {
+  if (!file || !file.type.startsWith("image/")) return;
+  if (aiController) aiController.abort();
+  if (offController) offController.abort();
+  aiController = new AbortController();
+  showDetailLoading("your meal photo");
+  try {
+    const dataUrl = await fileToScaledDataUrl(file);
+    const food = await estimateMealPhoto(dataUrl, aiController.signal);
+    showDetail(food);
+  } catch (e) {
+    if (e.name === "AbortError") return;
+    showDetail(null, true, { name: "", note: "Couldn't read that photo — add the food manually, or try again." });
+  }
+}
+
+function loadImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not load image"));
+    };
+    img.src = url;
+  });
+}
+
+async function fileToScaledDataUrl(file, maxDim = 1024, quality = 0.72) {
+  const img = await loadImage(file);
+  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * scale));
+  const h = Math.max(1, Math.round(img.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+  return canvas.toDataURL("image/jpeg", quality);
 }
 
 let onlineTimer = null;
@@ -338,8 +389,22 @@ function init() {
   el.picker?.addEventListener("click", (e) => {
     if (e.target === el.picker) closePicker();
   });
+
+  // Hidden file input that powers "Snap a meal" (opens the camera on mobile).
+  el.photoInput = document.createElement("input");
+  el.photoInput.type = "file";
+  el.photoInput.accept = "image/*";
+  el.photoInput.setAttribute("capture", "environment");
+  el.photoInput.hidden = true;
+  el.picker?.appendChild(el.photoInput);
+  el.photoInput.addEventListener("change", (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (f) handlePhoto(f);
+  });
   el.search?.addEventListener("input", () => renderResults(el.search.value));
   el.results?.addEventListener("click", (e) => {
+    if (e.target.closest('[data-act="snap-meal"]')) return el.photoInput?.click();
     if (e.target.closest('[data-act="ai-estimate"]')) return aiEstimate(el.search.value.trim());
     if (e.target.closest('[data-act="quick-add"]')) return showDetail(null, true);
     const opt = e.target.closest(".food-opt");

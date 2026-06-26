@@ -10,11 +10,11 @@
  * callers can fall back to manual entry. The API key stays server-side.
  */
 
-async function estimate(kind, query, signal) {
+async function estimate(kind, query, signal, extra = {}) {
   const res = await fetch("api/estimate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ kind, query }),
+    body: JSON.stringify({ kind, query, ...extra }),
     signal,
   });
   if (!res.ok) {
@@ -29,6 +29,20 @@ async function estimate(kind, query, signal) {
 /** Estimate calories + macros for any food described in plain language. */
 export async function estimateFood(query, signal) {
   const { food } = await estimate("food", query, signal);
+  if (!food) throw new Error("No estimate returned");
+  return food;
+}
+
+/**
+ * Estimate calories + macros from a PHOTO of a meal (Gemini vision). Takes a
+ * "data:image/...;base64,…" URL (the caller downscales first to keep it small).
+ */
+export async function estimateMealPhoto(dataUrl, signal) {
+  const comma = String(dataUrl).indexOf(",");
+  if (comma < 0) throw new Error("Invalid image");
+  const mimeType = dataUrl.slice(5, comma).split(";")[0]; // "image/jpeg"
+  const data = dataUrl.slice(comma + 1);
+  const { food } = await estimate("food", "", signal, { image: { data, mimeType } });
   if (!food) throw new Error("No estimate returned");
   return food;
 }

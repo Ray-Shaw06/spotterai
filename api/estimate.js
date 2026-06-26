@@ -1,9 +1,11 @@
 /**
  * SpotterAI — AI estimator (food macros + exercise classification)
  * ----------------------------------------------------------------------------
- * One serverless function that lets the user log ANYTHING by name, not just
- * items in the built-in lists:
+ * One serverless function that lets the user log ANYTHING, not just items in the
+ * built-in lists:
  *   - kind "food":     "2 egg & cheese omelettes" -> { kcal, protein, carbs, fat }
+ *   - kind "food" + image: a PHOTO of a plate -> identified meal + macros (Gemini
+ *     vision, still free tier)
  *   - kind "exercise": "hammer strength iso row"  -> { muscle, equipment, cardio }
  *
  * It calls Google Gemini (free tier) through the shared client, forcing a strict
@@ -21,6 +23,9 @@ const MUSCLES = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Ha
 
 const MAX_QUERY_CHARS = 120;
 const MAX_OUTPUT_TOKENS = 320;
+// Base64 length cap (~3 MB binary) — well under Vercel's request limit. The
+// client downscales photos to a few hundred KB before sending; this is a guard.
+const MAX_IMAGE_CHARS = 3_800_000;
 
 // Response schemas (OpenAPI subset Gemini supports) — belt-and-braces with the
 // prompt. We still validate/normalize below in case the model drifts.
@@ -58,6 +63,16 @@ Rules:
 - If the input is clearly not a food or drink, return kcal 0 and zero macros.
 Return ONLY the JSON object.`;
 
+const FOOD_VISION_INSTRUCTION = `You are a precise nutrition-estimation engine analyzing a PHOTO of food or drink.
+
+Rules:
+- Identify what's shown and estimate the TOTAL nutrition for the WHOLE portion visible. If several items are on the plate, sum them into one estimate.
+- Judge portion size from the image (use a plate, utensil, or hand for scale if visible); assume a normal home/restaurant portion if unsure.
+- "name" is a short, clean label of the meal (Title Case). "serving" describes the portion you estimated (e.g. "1 plate", "1 bowl", "2 tacos").
+- "kcal" is calories. "protein", "carbs", "fat" are grams (numbers, up to one decimal).
+- If there is no food or drink in the image, return name "No food detected" with kcal 0 and zero macros.
+Return ONLY the JSON object.`;
+
 const EXERCISE_INSTRUCTION = `You classify a single strength, gym, or fitness exercise by name.
 
 Return:
@@ -87,6 +102,16 @@ const round = (v, dp) => {
   const f = 10 ** dp;
   return Math.round(n * f) / f;
 };
+
+/** Validate an optional inline image payload from the client. */
+function validImage(img) {
+  if (!img || typeof img !== "object") return null;
+  const mimeType = String(img.mimeType || "").toLowerCase();
+  const data = typeof img.data === "string" ? img.data : "";
+  if (!/^image\/(jpeg|png|webp)$/.test(mimeType)) return null;
+  if (!data || data.length > MAX_IMAGE_CHARS) return null;
+  return { mimeType, data };
+}
 
 function normalizeFood(o, query) {
   if (!o || typeof o !== "object") return null;
@@ -135,27 +160,41 @@ export default async function handler(req, res) {
   payload = payload || {};
 
   const kind = payload.kind === "exercise" ? "exercise" : payload.kind === "food" ? "food" : null;
-  const query = String(payload.query || "").trim().slice(0, MAX_QUERY_CHARS);
   if (!kind) return res.status(400).json({ error: "Missing or invalid 'kind' (food | exercise)." });
-  if (!query) return res.status(400).json({ error: "Missing 'query'." });
 
   const food = kind === "food";
+  const image = food ? validImage(payload.image) : null; // photo estimate (food only)
+  const query = String(payload.query || "").trim().slice(0, MAX_QUERY_CHARS);
+  if (!query && !image) return res.status(400).json({ error: "Missing 'query' (or a food image)." });
+
+  // Build the request: a vision (photo) estimate for food, else a text estimate.
+  let contents, systemInstruction, timeoutMs;
+  if (image) {
+    contents = [{ role: "user", parts: [{ text: "Estimate the nutrition of the food in this photo." }, { inline_data: { mime_type: image.mimeType, data: image.data } }] }];
+    systemInstruction = FOOD_VISION_INSTRUCTION;
+    timeoutMs = 25000;
+  } else {
+    contents = [{ role: "user", parts: [{ text: `${food ? "Food" : "Exercise"}: ${query}` }] }];
+    systemInstruction = food ? FOOD_INSTRUCTION : EXERCISE_INSTRUCTION;
+    timeoutMs = 20000;
+  }
+
   try {
     const text = await callGemini({
       apiKey,
-      contents: [{ role: "user", parts: [{ text: `${food ? "Food" : "Exercise"}: ${query}` }] }],
-      systemInstruction: food ? FOOD_INSTRUCTION : EXERCISE_INSTRUCTION,
+      contents,
+      systemInstruction,
       generationConfig: {
         temperature: 0.3,
         maxOutputTokens: MAX_OUTPUT_TOKENS,
         responseMimeType: "application/json",
         responseSchema: food ? FOOD_SCHEMA : EXERCISE_SCHEMA,
       },
-      timeoutMs: 20000,
+      timeoutMs,
     });
 
     const parsed = extractJson(text);
-    const result = food ? normalizeFood(parsed, query) : normalizeExercise(parsed, query);
+    const result = food ? normalizeFood(parsed, query || "Meal") : normalizeExercise(parsed, query);
     if (!result) return res.status(502).json({ error: "The estimator returned an unexpected response. Try again." });
     return res.status(200).json(food ? { food: result } : { exercise: result });
   } catch (err) {
