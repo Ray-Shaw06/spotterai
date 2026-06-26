@@ -10,33 +10,33 @@
    1. Design tokens
 ---------------------------------------------------------------------------- */
 :root {
-  /* Color — base */
-  --bg: #0a0b0d;
-  --bg-soft: #0c0e11;
-  --surface: #131519;
-  --surface-2: #181b21; /* elevated */
-  --border: #242832;
-  --border-soft: #1b1f27;
+  /* Color — base: cool near-black, near-monochrome */
+  --bg: #0a0a0b;
+  --bg-soft: #0c0c0e;
+  --surface: #141416; /* card / elevated */
+  --surface-2: #1a1a1d; /* control / hover */
+  --border: rgba(255, 255, 255, 0.08); /* hairline */
+  --border-soft: rgba(255, 255, 255, 0.05);
 
-  /* Color — text */
-  --text: #f4f6f8;
-  --text-muted: #9aa4b2;
-  --text-faint: #828d9c; /* kept light enough for WCAG-AA on small captions */
+  /* Color — text: crisp near-white → cool greys */
+  --text: #f3f3f4;
+  --text-muted: #9a9aa3;
+  --text-faint: #6a6a73; /* still WCAG-AA on small captions */
 
-  /* Color — brand accent (vivid red). Kept bright so dark "ink" text on it,
-     and red text on the black background, both stay WCAG-AA legible. */
-  --accent: #ff3b3b;
-  --accent-hover: #ff5a5a;
-  --accent-soft: rgba(255, 59, 59, 0.12);
-  --accent-ink: #0a0b0d;
+  /* Color — accent: a single, understated deep emerald */
+  --accent: #22a883;
+  --accent-hover: #2ec59a;
+  --accent-soft: rgba(34, 168, 131, 0.12);
+  --accent-ring: rgba(34, 168, 131, 0.28);
+  --accent-ink: #04130d;
 
-  /* Color — status */
-  --success: #34d399;
-  --warn: #fbbf24;
-  --danger: #f87171;
-  --success-soft: rgba(52, 211, 153, 0.13);
-  --warn-soft: rgba(251, 191, 36, 0.13);
-  --danger-soft: rgba(248, 113, 113, 0.13);
+  /* Color — status (refined, desaturated) */
+  --success: #22a883;
+  --warn: #d8a441;
+  --danger: #db5a52;
+  --success-soft: rgba(34, 168, 131, 0.12);
+  --warn-soft: rgba(216, 164, 65, 0.12);
+  --danger-soft: rgba(219, 90, 82, 0.12);
 
   /* Spacing scale */
   --space-1: 0.25rem;
@@ -49,31 +49,32 @@
   --space-8: 4rem;
   --space-9: 6rem;
 
-  /* Radius */
+  /* Radius — crisp */
   --r-sm: 8px;
   --r-md: 12px;
-  --r-lg: 18px;
-  --r-xl: 26px;
+  --r-lg: 16px;
+  --r-xl: 22px;
   --r-full: 999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 28px 64px -28px rgba(0, 0, 0, 0.75), 0 10px 24px -16px rgba(0, 0, 0, 0.5);
-  --glow-accent: 0 14px 40px -16px rgba(255, 59, 59, 0.42);
+  /* Shadows — quiet + deep, never harsh */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 14px 36px -20px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 40px 84px -38px rgba(0, 0, 0, 0.85), 0 12px 28px -22px rgba(0, 0, 0, 0.6);
+  --glow-accent: 0 16px 44px -20px rgba(34, 168, 131, 0.3);
 
-  /* Typography */
-  --font-display: "Space Grotesk", system-ui, sans-serif;
+  /* Typography — Sora (display) + Inter (UI) + JetBrains Mono (data) */
+  --font-display: "Sora", "Inter", system-ui, sans-serif;
   --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --fs-display: clamp(2.5rem, 5.5vw, 4.25rem);
-  --fs-h1: clamp(1.85rem, 3.6vw, 2.75rem);
-  --fs-h2: clamp(1.4rem, 2.6vw, 2rem);
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --fs-display: clamp(2.6rem, 6vw, 4.5rem);
+  --fs-h1: clamp(1.9rem, 3.8vw, 2.9rem);
+  --fs-h2: clamp(1.45rem, 2.7vw, 2.05rem);
   --fs-body: 1rem;
   --fs-small: 0.875rem;
 
-  /* Layout */
-  --container: 1160px;
-  --transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* Layout + motion */
+  --container: 1120px;
+  --transition: 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* ----------------------------------------------------------------------------
@@ -106,21 +107,22 @@ body {
   line-height: 1.65;
   color: var(--text);
   background-color: var(--bg);
-  /* Subtle, restrained ambient glows — not gratuitous gradient soup. */
+  /* Whisper-quiet ambient light — near-monochrome, a hint of emerald. */
   background-image:
-    radial-gradient(60rem 40rem at 80% -10%, rgba(255, 59, 59, 0.07), transparent 60%),
-    radial-gradient(50rem 40rem at -10% 10%, rgba(150, 22, 35, 0.06), transparent 55%);
+    radial-gradient(66rem 48rem at 80% -14%, rgba(34, 168, 131, 0.05), transparent 62%),
+    radial-gradient(48rem 40rem at -8% 4%, rgba(255, 255, 255, 0.02), transparent 55%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  font-feature-settings: "cv05" 1, "ss03" 1;
   min-height: 100vh;
 }
 
 h1, h2, h3, h4, h5 {
   font-family: var(--font-display);
-  line-height: 1.12;
-  letter-spacing: -0.02em;
-  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  font-weight: 700;
 }
 
 a {
@@ -225,16 +227,16 @@ table {
   color: var(--accent);
 }
 
-/* Eyebrow label */
+/* Eyebrow label — editorial tracked caps */
 .eyebrow {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-small);
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-faint);
 }
 .eyebrow--center {
   justify-content: center;
@@ -444,11 +446,12 @@ table {
   box-shadow: var(--shadow-sm);
 }
 .hero__stat-value {
-  font-family: var(--font-display);
-  font-size: clamp(1.6rem, 3vw, 2.1rem);
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  font-weight: 600;
   color: var(--accent);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
 }
 .hero__stat-label {
   font-size: var(--fs-small);
@@ -601,7 +604,7 @@ table {
 .chip--caution input:checked + span {
   background: var(--warn-soft);
   border-color: color-mix(in srgb, var(--warn) 55%, transparent);
-  color: #fde68a;
+  color: var(--warn);
 }
 .chip input:focus-visible + span {
   outline: 2px solid var(--accent);
@@ -847,15 +850,19 @@ table {
   line-height: 1;
 }
 .gauge__value {
-  font-family: var(--font-display);
-  font-size: 3.4rem;
-  font-weight: 700;
-  letter-spacing: -0.04em;
+  font-family: var(--font-mono);
+  font-size: 3.5rem;
+  font-weight: 600;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
 }
 .gauge__max {
-  font-size: var(--fs-small);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
   color: var(--text-faint);
   margin-top: var(--space-1);
+  letter-spacing: 0.02em;
 }
 
 .score-card__eyebrow {
@@ -1562,7 +1569,7 @@ table {
   background: var(--surface);
 }
 .eval-summary.is-pass {
-  border-color: color-mix(in srgb, #34d399 50%, var(--border));
+  border-color: color-mix(in srgb, var(--success) 50%, var(--border));
 }
 .eval-summary.is-fail {
   border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
@@ -1574,7 +1581,7 @@ table {
   color: var(--text);
 }
 .eval-summary.is-pass .eval-summary__big {
-  color: #34d399;
+  color: var(--success);
 }
 .eval-summary__label {
   color: var(--text-muted);
@@ -1616,8 +1623,8 @@ table {
   font-weight: 700;
 }
 .eval-case.is-pass .eval-case__status {
-  background: color-mix(in srgb, #34d399 22%, transparent);
-  color: #34d399;
+  background: color-mix(in srgb, var(--success) 22%, transparent);
+  color: var(--success);
 }
 .eval-case.is-fail .eval-case__status {
   background: color-mix(in srgb, var(--danger) 22%, transparent);
@@ -1670,7 +1677,7 @@ table {
   font-size: var(--fs-small);
 }
 .eval-exp .ok {
-  color: #34d399;
+  color: var(--success);
 }
 .eval-exp .bad {
   color: var(--danger);
@@ -1697,8 +1704,8 @@ table {
   border-radius: 999px;
 }
 .eval-check--pass .eval-check__badge {
-  background: color-mix(in srgb, #34d399 18%, transparent);
-  color: #34d399;
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  color: var(--success);
 }
 .eval-check--warn .eval-check__badge {
   background: color-mix(in srgb, var(--warn) 20%, transparent);
@@ -2012,7 +2019,7 @@ table {
 }
 .cue--good {
   background: var(--success);
-  color: #04261a;
+  color: var(--accent-ink);
 }
 .cue--warn {
   background: var(--warn);
@@ -2570,10 +2577,12 @@ table {
   gap: var(--space-3);
 }
 .rank-xp {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-weight: 600;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 .rank-streak {
   display: inline-flex;
@@ -2616,10 +2625,12 @@ table {
   border-radius: var(--r-md);
 }
 .stat-tile__value {
-  font-family: var(--font-display);
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 600;
   font-size: 1.4rem;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 .stat-tile__label {
   font-size: 0.7rem;
@@ -3376,7 +3387,7 @@ table {
   align-items: center;
   justify-content: center;
 }
-.cal-ring__num { font-family: var(--font-display); font-weight: 700; font-size: 1.7rem; color: var(--text); line-height: 1; }
+.cal-ring__num { font-family: var(--font-mono); font-weight: 600; font-size: 1.7rem; color: var(--text); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
 .cal-ring__sub { font-size: 0.72rem; color: var(--text-muted); }
 .cal-meta { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: var(--space-2); }
 .cal-line { display: flex; align-items: baseline; justify-content: space-between; font-size: var(--fs-small); color: var(--text-muted); }
@@ -3432,7 +3443,7 @@ table {
 .water { display: flex; flex: 1; flex-direction: column; justify-content: center; gap: var(--space-3); }
 .water__amt { font-family: var(--font-display); font-weight: 700; font-size: 1.3rem; color: var(--text); }
 .water__bar { height: 10px; border-radius: var(--r-full); background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
-.water__bar span { display: block; height: 100%; background: #6cb8ff; border-radius: var(--r-full); transition: width 400ms ease; }
+.water__bar span { display: block; height: 100%; background: #6b8fa3; border-radius: var(--r-full); transition: width 400ms ease; }
 .water__btns { display: flex; gap: var(--space-2); }
 .water__btns .btn { flex: 1; }
 

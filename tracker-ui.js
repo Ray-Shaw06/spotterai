@@ -97,7 +97,7 @@ function renderStats(s) {
 
 function renderCharts(s) {
   if (els.weeklyChart) els.weeklyChart.innerHTML = barChart(s.weeklyVolume, { color: "var(--accent)", height: 130 });
-  if (els.bwChart) els.bwChart.innerHTML = lineChart(s.bodyweight.series, { color: "#6cb8ff", height: 130 });
+  if (els.bwChart) els.bwChart.innerHTML = lineChart(s.bodyweight.series, { color: "#6b8fa3", height: 130 });
   if (els.bwMeta) {
     els.bwMeta.innerHTML = s.bodyweight.latest != null
       ? `<strong>${s.bodyweight.latest} ${esc(s.unit)}</strong>${s.bodyweight.change ? ` · ${s.bodyweight.change > 0 ? "+" : ""}${s.bodyweight.change} ${esc(s.unit)} overall` : ""}`

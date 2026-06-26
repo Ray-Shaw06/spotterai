@@ -106,7 +106,7 @@ function renderSummary(entries) {
       <div class="cal-line"><span>Goal</span><strong>${t.kcal}</strong></div>
       <div class="cal-line"><span>Food</span><strong>${Math.round(c.kcal)}</strong></div>
       <div class="macro-rows">
-        ${macroRow("Protein", c.protein, t.protein, "#6cb8ff")}
+        ${macroRow("Protein", c.protein, t.protein, "#6b8fa3")}
         ${macroRow("Carbs", c.carbs, t.carbs, "var(--accent)")}
         ${macroRow("Fat", c.fat, t.fat, "var(--warn)")}
       </div>

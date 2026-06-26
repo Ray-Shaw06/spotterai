@@ -39,8 +39,8 @@ export const RANKS = [
   { name: "Silver", min: 800, color: "#c7ccd6" },
   { name: "Gold", min: 1600, color: "#ffd24a" },
   { name: "Platinum", min: 3000, color: "#7fe3d4" },
-  { name: "Diamond", min: 5000, color: "#6cb8ff" },
-  { name: "Champion", min: 8000, color: "#ff3b3b" },
+  { name: "Diamond", min: 5000, color: "#6b8fa3" },
+  { name: "Champion", min: 8000, color: "#22a883" },
 ];
 
 /** Resolve XP → current tier, next tier, and progress toward it. */

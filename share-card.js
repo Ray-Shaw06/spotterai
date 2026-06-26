@@ -10,16 +10,16 @@ import { deriveStats } from "./tracker-store.js";
 import { evaluatePlan } from "./evaluator.js";
 import { store } from "./store.js";
 
-const BG = "#0a0b0d";
-const RED = "#ff3b3b";
+const BG = "#0a0a0b";
+const ACCENT = "#22a883";
 const W = 1080;
 const H = 1080;
 
 function bandColor(score) {
-  if (score >= 85) return "#34d399";
-  if (score >= 70) return "#fbbf24";
-  if (score >= 50) return "#fb923c";
-  return RED;
+  if (score >= 85) return "#22a883";
+  if (score >= 70) return "#d8a441";
+  if (score >= 50) return "#cf8a3e";
+  return "#db5a52";
 }
 
 function roundRect(x, rx, ry, rw, rh, r) {
@@ -55,8 +55,8 @@ function drawCard(stats, score) {
   x.fillStyle = BG;
   x.fillRect(0, 0, W, H);
   const glow = x.createRadialGradient(W / 2, 360, 40, W / 2, 360, 720);
-  glow.addColorStop(0, "rgba(255,59,59,0.16)");
-  glow.addColorStop(1, "rgba(255,59,59,0)");
+  glow.addColorStop(0, "rgba(34,168,131,0.15)");
+  glow.addColorStop(1, "rgba(34,168,131,0)");
   x.fillStyle = glow;
   x.fillRect(0, 0, W, H);
   x.strokeStyle = "rgba(255,255,255,0.08)";
@@ -67,9 +67,9 @@ function drawCard(stats, score) {
   // Wordmark
   x.textAlign = "left";
   x.fillStyle = "#fff";
-  x.font = "700 56px 'Space Grotesk', Inter, sans-serif";
+  x.font = "700 56px 'Sora', Inter, sans-serif";
   x.fillText("SpotterAI", 96, 158);
-  x.fillStyle = RED;
+  x.fillStyle = ACCENT;
   x.beginPath();
   x.arc(372, 138, 9, 0, Math.PI * 2);
   x.fill();
@@ -84,7 +84,7 @@ function drawCard(stats, score) {
     ringArc(x, cx, cy, 168, score / 100, bandColor(score), 26);
     x.textAlign = "center";
     x.fillStyle = "#fff";
-    x.font = "700 130px 'Space Grotesk', Inter, sans-serif";
+    x.font = "700 130px 'Sora', Inter, sans-serif";
     x.fillText(String(score), cx, cy + 30);
     x.fillStyle = "rgba(255,255,255,0.5)";
     x.font = "500 30px Inter, sans-serif";
@@ -93,7 +93,7 @@ function drawCard(stats, score) {
     ringArc(x, cx, cy, 168, stats.rank.progress, stats.rank.tier.color, 26);
     x.textAlign = "center";
     x.fillStyle = "#fff";
-    x.font = "700 120px 'Space Grotesk', Inter, sans-serif";
+    x.font = "700 120px 'Sora', Inter, sans-serif";
     x.fillText(`L${stats.level}`, cx, cy + 28);
     x.fillStyle = "rgba(255,255,255,0.5)";
     x.font = "500 30px Inter, sans-serif";
@@ -103,7 +103,7 @@ function drawCard(stats, score) {
   // Rank line
   x.textAlign = "center";
   x.fillStyle = stats.rank.tier.color;
-  x.font = "700 56px 'Space Grotesk', Inter, sans-serif";
+  x.font = "700 56px 'Sora', Inter, sans-serif";
   x.fillText(stats.rank.tier.name, cx, 740);
   x.fillStyle = "rgba(255,255,255,0.6)";
   x.font = "400 30px Inter, sans-serif";
@@ -130,7 +130,7 @@ function drawCard(stats, score) {
     x.stroke();
     x.textAlign = "center";
     x.fillStyle = "#fff";
-    x.font = "700 50px 'Space Grotesk', Inter, sans-serif";
+    x.font = "700 50px 'Sora', Inter, sans-serif";
     x.fillText(val, tx + tileW / 2, 922);
     x.fillStyle = "rgba(255,255,255,0.5)";
     x.font = "400 24px Inter, sans-serif";

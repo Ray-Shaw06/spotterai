@@ -306,7 +306,7 @@ function draw(landmarks, metrics, cues) {
     const p = landmarks[i];
     ctx.beginPath();
     ctx.arc(p.x * w, p.y * h, warnJoints.has(i) ? r * 1.7 : r, 0, Math.PI * 2);
-    ctx.fillStyle = warnJoints.has(i) ? "#ff3b3b" : "rgba(255,255,255,0.9)";
+    ctx.fillStyle = warnJoints.has(i) ? "#db5a52" : "rgba(255,255,255,0.9)";
     ctx.fill();
     if (warnJoints.has(i)) {
       ctx.lineWidth = Math.max(2, w * 0.003);
