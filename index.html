@@ -423,37 +423,52 @@
     </section>
 
     <!-- ============================ NUTRITION PAGE ============================ -->
-    <section class="view section section--alt" data-view="nutrition" hidden>
+    <section id="nut-page" class="view section section--alt" data-view="nutrition" hidden>
       <div class="container">
         <header class="section-head">
           <p class="eyebrow eyebrow--center"><span class="eyebrow__dot" aria-hidden="true"></span> Nutrition</p>
-          <h2 class="section-title section-title--lg">Fuel your training</h2>
-          <p class="section-subtitle section-subtitle--center">Log food and hit your daily calorie and protein targets.</p>
+          <h2 class="section-title section-title--lg">Food diary</h2>
+          <p class="section-subtitle section-subtitle--center">Log meals and hit your calorie and macro targets — search foods or scan your own numbers.</p>
         </header>
 
+        <div class="nut-datenav">
+          <button id="nut-prev" class="icon-btn" type="button" aria-label="Previous day">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </button>
+          <span id="nut-date" class="nut-date">Today</span>
+          <button id="nut-next" class="icon-btn" type="button" aria-label="Next day">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </button>
+          <button id="nut-today" class="btn btn--ghost btn--sm nut-todaybtn" type="button" hidden>Today</button>
+        </div>
+
         <div class="dash-grid">
-          <div class="card dash-card">
-            <h3 class="card-title">Today</h3>
-            <div id="dash-nutrition" class="macros"></div>
-            <form id="add-food-form" class="dash-form field-inline">
-              <input name="name" class="input" placeholder="Food" autocomplete="off" />
-              <input name="kcal" class="input input--sm" type="number" min="0" inputmode="numeric" placeholder="kcal" />
-              <input name="protein" class="input input--sm" type="number" min="0" inputmode="numeric" placeholder="protein" />
-              <button type="submit" class="btn btn--primary btn--sm">Add</button>
-            </form>
-            <ul id="nutrition-today-list" class="entry-list"></ul>
-            <div class="dash-subchart"><span class="dash-subchart__label">Last 7 days (kcal)</span><div id="chart-nutrition"></div></div>
+          <div class="card dash-card nut-summary-card">
+            <h3 class="card-title">Calories &amp; macros</h3>
+            <div id="nut-summary" class="nut-summary"></div>
           </div>
 
           <div class="card dash-card">
+            <h3 class="card-title">Water</h3>
+            <div id="nut-water" class="water"></div>
+          </div>
+
+          <div class="card dash-card nut-meals-card">
+            <div id="nut-meals" class="nut-meals"></div>
+          </div>
+
+          <div class="card dash-card nut-meals-card">
             <h3 class="card-title">Goals &amp; targets</h3>
-            <form id="targets-form" class="dash-form">
-              <label class="field-label-sm">Daily calories<input name="kcal" class="input" type="number" min="0" inputmode="numeric" /></label>
-              <label class="field-label-sm">Daily protein (g)<input name="protein" class="input" type="number" min="0" inputmode="numeric" /></label>
+            <form id="nut-targets-form" class="dash-form nut-targets">
+              <label class="field-label-sm">Calories<input name="kcal" class="input" type="number" min="0" inputmode="numeric" /></label>
+              <label class="field-label-sm">Protein (g)<input name="protein" class="input" type="number" min="0" inputmode="numeric" /></label>
+              <label class="field-label-sm">Carbs (g)<input name="carbs" class="input" type="number" min="0" inputmode="numeric" /></label>
+              <label class="field-label-sm">Fat (g)<input name="fat" class="input" type="number" min="0" inputmode="numeric" /></label>
+              <label class="field-label-sm">Water (ml)<input name="water" class="input" type="number" min="0" inputmode="numeric" /></label>
               <label class="field-label-sm">Workouts / week<input name="weekly" class="input" type="number" min="0" max="14" inputmode="numeric" /></label>
               <div class="dash-actions">
                 <button type="submit" class="btn btn--ghost btn--sm">Save targets</button>
-                <button type="button" id="dash-reset" class="btn-link-danger">Reset this profile's data</button>
+                <button type="button" id="nut-reset" class="btn-link-danger">Reset this profile's data</button>
               </div>
             </form>
             <p class="dash-hint">Targets drive the rings and your protein-streak XP. Data is stored only in this browser.</p>
@@ -632,6 +647,23 @@
     </div>
   </div>
 
+  <!-- ===================== FOOD PICKER ===================== -->
+  <div id="food-picker" class="picker-modal" role="dialog" aria-modal="true" aria-label="Add food" aria-hidden="true">
+    <div class="picker-dialog">
+      <div class="picker-head picker-head--titled">
+        <span id="food-picker-title" class="picker-title">Add food</span>
+        <button id="food-picker-close" class="icon-btn" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+        </button>
+      </div>
+      <div class="picker-searchbar">
+        <input id="food-search" class="input" type="search" placeholder="Search foods…" autocomplete="off" aria-label="Search foods" />
+      </div>
+      <ul id="food-results" class="food-results"></ul>
+      <div id="food-detail" class="food-detail" hidden></div>
+    </div>
+  </div>
+
   <!-- ===================== ACCOUNT MODAL ===================== -->
   <div id="account-modal" class="account-modal" role="dialog" aria-modal="true" aria-label="Your profile" aria-hidden="true">
     <div class="account-dialog">
@@ -719,5 +751,6 @@
   <script type="module" src="form-coach.js"></script>
   <script type="module" src="tracker-ui.js"></script>
   <script type="module" src="workout-ui.js"></script>
+  <script type="module" src="nutrition-ui.js"></script>
 </body>
 </html>

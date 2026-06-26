@@ -190,8 +190,12 @@ to — **entirely client-side** (`localStorage`), no account, no backend.
   Champion**. All the game design lives in [`gamify.js`](gamify.js).
 - **Streaks & achievements** — daily streaks and unlockable badges, with
   celebratory toasts when you earn them.
-- **Nutrition tracking** — log food, set calorie/protein targets, and watch the
-  target rings fill; plus a 7-day calorie history.
+- **Nutrition tracking (MyFitnessPal-style)** — a daily **food diary** with meals
+  (breakfast / lunch / dinner / snacks), **full macros** (calories + protein /
+  carbs / fat) shown as a calories-remaining ring + macro bars, a **food search**
+  (built-in common foods + free **Open Food Facts** online lookup) with
+  servings/quantity, **recent foods**, **quick add**, **water tracking**, and
+  day-to-day navigation.
 - **Progress charts** — weekly-volume bars and a bodyweight trend line, drawn with
   hand-rolled **SVG (no chart library)** in [`charts.js`](charts.js).
 - **The coach sees all of it.** The tracker is summarized by
@@ -275,6 +279,8 @@ spotterai/
 ├─ tracker-ui.js          # gamified dashboard (rank, streak, nutrition, charts)
 ├─ workout-ui.js          # Hevy-style workout session (per-set logging, routines, history)
 ├─ exercises.js           # searchable exercise library
+├─ nutrition-ui.js        # MyFitnessPal-style food diary (meals, macros, water)
+├─ foods.js               # built-in food DB + Open Food Facts search
 
 ├─ router.js              # hash-based page router (Plan/Dashboard/Nutrition/…)
 ├─ profile-store.js       # local profiles + per-profile namespacing + export/import

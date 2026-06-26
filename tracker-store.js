@@ -17,11 +17,14 @@ const DEFAULTS = {
   workouts: [], // { id, date 'YYYY-MM-DD', name, focus, exercises:[{name,sets,reps,weight}], volume, xp }
   nutrition: [], // { id, date, name, kcal, protein }
   bodyweight: [], // { id, date, value }
-  targets: { kcal: 2200, protein: 140, weeklyWorkouts: 4 },
+  targets: { kcal: 2200, protein: 140, carbs: 250, fat: 70, weeklyWorkouts: 4, waterMl: 2500 },
   achievements: [], // unlocked ids
   routines: [], // saved workout templates
+  water: {}, // { 'YYYY-MM-DD': ml }
   unit: "kg",
 };
+
+const MEALS = ["breakfast", "lunch", "dinner", "snacks"];
 
 // ----------------------------------------------------------------------------
 // Persistence
@@ -79,6 +82,7 @@ export function importData(obj) {
     bodyweight: Array.isArray(incoming.bodyweight) ? incoming.bodyweight : [],
     achievements: Array.isArray(incoming.achievements) ? incoming.achievements : [],
     routines: Array.isArray(incoming.routines) ? incoming.routines : [],
+    water: incoming.water && typeof incoming.water === "object" ? incoming.water : {},
     updatedAt: incoming.updatedAt || Date.now(),
   };
   persist(false); // preserve the incoming timestamp
@@ -221,18 +225,50 @@ export function lastSetFor(name) {
   return null;
 }
 
-export function addNutrition({ name, kcal, protein, date } = {}) {
+export function addNutrition({ name, meal, qty, unit, kcal, protein, carbs, fat, date } = {}) {
+  const num = (v, dp = 1) => Math.max(0, Math.round((Number(v) || 0) * 10 ** dp) / 10 ** dp);
   const entry = {
     id: uid(),
     date: date || today(),
+    meal: MEALS.includes(meal) ? meal : "snacks",
     name: String(name || "Food"),
-    kcal: Math.max(0, Math.round(Number(kcal) || 0)),
-    protein: Math.max(0, Math.round(Number(protein) || 0)),
+    qty: Number(qty) || 1,
+    unit: String(unit || ""),
+    kcal: num(kcal, 0),
+    protein: num(protein),
+    carbs: num(carbs),
+    fat: num(fat),
   };
   state.nutrition.push(entry);
   const unlocked = unlockAchievements();
   persist();
   return { entry, newAchievements: unlocked };
+}
+
+// --- Water -----------------------------------------------------------------
+export function addWater(deltaMl, date) {
+  const d = date || today();
+  state.water[d] = Math.max(0, (state.water[d] || 0) + (Number(deltaMl) || 0));
+  persist();
+  return state.water[d];
+}
+export function getWater(date) {
+  return state.water[date || today()] || 0;
+}
+
+/** Most recent distinct foods (for quick re-add). */
+export function getRecentFoods(limit = 8) {
+  const seen = new Set();
+  const out = [];
+  for (let i = state.nutrition.length - 1; i >= 0; i--) {
+    const e = state.nutrition[i];
+    const key = e.name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ name: e.name, qty: e.qty || 1, unit: e.unit || "", kcal: e.kcal, protein: e.protein, carbs: e.carbs || 0, fat: e.fat || 0 });
+    if (out.length >= limit) break;
+  }
+  return out;
 }
 
 export function addBodyweight({ value, date } = {}) {
@@ -293,9 +329,11 @@ function baseStats() {
   // Nutrition aggregated per day
   const byDay = {};
   for (const e of state.nutrition) {
-    (byDay[e.date] ||= { kcal: 0, protein: 0 });
+    (byDay[e.date] ||= { kcal: 0, protein: 0, carbs: 0, fat: 0 });
     byDay[e.date].kcal += e.kcal;
     byDay[e.date].protein += e.protein;
+    byDay[e.date].carbs += e.carbs || 0;
+    byDay[e.date].fat += e.fat || 0;
   }
   const nutritionDays = Object.keys(byDay).length;
   const proteinTargetDays = Object.values(byDay).filter((d) => d.protein >= state.targets.protein).length;
@@ -356,11 +394,16 @@ export function deriveStats() {
   // Nutrition: today + last 7 days
   const todayKey = today();
   const todayEntries = state.nutrition.filter((e) => e.date === todayKey);
+  const sum = (k) => Math.round(todayEntries.reduce((v, e) => v + (e[k] || 0), 0));
   const nutritionToday = {
-    kcal: todayEntries.reduce((v, e) => v + e.kcal, 0),
-    protein: todayEntries.reduce((v, e) => v + e.protein, 0),
+    kcal: sum("kcal"),
+    protein: sum("protein"),
+    carbs: sum("carbs"),
+    fat: sum("fat"),
     targetKcal: state.targets.kcal,
     targetProtein: state.targets.protein,
+    targetCarbs: state.targets.carbs,
+    targetFat: state.targets.fat,
     entries: todayEntries,
   };
   const days7 = [];
@@ -417,7 +460,14 @@ export function getContext() {
       volume: w.volume,
       exercises: w.exercises.map((e) => exerciseSummary(e)),
     })),
-    nutritionToday: { kcal: d.nutritionToday.kcal, protein: d.nutritionToday.protein, targetKcal: d.nutritionToday.targetKcal, targetProtein: d.nutritionToday.targetProtein },
+    nutritionToday: {
+      kcal: d.nutritionToday.kcal,
+      protein: d.nutritionToday.protein,
+      carbs: d.nutritionToday.carbs,
+      fat: d.nutritionToday.fat,
+      targetKcal: d.nutritionToday.targetKcal,
+      targetProtein: d.nutritionToday.targetProtein,
+    },
     proteinTargetDays: d.proteinTargetDays,
     bodyweight: { latest: d.bodyweight.latest, change: d.bodyweight.change, unit: state.unit },
     personalRecords: d.prs,
