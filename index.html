@@ -419,6 +419,7 @@
           <div class="card dash-rankcard">
             <div id="dash-rank"></div>
             <div id="dash-stats" class="dash-stats"></div>
+            <button type="button" id="share-progress" class="btn btn--ghost btn--sm dash-share">📤 Share progress card</button>
           </div>
 
           <!-- Workout session (Hevy-style) -->
@@ -784,6 +785,12 @@
         <p class="account-note">Spins up a separate <strong>Demo</strong> profile pre-filled with ~6 weeks of workouts, nutrition and a saved plan — so the dashboard, charts and the <em>adaptive coach loop</em> all work on the first click. Your own profiles aren't touched.</p>
       </div>
 
+      <div class="account-section account-reminders">
+        <h3 class="account-h">Streak reminders</h3>
+        <label class="reminder-row"><input type="checkbox" id="reminders-toggle" /> <span>Remind me to keep my streak</span></label>
+        <p class="account-note" id="reminders-note">A local notification when you open the app and haven't logged today. No server, no tracking — it can't notify while the app is fully closed (that would need a backend).</p>
+      </div>
+
       <div class="account-section account-actions">
         <button type="button" id="account-export" class="btn btn--ghost btn--sm">Export backup</button>
         <label class="btn btn--ghost btn--sm account-import-label">
@@ -841,6 +848,8 @@
   <script type="module" src="workout-ui.js"></script>
   <script type="module" src="nutrition-ui.js"></script>
   <script type="module" src="quick-log.js"></script>
+  <script type="module" src="share-card.js"></script>
+  <script type="module" src="reminders.js"></script>
 
   <!-- Register the service worker (installable PWA + offline). Non-fatal. -->
   <script>

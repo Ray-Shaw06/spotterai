@@ -245,8 +245,19 @@ to — **entirely client-side** (`localStorage`), no account, no backend.
   meal** to estimate a whole plate from a **photo** (Gemini vision, on the free
   tier). Anything you log — a **custom food**, an online pick, or an AI estimate —
   is saved to your foods and stays searchable (and syncs).
-- **Progress charts** — weekly-volume bars and a bodyweight trend line, drawn with
-  hand-rolled **SVG (no chart library)** in [`charts.js`](charts.js).
+- **Progress charts** — weekly-volume bars, a bodyweight trend line, and a
+  **per-exercise estimated-1RM trend** (pick any lift), drawn with hand-rolled
+  **SVG (no chart library)** in [`charts.js`](charts.js).
+- **Coaching depth (pure code, no AI)** — **auto-progression** targets in the
+  session (a "▲ Target" load suggested from your last top set), in-session
+  **rest timer** (auto-starts on a completed set, with a beep), **plate** and
+  **1RM** calculators, and a transparent **deload flag** when weekly volume has
+  climbed for 3 straight weeks into a new peak. The math lives in
+  [`progression.js`](progression.js) and is **unit-tested**.
+- **Share + reminders** — render a **shareable progress card** (rank, streak,
+  weekly training, and your plan's safety score) to a PNG via canvas + the Web
+  Share API, and opt into **local streak reminders** (notifications via the
+  service worker — honest about being on-open, not server push).
 - **The coach sees all of it.** The tracker is summarized by
   [`tracker-store.js`](tracker-store.js) (`getContext()`) and passed to the
   chatbot, so **"summarize my week"**, "am I hitting protein?", and "what should I
@@ -327,6 +338,7 @@ spotterai/
 ├─ store.js               # tiny shared state (latest plan → chatbot context)
 ├─ gamify.js              # ranks, XP rules, achievement definitions
 ├─ charts.js              # dependency-free SVG line/bar/ring charts
+├─ progression.js         # ⭐ pure math: est. 1RM, auto-progression, deload trend
 ├─ tracker-store.js       # localStorage tracker + derived stats + chat context
 ├─ tracker-ui.js          # gamified dashboard (rank, streak, nutrition, charts)
 ├─ workout-ui.js          # Hevy-style workout session (per-set logging, routines, history)
@@ -335,6 +347,8 @@ spotterai/
 ├─ foods.js               # built-in food DB + Open Food Facts search
 ├─ ai.js                  # client for /api/estimate (AI food macros + exercise tags)
 ├─ quick-log.js           # natural-language + voice quick logging (→ /api/parse)
+├─ share-card.js          # render a shareable progress PNG (canvas, Web Share)
+├─ reminders.js           # opt-in local streak reminders (notifications)
 ├─ demo-data.js           # one-click "Load demo data" (isolated Demo profile)
 
 ├─ router.js              # hash-based page router (Plan/Dashboard/Nutrition/…)
