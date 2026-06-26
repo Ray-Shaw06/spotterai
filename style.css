@@ -10,33 +10,40 @@
    1. Design tokens
 ---------------------------------------------------------------------------- */
 :root {
-  /* Color — base */
+  /* Color — base (near-black) */
   --bg: #0a0b0d;
-  --bg-soft: #0c0e11;
-  --surface: #131519;
-  --surface-2: #181b21; /* elevated */
-  --border: #242832;
-  --border-soft: #1b1f27;
+  --bg-soft: #0b0d10;
+  --surface: #111318;   /* dark control / input fill */
+  --surface-2: #15181e; /* elevated control */
+
+  /* Frosted-glass + hairline separators (white over the dark base) */
+  --glass: rgba(255, 255, 255, 0.03);
+  --glass-2: rgba(255, 255, 255, 0.05);
+  --glass-top: rgba(255, 255, 255, 0.10); /* top-edge highlight */
+  --hover-tint: rgba(255, 255, 255, 0.04);
+  --pill: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.07);
+  --border-soft: rgba(255, 255, 255, 0.04);
 
   /* Color — text */
   --text: #f4f6f8;
-  --text-muted: #9aa4b2;
-  --text-faint: #828d9c; /* kept light enough for WCAG-AA on small captions */
+  --text-muted: #8b9dc3; /* muted slate-blue */
+  --text-faint: #6f7d96; /* dimmer slate, still WCAG-AA on captions */
 
-  /* Color — brand accent (vivid red). Kept bright so dark "ink" text on it,
-     and red text on the black background, both stay WCAG-AA legible. */
-  --accent: #ff3b3b;
-  --accent-hover: #ff5a5a;
-  --accent-soft: rgba(255, 59, 59, 0.12);
+  /* Color — signature accent: electric cyan */
+  --accent: #00e5c4;
+  --accent-hover: #2af0d6;
+  --accent-soft: rgba(0, 229, 196, 0.12);
+  --accent-ring: rgba(0, 229, 196, 0.30);
   --accent-ink: #0a0b0d;
 
-  /* Color — status */
-  --success: #34d399;
-  --warn: #fbbf24;
-  --danger: #f87171;
-  --success-soft: rgba(52, 211, 153, 0.13);
-  --warn-soft: rgba(251, 191, 36, 0.13);
-  --danger-soft: rgba(248, 113, 113, 0.13);
+  /* Color — status (cyan = good, amber = review, red = flagged) */
+  --success: #00e5c4;
+  --warn: #f59e0b;
+  --danger: #ff4d4d;
+  --success-soft: rgba(0, 229, 196, 0.12);
+  --warn-soft: rgba(245, 158, 11, 0.13);
+  --danger-soft: rgba(255, 77, 77, 0.13);
 
   /* Spacing scale */
   --space-1: 0.25rem;
@@ -56,15 +63,17 @@
   --r-xl: 26px;
   --r-full: 999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 28px 64px -28px rgba(0, 0, 0, 0.75), 0 10px 24px -16px rgba(0, 0, 0, 0.5);
-  --glow-accent: 0 14px 40px -16px rgba(255, 59, 59, 0.42);
+  /* Shadows — deep + dramatic, never the soft "shadcn" 0 4px 6px */
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 18px 44px -22px rgba(0, 0, 0, 0.8);
+  --shadow-lg: 0 48px 96px -40px rgba(0, 0, 0, 0.9), 0 16px 36px -24px rgba(0, 0, 0, 0.7);
+  --shadow-hover: 0 26px 60px -26px rgba(0, 0, 0, 0.85);
+  --glow-accent: 0 20px 54px -20px rgba(0, 229, 196, 0.45);
 
   /* Typography */
-  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-display: "Syne", "Space Grotesk", system-ui, sans-serif;
   --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
   --fs-display: clamp(2.5rem, 5.5vw, 4.25rem);
   --fs-h1: clamp(1.85rem, 3.6vw, 2.75rem);
   --fs-h2: clamp(1.4rem, 2.6vw, 2rem);
@@ -106,10 +115,10 @@ body {
   line-height: 1.65;
   color: var(--text);
   background-color: var(--bg);
-  /* Subtle, restrained ambient glows — not gratuitous gradient soup. */
+  /* Restrained ambient cyan glow — not gradient soup. */
   background-image:
-    radial-gradient(60rem 40rem at 80% -10%, rgba(255, 59, 59, 0.07), transparent 60%),
-    radial-gradient(50rem 40rem at -10% 10%, rgba(150, 22, 35, 0.06), transparent 55%);
+    radial-gradient(58rem 40rem at 82% -12%, rgba(0, 229, 196, 0.06), transparent 60%),
+    radial-gradient(46rem 38rem at -12% 8%, rgba(0, 229, 196, 0.035), transparent 55%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -118,9 +127,9 @@ body {
 
 h1, h2, h3, h4, h5 {
   font-family: var(--font-display);
-  line-height: 1.12;
-  letter-spacing: -0.02em;
-  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  font-weight: 700;
 }
 
 a {
@@ -257,7 +266,7 @@ table {
   gap: var(--space-2);
   padding: 0.8rem 1.4rem;
   border: 1px solid transparent;
-  border-radius: var(--r-full);
+  border-radius: 10px;
   font-weight: 600;
   font-size: 0.95rem;
   line-height: 1;
@@ -278,22 +287,43 @@ table {
 }
 
 .btn--primary {
+  position: relative;
+  overflow: hidden;
   background: var(--accent);
   color: var(--accent-ink);
+  font-weight: 700;
 }
 .btn--primary:hover {
   background: var(--accent-hover);
   box-shadow: var(--glow-accent);
 }
+/* Shimmer sweep on hover */
+.btn--primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 28%, rgba(255, 255, 255, 0.45) 50%, transparent 72%);
+  transform: translateX(-130%);
+  pointer-events: none;
+}
+.btn--primary:hover::after {
+  animation: btn-shimmer 0.85s ease;
+}
+@keyframes btn-shimmer {
+  to { transform: translateX(130%); }
+}
 
 .btn--ghost {
-  background: var(--surface);
+  background: var(--glass);
   border-color: var(--border);
   color: var(--text);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 .btn--ghost:hover {
-  border-color: var(--accent);
-  background: var(--surface-2);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: var(--hover-tint);
+  color: var(--accent);
 }
 
 .btn--sm {
@@ -486,10 +516,18 @@ table {
    8. Card base
 ---------------------------------------------------------------------------- */
 .card {
-  background: var(--surface);
+  background: var(--glass);
   border: 1px solid var(--border);
-  border-radius: var(--r-lg);
+  border-top-color: var(--glass-top); /* brighter top edge — frosted-glass micro-card */
+  border-radius: var(--r-md);
   box-shadow: var(--shadow-md);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+.card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-hover);
 }
 .card-title {
   font-size: 1.05rem;
@@ -548,18 +586,22 @@ table {
   gap: var(--space-5);
 }
 
-/* Chip toggles (custom radios/checkboxes) */
+/* Segmented controls (custom radios/checkboxes) — a grooved track with the
+   active segment raised, not loose pill buttons. */
 .chips {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-}
-.chips--compact {
-  gap: var(--space-2);
+  gap: 4px;
+  padding: 4px;
+  background: #111318;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  max-width: 100%;
 }
 .chip {
   position: relative;
   display: inline-flex;
+  flex: 1 1 auto;
 }
 .chip input {
   position: absolute;
@@ -572,36 +614,35 @@ table {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.55rem 0.95rem;
-  border: 1px solid var(--border);
-  border-radius: var(--r-full);
-  background: var(--surface-2);
+  width: 100%;
+  padding: 0.5rem 0.95rem;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
   color: var(--text-muted);
   font-size: 0.9rem;
   font-weight: 500;
   user-select: none;
-  transition: transform var(--transition), border-color var(--transition), background var(--transition), color var(--transition);
+  transition: background var(--transition), color var(--transition), box-shadow var(--transition);
 }
 .chip:hover span {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--hover-tint);
   color: var(--text);
-  transform: translateY(-1px);
 }
 .chip--square span {
-  min-width: 3rem;
+  min-width: 2.8rem;
   padding-inline: 0.6rem;
 }
 .chip input:checked + span {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
+  background: var(--pill);
+  color: var(--accent);
   font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), inset 0 1px 0 var(--glass-top);
 }
-/* Caution chips (injuries) signal a flagged input in amber, not the brand red. */
+/* Caution segments (injuries) signal a flagged input in amber. */
 .chip--caution input:checked + span {
+  color: var(--warn);
   background: var(--warn-soft);
-  border-color: color-mix(in srgb, var(--warn) 55%, transparent);
-  color: #fde68a;
 }
 .chip input:focus-visible + span {
   outline: 2px solid var(--accent);
@@ -626,10 +667,14 @@ table {
 .textarea::placeholder {
   color: var(--text-faint);
 }
+.textarea {
+  background: #111318;
+  border-color: rgba(255, 255, 255, 0.1);
+}
 .textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: 0 0 0 2px var(--accent-ring);
 }
 
 .form__foot {
@@ -820,19 +865,28 @@ table {
 }
 .gauge__track {
   fill: none;
-  stroke: var(--border);
-  stroke-width: 14;
+  stroke: rgba(255, 255, 255, 0.06);
+  stroke-width: 12;
+}
+.gauge__track--inner {
+  stroke-width: 8;
+  stroke: rgba(255, 255, 255, 0.05);
 }
 .gauge__progress {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 14;
+  stroke-width: 12;
   stroke-linecap: round;
-  transition: stroke-dashoffset 1.1s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.4s ease;
+  /* Draws itself from 0 over ~1.2s with a strong ease-out. */
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.5s ease;
 }
-/* The safety gauge stays a semantic green→amber→red scale, independent of the
-   red brand accent — a red ring must never read as a "good" score. */
-.gauge__progress.is-excellent { stroke: var(--success); }
+.gauge__progress--inner {
+  stroke-width: 8;
+  opacity: 0.5;
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.12s, stroke 0.5s ease;
+}
+/* Score colour shifts red → amber → cyan as it rises. */
+.gauge__progress.is-excellent,
 .gauge__progress.is-good { stroke: var(--success); }
 .gauge__progress.is-caution { stroke: var(--warn); }
 .gauge__progress.is-danger { stroke: var(--danger); }
@@ -847,13 +901,21 @@ table {
   line-height: 1;
 }
 .gauge__value {
-  font-family: var(--font-display);
-  font-size: 3.4rem;
-  font-weight: 700;
-  letter-spacing: -0.04em;
+  font-family: var(--font-mono);
+  font-size: clamp(2.9rem, 9vw, 3.7rem);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
+.gauge__value.is-excellent,
+.gauge__value.is-good { color: var(--success); }
+.gauge__value.is-caution { color: var(--warn); }
+.gauge__value.is-danger { color: var(--danger); }
 .gauge__max {
-  font-size: var(--fs-small);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
   color: var(--text-faint);
   margin-top: var(--space-1);
 }
@@ -919,57 +981,67 @@ table {
   gap: var(--space-2);
 }
 .check {
-  display: flex;
-  gap: var(--space-3);
-  padding: var(--space-4);
   border: 1px solid var(--border-soft);
-  border-radius: var(--r-md);
-  background: var(--surface-2);
-  border-left-width: 3px;
+  border-left: 3px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--glass);
+  overflow: hidden;
   animation: rise 0.5s both;
-  animation-delay: calc(var(--i) * 60ms);
+  animation-delay: calc(var(--i) * 55ms);
 }
 .check--pass { border-left-color: var(--success); }
 .check--warn { border-left-color: var(--warn); }
 .check--fail { border-left-color: var(--danger); }
 
+.check__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+  transition: background var(--transition);
+}
+.check__head:hover { background: var(--hover-tint); }
 .check__icon {
   flex-shrink: 0;
-  margin-top: 1px;
+  display: flex;
 }
 .check--pass .check__icon { color: var(--success); }
 .check--warn .check__icon { color: var(--warn); }
 .check--fail .check__icon { color: var(--danger); }
 
-.check__body {
+.check__label {
   flex: 1;
   min-width: 0;
-}
-.check__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-.check__label {
   font-weight: 600;
   font-size: 0.95rem;
 }
 .check__badge {
   flex-shrink: 0;
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: 0.68rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 0.2rem 0.55rem;
+  letter-spacing: 0.05em;
+  padding: 0.22rem 0.6rem;
   border-radius: var(--r-full);
 }
 .check__badge--pass { background: var(--success-soft); color: var(--success); }
 .check__badge--warn { background: var(--warn-soft); color: var(--warn); }
 .check__badge--fail { background: var(--danger-soft); color: var(--danger); }
+.check__chev {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  transition: transform var(--transition);
+}
+.check.is-open .check__chev { transform: rotate(180deg); }
 
 .check__detail {
-  margin-top: var(--space-2);
+  padding: 0 var(--space-4) var(--space-4) calc(var(--space-4) + 20px + var(--space-3));
   font-size: 0.88rem;
   color: var(--text-muted);
   line-height: 1.55;
@@ -1562,7 +1634,7 @@ table {
   background: var(--surface);
 }
 .eval-summary.is-pass {
-  border-color: color-mix(in srgb, #34d399 50%, var(--border));
+  border-color: color-mix(in srgb, var(--success) 50%, var(--border));
 }
 .eval-summary.is-fail {
   border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
@@ -1574,7 +1646,7 @@ table {
   color: var(--text);
 }
 .eval-summary.is-pass .eval-summary__big {
-  color: #34d399;
+  color: var(--success);
 }
 .eval-summary__label {
   color: var(--text-muted);
@@ -1616,8 +1688,8 @@ table {
   font-weight: 700;
 }
 .eval-case.is-pass .eval-case__status {
-  background: color-mix(in srgb, #34d399 22%, transparent);
-  color: #34d399;
+  background: color-mix(in srgb, var(--success) 22%, transparent);
+  color: var(--success);
 }
 .eval-case.is-fail .eval-case__status {
   background: color-mix(in srgb, var(--danger) 22%, transparent);
@@ -1670,7 +1742,7 @@ table {
   font-size: var(--fs-small);
 }
 .eval-exp .ok {
-  color: #34d399;
+  color: var(--success);
 }
 .eval-exp .bad {
   color: var(--danger);
@@ -1697,8 +1769,8 @@ table {
   border-radius: 999px;
 }
 .eval-check--pass .eval-check__badge {
-  background: color-mix(in srgb, #34d399 18%, transparent);
-  color: #34d399;
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  color: var(--success);
 }
 .eval-check--warn .eval-check__badge {
   background: color-mix(in srgb, var(--warn) 20%, transparent);
@@ -2498,20 +2570,20 @@ table {
 /* Generic text/number input used across the dashboard */
 .input {
   width: 100%;
-  padding: 0.6rem 0.8rem;
+  padding: 0.62rem 0.85rem;
   font-family: var(--font-body);
   font-size: var(--fs-small);
   color: var(--text);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
+  background: #111318;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--r-sm);
   transition: var(--transition);
 }
 .input::placeholder { color: var(--text-faint); }
 .input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: 0 0 0 2px var(--accent-ring);
 }
 .input--sm { max-width: 100px; }
 .field-inline {

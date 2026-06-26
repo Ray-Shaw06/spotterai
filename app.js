@@ -37,6 +37,7 @@ const errorText = document.getElementById("error-text");
 const fallbackNotice = document.getElementById("fallback-notice");
 
 const gaugeProgress = document.getElementById("gauge-progress");
+const gaugeInner = document.getElementById("gauge-inner");
 const scoreValueEl = document.getElementById("score-value");
 const scoreBandEl = document.getElementById("score-band");
 const countPass = document.getElementById("count-pass");
@@ -83,6 +84,7 @@ const STATUS_ICON = {
 };
 
 const STATUS_LABEL = { pass: "Pass", warn: "Review", fail: "Flagged" };
+const CHEVRON = '<svg class="check__chev" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 // ----------------------------------------------------------------------------
 // Reading the form
@@ -256,7 +258,7 @@ function renderResults(plan, inputs, usedFallback, { focus = true } = {}) {
   showState("results");
 
   // Animate the gauge once the panel is visible.
-  renderScore(audit.score);
+  renderScore(audit.score, audit.checks);
 
   if (focus) {
     // Move focus to the results for keyboard + screen-reader users.
@@ -274,38 +276,45 @@ function scoreBand(score) {
   return { cls: "is-danger", label: "Multiple serious flags" };
 }
 
-function renderScore(score) {
+function renderScore(score, checks = []) {
   const band = scoreBand(score);
 
-  // Color the gauge + band by removing prior band classes and adding the new one.
+  // Color the gauge ring, the score number, and the band label.
   const bandClasses = ["is-excellent", "is-good", "is-caution", "is-danger"];
-  gaugeProgress.classList.remove(...bandClasses);
-  scoreBandEl.classList.remove(...bandClasses);
-  gaugeProgress.classList.add(band.cls);
-  scoreBandEl.classList.add(band.cls);
+  for (const node of [gaugeProgress, scoreValueEl, scoreBandEl]) {
+    node.classList.remove(...bandClasses);
+    node.classList.add(band.cls);
+  }
   scoreBandEl.textContent = band.label;
 
-  // Ring geometry: r = 84 → circumference.
-  const r = 84;
-  const circumference = 2 * Math.PI * r;
-  gaugeProgress.style.strokeDasharray = `${circumference}`;
+  // Inner ring = pass/flag ratio of the audit.
+  const total = checks.length;
+  const ratio = total ? checks.filter((c) => c.status === "pass").length / total : 0;
+
+  // Ring geometry (must match the SVG radii: outer 86, inner 64).
+  const cOuter = 2 * Math.PI * 86;
+  const cInner = 2 * Math.PI * 64;
+  gaugeProgress.style.strokeDasharray = `${cOuter}`;
+  if (gaugeInner) gaugeInner.style.strokeDasharray = `${cInner}`;
+
+  const fill = () => {
+    gaugeProgress.style.strokeDashoffset = `${cOuter * (1 - score / 100)}`;
+    if (gaugeInner) gaugeInner.style.strokeDashoffset = `${cInner * (1 - ratio)}`;
+  };
 
   if (prefersReducedMotion) {
-    gaugeProgress.style.strokeDashoffset = `${circumference * (1 - score / 100)}`;
+    fill();
     scoreValueEl.textContent = String(score);
     return;
   }
 
-  // Start empty, then animate the ring fill on the next frame (CSS transition).
-  gaugeProgress.style.strokeDashoffset = `${circumference}`;
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      gaugeProgress.style.strokeDashoffset = `${circumference * (1 - score / 100)}`;
-    });
-  });
+  // Start empty, then draw both rings on the next frame (CSS transition does the easing).
+  gaugeProgress.style.strokeDashoffset = `${cOuter}`;
+  if (gaugeInner) gaugeInner.style.strokeDashoffset = `${cInner}`;
+  requestAnimationFrame(() => requestAnimationFrame(fill));
 
-  // Count the number up to the score.
-  animateCount(scoreValueEl, score, 1100);
+  // Count the number up to the score over the same ~1.2s.
+  animateCount(scoreValueEl, score, 1200);
 }
 
 function animateCount(el, target, duration) {
@@ -332,19 +341,20 @@ function renderChecks(checks) {
   const sorted = [...checks].sort((a, b) => order[a.status] - order[b.status]);
 
   checksList.innerHTML = sorted
-    .map(
-      (c, i) => `
-      <li class="check check--${c.status}" style="--i:${i}">
-        <span class="check__icon">${STATUS_ICON[c.status] || ""}</span>
-        <div class="check__body">
-          <div class="check__head">
-            <span class="check__label">${esc(c.label)}</span>
-            <span class="check__badge check__badge--${c.status}">${STATUS_LABEL[c.status]}</span>
-          </div>
-          <p class="check__detail">${esc(c.detail)}</p>
-        </div>
-      </li>`
-    )
+    .map((c, i) => {
+      // Flagged / review items open by default; passes stay tucked away.
+      const open = c.status !== "pass";
+      return `
+      <li class="check check--${c.status}${open ? " is-open" : ""}" style="--i:${i}">
+        <button type="button" class="check__head" data-act="toggle-check" aria-expanded="${open}">
+          <span class="check__icon">${STATUS_ICON[c.status] || ""}</span>
+          <span class="check__label">${esc(c.label)}</span>
+          <span class="check__badge check__badge--${c.status}">${STATUS_LABEL[c.status]}</span>
+          ${CHEVRON}
+        </button>
+        <p class="check__detail"${open ? "" : " hidden"}>${esc(c.detail)}</p>
+      </li>`;
+    })
     .join("");
 }
 
@@ -516,6 +526,18 @@ form.addEventListener("submit", (e) => {
 });
 
 retryBtn.addEventListener("click", () => generate());
+
+// Expand / collapse an audit check row.
+checksList?.addEventListener("click", (e) => {
+  const head = e.target.closest('[data-act="toggle-check"]');
+  if (!head) return;
+  const li = head.closest(".check");
+  const detail = li.querySelector(".check__detail");
+  const open = detail.hidden;
+  detail.hidden = !open;
+  li.classList.toggle("is-open", open);
+  head.setAttribute("aria-expanded", String(open));
+});
 
 regenerateBtn.addEventListener("click", () => {
   if (adaptCard) adaptCard.hidden = true;
