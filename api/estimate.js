@@ -11,10 +11,10 @@
  * gets a clean, bounded object (or a clean error to fall back from).
  *
  * The Gemini key is read from env here and never exposed to the client.
- * Runtime: Node 18+ (global fetch). CommonJS — no build step.
+ * Runtime: Node 18+ (global fetch). ES module (Vercel runs the default export).
  */
 
-const { callGemini } = require("../lib/gemini.js");
+import { callGemini } from "../lib/gemini.js";
 
 // Must mirror MUSCLES in exercises.js so the classified group is one the UI knows.
 const MUSCLES = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Cardio", "Full body"];
@@ -115,7 +115,7 @@ function normalizeExercise(o, query) {
   };
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed. Use POST." });

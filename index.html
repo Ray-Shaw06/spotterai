@@ -10,6 +10,13 @@
   />
   <meta name="theme-color" content="#0a0b0d" />
 
+  <!-- PWA: installable + offline (manifest + service worker) -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-title" content="SpotterAI" />
+
   <!-- Open Graph (nice link previews; all text, no paid assets) -->
   <meta property="og:title" content="SpotterAI — the AI coach that audits itself" />
   <meta property="og:description" content="An AI workout coach, plus a code-based system that audits the AI's plans for unsafe advice." />
@@ -713,6 +720,12 @@
         <p class="account-note">A PIN is light protection on a shared browser — not real security. Data stays in this browser; use Export to back it up or move it.</p>
       </div>
 
+      <div class="account-section account-demo">
+        <h3 class="account-h">Try it instantly</h3>
+        <button type="button" id="account-demo" class="btn btn--primary btn--block btn--sm">Load demo data</button>
+        <p class="account-note">Spins up a separate <strong>Demo</strong> profile pre-filled with ~6 weeks of workouts, nutrition and a saved plan — so the dashboard, charts and the <em>adaptive coach loop</em> all work on the first click. Your own profiles aren't touched.</p>
+      </div>
+
       <div class="account-section account-actions">
         <button type="button" id="account-export" class="btn btn--ghost btn--sm">Export backup</button>
         <label class="btn btn--ghost btn--sm account-import-label">
@@ -769,5 +782,14 @@
   <script type="module" src="tracker-ui.js"></script>
   <script type="module" src="workout-ui.js"></script>
   <script type="module" src="nutrition-ui.js"></script>
+
+  <!-- Register the service worker (installable PWA + offline). Non-fatal. -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js").catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>

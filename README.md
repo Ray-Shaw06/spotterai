@@ -1,5 +1,7 @@
 # SpotterAI 🟢
 
+[![CI](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml/badge.svg)](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml)
+
 **An AI fitness coach that audits its own safety.**
 
 I built an AI workout coach — and then built a separate, code-based system that
@@ -145,6 +147,19 @@ explains *why* it flagged so the user can make an informed decision.
 > intentionally simple keyword heuristics. They will occasionally over- or
 > under-flag. That's an honest reflection of what a lightweight automated auditor
 > can and can't do — which is itself part of the lesson.
+
+### Tested + CI
+
+Because the evaluator is the trust centerpiece, it's covered by a unit-test
+suite (the search logic too). It uses **Node's built-in test runner** — still
+**zero dependencies** — and runs on every push via **GitHub Actions** (the badge
+up top). The tests assert the auditor actually catches what it claims: missing
+rest days, RPE 10 for a beginner, all-push/no-pull imbalance, injury
+contraindications, excessive volume, and that a malformed plan never throws.
+
+```bash
+npm test          # or: node --test
+```
 
 ---
 
@@ -312,6 +327,7 @@ spotterai/
 ├─ nutrition-ui.js        # MyFitnessPal-style food diary (meals, macros, water)
 ├─ foods.js               # built-in food DB + Open Food Facts search
 ├─ ai.js                  # client for /api/estimate (AI food macros + exercise tags)
+├─ demo-data.js           # one-click "Load demo data" (isolated Demo profile)
 
 ├─ router.js              # hash-based page router (Plan/Dashboard/Nutrition/…)
 ├─ profile-store.js       # local profiles + per-profile namespacing + export/import
@@ -328,12 +344,31 @@ spotterai/
 │  └─ plan.js             # shared plan schema + parse/validate/normalize
 ├─ data/
 │  └─ sample-plans.json   # offline fallback plans (429 / offline demo)
+├─ test/                  # node --test unit tests (evaluator + search)
+├─ .github/workflows/     # CI (runs the tests on every push)
+├─ manifest.json          # PWA manifest (installable)
+├─ service-worker.js      # PWA offline shell + runtime caching
+├─ icons/                 # PWA app icons (generated, brand-red gauge)
 ├─ docs/                  # screenshots
 ├─ .env.example           # GEMINI_API_KEY=...
 ├─ .gitignore             # ignores .env and node_modules
 ├─ vercel.json            # function config
 └─ README.md
 ```
+
+---
+
+## Try it in 10 seconds + install it
+
+- **See it populated instantly.** Open the **profile** menu (top-right) → **Load
+  demo data**. It spins up an isolated **Demo** profile with ~6 weeks of workouts,
+  nutrition, bodyweight, and a saved plan — so the dashboard, charts, rank, and the
+  **adaptive coach loop** all do something on the very first click (your own
+  profiles are never touched).
+- **Install it.** SpotterAI is a **PWA** — a manifest + service worker make it
+  installable on phone/desktop ("Add to Home Screen") and keep the app shell plus
+  the built-in food/exercise databases working **offline** after the first visit.
+  (The AI features need a connection and degrade gracefully without one.)
 
 ---
 

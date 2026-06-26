@@ -11,6 +11,7 @@
 import { createProfile, deleteProfile, getActive, listProfiles, signIn, signOut, subscribe } from "./profile-store.js";
 import { exportData, importData } from "./tracker-store.js";
 import { SYNC_CONFIGURED, initSync, signInWithGoogle, signOutGoogle } from "./sync.js";
+import { seedDemo } from "./demo-data.js";
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -26,6 +27,7 @@ const els = {
   exportBtn: $("account-export"),
   importInput: $("account-import"),
   syncBody: $("sync-body"),
+  demo: $("account-demo"),
 };
 
 function esc(t) {
@@ -223,6 +225,22 @@ function init() {
     const f = e.target.files?.[0];
     if (f) importBackup(f);
     e.target.value = "";
+  });
+
+  // Load demo data into an isolated "Demo" profile, then jump to the dashboard.
+  els.demo?.addEventListener("click", async () => {
+    els.demo.disabled = true;
+    els.demo.textContent = "Loading demo…";
+    try {
+      await seedDemo();
+      closeModal();
+      location.hash = "#/dashboard";
+    } catch {
+      flash(els.demo, "Couldn't load the demo. Please try again.");
+    } finally {
+      els.demo.disabled = false;
+      els.demo.textContent = "Load demo data";
+    }
   });
 
   // Keep header + modal in sync when the profile changes.

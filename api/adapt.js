@@ -12,11 +12,11 @@
  * human-readable list of what changed and why.
  *
  * The Gemini key is read from env here and never exposed to the client.
- * Runtime: Node 18+ (global fetch). CommonJS — no build step.
+ * Runtime: Node 18+ (global fetch). ES module (Vercel runs the default export).
  */
 
-const { callGemini } = require("../lib/gemini.js");
-const { SCHEMA_HINT, extractJson, isValidPlan, normalizePlan } = require("../lib/plan.js");
+import { callGemini } from "../lib/gemini.js";
+import { SCHEMA_HINT, extractJson, isValidPlan, normalizePlan } from "../lib/plan.js";
 
 const MAX_JSON_RETRIES = 1; // re-ask once if the model returns malformed JSON
 const MAX_OUTPUT_TOKENS = 4096;
@@ -90,7 +90,7 @@ function cleanChanges(arr) {
     .slice(0, MAX_CHANGES);
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed. Use POST." });

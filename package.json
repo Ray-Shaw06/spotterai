@@ -2,10 +2,12 @@
   "name": "spotterai",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "An AI fitness coach that audits its own safety. Generates a personalized weekly training program with Gemini, then runs a pure-code evaluator that scores the plan for safety and quality.",
   "scripts": {
     "dev": "vercel dev",
-    "start": "vercel dev"
+    "start": "vercel dev",
+    "test": "node --test"
   },
   "license": "MIT",
   "engines": {

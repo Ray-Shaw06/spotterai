@@ -13,7 +13,7 @@
  * The Gemini key is read from env here and never exposed to the client.
  */
 
-const { callGemini } = require("../lib/gemini.js");
+import { callGemini } from "../lib/gemini.js";
 
 // Keep requests bounded.
 const MAX_MESSAGES = 16; // most recent turns kept for context
@@ -60,7 +60,7 @@ function toGeminiContents(messages) {
     }));
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed. Use POST." });
