@@ -15,7 +15,7 @@
  * Bump CACHE when shipping changes so old caches are cleaned on activate.
  */
 
-const CACHE = "spotterai-v1";
+const CACHE = "spotterai-v2";
 const CORE = [
   "./",
   "index.html",
@@ -65,12 +65,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Same-origin static assets → cache-first, then network (and cache it).
+  // Same-origin assets → NETWORK-FIRST (so deploys always show up), with the
+  // cache as an offline fallback. Avoids the classic PWA "I don't see my changes"
+  // staleness from cache-first on CSS/JS.
   if (sameOrigin) {
     event.respondWith(
       (async () => {
-        const cached = await caches.match(request);
-        if (cached) return cached;
         try {
           const res = await fetch(request);
           if (res && res.ok) {
@@ -79,7 +79,7 @@ self.addEventListener("fetch", (event) => {
           }
           return res;
         } catch {
-          return cached || Response.error();
+          return (await caches.match(request)) || Response.error();
         }
       })()
     );
