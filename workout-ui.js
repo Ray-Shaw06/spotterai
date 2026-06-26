@@ -306,7 +306,7 @@ function renderHistory() {
             .join("");
           return `<li class="hist" data-id="${w.id}">
             <button type="button" class="hist__head" data-act="toggle-hist">
-              <span class="hist__main"><span class="hist__name">${esc(w.name)}</span><span class="hist__sub">${esc(w.date)}${dur} · ${setCount} sets</span></span>
+              <span class="hist__main"><span class="hist__name">${esc(w.name)}</span><span class="hist__sub">${esc(w.date)}${dur} · ${setCount} ${setCount === 1 ? "set" : "sets"}</span></span>
               <span class="hist__vol">${w.volume ? (w.volume / 1000).toFixed(1) + "k" : "—"}</span>
             </button>
             <div class="hist__detail" hidden>${detail}<button type="button" class="btn-link-danger" data-act="del-workout">Delete workout</button></div>

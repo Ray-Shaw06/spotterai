@@ -2849,7 +2849,7 @@ table {
 .macro-bar span { display: block; height: 100%; border-radius: var(--r-full); transition: width 400ms ease; }
 
 /* Meals */
-.nut-meals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.nut-meals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); align-items: start; }
 .meal {
   display: flex;
   flex-direction: column;
@@ -2891,7 +2891,7 @@ table {
 .meal__add:hover { border-color: var(--accent); }
 
 /* Water */
-.water { display: flex; flex-direction: column; gap: var(--space-3); }
+.water { display: flex; flex: 1; flex-direction: column; justify-content: center; gap: var(--space-3); }
 .water__amt { font-family: var(--font-display); font-weight: 700; font-size: 1.3rem; color: var(--text); }
 .water__bar { height: 10px; border-radius: var(--r-full); background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
 .water__bar span { display: block; height: 100%; background: #6cb8ff; border-radius: var(--r-full); transition: width 400ms ease; }
