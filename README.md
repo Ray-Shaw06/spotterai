@@ -357,7 +357,7 @@ spotterai/
 ├─ charts.js              # dependency-free SVG line/bar/ring charts
 ├─ progression.js         # ⭐ pure math: est. 1RM, auto-progression, deload trend
 ├─ tracker-store.js       # localStorage tracker + derived stats + chat context
-├─ tracker-ui.js          # gamified dashboard (rank, streak, nutrition, charts)
+├─ tracker-ui.js          # dashboard + progress display (rank, streak, deload, charts, 1RM trend)
 ├─ workout-ui.js          # Hevy-style workout session (per-set logging, routines, history)
 ├─ exercises.js           # searchable exercise library
 ├─ nutrition-ui.js        # MyFitnessPal-style food diary (meals, macros, water)
