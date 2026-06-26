@@ -126,7 +126,7 @@ function renderModal() {
           .map(
             (p) => `<li class="account-row" data-id="${p.id}">
               <span class="account-avatar account-avatar--sm">${esc(initial(p.name))}</span>
-              <span class="account-row__name">${esc(p.name)} ${p.hasPin ? '<span class="account-lock" title="PIN protected" aria-label="PIN protected"><svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 11V8a6 6 0 0 1 12 0v3M5 11h14v9H5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ""}</span>
+              <span class="account-row__name">${esc(p.name)} ${p.hasPin ? '<span class="account-lock" title="PIN protected">🔒</span>' : ""}</span>
               ${p.hasPin ? '<input type="password" class="input input--sm account-pin" placeholder="PIN" inputmode="numeric" aria-label="PIN" />' : ""}
               <button type="button" class="btn btn--ghost btn--sm account-switch">Switch</button>
               <button type="button" class="account-del" aria-label="Delete profile">×</button>

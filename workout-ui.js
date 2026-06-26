@@ -277,7 +277,7 @@ function finishSession() {
   const durationSec = Math.floor((Date.now() - session.startedAt) / 1000);
   const { workout, newAchievements } = addWorkout({ name: el.name.value.trim() || session.name, exercises, durationSec });
   toast(`<strong>+${workout.xp} XP</strong> · ${esc(workout.name)} · ${fmtTime(durationSec)}`);
-  for (const a of newAchievements) toast(`Achievement · <strong>${esc(a.name)}</strong> · +${a.xp} XP`);
+  for (const a of newAchievements) toast(`<strong>🏆 ${esc(a.name)}</strong> · +${a.xp} XP`);
   session = null;
   saveDraft();
   showIdle();

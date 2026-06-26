@@ -36,14 +36,14 @@
   <!-- Favicon: an inline SVG shield-check in the brand red (zero external assets) -->
   <link
     rel="icon"
-    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0b0d'/%3E%3Cpath d='M16 5l8 3v7c0 5-3.4 8.8-8 11-4.6-2.2-8-6-8-11V8l8-3z' fill='none' stroke='%2300E5C4' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M12 16l3 3 5-6' fill='none' stroke='%2300E5C4' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0b0d'/%3E%3Cpath d='M16 5l8 3v7c0 5-3.4 8.8-8 11-4.6-2.2-8-6-8-11V8l8-3z' fill='none' stroke='%23ff3b3b' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M12 16l3 3 5-6' fill='none' stroke='%23ff3b3b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
   />
 
-  <!-- Fonts: Syne (display) + Inter (body) + JetBrains Mono (data) — free via Google Fonts -->
+  <!-- Fonts: Space Grotesk (display) + Inter (body) — both free via Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
     rel="stylesheet"
   />
 
@@ -52,53 +52,41 @@
 <body>
   <a class="skip-link" href="#generator">Skip to the workout generator</a>
 
-  <!-- ===================== APP SHELL ===================== -->
-  <div class="app-shell">
-    <aside class="sidebar">
-      <a class="sidebar__brand" href="#/" aria-label="SpotterAI home">
+  <!-- ===================== SITE HEADER ===================== -->
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="wordmark" href="/" aria-label="SpotterAI home">
+        <!-- Pure-SVG wordmark glyph: a shield with a check -->
         <span class="wordmark__glyph" aria-hidden="true">
-          <svg viewBox="0 0 32 32" width="22" height="22">
+          <svg viewBox="0 0 32 32" width="26" height="26">
             <path d="M16 4l9 3.4v7.8c0 5.6-3.8 9.8-9 12.2-5.2-2.4-9-6.6-9-12.2V7.4L16 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
             <path d="M11.5 16l3.2 3.2L21 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </span>
         <span class="wordmark__text">Spotter<span class="wordmark__accent">AI</span></span>
       </a>
-
-      <nav id="primary-nav" class="sidebar__nav" aria-label="Primary">
-        <a href="#/" data-nav="home" class="nav-link">
-          <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="5" width="12" height="16" rx="2" /><path d="M9 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1M9 12h6M9 16h4" /></svg><span>Plan</span>
-        </a>
-        <a href="#/dashboard" data-nav="dashboard" class="nav-link">
-          <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></svg><span>Dashboard</span>
-        </a>
-        <a href="#/nutrition" data-nav="nutrition" class="nav-link">
-          <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8c-2.6-1.7-6.5 0-6.5 5.2 0 4.7 3.2 8.8 6.5 8.8s6.5-4.1 6.5-8.8C18.5 8 14.6 6.3 12 8z" /><path d="M12 8c0-2.2 1.5-4 3.8-4.2" /></svg><span>Nutrition</span>
-        </a>
-        <a href="#/progress" data-nav="progress" class="nav-link">
-          <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l5.5-5.5 3 3L20 8" /><path d="M15 8h5v5" /></svg><span>Progress</span>
-        </a>
-        <a href="#/form-check" data-nav="form-check" class="nav-link">
-          <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2" /><path d="M16 10l5-3v10l-5-3z" /></svg><span>Form check</span>
-        </a>
-        <a href="#/evals" data-nav="evals" class="nav-link">
-          <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.6v5.4c0 4.4-3 7.6-7 8.9-4-1.3-7-4.5-7-8.9V5.6L12 3z" /><path d="M9.2 12l2 2 3.6-4" /></svg><span>Evals</span>
-        </a>
+      <button id="nav-toggle" class="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="primary-nav">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+      </button>
+      <nav id="primary-nav" class="site-header__nav" aria-label="Primary">
+        <a href="#/" data-nav="home" class="nav-link">Plan</a>
+        <a href="#/dashboard" data-nav="dashboard" class="nav-link">Dashboard</a>
+        <a href="#/nutrition" data-nav="nutrition" class="nav-link">Nutrition</a>
+        <a href="#/progress" data-nav="progress" class="nav-link">Progress</a>
+        <a href="#/form-check" data-nav="form-check" class="nav-link">Form check</a>
+        <a href="#/evals" data-nav="evals" class="nav-link">Evals</a>
       </nav>
+      <a class="header-gh" href="https://github.com/Ray-Shaw06/spotterai" target="_blank" rel="noopener" aria-label="View source on GitHub" title="View source on GitHub">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.7 18 5 18 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z" /></svg>
+      </a>
+      <button id="profile-btn" class="profile-btn" aria-haspopup="dialog" aria-expanded="false">
+        <span id="profile-avatar" class="profile-btn__avatar" aria-hidden="true">G</span>
+        <span id="profile-name" class="profile-btn__name">Guest</span>
+        <svg class="profile-btn__chev" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      </button>
+    </div>
+  </header>
 
-      <div class="sidebar__foot">
-        <button id="profile-btn" class="profile-btn" aria-haspopup="dialog" aria-expanded="false">
-          <span id="profile-avatar" class="profile-btn__avatar" aria-hidden="true">G</span>
-          <span id="profile-name" class="profile-btn__name">Guest</span>
-          <svg class="profile-btn__chev" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-        </button>
-        <a class="header-gh" href="https://github.com/Ray-Shaw06/spotterai" target="_blank" rel="noopener" aria-label="View source on GitHub" title="View source on GitHub">
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.7 18 5 18 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z" /></svg>
-        </a>
-      </div>
-    </aside>
-
-    <div class="app-main">
   <main>
     <!-- ============================ HOME / PLAN PAGE ============================ -->
     <div class="view" data-view="home">
@@ -274,23 +262,17 @@
           <!-- LOADING STATE (branded skeleton) -->
           <div class="state state--loading" id="state-loading" hidden>
             <div class="loading-head">
+              <span class="spinner" aria-hidden="true"></span>
               <div>
                 <p class="loading-title" id="loading-title">Generating your program…</p>
                 <p class="loading-step" id="loading-step">Asking the coach for a draft</p>
               </div>
             </div>
-            <div class="card skel-card skel-score" aria-hidden="true">
-              <div class="skel-ring"></div>
-              <div class="skel-lines">
-                <span class="skel-line" style="width: 35%"></span>
-                <span class="skel-line" style="width: 80%"></span>
-                <span class="skel-line" style="width: 62%"></span>
-              </div>
-            </div>
-            <div class="skel-days" aria-hidden="true">
-              <div class="card skel-card skel-day"><span class="skel-line skel-line--head"></span><span class="skel-line"></span><span class="skel-line"></span><span class="skel-line" style="width: 70%"></span></div>
-              <div class="card skel-card skel-day"><span class="skel-line skel-line--head"></span><span class="skel-line"></span><span class="skel-line"></span><span class="skel-line" style="width: 58%"></span></div>
-              <div class="card skel-card skel-day"><span class="skel-line skel-line--head"></span><span class="skel-line"></span><span class="skel-line"></span><span class="skel-line" style="width: 76%"></span></div>
+            <div class="skeleton-gauge" aria-hidden="true"></div>
+            <div class="skeleton-rows" aria-hidden="true">
+              <span class="skeleton-row"></span>
+              <span class="skeleton-row"></span>
+              <span class="skeleton-row"></span>
             </div>
             <p class="sr-only">Generating and auditing your plan, please wait.</p>
           </div>
@@ -318,12 +300,8 @@
               <div class="score-card__gauge">
                 <svg class="gauge" viewBox="0 0 200 200" role="img" aria-labelledby="score-aria">
                   <title id="score-aria">Automated safety and quality score</title>
-                  <!-- Outer ring: total score -->
-                  <circle class="gauge__track" cx="100" cy="100" r="86" />
-                  <circle class="gauge__progress" id="gauge-progress" cx="100" cy="100" r="86" transform="rotate(-90 100 100)" />
-                  <!-- Inner ring: pass / flag ratio -->
-                  <circle class="gauge__track gauge__track--inner" cx="100" cy="100" r="64" />
-                  <circle class="gauge__progress gauge__progress--inner" id="gauge-inner" cx="100" cy="100" r="64" transform="rotate(-90 100 100)" />
+                  <circle class="gauge__track" cx="100" cy="100" r="84" />
+                  <circle class="gauge__progress" id="gauge-progress" cx="100" cy="100" r="84" transform="rotate(-90 100 100)" />
                 </svg>
                 <div class="gauge__center">
                   <span class="gauge__value" id="score-value">0</span>
@@ -448,9 +426,7 @@
           </div>
           <form id="quicklog-form" class="quicklog__form">
             <input id="quicklog-input" class="input quicklog__input" placeholder="Log a workout or a meal…" autocomplete="off" />
-            <button type="button" id="quicklog-mic" class="quicklog__mic" aria-label="Log by voice" title="Log by voice">
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
-            </button>
+            <button type="button" id="quicklog-mic" class="quicklog__mic" aria-label="Log by voice" title="Log by voice">🎤</button>
             <button type="submit" id="quicklog-send" class="btn btn--primary btn--sm">Log</button>
           </form>
           <div id="quicklog-result" class="quicklog__result" hidden></div>
@@ -461,7 +437,7 @@
           <div class="card dash-rankcard">
             <div id="dash-rank"></div>
             <div id="dash-stats" class="dash-stats"></div>
-            <button type="button" id="share-progress" class="btn btn--ghost btn--sm dash-share">Share progress card</button>
+            <button type="button" id="share-progress" class="btn btn--ghost btn--sm dash-share">📤 Share progress card</button>
           </div>
 
           <!-- Workout session (Hevy-style) -->
@@ -492,7 +468,7 @@
 
               <div id="session-exercises" class="session-exercises"></div>
               <button type="button" id="session-add-exercise" class="btn btn--ghost btn--sm session-add">+ Add exercise</button>
-              <button type="button" id="session-tools-toggle" class="btn btn--ghost btn--sm session-add">Tools — plate &amp; 1RM</button>
+              <button type="button" id="session-tools-toggle" class="btn btn--ghost btn--sm session-add">🧮 Tools — plate &amp; 1RM</button>
 
               <!-- Lifting tools (plate calculator + 1RM estimate) -->
               <div id="session-tools" class="session-tools" hidden>
@@ -775,8 +751,6 @@
       </p>
     </div>
   </footer>
-    </div><!-- /.app-main -->
-  </div><!-- /.app-shell -->
 
   <!-- ===================== EXERCISE PICKER ===================== -->
   <div id="exercise-picker" class="picker-modal" role="dialog" aria-modal="true" aria-label="Add exercise" aria-hidden="true">

@@ -195,7 +195,7 @@ function renderResults(q) {
   let html = "";
   // Snap a meal: estimate macros from a photo (Gemini vision).
   html += `<li><button type="button" class="food-opt food-opt--ai" data-act="snap-meal">
-    <span class="food-opt__main"><span class="food-opt__name">Snap a meal — macros from a photo</span><span class="food-opt__sub">use your camera to estimate calories</span></span>
+    <span class="food-opt__main"><span class="food-opt__name">📷 Snap a meal → macros</span><span class="food-opt__sub">estimate calories from a photo</span></span>
     <span class="food-opt__tag food-opt__tag--ai">AI</span></button></li>`;
   // Estimate-anything: turn whatever the user typed into macros via the AI.
   if (query) {

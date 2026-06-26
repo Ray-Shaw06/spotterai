@@ -104,7 +104,7 @@ function renderGuard(flags) {
   const box = document.createElement("div");
   const worst = flags.some((f) => f.severity === "warn") ? "warn" : "caution";
   box.className = `chat-guard chat-guard--${worst}`;
-  box.innerHTML = `<span class="chat-guard__head">Safety check · automated</span><ul>${flags
+  box.innerHTML = `<span class="chat-guard__head">⚠️ Safety check (auto)</span><ul>${flags
     .map((f) => `<li><strong>${escapeHtml(f.label)}.</strong> ${escapeHtml(f.note)}</li>`)
     .join("")}</ul>`;
   return box;
