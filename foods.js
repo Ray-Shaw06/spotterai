@@ -228,15 +228,30 @@ export function searchFoods(query, limit = 25, extra = []) {
 }
 
 /**
- * Search Open Food Facts (free, no key). Returns foods with per-100g macros.
- * Throws on network/CORS failure (caller falls back to built-in only).
+ * Search Open Food Facts (free, no key, CORS-enabled). Returns foods with
+ * per-100g macros. This endpoint sends `access-control-allow-origin: *` (so it
+ * works from the browser) but intermittently returns 503 under load, so we retry
+ * transient failures a couple of times. Throws on real failure (caller falls
+ * back to the built-in + custom foods).
  */
 export async function searchOpenFoodFacts(query, signal) {
   const url =
     "https://world.openfoodfacts.org/cgi/search.pl?search_terms=" +
     encodeURIComponent(query) +
     "&search_simple=1&action=process&json=1&page_size=20&fields=product_name,brands,nutriments";
-  const res = await fetch(url, { signal });
+
+  let res;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (signal?.aborted) {
+      const e = new Error("aborted");
+      e.name = "AbortError";
+      throw e;
+    }
+    res = await fetch(url, { signal });
+    if (res.ok) break;
+    if (res.status < 500) throw new Error(`Open Food Facts ${res.status}`); // permanent
+    await new Promise((r) => setTimeout(r, 500 * (attempt + 1))); // transient (e.g. 503) → backoff + retry
+  }
   if (!res.ok) throw new Error(`Open Food Facts ${res.status}`);
   const data = await res.json();
   const out = [];
