@@ -436,8 +436,40 @@
                 <input id="session-name" class="input session-name" aria-label="Workout name" autocomplete="off" />
                 <span id="session-timer" class="session-timer" aria-label="Duration">0:00</span>
               </div>
+
+              <!-- Rest timer (auto-starts when a set is marked done) -->
+              <div id="rest-timer" class="rest-timer" hidden>
+                <span class="rest-timer__label">Rest</span>
+                <span id="rest-time" class="rest-timer__time">0:00</span>
+                <div class="rest-timer__btns">
+                  <button type="button" class="btn btn--ghost btn--sm" data-rest="add">+15s</button>
+                  <button type="button" class="btn btn--ghost btn--sm" data-rest="skip">Skip</button>
+                </div>
+              </div>
+
               <div id="session-exercises" class="session-exercises"></div>
               <button type="button" id="session-add-exercise" class="btn btn--ghost btn--sm session-add">+ Add exercise</button>
+              <button type="button" id="session-tools-toggle" class="btn btn--ghost btn--sm session-add">🧮 Tools — plate &amp; 1RM</button>
+
+              <!-- Lifting tools (plate calculator + 1RM estimate) -->
+              <div id="session-tools" class="session-tools" hidden>
+                <div class="tool">
+                  <h4 class="tool__title">Plate calculator</h4>
+                  <div class="tool__row">
+                    <label class="field-label-sm">Target<input id="plate-target" class="input input--sm" type="number" inputmode="decimal" min="0" placeholder="100" /></label>
+                    <label class="field-label-sm">Bar<input id="plate-bar" class="input input--sm" type="number" inputmode="decimal" min="0" /></label>
+                  </div>
+                  <div id="plate-out" class="tool__out"></div>
+                </div>
+                <div class="tool">
+                  <h4 class="tool__title">1RM estimate</h4>
+                  <div class="tool__row">
+                    <label class="field-label-sm">Weight<input id="orm-weight" class="input input--sm" type="number" inputmode="decimal" min="0" placeholder="80" /></label>
+                    <label class="field-label-sm">Reps<input id="orm-reps" class="input input--sm" type="number" inputmode="numeric" min="1" placeholder="5" /></label>
+                  </div>
+                  <div id="orm-out" class="tool__out"></div>
+                </div>
+              </div>
               <div class="session-actions">
                 <button type="button" id="session-discard" class="btn-link-danger">Discard</button>
                 <div class="session-actions__right">

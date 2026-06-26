@@ -14,6 +14,7 @@
 import { addCustomExercise, addRoutine, addWorkout, getCustomExercises, getLoggedExerciseNames, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, subscribe, suggestProgression, updateCustomExercise } from "./tracker-store.js";
 import { findExercise, isCardio, searchExercises } from "./exercises.js";
 import { classifyExercise } from "./ai.js";
+import { epley1RM } from "./progression.js";
 import { store } from "./store.js";
 
 const $ = (id) => document.getElementById(id);
@@ -30,6 +31,17 @@ const el = {
   discard: $("session-discard"),
   saveRoutine: $("session-save-routine"),
   history: $("workout-history"),
+  // rest timer + tools
+  restTimer: $("rest-timer"),
+  restTime: $("rest-time"),
+  toolsToggle: $("session-tools-toggle"),
+  tools: $("session-tools"),
+  plateTarget: $("plate-target"),
+  plateBar: $("plate-bar"),
+  plateOut: $("plate-out"),
+  ormWeight: $("orm-weight"),
+  ormReps: $("orm-reps"),
+  ormOut: $("orm-out"),
   // picker
   picker: $("exercise-picker"),
   search: $("exercise-search"),
@@ -111,6 +123,110 @@ function stopTimer() {
 }
 
 // ----------------------------------------------------------------------------
+// Rest timer (auto-starts when a set is checked done)
+// ----------------------------------------------------------------------------
+let restId = null;
+let restRemaining = 0;
+const REST_DEFAULT = 120;
+
+function startRest(sec = REST_DEFAULT) {
+  if (!el.restTimer) return;
+  stopRest();
+  restRemaining = sec;
+  el.restTimer.hidden = false;
+  el.restTime.textContent = fmtTime(restRemaining);
+  restId = setInterval(() => {
+    restRemaining -= 1;
+    if (restRemaining <= 0) return restDone();
+    el.restTime.textContent = fmtTime(restRemaining);
+  }, 1000);
+}
+function stopRest() {
+  if (restId) clearInterval(restId);
+  restId = null;
+}
+function skipRest() {
+  stopRest();
+  if (el.restTimer) el.restTimer.hidden = true;
+}
+function addRest(sec) {
+  if (!el.restTimer || el.restTimer.hidden) return;
+  restRemaining = Math.max(1, restRemaining + sec);
+  el.restTime.textContent = fmtTime(restRemaining);
+}
+function restDone() {
+  stopRest();
+  if (el.restTime) el.restTime.textContent = "0:00";
+  try {
+    navigator.vibrate?.(200);
+  } catch {
+    /* ignore */
+  }
+  beep();
+  setTimeout(() => {
+    if (el.restTimer && !restId) el.restTimer.hidden = true;
+  }, 1500);
+}
+function beep() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.type = "sine";
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.45);
+    o.start();
+    o.stop(ctx.currentTime + 0.47);
+    o.onended = () => ctx.close();
+  } catch {
+    /* audio blocked — vibrate/visual still fire */
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Tools — plate calculator + 1RM estimate
+// ----------------------------------------------------------------------------
+function renderPlates() {
+  if (!el.plateOut) return;
+  const u = unit();
+  const bar = Number(el.plateBar.value) || (u === "lb" ? 45 : 20);
+  const target = Number(el.plateTarget.value) || 0;
+  if (target <= 0) return void (el.plateOut.innerHTML = `<span class="muted">Enter a target weight.</span>`);
+  if (target < bar) return void (el.plateOut.innerHTML = `<span class="muted">Target is below the bar (${bar}${u}).</span>`);
+  let perSide = (target - bar) / 2;
+  const plates = u === "lb" ? [45, 35, 25, 10, 5, 2.5] : [25, 20, 15, 10, 5, 2.5, 1.25];
+  const used = [];
+  for (const p of plates) {
+    const c = Math.floor(perSide / p + 1e-9);
+    if (c > 0) {
+      used.push([p, c]);
+      perSide -= p * c;
+    }
+  }
+  const leftover = Math.round(perSide * 100) / 100;
+  el.plateOut.innerHTML = used.length
+    ? `<p class="plate-line"><span class="muted">Per side:</span> ${used.map(([p, c]) => `<span class="plate-chip">${c}×${p}</span>`).join(" ")}</p>${leftover > 0 ? `<p class="muted">~${leftover}${u} left over (no standard plate).</p>` : ""}`
+    : `<span class="muted">Just the bar — no plates needed.</span>`;
+}
+function renderOrm() {
+  if (!el.ormOut) return;
+  const w = Number(el.ormWeight.value) || 0;
+  const r = Number(el.ormReps.value) || 0;
+  if (w <= 0 || r <= 0) return void (el.ormOut.innerHTML = `<span class="muted">Enter weight × reps.</span>`);
+  const u = unit();
+  const orm = Math.round(epley1RM(w, r));
+  const pcts = [95, 90, 85, 80, 75, 70];
+  el.ormOut.innerHTML = `<p class="orm-est">Est. 1RM <strong>${orm} ${u}</strong></p>
+    <ul class="orm-table">${pcts.map((p) => `<li><span>${p}%</span><span>${Math.round((orm * p) / 100)} ${u}</span></li>`).join("")}</ul>`;
+}
+
+// ----------------------------------------------------------------------------
 // Lifecycle
 // ----------------------------------------------------------------------------
 function defaultName() {
@@ -133,6 +249,7 @@ function startSession(preset) {
 
 function showIdle() {
   stopTimer();
+  skipRest();
   el.session.hidden = true;
   el.idle.hidden = false;
   renderIdle();
@@ -434,6 +551,28 @@ function init() {
   el.finish?.addEventListener("click", finishSession);
   el.discard?.addEventListener("click", discardSession);
   el.addEx?.addEventListener("click", openPicker);
+
+  // Rest timer controls
+  el.restTimer?.addEventListener("click", (e) => {
+    const a = e.target.closest("[data-rest]")?.dataset.rest;
+    if (a === "add") addRest(15);
+    else if (a === "skip") skipRest();
+  });
+
+  // Tools: plate calculator + 1RM estimate
+  el.toolsToggle?.addEventListener("click", () => {
+    const show = el.tools.hidden;
+    el.tools.hidden = !show;
+    if (show) {
+      if (!el.plateBar.value) el.plateBar.value = unit() === "lb" ? 45 : 20;
+      renderPlates();
+      renderOrm();
+    }
+  });
+  el.plateTarget?.addEventListener("input", renderPlates);
+  el.plateBar?.addEventListener("input", renderPlates);
+  el.ormWeight?.addEventListener("input", renderOrm);
+  el.ormReps?.addEventListener("input", renderOrm);
   el.saveRoutine?.addEventListener("click", () => {
     if (!session?.exercises.length) return;
     const name = prompt("Name this routine:", session.name);
@@ -477,6 +616,7 @@ function init() {
       const si = Number(e.target.closest(".set-row").dataset.set);
       ex.sets[si].done = !ex.sets[si].done;
       e.target.closest(".set-row").classList.toggle("is-done", ex.sets[si].done);
+      if (ex.sets[si].done) startRest(); // auto rest between sets
       saveDraft();
     }
   });
