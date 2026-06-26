@@ -11,7 +11,7 @@
  * re-rendering, so inputs never lose focus; structural changes re-render.
  */
 
-import { addCustomExercise, addRoutine, addWorkout, getCustomExercises, getLoggedExerciseNames, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, subscribe, updateCustomExercise } from "./tracker-store.js";
+import { addCustomExercise, addRoutine, addWorkout, getCustomExercises, getLoggedExerciseNames, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, subscribe, suggestProgression, updateCustomExercise } from "./tracker-store.js";
 import { findExercise, isCardio, searchExercises } from "./exercises.js";
 import { classifyExercise } from "./ai.js";
 import { store } from "./store.js";
@@ -190,11 +190,15 @@ function addExercise(name, muscle, cardioOverride) {
   // Persist anything not in the built-in library so it's searchable next time.
   if (!findExercise(name)) addCustomExercise({ name, muscle, cardio });
   const prev = lastSetFor(name);
+  // Auto-progression: a suggested target load for this session (shown as a hint
+  // + the weight placeholder), computed from the last top set.
+  const suggest = cardio ? null : suggestProgression(name);
   session.exercises.push({
     name,
     muscle: muscle || findExercise(name)?.muscle || "",
     cardio,
     prev,
+    suggest,
     sets: [cardio ? { durationMin: "", distance: "", done: false } : { weight: "", reps: "", done: false }],
   });
   renderSession();
@@ -242,6 +246,8 @@ function renderSession() {
     .map((ex, ei) => {
       const cardio = ex.cardio || isCardio(ex.name);
       const prevText = ex.prev ? `Previous: ${ex.prev.top.weight ? ex.prev.top.weight + u + " × " : ""}${ex.prev.top.reps || ex.prev.sets.length + " sets"}` : "No history yet";
+      const sug = !cardio && ex.suggest && ex.suggest.weight ? ex.suggest : null;
+      const targetTag = sug ? `<span class="ex-target" title="Auto-progression from your last session">▲ Target ${sug.weight}${u}${sug.increment > 0 ? ` (+${sug.increment})` : ""}</span>` : "";
       const head = `${cardio ? "<th>Min</th><th>Dist</th>" : `<th>${u}</th><th>Reps</th>`}`;
       const rows = ex.sets
         .map((s, si) => {
@@ -250,8 +256,8 @@ function renderSession() {
           const cells = cardio
             ? `<td><input class="input set-in" data-f="durationMin" type="number" inputmode="decimal" value="${esc(s.durationMin ?? "")}" placeholder="min" /></td>
                <td><input class="input set-in" data-f="distance" type="number" inputmode="decimal" value="${esc(s.distance ?? "")}" placeholder="km" /></td>`
-            : `<td><input class="input set-in" data-f="weight" type="number" inputmode="decimal" value="${esc(s.weight ?? "")}" placeholder="${prevSet?.weight ?? ""}" /></td>
-               <td><input class="input set-in" data-f="reps" type="number" inputmode="numeric" value="${esc(s.reps ?? "")}" placeholder="${prevSet?.reps ?? ""}" /></td>`;
+            : `<td><input class="input set-in" data-f="weight" type="number" inputmode="decimal" value="${esc(s.weight ?? "")}" placeholder="${esc(sug?.weight ?? prevSet?.weight ?? "")}" /></td>
+               <td><input class="input set-in" data-f="reps" type="number" inputmode="numeric" value="${esc(s.reps ?? "")}" placeholder="${esc(prevSet?.reps ?? "")}" /></td>`;
           return `<tr class="set-row ${s.done ? "is-done" : ""}" data-set="${si}">
             <td class="set-n">${si + 1}</td>
             <td class="set-prev">${cardio ? "–" : prevCell}</td>
@@ -265,7 +271,7 @@ function renderSession() {
         .join("");
       return `<div class="ex-block" data-ex="${ei}">
         <div class="ex-block__head">
-          <div class="ex-block__title"><span class="ex-block__name">${esc(ex.name)}</span><span class="ex-block__prev">${esc(prevText)}</span></div>
+          <div class="ex-block__title"><span class="ex-block__name">${esc(ex.name)}</span><span class="ex-block__prev">${esc(prevText)}${targetTag}</span></div>
           <button type="button" class="ex-block__del" data-act="del-ex" aria-label="Remove exercise">×</button>
         </div>
         <table class="set-table">

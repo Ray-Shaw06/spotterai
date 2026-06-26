@@ -12,6 +12,7 @@
 
 import { ACHIEVEMENTS, RANKS, XP, achievementXp, levelFor, rankFor, workoutXp } from "./gamify.js";
 import { trackerKey } from "./profile-store.js";
+import { deloadFromWeeklyVolume, epley1RM, suggestNextWeight } from "./progression.js";
 
 const DEFAULTS = {
   workouts: [], // { id, date 'YYYY-MM-DD', name, focus, exercises:[{name,sets,reps,weight}], volume, xp }
@@ -316,6 +317,75 @@ export function getLoggedExerciseNames() {
     }
   }
   return out;
+}
+
+// ----------------------------------------------------------------------------
+// Coaching depth: per-exercise progress, auto-progression, deload trend
+// ----------------------------------------------------------------------------
+
+/** Per-session estimated 1RM / top weight / volume for one exercise, oldest→newest. */
+export function exerciseProgress(name) {
+  const key = String(name || "").toLowerCase();
+  const points = [];
+  for (const w of state.workouts) {
+    const ex = (w.exercises || []).find((e) => String(e.name).toLowerCase() === key);
+    if (!ex) continue;
+    const sets = setsOf(ex).filter((s) => s.weight > 0 && s.reps > 0);
+    if (!sets.length) continue;
+    let best = 0;
+    let top = 0;
+    let vol = 0;
+    for (const s of sets) {
+      best = Math.max(best, epley1RM(s.weight, s.reps));
+      top = Math.max(top, s.weight);
+      vol += s.weight * s.reps;
+    }
+    points.push({ date: w.date, label: shortDate(w.date), e1RM: Math.round(best), topWeight: top, volume: Math.round(vol) });
+  }
+  return points.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Distinct exercise names that have at least one weighted set (most recent first). */
+export function exerciseNamesWithHistory() {
+  const seen = new Set();
+  const out = [];
+  for (let i = state.workouts.length - 1; i >= 0; i--) {
+    for (const e of state.workouts[i].exercises || []) {
+      const k = String(e.name).toLowerCase();
+      if (seen.has(k)) continue;
+      if (setsOf(e).some((s) => s.weight > 0 && s.reps > 0)) {
+        seen.add(k);
+        out.push(e.name);
+      }
+    }
+  }
+  return out;
+}
+
+/** Auto-progression target for the next session of an exercise (or null). */
+export function suggestProgression(name) {
+  const prev = lastSetFor(name);
+  return prev ? suggestNextWeight(prev.top) : null;
+}
+
+/** Weekly training volume for the last `n` weeks (oldest→current). */
+function lastNWeeksVolume(n) {
+  const starts = [];
+  let m = mondayOf(new Date());
+  for (let i = 0; i < n; i++) {
+    starts.unshift(new Date(m));
+    m = new Date(m);
+    m.setDate(m.getDate() - 7);
+  }
+  return starts.map((wk) => {
+    const t = wk.getTime();
+    return state.workouts.filter((w) => mondayOf(w.date).getTime() === t).reduce((v, w) => v + (w.volume || 0), 0);
+  });
+}
+
+/** Deload suggestion from the recent volume trend (or null). */
+export function deloadCheck() {
+  return deloadFromWeeklyVolume(lastNWeeksVolume(6));
 }
 
 export function addCustomFood(food = {}) {

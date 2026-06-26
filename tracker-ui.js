@@ -9,7 +9,7 @@
  * change event.
  */
 
-import { addBodyweight, addNutrition, addWorkout, deriveStats, removeEntry, resetAll, setTargets, subscribe, getState } from "./tracker-store.js";
+import { addBodyweight, addNutrition, addWorkout, deloadCheck, deriveStats, exerciseNamesWithHistory, exerciseProgress, removeEntry, resetAll, setTargets, subscribe, getState } from "./tracker-store.js";
 import { barChart, lineChart, ring } from "./charts.js";
 import { store } from "./store.js";
 
@@ -26,6 +26,10 @@ const els = {
   nutrition7d: $("chart-nutrition"),
   bwChart: $("chart-bodyweight"),
   bwMeta: $("bodyweight-meta"),
+  exPick: $("exercise-progress-pick"),
+  exChart: $("chart-exercise"),
+  exMeta: $("exercise-progress-meta"),
+  deload: $("dash-deload"),
   achievements: $("dash-achievements"),
   recent: $("recent-workouts"),
   // forms
@@ -104,9 +108,54 @@ function render() {
   renderRank(s);
   renderStats(s);
   renderCharts(s);
+  renderExerciseProgress();
+  renderDeload();
   renderNutrition(s);
   renderAchievements(s);
   renderRecent(s);
+}
+
+// --- Per-exercise progress (estimated 1RM trend) ---------------------------
+let exSel = null; // remembered exercise selection
+function renderExerciseProgress() {
+  if (!els.exChart) return;
+  const names = exerciseNamesWithHistory();
+  if (els.exPick) {
+    if (!names.includes(exSel)) exSel = names[0] || null;
+    els.exPick.innerHTML = names.length ? names.map((n) => `<option${n === exSel ? " selected" : ""}>${esc(n)}</option>`).join("") : `<option>No weighted lifts yet</option>`;
+    els.exPick.disabled = !names.length;
+  }
+  if (!exSel) {
+    els.exChart.innerHTML = lineChart([], { height: 130 });
+    if (els.exMeta) els.exMeta.innerHTML = `<span class="muted">Log a weighted exercise to see its estimated 1RM trend.</span>`;
+    return;
+  }
+  const pts = exerciseProgress(exSel);
+  els.exChart.innerHTML = lineChart(pts.map((p) => ({ label: p.label, value: p.e1RM })), { color: "var(--accent)", height: 130 });
+  if (els.exMeta) {
+    const unit = getState().unit;
+    const best = pts.reduce((m, p) => Math.max(m, p.e1RM), 0);
+    const top = pts.reduce((m, p) => Math.max(m, p.topWeight), 0);
+    els.exMeta.innerHTML = pts.length
+      ? `Est. 1RM <strong>${best} ${esc(unit)}</strong> · best set ${top} ${esc(unit)} · ${pts.length} session${pts.length > 1 ? "s" : ""}`
+      : `<span class="muted">No weighted sets logged for this lift yet.</span>`;
+  }
+}
+
+// --- Deload / fatigue flag --------------------------------------------------
+let deloadDismissed = false;
+function renderDeload() {
+  if (!els.deload) return;
+  const d = deloadCheck();
+  if (!d || !d.recommend || deloadDismissed) {
+    els.deload.hidden = true;
+    return;
+  }
+  els.deload.hidden = false;
+  els.deload.innerHTML = `
+    <span class="deload-flag__icon" aria-hidden="true">⚠️</span>
+    <p class="deload-flag__text">${esc(d.reason)}</p>
+    <button type="button" class="deload-flag__dismiss" data-act="deload-dismiss" aria-label="Dismiss">×</button>`;
 }
 
 function renderRecent(s) {
@@ -322,6 +371,19 @@ function init() {
     els.targetsForm.querySelector('[name="protein"]').value = t.protein;
     els.targetsForm.querySelector('[name="weekly"]').value = t.weeklyWorkouts;
   }
+
+  // Per-exercise progress picker
+  els.exPick?.addEventListener("change", () => {
+    exSel = els.exPick.value;
+    renderExerciseProgress();
+  });
+  // Deload flag dismiss
+  els.deload?.addEventListener("click", (e) => {
+    if (e.target.closest('[data-act="deload-dismiss"]')) {
+      deloadDismissed = true;
+      els.deload.hidden = true;
+    }
+  });
 
   // Delete nutrition entries (event delegation)
   els.nutritionList?.addEventListener("click", (e) => {
