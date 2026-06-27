@@ -272,6 +272,30 @@ function wordMatch(w, qt) {
   return w === qt || w.startsWith(qt) || (qt.startsWith(w) && w.length >= 3);
 }
 
+// Common lifting shorthand → full words, so "db", "ohp", "rdl" search as a
+// real lifter would type. Only unambiguous abbreviations (none is a prefix of
+// an actual exercise word) so this can't break normal matching.
+const ABBREV = {
+  db: ["dumbbell"],
+  bb: ["barbell"],
+  kb: ["kettlebell"],
+  bw: ["bodyweight"],
+  ohp: ["overhead", "press"],
+  rdl: ["romanian", "deadlift"],
+  sldl: ["stiff", "leg", "deadlift"],
+  bp: ["bench", "press"],
+  cg: ["close", "grip"],
+};
+// Expand any abbreviation tokens in a query into their full words.
+function expandAbbrev(tokens) {
+  const out = [];
+  for (const t of tokens) {
+    if (ABBREV[t]) out.push(...ABBREV[t]);
+    else out.push(t);
+  }
+  return out;
+}
+
 /**
  * Search the library, optionally merging in `extra` entries (the user's custom
  * exercises + anything they've logged) so any exercise stays findable.
@@ -285,7 +309,7 @@ export function searchExercises(query, limit = 30, extra = []) {
   const pool = extra && extra.length ? dedupeByName([...extra, ...EXERCISES]) : EXERCISES;
   const q = String(query || "").trim().toLowerCase();
   if (!q) return pool.slice(0, limit);
-  const qTokens = tokenize(q);
+  const qTokens = expandAbbrev(tokenize(q));
   const scored = [];
   for (const e of pool) {
     const name = e.name.toLowerCase();

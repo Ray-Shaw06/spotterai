@@ -215,6 +215,17 @@ function wordMatch(w, qt) {
   return w === qt || w.startsWith(qt) || (qt.startsWith(w) && w.length >= 3);
 }
 
+// A couple of common food shorthands → full words.
+const ABBREV = { pb: ["peanut", "butter"], oj: ["orange", "juice"] };
+function expandAbbrev(tokens) {
+  const out = [];
+  for (const t of tokens) {
+    if (ABBREV[t]) out.push(...ABBREV[t]);
+    else out.push(t);
+  }
+  return out;
+}
+
 /**
  * Search foods, optionally merging in `extra` (the user's saved custom foods)
  * so anything logged once stays searchable. Token-based AND search: every word
@@ -226,7 +237,7 @@ export function searchFoods(query, limit = 25, extra = []) {
   const pool = extra && extra.length ? dedupeFoods([...extra, ...FOODS]) : FOODS;
   const q = String(query || "").trim().toLowerCase();
   if (!q) return pool.slice(0, limit);
-  const qTokens = tokenize(q);
+  const qTokens = expandAbbrev(tokenize(q));
   const scored = [];
   for (const f of pool) {
     const name = f.name.toLowerCase();

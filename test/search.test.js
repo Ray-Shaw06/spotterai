@@ -22,6 +22,18 @@ test("word order doesn't matter (token AND search)", () => {
   assert.ok(names(res).includes("Incline Dumbbell Press"));
 });
 
+test("lifting shorthand expands (db / ohp / rdl / bb)", () => {
+  assert.ok(names(searchExercises("db incline press")).includes("Incline Dumbbell Press"));
+  assert.ok(names(searchExercises("ohp")).includes("Overhead Press"));
+  assert.ok(names(searchExercises("rdl")).includes("Romanian Deadlift"));
+  assert.ok(names(searchExercises("bb row")).includes("Barbell Row"));
+});
+
+test("food shorthand expands (pb / oj)", () => {
+  assert.ok(names(searchFoods("pb")).includes("Peanut butter"));
+  assert.ok(names(searchFoods("oj")).includes("Orange juice"));
+});
+
 test("a single token matches by prefix", () => {
   const res = searchExercises("squat");
   assert.ok(names(res).includes("Back Squat"));
