@@ -887,9 +887,19 @@
   <script type="module" src="reminders.js"></script>
   <script type="module" src="eval-ui.js"></script>
 
-  <!-- Register the service worker (installable PWA + offline). Non-fatal. -->
+  <!-- Register the service worker (installable PWA + offline). Non-fatal.
+       When a NEW worker takes over (a deploy), auto-reload once so users never
+       get stuck on stale cached assets. Skipped on first-ever install. -->
   <script>
     if ("serviceWorker" in navigator) {
+      if (navigator.serviceWorker.controller) {
+        let reloaded = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (reloaded) return;
+          reloaded = true;
+          location.reload();
+        });
+      }
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("service-worker.js").catch(() => {});
       });
