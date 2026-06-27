@@ -105,43 +105,75 @@
     <!-- ===================== HERO ===================== -->
     <section class="hero">
       <div class="container hero__inner">
-        <p class="eyebrow">
-          <span class="eyebrow__dot" aria-hidden="true"></span>
-          AI generation · code-based safety audit
-        </p>
-        <h1 class="hero__title">
-          An AI coach that <span class="accent-text">audits its own advice</span>.
-        </h1>
-        <p class="hero__lede">
-          SpotterAI writes you a personalized weekly training program — then runs that
-          plan through a code-based safety evaluator that scores it and flags risky or
-          low-quality programming before you ever trust it.
-        </p>
-        <div class="hero__actions">
-          <button type="button" id="hero-demo" class="btn btn--primary">Try the live demo</button>
-          <a href="#generator" class="btn btn--ghost">Build my own plan</a>
+        <div class="hero__copy">
+          <p class="eyebrow">
+            <span class="eyebrow__dot" aria-hidden="true"></span>
+            AI generation · code-based safety audit
+          </p>
+          <h1 class="hero__title">
+            An AI coach that <span class="accent-text">audits its own advice</span>.
+          </h1>
+          <p class="hero__lede">
+            SpotterAI writes you a personalized weekly training program — then runs that
+            plan through a code-based safety evaluator that scores it and flags risky or
+            low-quality programming before you ever trust it.
+          </p>
+          <div class="hero__actions">
+            <button type="button" id="hero-demo" class="btn btn--primary">Try the live demo</button>
+            <a href="#generator" class="btn btn--ghost">Build my own plan</a>
+          </div>
+          <p class="hero__trust">
+            <span>✓ $0 to run</span><span>✓ no signup</span><span>✓ runs on your device</span><span>✓ <a href="#/evals" data-nav="evals">see the safety evals</a></span>
+          </p>
         </div>
-        <p class="hero__trust">
-          <span>✓ $0 to run</span><span>✓ no signup</span><span>✓ runs on your device</span><span>✓ <a href="#/evals" data-nav="evals">see the safety evals</a></span>
-        </p>
 
-        <!-- Three quick value props -->
-        <ul class="hero__stats" aria-label="What SpotterAI does">
-          <li class="hero__stat">
-            <span class="hero__stat-value">6</span>
-            <span class="hero__stat-label">automated safety &amp; quality checks</span>
-          </li>
-          <li class="hero__stat">
-            <span class="hero__stat-value">0–100</span>
-            <span class="hero__stat-label">transparent, rubric-based score</span>
-          </li>
-          <li class="hero__stat">
-            <span class="hero__stat-value">100%</span>
-            <span class="hero__stat-label">heuristic — flags concerns, never certifies</span>
-          </li>
-        </ul>
+        <!-- Product preview: a static mock of the code-based audit output -->
+        <div class="hero__visual" aria-hidden="true">
+          <div class="audit-card">
+            <div class="audit-card__head">
+              <span class="audit-card__title">Plan safety audit</span>
+              <span class="audit-card__live"><span class="audit-card__pulse"></span> code-scored</span>
+            </div>
+            <div class="audit-card__score">
+              <svg class="score-ring" viewBox="0 0 120 120" width="104" height="104">
+                <circle class="score-ring__track" cx="60" cy="60" r="52" />
+                <circle class="score-ring__fill" cx="60" cy="60" r="52" />
+                <text x="60" y="57" class="score-ring__num">84</text>
+                <text x="60" y="75" class="score-ring__den">/ 100</text>
+              </svg>
+              <div class="audit-card__verdict">
+                <strong>Solid program</strong>
+                <span>2 minor flags · reviewed by code, not vibes</span>
+              </div>
+            </div>
+            <ul class="audit-card__checks">
+              <li class="is-ok"><svg class="ico" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" /></svg> Weekly volume in a sensible range</li>
+              <li class="is-ok"><svg class="ico" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" /></svg> Progression looks reasonable</li>
+              <li class="is-warn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 8v5m0 3h.01M10.3 4 2 18h20L13.7 4a2 2 0 0 0-3.4 0z" /></svg> High squat frequency — monitor fatigue</li>
+              <li class="is-ok"><svg class="ico" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" /></svg> Adequate rest between hard sessions</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </section>
+
+    <!-- Three quick value props -->
+    <div class="container">
+      <ul class="hero__stats" aria-label="What SpotterAI does">
+        <li class="hero__stat">
+          <span class="hero__stat-value">6</span>
+          <span class="hero__stat-label">automated safety &amp; quality checks</span>
+        </li>
+        <li class="hero__stat">
+          <span class="hero__stat-value">0–100</span>
+          <span class="hero__stat-label">transparent, rubric-based score</span>
+        </li>
+        <li class="hero__stat">
+          <span class="hero__stat-value">100%</span>
+          <span class="hero__stat-label">heuristic — flags concerns, never certifies</span>
+        </li>
+      </ul>
+    </div>
 
     <div class="container">
       <!-- Persistent disclaimer -->
