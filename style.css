@@ -206,6 +206,12 @@ table {
   margin: 0 auto var(--space-7);
   text-align: center;
 }
+/* Left-aligned page header for the app pages (dashboard, nutrition, …). */
+.section-head--start {
+  max-width: none;
+  margin: 0 0 var(--space-6);
+  text-align: left;
+}
 
 .section-title {
   font-size: var(--fs-h2);
@@ -313,7 +319,172 @@ table {
 }
 
 /* ----------------------------------------------------------------------------
-   5. Header & wordmark
+   4b. App shell — persistent left sidebar + main content
+---------------------------------------------------------------------------- */
+.app-shell {
+  display: grid;
+  grid-template-columns: 244px minmax(0, 1fr);
+  min-height: 100vh;
+}
+.sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5) var(--space-4);
+  border-right: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.015);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.sidebar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2) var(--space-6);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+.sidebar__brand .wordmark__glyph {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--accent);
+}
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+.sidebar__nav .nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.6rem 0.78rem;
+  border-radius: var(--r-sm);
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition: background var(--transition), color var(--transition);
+}
+.sidebar__nav .nav-link__icon {
+  flex: none;
+  opacity: 0.8;
+}
+.sidebar__nav .nav-link:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+.sidebar__nav .nav-link.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.sidebar__nav .nav-link.is-active .nav-link__icon {
+  opacity: 1;
+}
+.sidebar__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.sidebar__foot .profile-btn {
+  flex: 1;
+  min-width: 0;
+  margin-left: 0;
+  justify-content: flex-start;
+}
+.sidebar__foot .profile-btn__name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.app-main > main {
+  flex: 1;
+}
+
+/* Mobile: sidebar reflows — brand + profile become a slim top bar, the nav a
+   fixed bottom tab bar. */
+@media (max-width: 960px) {
+  .app-shell { display: block; }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    z-index: 50;
+  }
+  .sidebar__brand { padding: 0; font-size: 1.05rem; }
+  .sidebar__brand .wordmark__glyph { width: 30px; height: 30px; }
+  .sidebar__foot { margin: 0 0 0 auto; padding: 0; border: none; }
+  .sidebar__foot .profile-btn { flex: none; padding: 4px; gap: 0; }
+  .profile-btn__name,
+  .profile-btn__chev { display: none; }
+  .sidebar__nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    flex: none;
+    flex-direction: row;
+    gap: 0;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+    border-top: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+    z-index: 60;
+  }
+  .sidebar__nav::-webkit-scrollbar { display: none; }
+  .sidebar__nav .nav-link {
+    flex: 1 0 auto;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 56px;
+    padding: 0.4rem 0.3rem;
+    font-size: 0.64rem;
+    text-align: center;
+    color: var(--text-faint);
+  }
+  .sidebar__nav .nav-link span { white-space: nowrap; }
+  .sidebar__nav .nav-link.is-active { background: transparent; color: var(--accent); }
+  .app-main { padding-top: 54px; padding-bottom: 64px; }
+  .chat-fab { bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ----------------------------------------------------------------------------
+   5. Header & wordmark (legacy — retained for the footer wordmark)
 ---------------------------------------------------------------------------- */
 .site-header {
   position: sticky;
@@ -1261,14 +1432,18 @@ table {
 }
 .quicklog__mic {
   flex: none;
+  display: grid;
+  place-items: center;
   width: 42px;
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   background: var(--surface-2);
+  color: var(--text-muted);
   cursor: pointer;
-  font-size: 1.05rem;
-  line-height: 1;
+  transition: var(--transition);
 }
+.quicklog__mic:hover svg,
+.quicklog__mic.is-recording svg { color: var(--accent); }
 .quicklog__mic:hover {
   border-color: var(--accent);
 }
@@ -2500,6 +2675,12 @@ table {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+/* Keep the history from dominating the page. */
+#workout-history {
+  max-height: 460px;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 /* Generic text/number input used across the dashboard */
