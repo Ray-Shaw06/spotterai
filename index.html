@@ -459,6 +459,21 @@
           </p>
         </header>
 
+        <!-- First-run welcome (shown only while the profile has no data) -->
+        <div id="dash-welcome" class="dash-welcome" hidden>
+          <span class="dash-welcome__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" /></svg>
+          </span>
+          <div class="dash-welcome__body">
+            <h3 class="dash-welcome__title">Welcome to SpotterAI</h3>
+            <p class="dash-welcome__text">Your dashboard fills in as you train — rank, streak, volume and history all build from what you log. Log your first workout below, or load a demo profile to explore a fully-populated account.</p>
+            <div class="dash-welcome__actions">
+              <button type="button" id="welcome-demo" class="btn btn--primary btn--sm">Load demo data</button>
+              <a href="#/" data-nav="home" class="btn btn--ghost btn--sm">Build a plan first</a>
+            </div>
+          </div>
+        </div>
+
         <!-- Deload / fatigue flag (pure-code heuristic) -->
         <div id="dash-deload" class="deload-flag" hidden></div>
 

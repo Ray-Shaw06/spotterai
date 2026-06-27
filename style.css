@@ -2797,6 +2797,48 @@ table {
   scrollbar-width: thin;
 }
 
+/* First-run welcome card (shown only on an empty profile) */
+.dash-welcome {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+  background:
+    radial-gradient(120% 140% at 0% 0%, var(--accent-soft), transparent 55%),
+    var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.dash-welcome__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.dash-welcome__title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.dash-welcome__text {
+  margin-top: var(--space-2);
+  max-width: 64ch;
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.dash-welcome__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
 /* Generic text/number input used across the dashboard */
 .input {
   width: 100%;

@@ -19,6 +19,7 @@ const els = {
   root: $("dashboard"),
   rank: $("dash-rank"),
   stats: $("dash-stats"),
+  welcome: $("dash-welcome"),
   deload: $("dash-deload"),
   dashWeekly: $("dash-weekly"),
   dashWeeklyMeta: $("dash-weekly-meta"),
@@ -66,6 +67,8 @@ function render() {
   renderExerciseProgress();
   renderDeload();
   renderAchievements(s);
+  // First-run welcome: only while the profile is genuinely empty.
+  if (els.welcome) els.welcome.hidden = !(s.workoutCount === 0 && s.totalXP === 0);
 }
 
 function renderRank(s) {
