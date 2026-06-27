@@ -17,7 +17,8 @@ test("equipment prefix + plural still finds the library exercise", () => {
 });
 
 test("word order doesn't matter (token AND search)", () => {
-  const res = searchExercises("db incline press");
+  // Same words, scrambled order — token-AND search should still find it.
+  const res = searchExercises("press incline dumbbell");
   assert.ok(names(res).includes("Incline Dumbbell Press"));
 });
 
