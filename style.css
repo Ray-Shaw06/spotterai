@@ -1532,8 +1532,9 @@ table {
   border-radius: var(--r-md);
 }
 .deload-flag__icon {
-  font-size: 1.05rem;
-  line-height: 1.4;
+  display: flex;
+  flex-shrink: 0;
+  color: var(--warn);
 }
 .deload-flag__text {
   flex: 1;
@@ -2711,8 +2712,30 @@ table {
 .field-inline .input { flex: 1; min-width: 90px; }
 .field-inline .input--sm { flex: 0 0 auto; }
 
-/* Rank card */
-.dash-rankcard { gap: var(--space-4); }
+/* Bento: let a card span the full grid width */
+.dash-span { grid-column: 1 / -1; }
+
+/* Rank hero — rank/level + XP on the left, stat tiles on the right */
+.dash-rankcard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-6);
+  row-gap: var(--space-4);
+  padding: var(--space-5);
+}
+.dash-rankcard #dash-stats {
+  grid-template-columns: repeat(2, 1fr);
+}
+.dash-rankcard .dash-share {
+  grid-column: 1 / -1;
+  width: auto;
+  justify-self: start;
+  margin-top: var(--space-1);
+}
+@media (max-width: 760px) {
+  .dash-rankcard { grid-template-columns: 1fr; }
+}
 #dash-rank {
   display: flex;
   align-items: center;

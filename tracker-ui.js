@@ -20,6 +20,8 @@ const els = {
   rank: $("dash-rank"),
   stats: $("dash-stats"),
   deload: $("dash-deload"),
+  dashWeekly: $("dash-weekly"),
+  dashWeeklyMeta: $("dash-weekly-meta"),
   achievements: $("dash-achievements"),
   // Progress page
   weeklyChart: $("chart-weekly"),
@@ -80,7 +82,7 @@ function renderRank(s) {
         <span class="rank-streak" title="Day streak">${icon("flame")} ${s.streakDays}-day streak</span>
       </div>
       <div class="rank-bar"><span style="width:${(progress * 100).toFixed(1)}%; background:${tier.color}"></span></div>
-      <p class="rank-next">${next ? `${xpForNext.toLocaleString()} XP to <strong>${esc(next.name)}</strong>` : "Top rank reached — Champion 🏆"}</p>
+      <p class="rank-next">${next ? `${xpForNext.toLocaleString()} XP to <strong>${esc(next.name)}</strong>` : "Top rank reached — Champion"}</p>
     </div>`;
 }
 
@@ -97,6 +99,11 @@ function renderStats(s) {
 
 function renderCharts(s) {
   if (els.weeklyChart) els.weeklyChart.innerHTML = barChart(s.weeklyVolume, { color: "var(--accent)", height: 130 });
+  if (els.dashWeekly) els.dashWeekly.innerHTML = barChart(s.weeklyVolume, { color: "var(--accent)", height: 132 });
+  if (els.dashWeeklyMeta) {
+    const wk = s.weeklyVolume.length ? s.weeklyVolume[s.weeklyVolume.length - 1].value : 0;
+    els.dashWeeklyMeta.innerHTML = `<strong>${wk ? (wk / 1000).toFixed(1) + "k" : "0"}</strong> this week · total weight moved`;
+  }
   if (els.bwChart) els.bwChart.innerHTML = lineChart(s.bodyweight.series, { color: "#6b8fa3", height: 130 });
   if (els.bwMeta) {
     els.bwMeta.innerHTML = s.bodyweight.latest != null
@@ -143,7 +150,7 @@ function renderDeload() {
   }
   els.deload.hidden = false;
   els.deload.innerHTML = `
-    <span class="deload-flag__icon" aria-hidden="true">⚠️</span>
+    <span class="deload-flag__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4m0 4h.01" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     <p class="deload-flag__text">${esc(d.reason)}</p>
     <button type="button" class="deload-flag__dismiss" data-act="deload-dismiss" aria-label="Dismiss">×</button>`;
 }
