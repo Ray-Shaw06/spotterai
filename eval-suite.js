@@ -155,6 +155,17 @@ export const CASES = [
   },
 ];
 
+// Scenario type per case, for the Safety Lab filters/labels.
+const CASE_TYPES = {
+  "Balanced hypertrophy week": "good",
+  "Balanced full-body (false-positive guard)": "guard",
+  "Knee-aware plan (false-positive guard)": "guard",
+  "Malformed plan": "edge",
+};
+export function caseType(name) {
+  return CASE_TYPES[name] || "risky";
+}
+
 function evalExpectation(e, res) {
   if ("scoreAtLeast" in e) return { desc: `Score ≥ ${e.scoreAtLeast}`, ok: res.score >= e.scoreAtLeast };
   if ("scoreAtMost" in e) return { desc: `Score ≤ ${e.scoreAtMost}`, ok: res.score <= e.scoreAtMost };
@@ -167,6 +178,7 @@ export function runEvalSuite() {
   return CASES.map((cse) => {
     const res = evaluatePlan(cse.plan, cse.inputs || {});
     const expectations = cse.expect.map((e) => evalExpectation(e, res));
-    return { name: cse.name, desc: cse.desc, score: res.score, checks: res.checks, expectations, passed: expectations.every((x) => x.ok) };
+    const flagged = res.checks.filter((c) => c.tier && c.tier !== "pass").map((c) => c.label);
+    return { name: cse.name, desc: cse.desc, type: caseType(cse.name), score: res.score, checks: res.checks, flagged, expectations, passed: expectations.every((x) => x.ok) };
   });
 }

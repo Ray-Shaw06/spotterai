@@ -16,6 +16,7 @@
 import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
 import { repairPlan } from "./repair.js";
 import { screenRequest, GENERATOR_BOUNDARY } from "./safety-boundaries.js";
+import { ruleForCheck } from "./rule-explanations.js";
 import { setPlan, store } from "./store.js";
 import { getContext as getTrackerContext } from "./tracker-store.js";
 
@@ -335,6 +336,10 @@ function renderFlagCard(c, i) {
     ? `<p class="flag__row"><span class="flag__row-label">Safer alternatives</span> ${esc(c.alternatives.join(" · "))}</p>`
     : "";
   const fix = c.fix ? `<p class="flag__row"><span class="flag__row-label">Suggested fix</span> ${esc(c.fix)}</p>` : "";
+  const rule = ruleForCheck(c.id);
+  const why = rule
+    ? `<details class="flag__rule"><summary>Why this rule exists</summary><p class="flag__rule-body">${esc(rule.why)} <span class="flag__rule-lim">Limitation — ${esc(rule.limitations)}</span></p></details>`
+    : "";
   return `
     <article class="flag flag--${c.tier}" style="--i:${i}">
       <header class="flag__head">
@@ -344,6 +349,7 @@ function renderFlagCard(c, i) {
       <p class="flag__why">${esc(c.detail)}</p>
       ${fix}
       ${alts}
+      ${why}
     </article>`;
 }
 

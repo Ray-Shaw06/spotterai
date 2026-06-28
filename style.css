@@ -929,6 +929,11 @@ table {
 .flag__why { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.55; }
 .flag__row { margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text); line-height: 1.5; }
 .flag__row-label { display: inline-block; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); font-weight: 600; margin-right: 6px; }
+.flag__rule { margin-top: var(--space-3); border-top: 1px solid var(--border); padding-top: var(--space-2); }
+.flag__rule > summary { cursor: pointer; font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
+.flag__rule > summary::marker { color: var(--accent); }
+.flag__rule-body { margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; }
+.flag__rule-lim { display: block; margin-top: 4px; color: var(--text-faint); font-size: 0.8rem; }
 
 /* Passed checks (collapsed) */
 .audit__passed { margin-top: var(--space-4); }
@@ -1000,6 +1005,18 @@ table {
 .tech { padding: var(--space-4); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); }
 .tech h5 { font-size: 0.92rem; font-weight: 600; color: var(--accent); margin-bottom: 5px; }
 .tech p { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; }
+
+/* Rule explanation cards + training principles */
+.rule-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); margin-top: var(--space-5); }
+.rule-card { padding: var(--space-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-md); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); display: flex; flex-direction: column; gap: var(--space-2); }
+.rule-card__name { font-size: 1rem; font-weight: 600; color: var(--accent); margin-bottom: 2px; }
+.rule-card__row { font-size: var(--fs-small); color: var(--text); line-height: 1.5; }
+.rule-card__k { display: block; font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); font-weight: 600; }
+.rule-card__limit { color: var(--text-muted); border-top: 1px solid var(--border); padding-top: var(--space-2); margin-top: auto; }
+.principles { list-style: none; padding: 0; margin: var(--space-4) 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-2) var(--space-5); }
+.principles li { position: relative; padding-left: var(--space-5); font-size: var(--fs-small); color: var(--text-muted); }
+.principles li::before { content: ""; position: absolute; left: 4px; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.principles__note { margin-top: var(--space-4); padding: var(--space-3) var(--space-4); font-size: var(--fs-small); color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--text-faint); border-radius: var(--r-sm); max-width: 80ch; }
 
 /* Privacy & data */
 .privacy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4); margin-top: var(--space-5); }
@@ -2236,6 +2253,21 @@ table {
   color: var(--text-muted);
   font-size: var(--fs-small);
 }
+/* Filters + scenario types (red-team report) */
+.eval-filters { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-4) 0; }
+.eval-filter { display: inline-flex; align-items: center; gap: 6px; padding: 0.4rem 0.85rem; font-size: var(--fs-small); font-weight: 500; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition); }
+.eval-filter:hover { color: var(--text); border-color: var(--accent-ring); }
+.eval-filter.is-active { color: var(--accent); border-color: var(--accent-ring); background: var(--accent-soft); }
+.eval-filter__n { font-family: var(--font-mono); font-size: 0.72rem; opacity: 0.85; }
+.eval-case__type { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; padding: 2px 7px; border-radius: var(--r-full); vertical-align: middle; margin-left: 6px; }
+.eval-case__type--good, .eval-case__type--guard { color: var(--success); background: var(--success-soft); }
+.eval-case__type--risky { color: var(--warn); background: var(--warn-soft); }
+.eval-case__type--edge { color: var(--text-muted); background: rgba(255, 255, 255, 0.06); }
+.eval-flagchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.eval-chip { font-size: 0.72rem; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); padding: 3px 10px; }
+.eval-case__sub--muted { color: var(--text-faint); }
+.eval-empty { padding: var(--space-5); text-align: center; }
+
 .eval-cases {
   display: flex;
   flex-direction: column;

@@ -13,6 +13,7 @@
 
 import { CASES, runEvalSuite } from "./eval-suite.js";
 import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
+import { RULE_EXPLANATIONS, TRAINING_PRINCIPLES, PRINCIPLES_NOTE } from "./rule-explanations.js";
 
 const mount = document.getElementById("safety-lab");
 
@@ -35,6 +36,8 @@ function benchmark() {
   const riskyCaught = risky.filter((x) => x.r.passed).length;
   const falsePositives = safe.filter((x) => !x.r.passed).length;
   const casesPass = results.filter((r) => r.passed).length;
+  const expPass = results.reduce((n, r) => n + r.expectations.filter((e) => e.ok).length, 0);
+  const expTotal = results.reduce((n, r) => n + r.expectations.length, 0);
 
   // Measure average audit time over many runs (warm) for a stable number.
   const N = 40;
@@ -47,6 +50,9 @@ function benchmark() {
     riskyTotal: risky.length,
     riskyCaught,
     falsePositives,
+    expPass,
+    expFail: expTotal - expPass,
+    expTotal,
     avgMs,
     passing: casesPass === results.length,
   };
@@ -117,18 +123,46 @@ function render() {
       <div class="lab-block__head">
         <div>
           <h3 class="lab-block__title">Evaluator benchmark</h3>
-          <p class="lab-block__sub">Measured live from the red-team suite below — the same pure evaluator that ships in the app.</p>
+          <p class="lab-block__sub">SpotterAI runs known-good and intentionally risky plans through the same evaluator used in the app. These tests help catch regressions and make the guardrails more transparent. Computed live in your browser from the bundled suite — also gated in CI.</p>
         </div>
-        <span class="bench__status bench__status--${b.passing ? "pass" : "fail"}">${b.passing ? "Passing" : "Regression"}</span>
+        <span class="bench__status bench__status--${b.passing ? "pass" : "fail"}">${b.passing ? "Passing" : "Needs review"}</span>
       </div>
       <dl class="bench">
         ${row("Test cases run", b.total)}
+        ${row("Expectations passed", `${b.expPass}/${b.expTotal}`, "is-ok")}
+        ${row("Expectations failed", b.expFail, b.expFail ? "is-warn" : "is-ok")}
         ${row("Risky plans caught", `${b.riskyCaught}/${b.riskyTotal}`, "is-ok")}
         ${row("Safe plans incorrectly flagged", b.falsePositives, b.falsePositives ? "is-warn" : "is-ok")}
         ${row("Average audit time", `${b.avgMs < 1 ? b.avgMs.toFixed(2) : Math.round(b.avgMs)} ms`)}
         ${row("Evaluator version", esc(EVALUATOR_VERSION))}
-        ${row("Regression status", b.passing ? "Passing" : "Failing", b.passing ? "is-ok" : "is-warn")}
+        ${row("Last test run", "Just now · on page load")}
+        ${row("Regression status", b.passing ? "Passing" : "Needs review", b.passing ? "is-ok" : "is-warn")}
       </dl>
+    </div>`;
+
+  const rules = `
+    <div class="lab-block">
+      <h3 class="lab-block__title">Why these rules exist</h3>
+      <p class="lab-block__sub">Every check in plain English — what it looks at, why it matters, what SpotterAI does, and where it's limited.</p>
+      <div class="rule-grid">
+        ${RULE_EXPLANATIONS.map(
+          (r) => `
+          <article class="rule-card">
+            <h4 class="rule-card__name">${esc(r.name)}</h4>
+            <p class="rule-card__row"><span class="rule-card__k">Checks</span> ${esc(r.checks)}</p>
+            <p class="rule-card__row"><span class="rule-card__k">Why it matters</span> ${esc(r.why)}</p>
+            <p class="rule-card__row"><span class="rule-card__k">What SpotterAI does</span> ${esc(r.action)}</p>
+            <p class="rule-card__row rule-card__limit"><span class="rule-card__k">Limitations</span> ${esc(r.limitations)}</p>
+          </article>`
+        ).join("")}
+      </div>
+    </div>`;
+
+  const principles = `
+    <div class="lab-block">
+      <h3 class="lab-block__title">Training principles behind the checks</h3>
+      <ul class="principles">${TRAINING_PRINCIPLES.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
+      <p class="principles__note">${esc(PRINCIPLES_NOTE)}</p>
     </div>`;
 
   const cols = `
@@ -191,7 +225,7 @@ function render() {
       </div>
     </div>`;
 
-  mount.innerHTML = bench + cols + examples + privacy + tech;
+  mount.innerHTML = bench + cols + rules + examples + privacy + principles + tech;
 }
 
 if (mount) render();
