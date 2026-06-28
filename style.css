@@ -1006,6 +1006,26 @@ table {
 .tech h5 { font-size: 0.92rem; font-weight: 600; color: var(--accent); margin-bottom: 5px; }
 .tech p { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; }
 
+/* Homepage user scenarios */
+.scenario-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); margin-top: var(--space-6); }
+.scenario { padding: var(--space-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-md); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); display: flex; flex-direction: column; gap: var(--space-3); }
+.scenario__title { font-size: 1.1rem; font-weight: 600; letter-spacing: -0.01em; }
+.scenario__input, .scenario__row, .scenario__why { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; }
+.scenario__k { display: block; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); font-weight: 600; margin-bottom: 2px; }
+.scenario__input { color: var(--text); }
+.scenario__why { margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--border); }
+.scenario__why .scenario__k { color: var(--accent); }
+
+/* Homepage limitations ("what not to trust") */
+.limits { padding: var(--space-6); }
+.limits__intro { margin-top: var(--space-3); font-size: 1.02rem; color: var(--text-muted); max-width: 72ch; }
+.limits__intro strong { color: var(--text); }
+.limits__list { list-style: none; padding: 0; margin: var(--space-5) 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-2) var(--space-5); }
+.limits__list li { position: relative; padding-left: var(--space-5); font-size: var(--fs-small); color: var(--text-muted); }
+.limits__list li::before { content: "✕"; position: absolute; left: 2px; color: var(--danger); font-size: 0.8rem; font-weight: 700; }
+.limits__redirect { padding: var(--space-3) var(--space-4); font-size: var(--fs-small); color: var(--text); background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: var(--r-sm); }
+.limits__redirect strong { color: var(--accent); }
+
 /* Rule explanation cards + training principles */
 .rule-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); margin-top: var(--space-5); }
 .rule-card { padding: var(--space-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-md); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); display: flex; flex-direction: column; gap: var(--space-2); }

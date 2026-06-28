@@ -29,3 +29,16 @@ test("positioning is the AI fitness copilot promise, not the old coach line", ()
 test("footer carries the full copilot description", () => {
   assert.ok(/AI fitness copilot that helps you build plans/i.test(html));
 });
+
+test("homepage has the three user scenario cards", () => {
+  assert.ok(/See how SpotterAI handles real training situations/i.test(html));
+  for (const t of ["Healthy beginner", "Knee limitation", "Inconsistent training logs"]) {
+    assert.ok(html.includes(t), `scenario card present: ${t}`);
+  }
+});
+
+test("homepage has the 'What not to trust SpotterAI for' limitations section", () => {
+  assert.ok(/What not to trust SpotterAI for/i.test(html));
+  assert.ok(/Diagnosing pain or injuries/i.test(html));
+  assert.ok(/still help you create a more conservative general plan/i.test(html));
+});
