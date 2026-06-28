@@ -373,6 +373,12 @@
               <span>Live generation was unavailable, so we're <strong>showing a saved example</strong>. The safety audit below still runs on it in full.</span>
             </div>
 
+            <!-- Safety boundary: shown prominently when inputs trip a hard limit -->
+            <div class="boundary-notice" id="safety-boundary" hidden role="alert">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4m0 4h.01" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              <p id="safety-boundary-text"></p>
+            </div>
+
             <!-- Audit summary — flags first, quality score demoted -->
             <div class="card audit">
               <div class="audit__head">
@@ -814,9 +820,24 @@
           <aside class="card form-side">
             <p id="form-status" class="form-side__status" data-tone="muted">Camera is off.</p>
 
+            <!-- Live confidence meter (from landmark visibility) -->
+            <div class="form-conf" id="form-confidence" hidden>
+              <div class="form-conf__top">
+                <span class="form-side__heading">Confidence</span>
+                <span class="form-conf__label" id="form-confidence-label">—</span>
+              </div>
+              <div class="form-conf__track"><span class="form-conf__bar" id="form-confidence-bar"></span></div>
+              <p class="form-conf__note" id="form-confidence-note">Higher when your full body is clearly in frame.</p>
+            </div>
+
             <div class="form-side__block">
-              <h3 class="form-side__heading">Setup</h3>
+              <h3 class="form-side__heading">Camera setup</h3>
               <p id="form-setup" class="form-side__setup">Stand side-on to the camera, full body in frame.</p>
+              <ul class="form-side__list form-side__list--tight">
+                <li><strong>Side angle</strong> for squat, hinge, lunge, press — it judges depth and joint angles.</li>
+                <li><strong>Front angle</strong> for symmetry checks; good, even lighting; ~2–3 m back.</li>
+                <li>Keep your whole body in frame and avoid baggy clothing.</li>
+              </ul>
             </div>
 
             <div class="form-side__block">
@@ -833,11 +854,22 @@
               </ul>
             </div>
 
-            <p class="form-side__disclaimer">
-              Heuristic cues from a single 2D camera — not a coach or physiotherapist.
-              It can't see your spine, load, or true 3D depth, so it can be wrong.
-              Treat it as a mirror, not a judge; stop if anything hurts.
-            </p>
+            <div class="form-side__block">
+              <h3 class="form-side__heading">Limitations</h3>
+              <p class="form-side__disclaimer">
+                Camera-based feedback is approximate. SpotterAI cannot fully assess load,
+                pain, fatigue, depth, bracing, or 3D joint mechanics from a single camera
+                view. Treat it as a mirror, not a judge — and stop if anything hurts.
+              </p>
+            </div>
+
+            <div class="form-side__block">
+              <button type="button" id="form-pain" class="btn btn--ghost btn--sm form-pain-btn">I feel pain</button>
+              <p class="form-pain-msg" id="form-pain-msg" hidden role="alert">
+                Stop the movement. SpotterAI cannot diagnose pain — consider speaking with a
+                qualified professional (a doctor or physiotherapist) before continuing.
+              </p>
+            </div>
           </aside>
         </div>
       </div>

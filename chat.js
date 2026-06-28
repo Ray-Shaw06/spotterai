@@ -12,6 +12,7 @@
 import { store } from "./store.js";
 import { getContext as getTrackerContext } from "./tracker-store.js";
 import { auditReply } from "./chat-guard.js";
+import { screenRequest, SAFE_REDIRECT } from "./safety-boundaries.js";
 
 const fab = document.getElementById("chat-fab");
 const panel = document.getElementById("chat-panel");
@@ -184,6 +185,17 @@ function togglePanel() {
 async function send() {
   const text = input.value.trim();
   if (!text || pending) return;
+
+  // Safety boundary: refuse unsafe requests (pain, diagnosis, ED, etc.) up front,
+  // before any API call — and don't add them to the model's context.
+  if (screenRequest(text).level === "block") {
+    input.value = "";
+    input.style.height = "auto";
+    if (suggestions) suggestions.hidden = true;
+    addBubble("user", text);
+    addBubble("assistant", SAFE_REDIRECT);
+    return;
+  }
 
   pending = true;
   input.value = "";

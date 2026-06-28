@@ -1001,6 +1001,44 @@ table {
 .tech h5 { font-size: 0.92rem; font-weight: 600; color: var(--accent); margin-bottom: 5px; }
 .tech p { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; }
 
+/* Privacy & data */
+.privacy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4); margin-top: var(--space-5); }
+.privacy-col { padding: var(--space-5); background: var(--surface); border: 1px solid var(--border); border-top-width: 3px; border-radius: var(--r-lg); box-shadow: var(--shadow-md); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.privacy-col--local { border-top-color: var(--success); }
+.privacy-col--sent { border-top-color: var(--accent); }
+.privacy-col--never { border-top-color: var(--text-faint); }
+.privacy-col h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: var(--space-3); }
+.privacy-col--local h4 { color: var(--success); }
+.privacy-col--sent h4 { color: var(--accent); }
+.privacy-col ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.privacy-col li { position: relative; padding-left: var(--space-4); font-size: var(--fs-small); color: var(--text-muted); }
+.privacy-col li::before { content: ""; position: absolute; left: 2px; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.5; }
+.privacy-controls { margin-top: var(--space-4); padding: var(--space-3) var(--space-4); font-size: var(--fs-small); color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); }
+.privacy-controls strong { color: var(--text); }
+
+/* Safety boundary notice (generator) */
+.boundary-notice { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-4); margin-bottom: var(--space-4); background: var(--danger-soft); border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent); border-left: 3px solid var(--danger); border-radius: var(--r-md); color: var(--text); }
+.boundary-notice svg { color: var(--danger); flex-shrink: 0; margin-top: 1px; }
+.boundary-notice p { font-size: var(--fs-small); color: var(--text-muted); }
+
+/* Form-check confidence meter + pain state */
+.form-conf { padding: var(--space-3) 0; border-bottom: 1px solid var(--border); }
+.form-conf__top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-2); }
+.form-conf__label { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 600; }
+.form-conf__label[data-level="high"] { color: var(--success); }
+.form-conf__label[data-level="med"] { color: var(--warn); }
+.form-conf__label[data-level="low"] { color: var(--danger); }
+.form-conf__track { height: 7px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); overflow: hidden; }
+.form-conf__bar { display: block; height: 100%; width: 0; border-radius: var(--r-full); transition: width 200ms ease; background: var(--danger); }
+.form-conf__bar[data-level="high"] { background: var(--success); }
+.form-conf__bar[data-level="med"] { background: var(--warn); }
+.form-conf__bar[data-level="low"] { background: var(--danger); }
+.form-conf__note { margin-top: var(--space-2); font-size: 0.76rem; color: var(--text-faint); }
+.form-side__list--tight { margin-top: var(--space-2); gap: 6px !important; }
+.form-side__list--tight li { font-size: 0.8rem; }
+.form-pain-btn { width: 100%; }
+.form-pain-msg { margin-top: var(--space-3); padding: var(--space-3) var(--space-4); font-size: var(--fs-small); color: var(--text); background: var(--danger-soft); border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent); border-left: 3px solid var(--danger); border-radius: var(--r-sm); }
+
 /* ----------------------------------------------------------------------------
    Plan repair — before/after comparison
 ---------------------------------------------------------------------------- */

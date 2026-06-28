@@ -52,7 +52,16 @@ const el = {
   setup: document.getElementById("form-setup"),
   lastRep: document.getElementById("form-lastrep"),
   select: document.getElementById("form-exercise"),
+  conf: document.getElementById("form-confidence"),
+  confBar: document.getElementById("form-confidence-bar"),
+  confLabel: document.getElementById("form-confidence-label"),
+  pain: document.getElementById("form-pain"),
+  painMsg: document.getElementById("form-pain-msg"),
 };
+
+// Key landmarks whose visibility tells us if we can actually judge the rep.
+const CONF_LANDMARKS = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
+const LOW_CONFIDENCE = 0.5; // below this we refuse strong feedback
 
 const hasUI = el.video && el.canvas && el.start;
 
@@ -213,6 +222,7 @@ function stop() {
   if (el.overlay) el.overlay.hidden = true;
   if (el.placeholder) el.placeholder.hidden = false;
   if (el.select) el.select.disabled = false;
+  if (el.conf) el.conf.hidden = true;
   setStatus("Camera stopped.");
 }
 
@@ -220,6 +230,32 @@ function resetReadout() {
   if (el.repCount) el.repCount.textContent = "0";
   if (el.liveCues) el.liveCues.innerHTML = "";
   if (el.lastRep) el.lastRep.innerHTML = "";
+}
+
+/** Mean visibility of the key joints — our "can we even judge this?" confidence. */
+function frameConfidence(image) {
+  let sum = 0;
+  let n = 0;
+  for (const i of CONF_LANDMARKS) {
+    const v = image[i]?.visibility;
+    if (typeof v === "number") { sum += v; n += 1; }
+  }
+  return n ? sum / n : 0;
+}
+
+function updateConfidence(conf) {
+  if (!el.conf) return;
+  el.conf.hidden = false;
+  const pct = Math.round(conf * 100);
+  const level = conf >= 0.75 ? "high" : conf >= LOW_CONFIDENCE ? "med" : "low";
+  if (el.confBar) {
+    el.confBar.style.width = `${pct}%`;
+    el.confBar.dataset.level = level;
+  }
+  if (el.confLabel) {
+    el.confLabel.textContent = `${level === "high" ? "High" : level === "med" ? "Medium" : "Low"} · ${pct}%`;
+    el.confLabel.dataset.level = level;
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -242,6 +278,9 @@ function loop() {
     const world = result?.worldLandmarks?.[0] || image; // 3D preferred; fall back to 2D
 
     if (image && world) {
+      const conf = frameConfidence(image);
+      updateConfidence(conf);
+
       const metrics = smoothMetrics(currentExercise.metrics(image, world), t);
 
       let cues;
@@ -261,8 +300,12 @@ function loop() {
         lastRep = counter.lastRep;
       }
 
+      // Low confidence: refuse strong form advice rather than guess.
+      const lowConf = conf < LOW_CONFIDENCE;
+      if (lowConf) cues = [{ level: "warn", text: "Camera angle or visibility is too limited for useful feedback — step fully into frame, side-on." }];
+
       draw(image, metrics, cues);
-      renderReadout(cues, justCompleted, lastRep);
+      renderReadout(cues, justCompleted, lastRep, lowConf);
     } else {
       const ctx = el.canvas.getContext("2d");
       ctx.clearRect(0, 0, el.canvas.width, el.canvas.height);
@@ -324,7 +367,7 @@ function badge(level, text) {
   return `<span class="cue cue--${level === "good" ? "good" : "warn"}">${esc(text)}</span>`;
 }
 
-function renderReadout(cues, justCompleted, lastRep) {
+function renderReadout(cues, justCompleted, lastRep, lowConf = false) {
   if (el.repCount) el.repCount.textContent = String(counter.reps);
 
   if (el.liveCues) {
@@ -333,7 +376,10 @@ function renderReadout(cues, justCompleted, lastRep) {
       : badge("good", "Looking good — keep going");
   }
 
-  if (justCompleted && lastRep && el.lastRep) {
+  // When confidence is low, don't grade the rep — say so plainly.
+  if (justCompleted && lowConf && el.lastRep) {
+    el.lastRep.innerHTML = `<span class="form-lastrep__label">Rep ${counter.reps}</span> ${badge("warn", "Unable to judge this rep")}`;
+  } else if (justCompleted && lastRep && el.lastRep) {
     const { rep, depth } = lastRep;
     el.lastRep.innerHTML = `<span class="form-lastrep__label">Rep ${rep}</span> ${badge(depth.level, depth.text)}`;
     if (!reducedMotion) {
@@ -351,6 +397,13 @@ function renderReadout(cues, justCompleted, lastRep) {
 if (hasUI) {
   el.start.addEventListener("click", start);
   el.stop.addEventListener("click", stop);
+
+  // "I feel pain" — stop immediately and surface the conservative message.
+  el.pain?.addEventListener("click", () => {
+    if (el.painMsg) el.painMsg.hidden = false;
+    if (running) stop();
+    setStatus("Stopped — please read the note below.", "warn");
+  });
 
   // Switching exercise rebuilds the counter, smoothers, and setup hint.
   el.select?.addEventListener("change", resetForExercise);

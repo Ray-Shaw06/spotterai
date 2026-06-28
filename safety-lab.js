@@ -90,6 +90,12 @@ const BAD_PLANS = [
   },
 ];
 
+const PRIVACY = {
+  local: ["Workout logs", "Meal logs", "Progress data", "Profiles", "Webcam video (form check)"],
+  sent: ["Workout-generation inputs", "Plan context", "Coach chat messages", "Adaptation context"],
+  never: ["Raw webcam video (form check runs on-device)", "Local-only profile data, unless you include it in a generation request"],
+};
+
 const ARCH = [
   ["AI plan generation", "A serverless function holds the API key and prompts Gemini for a strict-JSON weekly plan."],
   ["Deterministic evaluator", "Pure code (no LLM) scores the plan against a fixed, versioned rubric — the same logic in the app and in CI."],
@@ -157,6 +163,23 @@ function render() {
       </div>
     </div>`;
 
+  const privacyCol = (title, items, cls) => `
+    <div class="privacy-col privacy-col--${cls}">
+      <h4>${title}</h4>
+      <ul>${items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
+    </div>`;
+  const privacy = `
+    <div class="lab-block">
+      <h3 class="lab-block__title">Privacy &amp; data</h3>
+      <p class="lab-block__sub">Fitness data is personal, so SpotterAI is explicit about what stays on your device and what is used for AI features.</p>
+      <div class="privacy-grid">
+        ${privacyCol("Stays on your device", PRIVACY.local, "local")}
+        ${privacyCol("May be sent to AI", PRIVACY.sent, "sent")}
+        ${privacyCol("Never sent", PRIVACY.never, "never")}
+      </div>
+      <p class="privacy-controls">You're in control: <strong>export</strong>, <strong>import</strong>, <strong>delete local data</strong>, or <strong>reset the demo profile</strong> from the account menu (bottom-left). No account is required and there are no third-party trackers.</p>
+    </div>`;
+
   const tech = `
     <div class="lab-block">
       <h3 class="lab-block__title">Technical architecture</h3>
@@ -168,7 +191,7 @@ function render() {
       </div>
     </div>`;
 
-  mount.innerHTML = bench + cols + examples + tech;
+  mount.innerHTML = bench + cols + examples + privacy + tech;
 }
 
 if (mount) render();

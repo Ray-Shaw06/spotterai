@@ -15,6 +15,7 @@
 
 import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
 import { repairPlan } from "./repair.js";
+import { screenRequest, GENERATOR_BOUNDARY } from "./safety-boundaries.js";
 import { setPlan, store } from "./store.js";
 import { getContext as getTrackerContext } from "./tracker-store.js";
 
@@ -236,8 +237,18 @@ async function generate() {
 // Rendering: results
 // ----------------------------------------------------------------------------
 
+const safetyBoundary = document.getElementById("safety-boundary");
+const safetyBoundaryText = document.getElementById("safety-boundary-text");
+
 function renderResults(plan, inputs, usedFallback, { focus = true } = {}) {
   fallbackNotice.hidden = !usedFallback;
+
+  // Surface a hard safety boundary prominently (never bury it under a plan).
+  if (safetyBoundary) {
+    const blocked = screenRequest(inputs?.injuryNotes || "").level === "block";
+    safetyBoundary.hidden = !blocked;
+    if (blocked && safetyBoundaryText) safetyBoundaryText.textContent = GENERATOR_BOUNDARY;
+  }
 
   // Run the pure-code audit, then render it flags-first.
   const audit = evaluatePlan(plan, inputs);
