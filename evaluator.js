@@ -20,7 +20,7 @@
  * Runs in the browser as an ES module.
  */
 
-import { lookupExercise, isContraindicated } from "./exercise-data.js";
+import { lookupExercise, isContraindicated, volumeContribution } from "./exercise-data.js";
 
 // ============================================================================
 // 1. TUNABLE CONSTANTS  (the rubric)
@@ -251,12 +251,26 @@ export function computeWeeklyVolume(plan) {
   for (const ex of allExercises(plan)) {
     const sets = Number(ex.sets) || 0;
     if (sets <= 0) continue;
-    const name = norm(ex.name);
-    for (const [group, { include, exclude }] of Object.entries(MUSCLE_KEYWORDS)) {
-      const hit = include.some((kw) => name.includes(kw)) && !exclude.some((kw) => name.includes(kw));
-      if (hit) volume[group] += sets;
+
+    // Prefer the structured DB: 1.0 set to each primary mover, 0.5 to each
+    // secondary. Fall back to keyword matching (full set to each matched group)
+    // only when the exercise isn't in the DB.
+    const contrib = volumeContribution(ex.name);
+    if (contrib) {
+      for (const [group, weight] of Object.entries(contrib)) {
+        if (group in volume) volume[group] += sets * weight;
+      }
+    } else {
+      const name = norm(ex.name);
+      for (const [group, { include, exclude }] of Object.entries(MUSCLE_KEYWORDS)) {
+        const hit = include.some((kw) => name.includes(kw)) && !exclude.some((kw) => name.includes(kw));
+        if (hit) volume[group] += sets;
+      }
     }
   }
+
+  // Round to a tidy half-set so displayed numbers stay clean.
+  for (const g of Object.keys(volume)) volume[g] = Math.round(volume[g] * 2) / 2;
   return volume;
 }
 

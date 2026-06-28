@@ -21,6 +21,7 @@ import {
   PULL_GROUPS,
   THRESHOLDS,
 } from "./evaluator.js";
+import { lookupExercise, isContraindicated } from "./exercise-data.js";
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const norm = (t) => String(t || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -44,17 +45,40 @@ function nextVersion(v) {
 // Per-flag repairs
 // ----------------------------------------------------------------------------
 
+/** Is this exercise risky for the injury? Mirror the evaluator: structured DB
+ *  contraindications for known lifts, keyword fallback for unknown ones. */
+function riskyForInjury(name, key, rule) {
+  const known = lookupExercise(name);
+  return known ? isContraindicated(name, key) : rule.riskyKeywords.some((k) => norm(name).includes(k));
+}
+
+/** Pick a safe alternative that best preserves the original's primary muscle, so
+ *  the swap removes the risk without quietly dropping training stimulus. */
+function bestAlternative(originalName, alts, injuryKey) {
+  const pool = alts.filter((a) => !isContraindicated(a, injuryKey));
+  const list = pool.length ? pool : alts;
+  const orig = lookupExercise(originalName);
+  const primary = orig?.primaryMuscles?.[0];
+  if (primary) {
+    const exact = list.find((a) => lookupExercise(a)?.primaryMuscles.includes(primary));
+    if (exact) return exact;
+  }
+  const overlap = list.find((a) => {
+    const e = lookupExercise(a);
+    return e && orig && e.primaryMuscles.some((m) => orig.primaryMuscles.includes(m));
+  });
+  return overlap || list[0] || `a ${injuryKey}-friendly variation`;
+}
+
 function repairInjury(plan, check, changes) {
   const key = check.id.replace("injury_", "");
   const rule = INJURY_RULES[key];
   if (!rule) return;
   const alts = rule.alternatives || [];
-  let ai = 0;
   for (const day of plan.days || []) {
     for (const ex of day.exercises || []) {
-      if (rule.riskyKeywords.some((k) => norm(ex.name).includes(k))) {
-        const alt = alts[ai % alts.length] || `a ${rule.label.toLowerCase()}-friendly variation`;
-        ai++;
+      if (riskyForInjury(ex.name, key, rule)) {
+        const alt = bestAlternative(ex.name, alts, key);
         changes.push({ issue: `${rule.label}: “${ex.name}” may aggravate the injury`, fix: `Replaced with ${alt}` });
         ex.name = alt;
         ex.notes = ex.notes ? `${ex.notes} · ${rule.label}-friendly swap` : `${rule.label}-friendly swap`;
@@ -104,6 +128,13 @@ function repairVolume(plan, changes) {
   }
 }
 
+// Back-friendly pulling additions (no lower-back or shoulder/push contribution).
+const PULL_ADDS = [
+  { name: "Lat Pulldown", sets: 3, reps: "10-12", rpe: 8 },
+  { name: "Seated Cable Row", sets: 3, reps: "10-12", rpe: 8 },
+  { name: "Chest-Supported Row", sets: 3, reps: "10-12", rpe: 8 },
+];
+
 function repairBalance(plan, changes) {
   const vol = computeWeeklyVolume(plan);
   const push = sumGroups(vol, PUSH_GROUPS);
@@ -112,22 +143,36 @@ function repairBalance(plan, changes) {
   const days = (plan.days || []).filter((d) => (d.exercises || []).length);
   if (!days.length) return;
 
-  if (push >= pull) {
-    // add pulling to the day with the most pressing
-    const target = days.reduce(
-      (best, d) => {
-        const p = (d.exercises || []).filter((e) => PUSH_GROUPS.some((g) => matchesGroup(e.name, g))).length;
-        return p > best.p ? { d, p } : best;
-      },
-      { d: days[0], p: -1 }
-    ).d;
-    target.exercises.push({ name: "Seated Cable Row", sets: 3, reps: "10-12", rpe: 8, notes: "Added to balance push/pull" });
-    target.exercises.push({ name: "Face Pull", sets: 3, reps: "12-15", rpe: 8, notes: "Rear delts / upper back" });
-    changes.push({ issue: "Pushing volume far outweighs pulling", fix: "Added Seated Cable Row + Face Pull to even the ratio" });
-  } else {
+  if (push < pull) {
     days[0].exercises.push({ name: "Dumbbell Bench Press", sets: 3, reps: "8-12", rpe: 8, notes: "Added to balance push/pull" });
     changes.push({ issue: "Pulling volume far outweighs pushing", fix: "Added Dumbbell Bench Press to even the ratio" });
+    return;
   }
+
+  // Pushing dominates: trim a little of the heaviest pressing AND add pure
+  // pulling, scaled to the gap, on the most press-heavy day.
+  const pressers = [];
+  for (const d of days) for (const e of d.exercises || []) {
+    if (PUSH_GROUPS.some((g) => matchesGroup(e.name, g)) && !PULL_GROUPS.some((g) => matchesGroup(e.name, g))) pressers.push(e);
+  }
+  pressers.sort((a, b) => Number(b.sets) - Number(a.sets));
+  let trimmed = 0;
+  for (const e of pressers.slice(0, 2)) if (Number(e.sets) > 3) { e.sets = Number(e.sets) - 1; trimmed += 1; }
+
+  const target = days.reduce(
+    (best, d) => {
+      const p = (d.exercises || []).filter((e) => PUSH_GROUPS.some((g) => matchesGroup(e.name, g))).length;
+      return p > best.p ? { d, p } : best;
+    },
+    { d: days[0], p: -1 }
+  ).d;
+  const needed = Math.max(1, Math.min(3, Math.ceil((push / 2 - pull) / 3)));
+  for (let i = 0; i < needed; i++) target.exercises.push({ ...PULL_ADDS[i % PULL_ADDS.length], notes: "Added to balance push/pull" });
+
+  changes.push({
+    issue: "Pushing volume far outweighs pulling",
+    fix: `Added ${needed} pulling exercise${needed > 1 ? "s" : ""}${trimmed ? ` and trimmed ${trimmed} pressing set${trimmed > 1 ? "s" : ""}` : ""} to even the ratio`,
+  });
 }
 
 function repairBeginner(plan, changes) {

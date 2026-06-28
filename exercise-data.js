@@ -57,6 +57,60 @@ export const EXERCISE_DATA = [
   E("Dumbbell Curl", { primaryMuscles: ["biceps"], movementPattern: "isolation", equipment: ["dumbbell"], difficulty: "beginner", jointStress: ["wrist"], contraindications: [], commonSubstitutions: ["EZ-bar Curl", "Hammer Curl"], regressionOptions: [], progressionOptions: [] }),
   E("Hammer Curl", { primaryMuscles: ["biceps"], movementPattern: "isolation", equipment: ["dumbbell"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Dumbbell Curl"], regressionOptions: [], progressionOptions: [] }),
   E("Triceps Pushdown", { primaryMuscles: ["triceps"], movementPattern: "isolation", equipment: ["cable"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Overhead Triceps Extension"], regressionOptions: [], progressionOptions: [] }),
+
+  // --- Chest (more) --------------------------------------------------------
+  E("Incline Barbell Bench Press", { primaryMuscles: ["chest", "shoulders"], secondaryMuscles: ["triceps"], movementPattern: "horizontal_push", equipment: ["barbell", "bench"], difficulty: "intermediate", jointStress: ["shoulder", "wrist"], contraindications: ["wrist"], commonSubstitutions: ["Incline Dumbbell Press"], regressionOptions: ["Incline Machine Press"], progressionOptions: [] }),
+  E("Decline Bench Press", { primaryMuscles: ["chest"], secondaryMuscles: ["triceps"], movementPattern: "horizontal_push", equipment: ["barbell", "bench"], difficulty: "intermediate", jointStress: ["shoulder"], contraindications: [], commonSubstitutions: ["Dip", "Machine Chest Press"], regressionOptions: [], progressionOptions: [] }),
+  E("Machine Chest Press", { primaryMuscles: ["chest"], secondaryMuscles: ["triceps", "shoulders"], movementPattern: "horizontal_push", equipment: ["machine"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Dumbbell Bench Press"], regressionOptions: [], progressionOptions: ["Barbell Bench Press"] }),
+  E("Cable Fly", { primaryMuscles: ["chest"], movementPattern: "isolation", equipment: ["cable"], difficulty: "beginner", jointStress: ["shoulder"], contraindications: [], commonSubstitutions: ["Pec Deck", "Dumbbell Fly"], regressionOptions: [], progressionOptions: [] }),
+  E("Dumbbell Fly", { primaryMuscles: ["chest"], movementPattern: "isolation", equipment: ["dumbbell"], difficulty: "beginner", jointStress: ["shoulder"], contraindications: ["shoulder"], commonSubstitutions: ["Cable Fly", "Pec Deck"], regressionOptions: [], progressionOptions: [] }),
+  E("Pec Deck", { primaryMuscles: ["chest"], movementPattern: "isolation", equipment: ["machine"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Cable Fly"], regressionOptions: [], progressionOptions: [] }),
+
+  // --- Back (more) ---------------------------------------------------------
+  E("Pendlay Row", { primaryMuscles: ["back"], secondaryMuscles: ["biceps"], movementPattern: "horizontal_pull", equipment: ["barbell"], difficulty: "advanced", jointStress: ["lower_back"], contraindications: ["lower_back"], commonSubstitutions: ["Chest-Supported Row"], regressionOptions: ["Chest-Supported Row"], progressionOptions: [] }),
+  E("Bent-Over Row", { primaryMuscles: ["back"], secondaryMuscles: ["biceps"], movementPattern: "horizontal_pull", equipment: ["barbell"], difficulty: "intermediate", jointStress: ["lower_back"], contraindications: ["lower_back"], commonSubstitutions: ["Chest-Supported Row", "Seated Cable Row"], regressionOptions: ["Chest-Supported Row"], progressionOptions: [] }),
+  E("T-Bar Row", { primaryMuscles: ["back"], secondaryMuscles: ["biceps"], movementPattern: "horizontal_pull", equipment: ["barbell"], difficulty: "intermediate", jointStress: ["lower_back"], contraindications: ["lower_back"], commonSubstitutions: ["Chest-Supported Row"], regressionOptions: ["Chest-Supported Row"], progressionOptions: [] }),
+  E("One-Arm Dumbbell Row", { primaryMuscles: ["back"], secondaryMuscles: ["biceps"], movementPattern: "horizontal_pull", equipment: ["dumbbell"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Seated Cable Row"], regressionOptions: [], progressionOptions: [] }),
+  E("Chin-up", { primaryMuscles: ["back", "biceps"], movementPattern: "vertical_pull", equipment: ["bodyweight"], difficulty: "intermediate", jointStress: ["shoulder", "wrist"], contraindications: [], commonSubstitutions: ["Lat Pulldown", "Assisted Chin-up"], regressionOptions: ["Assisted Chin-up", "Lat Pulldown"], progressionOptions: ["Weighted Chin-up"] }),
+  E("Straight-Arm Pulldown", { primaryMuscles: ["back"], movementPattern: "isolation", equipment: ["cable"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Pullover"], regressionOptions: [], progressionOptions: [] }),
+  E("Barbell Shrug", { primaryMuscles: ["back"], movementPattern: "isolation", equipment: ["barbell"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Dumbbell Shrug"], regressionOptions: [], progressionOptions: [] }),
+  E("Rack Pull", { primaryMuscles: ["back", "hamstrings"], secondaryMuscles: ["glutes"], movementPattern: "hinge", equipment: ["barbell"], difficulty: "intermediate", jointStress: ["lower_back"], contraindications: [], commonSubstitutions: ["Trap-Bar Deadlift"], regressionOptions: [], progressionOptions: ["Deadlift"] }),
+
+  // --- Shoulders (more) ----------------------------------------------------
+  E("Dumbbell Shoulder Press", { primaryMuscles: ["shoulders"], secondaryMuscles: ["triceps"], movementPattern: "vertical_push", equipment: ["dumbbell"], difficulty: "beginner", jointStress: ["shoulder"], contraindications: [], commonSubstitutions: ["Overhead Press", "Machine Shoulder Press"], regressionOptions: ["Seated Dumbbell Press"], progressionOptions: ["Overhead Press"] }),
+  E("Arnold Press", { primaryMuscles: ["shoulders"], secondaryMuscles: ["triceps"], movementPattern: "vertical_push", equipment: ["dumbbell"], difficulty: "intermediate", jointStress: ["shoulder"], contraindications: ["shoulder"], commonSubstitutions: ["Dumbbell Shoulder Press"], regressionOptions: [], progressionOptions: [] }),
+  E("Cable Lateral Raise", { primaryMuscles: ["shoulders"], movementPattern: "isolation", equipment: ["cable"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Dumbbell Lateral Raise"], regressionOptions: [], progressionOptions: [] }),
+  E("Rear-Delt Fly", { primaryMuscles: ["shoulders", "back"], movementPattern: "isolation", equipment: ["dumbbell"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Face Pull"], regressionOptions: [], progressionOptions: [] }),
+  E("Front Raise", { primaryMuscles: ["shoulders"], movementPattern: "isolation", equipment: ["dumbbell"], difficulty: "beginner", jointStress: ["shoulder"], contraindications: [], commonSubstitutions: ["Cable Front Raise"], regressionOptions: [], progressionOptions: [] }),
+  E("Upright Row", { primaryMuscles: ["shoulders"], secondaryMuscles: ["biceps"], movementPattern: "vertical_pull", equipment: ["barbell"], difficulty: "intermediate", jointStress: ["shoulder", "wrist"], contraindications: ["shoulder"], commonSubstitutions: ["Cable Lateral Raise"], regressionOptions: [], progressionOptions: [] }),
+
+  // --- Arms (more) ---------------------------------------------------------
+  E("EZ-Bar Curl", { primaryMuscles: ["biceps"], movementPattern: "isolation", equipment: ["barbell"], difficulty: "beginner", jointStress: ["wrist"], contraindications: [], commonSubstitutions: ["Dumbbell Curl"], regressionOptions: [], progressionOptions: [] }),
+  E("Barbell Curl", { primaryMuscles: ["biceps"], movementPattern: "isolation", equipment: ["barbell"], difficulty: "beginner", jointStress: ["wrist"], contraindications: ["wrist"], commonSubstitutions: ["EZ-Bar Curl", "Dumbbell Curl"], regressionOptions: [], progressionOptions: [] }),
+  E("Preacher Curl", { primaryMuscles: ["biceps"], movementPattern: "isolation", equipment: ["machine"], difficulty: "beginner", jointStress: ["wrist"], contraindications: [], commonSubstitutions: ["Dumbbell Curl"], regressionOptions: [], progressionOptions: [] }),
+  E("Cable Curl", { primaryMuscles: ["biceps"], movementPattern: "isolation", equipment: ["cable"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Dumbbell Curl"], regressionOptions: [], progressionOptions: [] }),
+  E("Skullcrusher", { primaryMuscles: ["triceps"], movementPattern: "isolation", equipment: ["barbell"], difficulty: "intermediate", jointStress: ["elbow", "wrist"], contraindications: [], commonSubstitutions: ["Overhead Triceps Extension", "Triceps Pushdown"], regressionOptions: [], progressionOptions: [] }),
+  E("Overhead Triceps Extension", { primaryMuscles: ["triceps"], movementPattern: "isolation", equipment: ["dumbbell"], difficulty: "beginner", jointStress: ["shoulder"], contraindications: [], commonSubstitutions: ["Triceps Pushdown"], regressionOptions: [], progressionOptions: [] }),
+  E("Close-Grip Bench Press", { primaryMuscles: ["triceps", "chest"], movementPattern: "horizontal_push", equipment: ["barbell", "bench"], difficulty: "intermediate", jointStress: ["wrist", "shoulder"], contraindications: ["wrist"], commonSubstitutions: ["Dip", "Triceps Pushdown"], regressionOptions: [], progressionOptions: [] }),
+  E("Triceps Kickback", { primaryMuscles: ["triceps"], movementPattern: "isolation", equipment: ["dumbbell"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Triceps Pushdown"], regressionOptions: [], progressionOptions: [] }),
+
+  // --- Legs (more) ---------------------------------------------------------
+  E("Hack Squat", { primaryMuscles: ["quads"], secondaryMuscles: ["glutes"], movementPattern: "squat", equipment: ["machine"], difficulty: "intermediate", jointStress: ["knee"], contraindications: [], commonSubstitutions: ["Leg Press", "Back Squat"], regressionOptions: ["Leg Press"], progressionOptions: [] }),
+  E("Bulgarian Split Squat", { primaryMuscles: ["quads", "glutes"], movementPattern: "lunge", equipment: ["dumbbell"], difficulty: "intermediate", jointStress: ["knee"], contraindications: [], commonSubstitutions: ["Split Squat", "Leg Press"], regressionOptions: ["Split Squat"], progressionOptions: [] }),
+  E("Reverse Lunge", { primaryMuscles: ["quads", "glutes"], movementPattern: "lunge", equipment: ["dumbbell", "bodyweight"], difficulty: "beginner", jointStress: ["knee"], contraindications: [], commonSubstitutions: ["Split Squat", "Step-up"], regressionOptions: ["Split Squat"], progressionOptions: ["Walking Lunge"] }),
+  E("Seated Leg Curl", { primaryMuscles: ["hamstrings"], movementPattern: "isolation", equipment: ["machine"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Lying Leg Curl", "Nordic Curl"], regressionOptions: [], progressionOptions: ["Nordic Curl"] }),
+  E("Nordic Curl", { primaryMuscles: ["hamstrings"], movementPattern: "isolation", equipment: ["bodyweight"], difficulty: "advanced", jointStress: [], contraindications: [], commonSubstitutions: ["Lying Leg Curl"], regressionOptions: ["Lying Leg Curl"], progressionOptions: [] }),
+  E("Hip Abduction", { primaryMuscles: ["glutes"], movementPattern: "isolation", equipment: ["machine"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Cable Kickback"], regressionOptions: [], progressionOptions: [] }),
+  E("Standing Calf Raise", { primaryMuscles: ["calves"], movementPattern: "isolation", equipment: ["machine"], difficulty: "beginner", jointStress: ["ankle"], contraindications: [], commonSubstitutions: ["Seated Calf Raise"], regressionOptions: [], progressionOptions: [] }),
+  E("Seated Calf Raise", { primaryMuscles: ["calves"], movementPattern: "isolation", equipment: ["machine"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Standing Calf Raise"], regressionOptions: [], progressionOptions: [] }),
+
+  // --- Core ----------------------------------------------------------------
+  E("Plank", { primaryMuscles: ["core"], movementPattern: "isometric", equipment: ["bodyweight"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Dead Bug"], regressionOptions: ["Knee Plank"], progressionOptions: ["Weighted Plank"] }),
+  E("Hanging Leg Raise", { primaryMuscles: ["core"], movementPattern: "isolation", equipment: ["bodyweight"], difficulty: "intermediate", jointStress: ["shoulder"], contraindications: [], commonSubstitutions: ["Lying Leg Raise", "Cable Crunch"], regressionOptions: ["Lying Leg Raise"], progressionOptions: [] }),
+  E("Cable Crunch", { primaryMuscles: ["core"], movementPattern: "isolation", equipment: ["cable"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Crunch"], regressionOptions: [], progressionOptions: [] }),
+  E("Ab Wheel Rollout", { primaryMuscles: ["core"], movementPattern: "isolation", equipment: ["bodyweight"], difficulty: "advanced", jointStress: ["lower_back"], contraindications: ["lower_back"], commonSubstitutions: ["Plank"], regressionOptions: ["Plank"], progressionOptions: [] }),
+  E("Russian Twist", { primaryMuscles: ["core"], movementPattern: "isolation", equipment: ["bodyweight"], difficulty: "beginner", jointStress: ["lower_back"], contraindications: [], commonSubstitutions: ["Pallof Press"], regressionOptions: [], progressionOptions: [] }),
+  E("Pallof Press", { primaryMuscles: ["core"], movementPattern: "isometric", equipment: ["cable"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Plank"], regressionOptions: [], progressionOptions: [] }),
 ];
 
 // ----------------------------------------------------------------------------
@@ -85,4 +139,23 @@ export function lookupExercise(name) {
 export function isContraindicated(name, injuryKey) {
   const e = lookupExercise(name);
   return !!e && e.contraindications.includes(injuryKey);
+}
+
+// The ten muscle groups the evaluator scores volume against.
+const VOLUME_GROUPS = new Set(["chest", "back", "shoulders", "biceps", "triceps", "quads", "hamstrings", "glutes", "calves", "core"]);
+
+/**
+ * Per-set volume contribution for an exercise, by muscle group: a working set
+ * counts 1.0 toward each primary mover and 0.5 toward each secondary (the
+ * standard "direct vs indirect" convention) — far more accurate than counting a
+ * full set toward every keyword-matched group. Returns null when the exercise
+ * isn't in the DB (→ the evaluator falls back to keyword matching).
+ */
+export function volumeContribution(name) {
+  const e = lookupExercise(name);
+  if (!e) return null;
+  const out = {};
+  for (const m of e.primaryMuscles || []) if (VOLUME_GROUPS.has(m)) out[m] = (out[m] || 0) + 1;
+  for (const m of e.secondaryMuscles || []) if (VOLUME_GROUPS.has(m)) out[m] = (out[m] || 0) + 0.5;
+  return out;
 }
