@@ -20,6 +20,8 @@
  * Runs in the browser as an ES module.
  */
 
+import { lookupExercise, isContraindicated } from "./exercise-data.js";
+
 // ============================================================================
 // 1. TUNABLE CONSTANTS  (the rubric)
 // ============================================================================
@@ -390,10 +392,14 @@ function checkInjuries(plan, userInputs) {
     const id = `injury_${key}`;
     const label = `Injury safety — ${rule.label}`;
 
-    // Find which prescribed exercises match this injury's risky-movement keywords.
+    // Find which prescribed exercises are risky for this injury. Prefer the
+    // structured exercise DB (curated contraindications); fall back to keyword
+    // matching when the exercise isn't in the DB.
     const matched = [];
     for (const ex of allExercises(plan)) {
-      if (matchesAny(ex.name, rule.riskyKeywords)) matched.push(ex.name);
+      const known = lookupExercise(ex.name);
+      const risky = known ? isContraindicated(ex.name, key) : matchesAny(ex.name, rule.riskyKeywords);
+      if (risky) matched.push(ex.name);
     }
     const unique = [...new Set(matched)];
 
