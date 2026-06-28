@@ -33,14 +33,20 @@ test("repairing a knee-conflict + imbalance plan reduces flags and never worsens
   assert.ok(!names.some((n) => n.includes("walking lunge") || n.includes("leg extension")), "risky knee movements should be swapped out");
 });
 
-test("a clean plan yields no repair changes and leaves the plan untouched", () => {
+test("a clean plan yields no repair changes", () => {
+  // Balanced push/pull, a rest day, moderate intensity, General goal (so the
+  // under-volume check doesn't apply) — nothing for the engine to fix.
   const plan = {
-    program_name: "Balanced", goal: "Hypertrophy", days_per_week: 2, version: "v1",
+    program_name: "Balanced", goal: "General", days_per_week: 2, version: "v1",
     days: [
-      day("Upper", [ex("Bench Press", 3, "8-10", 8), ex("Barbell Row", 3, "8-10", 8), ex("Lat Pulldown", 3, "10-12", 8)]),
+      day("Upper", [
+        ex("Bench Press", 3, "8-10", 7), ex("Overhead Press", 3, "8-10", 7),
+        ex("Triceps Pushdown", 3, "12-15", 8), ex("Barbell Row", 3, "8-10", 7),
+        ex("Lat Pulldown", 3, "10-12", 8), ex("Dumbbell Curl", 3, "12-15", 8),
+      ]),
       day("Rest", []),
     ],
   };
-  const r = repairPlan(plan, { goal: "Hypertrophy", experience: "Intermediate" });
-  assert.equal(r.changes.length, 0);
+  const r = repairPlan(plan, { goal: "General", experience: "Intermediate" });
+  assert.equal(r.changes.length, 0, `expected no changes, got: ${r.changes.map((c) => c.fix).join("; ")}`);
 });
