@@ -14,7 +14,7 @@ const TITLES = {
   nutrition: "Nutrition · SpotterAI",
   progress: "Progress · SpotterAI",
   "form-check": "Form check · SpotterAI",
-  evals: "Safety evals · SpotterAI",
+  evals: "Safety Lab · SpotterAI",
 };
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
