@@ -10,33 +10,37 @@
    1. Design tokens
 ---------------------------------------------------------------------------- */
 :root {
-  /* Color — base: cool near-black, near-monochrome */
-  --bg: #0a0a0b;
-  --bg-soft: #0c0c0e;
-  --surface: #141416; /* card / elevated */
-  --surface-2: #1a1a1d; /* control / hover */
-  --border: rgba(255, 255, 255, 0.08); /* hairline */
-  --border-soft: rgba(255, 255, 255, 0.05);
+  /* Color — base: deep cool charcoal, faint blue undertone ("Aurora") */
+  --bg: #07080b;
+  --bg-soft: #090a0e;
+  /* Surfaces are translucent glass — the ambient aurora tints through them. */
+  --surface: rgba(22, 24, 31, 0.72); /* card / elevated */
+  --surface-solid: #16181f; /* opaque variant where blur isn't wanted */
+  --surface-2: rgba(32, 35, 44, 0.85); /* control / hover */
+  --border: rgba(255, 255, 255, 0.10); /* hairline */
+  --border-soft: rgba(255, 255, 255, 0.06);
+  --sheen: rgba(255, 255, 255, 0.06); /* top-edge highlight on glass */
 
   /* Color — text: crisp near-white → cool greys */
-  --text: #f3f3f4;
-  --text-muted: #9a9aa3;
-  --text-faint: #6a6a73; /* still WCAG-AA on small captions */
+  --text: #f4f5f7;
+  --text-muted: #9ba0ad;
+  --text-faint: #6b7080; /* still WCAG-AA on small captions */
 
-  /* Color — accent: a single, understated deep emerald */
-  --accent: #22a883;
-  --accent-hover: #2ec59a;
-  --accent-soft: rgba(34, 168, 131, 0.12);
-  --accent-ring: rgba(34, 168, 131, 0.28);
-  --accent-ink: #04130d;
+  /* Color — accent: a luminous emerald that glows on dark */
+  --accent: #2dd4a2;
+  --accent-hover: #45e6b6;
+  --accent-soft: rgba(45, 212, 162, 0.14);
+  --accent-ring: rgba(45, 212, 162, 0.34);
+  --accent-ink: #04140d;
+  --accent-2: #3aa6e0; /* teal companion — used only in ambient blooms */
 
-  /* Color — status (refined, desaturated) */
-  --success: #22a883;
-  --warn: #d8a441;
-  --danger: #db5a52;
-  --success-soft: rgba(34, 168, 131, 0.12);
-  --warn-soft: rgba(216, 164, 65, 0.12);
-  --danger-soft: rgba(219, 90, 82, 0.12);
+  /* Color — status */
+  --success: #2dd4a2;
+  --warn: #e0b455;
+  --danger: #e26a62;
+  --success-soft: rgba(45, 212, 162, 0.14);
+  --warn-soft: rgba(224, 180, 85, 0.13);
+  --danger-soft: rgba(226, 106, 98, 0.13);
 
   /* Spacing scale */
   --space-1: 0.25rem;
@@ -56,18 +60,19 @@
   --r-xl: 22px;
   --r-full: 999px;
 
-  /* Shadows — quiet + deep, never harsh */
+  /* Shadows — deep + soft, with a glass top-sheen highlight baked in */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 14px 36px -20px rgba(0, 0, 0, 0.7);
-  --shadow-lg: 0 40px 84px -38px rgba(0, 0, 0, 0.85), 0 12px 28px -22px rgba(0, 0, 0, 0.6);
-  --glow-accent: 0 16px 44px -20px rgba(34, 168, 131, 0.3);
+  --shadow-md: 0 18px 44px -22px rgba(0, 0, 0, 0.8), inset 0 1px 0 var(--sheen);
+  --shadow-lg: 0 50px 100px -40px rgba(0, 0, 0, 0.9), 0 16px 36px -24px rgba(0, 0, 0, 0.7), inset 0 1px 0 var(--sheen);
+  --glow-accent: 0 10px 30px -8px rgba(45, 212, 162, 0.5);
+  --glow-accent-strong: 0 0 0 1px var(--accent-ring), 0 12px 36px -6px rgba(45, 212, 162, 0.55);
 
   /* Typography — Sora (display) + Inter (UI) + JetBrains Mono (data) */
   --font-display: "Sora", "Inter", system-ui, sans-serif;
   --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --fs-display: clamp(2.6rem, 6vw, 4.5rem);
-  --fs-h1: clamp(1.9rem, 3.8vw, 2.9rem);
+  --fs-display: clamp(2.7rem, 6.2vw, 4.9rem);
+  --fs-h1: clamp(1.95rem, 3.8vw, 3rem);
   --fs-h2: clamp(1.45rem, 2.7vw, 2.05rem);
   --fs-body: 1rem;
   --fs-small: 0.875rem;
@@ -107,21 +112,31 @@ body {
   line-height: 1.65;
   color: var(--text);
   background-color: var(--bg);
-  /* Whisper-quiet ambient light — near-monochrome, a hint of emerald. */
-  background-image:
-    radial-gradient(66rem 48rem at 80% -14%, rgba(34, 168, 131, 0.05), transparent 62%),
-    radial-gradient(48rem 40rem at -8% 4%, rgba(255, 255, 255, 0.02), transparent 55%);
-  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   font-feature-settings: "cv05" 1, "ss03" 1;
   min-height: 100vh;
 }
 
+/* Aurora — fixed, full-viewport ambient glow blooms (emerald + teal) that sit
+   behind everything. Translucent glass surfaces let this tint through. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(58rem 42rem at 82% -12%, rgba(45, 212, 162, 0.18), transparent 60%),
+    radial-gradient(52rem 40rem at 6% 2%, rgba(58, 166, 224, 0.13), transparent 58%),
+    radial-gradient(46rem 40rem at 50% 116%, rgba(45, 212, 162, 0.12), transparent 60%),
+    radial-gradient(30rem 30rem at 96% 70%, rgba(58, 166, 224, 0.08), transparent 60%);
+}
+
 h1, h2, h3, h4, h5 {
   font-family: var(--font-display);
-  line-height: 1.1;
-  letter-spacing: -0.025em;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
   font-weight: 700;
 }
 
@@ -286,12 +301,14 @@ table {
 }
 
 .btn--primary {
-  background: var(--accent);
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
   color: var(--accent-ink);
+  box-shadow: var(--glow-accent), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .btn--primary:hover {
-  background: var(--accent-hover);
-  box-shadow: var(--glow-accent);
+  background: linear-gradient(180deg, #5cf0c6, var(--accent-hover));
+  box-shadow: var(--glow-accent-strong), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
 .btn--ghost {
@@ -334,10 +351,10 @@ table {
   display: flex;
   flex-direction: column;
   padding: var(--space-5) var(--space-4);
-  border-right: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.015);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  border-right: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.008));
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
 .sidebar__brand {
   display: inline-flex;
@@ -356,9 +373,10 @@ table {
   width: 34px;
   height: 34px;
   border-radius: var(--r-sm);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: radial-gradient(120% 120% at 30% 0%, var(--accent-soft), var(--surface-2));
+  border: 1px solid var(--accent-ring);
   color: var(--accent);
+  box-shadow: var(--glow-accent);
 }
 .sidebar__nav {
   display: flex;
@@ -367,29 +385,44 @@ table {
   flex: 1;
 }
 .sidebar__nav .nav-link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: 0.6rem 0.78rem;
-  border-radius: var(--r-sm);
+  padding: 0.62rem 0.78rem;
+  border-radius: var(--r-md);
   color: var(--text-muted);
   font-size: 0.92rem;
   font-weight: 500;
   letter-spacing: -0.01em;
   white-space: nowrap;
-  transition: background var(--transition), color var(--transition);
+  transition: background var(--transition), color var(--transition), box-shadow var(--transition);
 }
 .sidebar__nav .nav-link__icon {
   flex: none;
-  opacity: 0.8;
+  opacity: 0.75;
 }
 .sidebar__nav .nav-link:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
 }
 .sidebar__nav .nav-link.is-active {
-  background: var(--accent-soft);
+  background: linear-gradient(90deg, var(--accent-soft), rgba(45, 212, 162, 0.04));
   color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-ring), 0 6px 18px -10px rgba(45, 212, 162, 0.6);
+}
+/* Glowing left indicator bar on the active item */
+.sidebar__nav .nav-link.is-active::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  border-radius: var(--r-full);
+  background: var(--accent);
+  box-shadow: 0 0 10px 1px var(--accent);
 }
 .sidebar__nav .nav-link.is-active .nav-link__icon {
   opacity: 1;
@@ -777,6 +810,8 @@ table {
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-md);
+  -webkit-backdrop-filter: blur(14px) saturate(1.25);
+  backdrop-filter: blur(14px) saturate(1.25);
 }
 .card-title {
   font-size: 1.05rem;
