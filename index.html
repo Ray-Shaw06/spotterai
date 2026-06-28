@@ -437,50 +437,6 @@
       </div>
     </section>
 
-    <!-- ===================== HOW IT WORKS ===================== -->
-    <section id="how-it-works" class="section section--alt">
-      <div class="container">
-        <header class="section-head">
-          <p class="eyebrow eyebrow--center"><span class="eyebrow__dot" aria-hidden="true"></span> The method</p>
-          <h2 class="section-title section-title--lg">Generate, then audit</h2>
-          <p class="section-subtitle section-subtitle--center">
-            The interesting part isn't the AI writing a workout — anyone can do that.
-            It's the second system that checks the first one's work.
-          </p>
-        </header>
-
-        <ol class="steps">
-          <li class="card step">
-            <span class="step__num">1</span>
-            <h3 class="step__title">You describe your training</h3>
-            <p class="step__text">Goal, experience, days, equipment, session length, and any injuries — captured in a fast, fully custom form.</p>
-          </li>
-          <li class="card step">
-            <span class="step__num">2</span>
-            <h3 class="step__title">Gemini drafts a program</h3>
-            <p class="step__text">A serverless function (holding the API key) prompts Gemini for a <em>strict-JSON</em> weekly plan, validating and retrying on malformed output.</p>
-          </li>
-          <li class="card step">
-            <span class="step__num">3</span>
-            <h3 class="step__title">Code audits the plan</h3>
-            <p class="step__text">A pure-code evaluator estimates volume, balance, recovery, and injury risk — then scores the plan 0–100 and explains every flag.</p>
-          </li>
-        </ol>
-
-        <div class="card method-note">
-          <h3 class="card-title">What the evaluator checks</h3>
-          <ul class="method-list">
-            <li><strong>Recovery</strong> — flags a week with no rest day.</li>
-            <li><strong>Weekly volume</strong> — estimates sets per muscle group; flags overtraining or under-stimulation for the goal.</li>
-            <li><strong>Push / pull balance</strong> — flags lopsided programming (e.g. all push, no pull).</li>
-            <li><strong>Injury contraindications</strong> — maps stated injuries to risky movements and suggests regressions.</li>
-            <li><strong>Beginner load sanity</strong> — flags advanced intensity or volume prescribed to a beginner.</li>
-            <li><strong>Goal fit</strong> — checks rep ranges and structure against the stated goal.</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
     </div><!-- /home view -->
 
     <!-- ============================ DASHBOARD PAGE ============================ -->
