@@ -9,10 +9,12 @@
  * Display areas re-render on change; inputs in the food picker are short-lived.
  */
 
-import { addCustomFood, addNutrition, addWater, getCustomFoods, getRecentFoods, getState, getWater, removeEntry, resetAll, setTargets, subscribe } from "./tracker-store.js";
+import { addCustomFood, addNutrition, addWater, deriveStats, getCustomFoods, getRecentFoods, getState, getWater, removeEntry, resetAll, setTargets, subscribe } from "./tracker-store.js";
 import { searchFoods, searchOpenFoodFacts } from "./foods.js";
 import { estimateFood, estimateMealPhoto } from "./ai.js";
 import { ring } from "./charts.js";
+import { evaluateNutrition, NUTRITION_DISCLAIMER } from "./nutrition-safety.js";
+import { store } from "./store.js";
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -27,6 +29,7 @@ const el = {
   weekChart: $("nut-week-chart"),
   targetsForm: $("nut-targets-form"),
   reset: $("nut-reset"),
+  safety: $("nutrition-safety"),
   // picker
   picker: $("food-picker"),
   search: $("food-search"),
@@ -77,6 +80,68 @@ function render() {
   renderSummary(entries);
   renderMeals(entries);
   renderWater();
+  renderNutritionSafety();
+}
+
+// --- Nutrition safety guardrails + Trust Report ----------------------------
+const TIER_LABEL = { critical: "Critical", warning: "Warning" };
+
+function renderNutritionSafety() {
+  if (!el.safety) return;
+  const s = deriveStats();
+  const { flags, trust } = evaluateNutrition({
+    targets: getState().targets,
+    bodyweight: s.bodyweight?.latest ?? null,
+    unit: s.unit,
+    goal: store.inputs?.goal || "",
+  });
+
+  const verdict = flags.some((f) => f.tier === "critical")
+    ? { tone: "critical", text: "An aggressive target needs review" }
+    : flags.length
+    ? { tone: "warning", text: `${flags.length} target${flags.length > 1 ? "s" : ""} to review` }
+    : { tone: "ok", text: "Your targets look reasonable" };
+
+  const flagCards = flags
+    .map(
+      (f) => `<article class="flag flag--${f.tier}">
+        <header class="flag__head"><span class="flag__sev">${TIER_LABEL[f.tier]}</span><span class="flag__label">${esc(f.label)}</span></header>
+        <p class="flag__why">${esc(f.why)}</p>
+        <p class="flag__row"><span class="flag__row-label">Safer suggestion</span> ${esc(f.fix)}</p>
+      </article>`
+    )
+    .join("");
+
+  const list = (arr, empty) => (arr.length ? `<ul class="trust__list">${arr.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : `<span class="muted">${empty}</span>`);
+  const row = (dt, dd) => `<div class="trust__row"><dt>${dt}</dt><dd>${dd}</dd></div>`;
+
+  el.safety.innerHTML = `
+    <div class="card audit nut-safety">
+      <div class="audit__head">
+        <div class="audit__headline">
+          <p class="audit__eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span> Nutrition safety · deterministic</p>
+          <h3 class="audit__verdict is-${verdict.tone}">${esc(verdict.text)}</h3>
+        </div>
+      </div>
+      <div class="audit__flags">${flagCards || `<p class="audit__clear">No safety flags on your current targets. These are conservative checks, not a personalized diet.</p>`}</div>
+      <details class="card trust nut-trust">
+        <summary class="trust__summary">
+          <span class="trust__title">Nutrition Trust Report</span>
+          <span class="trust__conf trust__conf--${trust.confidence.toLowerCase()}">Confidence: ${trust.confidence}</span>
+        </summary>
+        <div class="trust__body">
+          <dl class="trust__grid">
+            ${row("Goal", esc(trust.goal))}
+            ${row("Calorie target", trust.kcalTarget ? `${trust.kcalTarget} kcal` : "—")}
+            ${row("Protein target", trust.proteinTarget ? `${trust.proteinTarget} g` : "—")}
+            ${row("Confidence", `${trust.confidence} — ${esc(trust.whyLimited)}`)}
+          </dl>
+          <div class="trust__block"><h5>What data was used</h5>${list(trust.dataUsed, "—")}</div>
+          <div class="trust__block"><h5>What's missing</h5>${list(trust.dataMissing, "Nothing major.")}</div>
+          <p class="trust__disclaimer">${esc(NUTRITION_DISCLAIMER)}</p>
+        </div>
+      </details>
+    </div>`;
 }
 
 function renderDate() {

@@ -1039,6 +1039,10 @@ table {
 .form-pain-btn { width: 100%; }
 .form-pain-msg { margin-top: var(--space-3); padding: var(--space-3) var(--space-4); font-size: var(--fs-small); color: var(--text); background: var(--danger-soft); border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent); border-left: 3px solid var(--danger); border-radius: var(--r-sm); }
 
+/* Nutrition safety section spacing (reuses .audit / .flag / .trust styling) */
+.nut-safety { margin-top: var(--space-5); }
+.nut-trust { margin-top: var(--space-4); }
+
 /* ----------------------------------------------------------------------------
    Plan repair — before/after comparison
 ---------------------------------------------------------------------------- */
