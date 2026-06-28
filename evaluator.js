@@ -79,7 +79,7 @@ export const PENALTY = {
  * it contains ANY include keyword and NO exclude keyword. Excludes prevent the
  * obvious cross-contaminations (e.g. "leg curl" is hamstrings, not biceps).
  */
-const MUSCLE_KEYWORDS = {
+export const MUSCLE_KEYWORDS = {
   chest: {
     include: ["bench", "chest press", "chest fly", "push-up", "push up", "pushup", "fly", "flye", "pec", "incline press", "incline dumbbell press", "incline barbell press", "decline press", "decline dumbbell press", "dip"],
     exclude: ["leg press"],
@@ -123,8 +123,8 @@ const MUSCLE_KEYWORDS = {
 };
 
 // Which groups count as "push" vs "pull" for the upper-body balance check.
-const PUSH_GROUPS = ["chest", "shoulders", "triceps"];
-const PULL_GROUPS = ["back", "biceps"];
+export const PUSH_GROUPS = ["chest", "shoulders", "triceps"];
+export const PULL_GROUPS = ["back", "biceps"];
 
 // Prime movers we expect to see trained for muscle-building goals.
 const PRIME_MOVERS = ["chest", "back", "quads", "hamstrings", "shoulders"];
@@ -138,7 +138,7 @@ const PRIME_MOVERS = ["chest", "back", "quads", "hamstrings", "shoulders"];
  * text, the movement keywords considered risky, and a plain-language regression
  * suggestion. These are conservative heuristics, not medical guidance.
  */
-const INJURY_RULES = {
+export const INJURY_RULES = {
   lower_back: {
     label: "Lower back",
     aliases: ["lower back", "low back", "back pain", "lumbar", "herniat", "disc", "sciatic"],
@@ -242,7 +242,7 @@ function round(n) {
  * exercise whose name matches that group's keywords. A compound counts its full
  * sets toward each muscle it matches — a deliberate, transparent estimate.
  */
-function computeWeeklyVolume(plan) {
+export function computeWeeklyVolume(plan) {
   const volume = {};
   for (const group of Object.keys(MUSCLE_KEYWORDS)) volume[group] = 0;
 
@@ -278,7 +278,7 @@ function countTrainingDays(plan) {
 }
 
 /** Which injury rules are active, from both checkboxes and free text. */
-function activeInjuries(userInputs) {
+export function activeInjuries(userInputs) {
   const active = new Set();
 
   // Checkbox values are normalized keys: "lower_back", "knee", "shoulder", "wrist".

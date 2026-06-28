@@ -14,6 +14,7 @@
  */
 
 import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
+import { repairPlan } from "./repair.js";
 import { setPlan, store } from "./store.js";
 import { getContext as getTrackerContext } from "./tracker-store.js";
 
@@ -45,6 +46,7 @@ const countPass = document.getElementById("count-pass");
 const auditPassed = document.getElementById("audit-passed");
 const auditPassedList = document.getElementById("audit-passed-list");
 const trustReportEl = document.getElementById("trust-report");
+const repairMount = document.getElementById("repair-mount");
 const planOutput = document.getElementById("plan-output");
 
 // Adaptive coach loop (re-tune the plan from logged training, then re-audit).
@@ -241,6 +243,7 @@ function renderResults(plan, inputs, usedFallback, { focus = true } = {}) {
   const audit = evaluatePlan(plan, inputs);
 
   renderAudit(audit);
+  renderRepair(plan, inputs, audit);
   renderTrustReport(plan, inputs, audit);
   renderPlan(plan);
 
@@ -400,6 +403,78 @@ function renderTrustReport(plan, inputs, audit) {
       </div>
     </details>`;
 }
+
+// ----------------------------------------------------------------------------
+// Plan repair — deterministic before/after, with apply / keep-original.
+// ----------------------------------------------------------------------------
+
+let pendingRepair = null;
+
+function renderRepair(plan, inputs, audit) {
+  if (!repairMount) return;
+  const flags = audit.summary.critical + audit.summary.warning;
+  pendingRepair = null;
+
+  if (flags === 0) {
+    repairMount.innerHTML = "";
+    return;
+  }
+
+  const repair = repairPlan(plan, inputs);
+  if (!repair.changes.length) {
+    repairMount.innerHTML = "";
+    return;
+  }
+  pendingRepair = { repair, inputs };
+
+  const b = repair.before.summary;
+  const a = repair.after.summary;
+  const bFlags = b.critical + b.warning;
+  const aFlags = a.critical + a.warning;
+  const noun = (n) => `${n} issue${n === 1 ? "" : "s"}`;
+
+  repairMount.innerHTML = `
+    <div class="card repair">
+      <div class="repair__head">
+        <p class="repair__eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span> Plan repair · deterministic</p>
+        <h3 class="repair__title">A safer version is available</h3>
+        <p class="repair__sub">SpotterAI turned each flag into a concrete edit — preserving your goal and days — then re-audited the result.</p>
+      </div>
+      <div class="repair__compare">
+        <div class="repair__col">
+          <span class="repair__col-label">Original</span>
+          <span class="repair__col-flags is-warn">${noun(bFlags)}</span>
+          <span class="repair__col-score">quality ${repair.before.score}</span>
+        </div>
+        <span class="repair__arrow" aria-hidden="true">→</span>
+        <div class="repair__col repair__col--after">
+          <span class="repair__col-label">Repaired · ${esc(repair.plan.version || "v2")}</span>
+          <span class="repair__col-flags ${aFlags ? "is-warn" : "is-ok"}">${noun(aFlags)}</span>
+          <span class="repair__col-score">quality ${repair.after.score}</span>
+        </div>
+      </div>
+      <ul class="repair__changes">
+        ${repair.changes.map((c) => `<li><span class="repair__issue">${esc(c.issue)}</span><span class="repair__fix">${esc(c.fix)}</span></li>`).join("")}
+      </ul>
+      <div class="repair__actions">
+        <button type="button" class="btn btn--primary btn--sm" data-repair="apply">Apply safer version</button>
+        <button type="button" class="btn btn--ghost btn--sm" data-repair="keep">Keep original</button>
+      </div>
+      <p class="repair__caution" hidden>Keeping the original plan — the flags above still apply. Review them before training, especially anything marked critical, and consider a qualified coach for injuries or pain.</p>
+    </div>`;
+}
+
+repairMount?.addEventListener("click", (e) => {
+  if (e.target.closest('[data-repair="apply"]') && pendingRepair) {
+    const { repair, inputs } = pendingRepair;
+    publishPlan(repair.plan, inputs);
+    renderResults(repair.plan, inputs, false);
+  } else if (e.target.closest('[data-repair="keep"]')) {
+    const caution = repairMount.querySelector(".repair__caution");
+    if (caution) caution.hidden = false;
+    repairMount.querySelectorAll(".repair__actions button").forEach((b) => (b.disabled = true));
+  }
+});
 
 function renderPlan(plan) {
   const dayCards = (plan.days || [])
