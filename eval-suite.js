@@ -87,6 +87,72 @@ export const CASES = [
     plan: { program_name: "Broken", days: "not-an-array" },
     expect: [{ check: "invalid_plan", status: "fail" }, { scoreAtMost: 0 }],
   },
+
+  // --- Expanded battery: more risky plans + false-positive guards ----------
+  {
+    name: "Quad-dominant, no hamstrings",
+    desc: "Heavy quad work with zero direct hamstring volume — leg-balance must flag.",
+    inputs: { goal: "Hypertrophy", experience: "Intermediate" },
+    plan: plan([day("Legs", [ex("Back Squat", 4, "6-8", 8), ex("Leg Press", 4, "10-12", 8), ex("Bulgarian Split Squat", 3, "10", 8), ex("Leg Extension", 3, "15", 9)]), day("Upper", [ex("Bench Press", 4, "8", 8), ex("Barbell Row", 4, "8", 8)]), day("Rest", [])]),
+    expect: [{ check: "leg_balance", status: "warn" }],
+  },
+  {
+    name: "Marathon session",
+    desc: "One workout with 40+ working sets — session-length sanity must fail.",
+    inputs: { goal: "Hypertrophy" },
+    plan: plan([day("Everything", Array.from({ length: 14 }, (_, i) => ex(["Bench Press", "Barbell Row", "Overhead Press", "Lat Pulldown", "Back Squat", "Romanian Deadlift", "Leg Press"][i % 7], 3, "10", 8))), day("Rest", [])]),
+    expect: [{ check: "session_load", status: "fail" }],
+  },
+  {
+    name: "Lower-back injury, heavy hinging",
+    desc: "A reported lower-back issue plus deadlifts and good mornings — injury check must fail.",
+    inputs: { goal: "Strength", injuries: ["lower_back"] },
+    plan: plan([day("Pull", [ex("Conventional Deadlift", 4, "5", 8), ex("Barbell Row", 4, "8", 8), ex("Good Morning", 3, "10", 8)]), day("Rest", [])]),
+    expect: [{ check: "injury_lower_back", status: "fail" }],
+  },
+  {
+    name: "Shoulder injury, overhead pressing",
+    desc: "A reported shoulder issue plus overhead presses, dips, and upright rows — injury check must fail.",
+    inputs: { goal: "Hypertrophy", injuries: ["shoulder"] },
+    plan: plan([day("Push", [ex("Overhead Press", 4, "8", 8), ex("Dips", 3, "10", 8), ex("Upright Row", 3, "12", 8)]), day("Rest", [])]),
+    expect: [{ check: "injury_shoulder", status: "fail" }],
+  },
+  {
+    name: "Wrist injury, straight-bar work",
+    desc: "A reported wrist issue plus barbell bench and barbell curls — injury check must flag.",
+    inputs: { goal: "Hypertrophy", injuries: ["wrist"] },
+    plan: plan([day("Upper", [ex("Barbell Bench Press", 4, "6-8", 8), ex("Barbell Curl", 3, "10", 8), ex("Seated Cable Row", 4, "10", 8)]), day("Rest", [])]),
+    expect: [{ check: "injury_wrist", status: "fail" }],
+  },
+  {
+    name: "Six training days",
+    desc: "Six sessions, one rest day — recovery should warn (works only if well managed).",
+    inputs: { goal: "Hypertrophy", experience: "Advanced" },
+    plan: plan([...Array.from({ length: 6 }, () => day("Full Body", [ex("Goblet Squat", 3, "10", 7), ex("Dumbbell Bench Press", 3, "10", 7), ex("One-Arm Dumbbell Row", 3, "10", 7)])), day("Rest", [])]),
+    expect: [{ check: "rest_days", status: "warn" }],
+  },
+  {
+    name: "Knee-aware plan (false-positive guard)",
+    desc: "Knee injury declared, but every lift is knee-friendly — the injury check must NOT fire.",
+    inputs: { goal: "Hypertrophy", injuries: ["knee"] },
+    plan: plan([day("Lower", [ex("Leg Press", 3, "12", 7), ex("Hip Thrust", 3, "10", 7), ex("Seated Leg Curl", 3, "12", 8), ex("Step-up", 3, "10", 7)]), day("Rest", [])]),
+    expect: [{ check: "injury_knee", status: "pass" }],
+  },
+  {
+    name: "Balanced full-body (false-positive guard)",
+    desc: "A sensible 3-day full-body week — must pass cleanly with a high score.",
+    inputs: { goal: "Hypertrophy", experience: "Intermediate" },
+    plan: plan([
+      day("Full Body A", [ex("Back Squat", 3, "6-8", 8), ex("Bench Press", 3, "8-10", 8), ex("Barbell Row", 3, "8-10", 8), ex("Romanian Deadlift", 3, "10", 8), ex("Lat Pulldown", 3, "10-12", 8)]),
+      day("Rest", []),
+      day("Full Body B", [ex("Leg Press", 3, "10-12", 8), ex("Overhead Press", 3, "8-10", 8), ex("Seated Cable Row", 3, "10-12", 8), ex("Lying Leg Curl", 3, "12", 8), ex("Dumbbell Curl", 3, "12", 8)]),
+      day("Rest", []),
+      day("Full Body C", [ex("Front Squat", 3, "8", 8), ex("Incline Dumbbell Press", 3, "10", 8), ex("Pull-up", 3, "8", 8), ex("Hip Thrust", 3, "10", 8), ex("Triceps Pushdown", 3, "12", 8)]),
+      day("Rest", []),
+      day("Rest", []),
+    ]),
+    expect: [{ scoreAtLeast: 85 }, { check: "muscle_balance", status: "pass" }, { check: "leg_balance", status: "pass" }, { check: "weekly_volume", status: "pass" }],
+  },
 ];
 
 function evalExpectation(e, res) {

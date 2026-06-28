@@ -53,6 +53,17 @@ export const THRESHOLDS = {
 
   // --- Injuries -------------------------------------------------------------
   INJURY_MATCHES_FOR_FAIL: 2, // this many contraindicated movements → fail (else warn)
+
+  // --- Quad / hamstring balance (knee-health antagonist check) --------------
+  LEG_BALANCE_RATIO_WARN: 3.0, // one side > 3× the other → imbalance (lenient)
+  LEG_MIN_SETS_TO_JUDGE: 4,
+
+  // --- Per-session set sanity ----------------------------------------------
+  SESSION_SETS_WARN: 30, // a very long single session
+  SESSION_SETS_FAIL: 40, // extreme — quality collapses late in the workout
+
+  // --- Structured-data coverage (transparency about estimate quality) ------
+  COVERAGE_MIN: 0.7, // below this, many lifts fell back to rougher keyword logic
 };
 
 /**
@@ -486,6 +497,62 @@ function checkGoalFit(plan, userInputs, goal) {
   return finalize(id, label, "pass", `Program structure is reasonable for a ${goal.replace("_", " ")} goal.`);
 }
 
+/** Quad / hamstring balance — antagonist check that supports knee health. */
+function checkLegBalance(volume) {
+  const id = "leg_balance";
+  const label = "Quad / hamstring balance";
+  const quad = volume.quads || 0;
+  const ham = volume.hamstrings || 0;
+
+  if (quad + ham < THRESHOLDS.LEG_MIN_SETS_TO_JUDGE) {
+    return finalize(id, label, "pass", "Not enough lower-body volume this week to assess quad/hamstring balance.");
+  }
+  if (ham === 0) {
+    return finalize(id, label, "warn", `Quad work with no direct hamstring work (quads ${round(quad)} vs hamstrings 0 sets). Add a hinge or leg curl — balanced posterior-chain volume supports the knees.`);
+  }
+  const ratio = Math.max(quad, ham) / Math.min(quad, ham);
+  const heavier = quad > ham ? "quads" : "hamstrings";
+  if (ratio >= THRESHOLDS.LEG_BALANCE_RATIO_WARN) {
+    return finalize(id, label, "warn", `Lower body skews toward ${heavier} (quads ${round(quad)} vs hamstrings ${round(ham)} sets, ${round(ratio)}×). A more even split supports knee health.`);
+  }
+  return finalize(id, label, "pass", `Quad and hamstring volume are reasonably balanced (quads ${round(quad)} vs hamstrings ${round(ham)} sets).`);
+}
+
+/** Per-session set sanity — flags an extremely long single workout. */
+function checkSessionLoad(plan) {
+  const id = "session_load";
+  const label = "Session length sanity";
+  let worst = 0;
+  let worstDay = "";
+  for (const day of plan.days || []) {
+    const text = `${norm(day.day)} ${norm(day.focus)}`;
+    if (/\b(rest|recovery|off day|day off|active recovery)\b/.test(text)) continue;
+    const sets = (day.exercises || []).reduce((s, e) => s + (Number(e.sets) || 0), 0);
+    if (sets > worst) { worst = sets; worstDay = day.focus || day.day || "a session"; }
+  }
+  if (worst >= THRESHOLDS.SESSION_SETS_FAIL) {
+    return finalize(id, label, "fail", `One session prescribes ${worst} working sets (${worstDay}). That's an extreme, very long workout — quality and form decay late on, raising injury risk. Split it across days.`);
+  }
+  if (worst >= THRESHOLDS.SESSION_SETS_WARN) {
+    return finalize(id, label, "warn", `A session prescribes ${worst} working sets (${worstDay}) — a long workout. Consider trimming or splitting it for better quality per set.`);
+  }
+  return finalize(id, label, "pass", "No single session is overloaded with working sets.");
+}
+
+/** Transparency: how much of the plan the structured DB recognized. */
+function checkCoverage(plan) {
+  const id = "coverage";
+  const label = "Exercise recognition";
+  const all = allExercises(plan);
+  if (!all.length) return finalize(id, label, "pass", "No exercises to assess.");
+  const known = all.filter((e) => lookupExercise(e.name)).length;
+  const pct = known / all.length;
+  if (pct >= THRESHOLDS.COVERAGE_MIN) {
+    return finalize(id, label, "pass", `${known}/${all.length} exercises matched the structured database, so the volume and injury checks ran on recognized movements.`);
+  }
+  return finalize(id, label, "warn", `Only ${known}/${all.length} exercises were recognized; the rest were assessed by name keywords, so the volume estimates for those are rougher. Use standard exercise names for a sharper audit.`);
+}
+
 // ============================================================================
 // 7. SEVERITY TIERS + REMEDIES
 //    The UI leads with flags (not the score), so each check is sorted into a
@@ -522,9 +589,10 @@ const REMEDIES = {
 function tierFor(check) {
   if (check.status === "pass") return "pass";
   if (check.id === "invalid_plan") return "critical";
-  if (check.id === "goal_fit") return "suggestion";
+  // Quality / optimization / transparency notes, not safety flags.
+  if (check.id === "goal_fit" || check.id === "leg_balance" || check.id === "coverage") return "suggestion";
   if (check.id.startsWith("injury_")) return check.status === "fail" ? "critical" : "warning";
-  const CRITICAL_ON_FAIL = new Set(["rest_days", "weekly_volume", "beginner_load"]);
+  const CRITICAL_ON_FAIL = new Set(["rest_days", "weekly_volume", "beginner_load", "session_load"]);
   if (check.status === "fail" && CRITICAL_ON_FAIL.has(check.id)) return "critical";
   return "warning";
 }
@@ -586,9 +654,12 @@ export function evaluatePlan(plan, userInputs = {}) {
     checkRestDays(plan),
     checkWeeklyVolume(plan, volume, goal),
     checkMuscleBalance(volume),
+    checkLegBalance(volume),
+    checkSessionLoad(plan),
     ...checkInjuries(plan, userInputs),
     checkBeginnerLoad(plan, volume, userInputs),
     checkGoalFit(plan, userInputs, goal),
+    checkCoverage(plan),
   ];
 
   // Score: start at 100 and deduct each check's penalty. Clamp to [0, 100].
