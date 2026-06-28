@@ -3,13 +3,13 @@
 [![CI](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml/badge.svg)](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml)
 &nbsp;[![License: MIT](https://img.shields.io/badge/License-MIT-ff3b3b.svg)](LICENSE)
 
-**An AI fitness coach that audits its own safety.** &nbsp;·&nbsp; **[▶ Live demo](https://spotterai.vercel.app)**
+**Your AI fitness copilot — plan, track, adapt, and audit your training.** &nbsp;·&nbsp; **[▶ Live demo](https://spotterai.vercel.app)**
 
 <p align="center">
   <img src="og-image.png" alt="SpotterAI — an AI coach that audits its own safety, showing a plan safety score of 86/100 and the auditor's checks (rest & recovery, weekly volume, push/pull balance, injury contraindications)." width="700" />
 </p>
 
-I built an AI workout coach — and then built a separate, code-based system that
+I built an AI fitness copilot — and a separate, code-based system that
 audits the AI's plans for unsafe or low-quality advice. SpotterAI generates a
 personalized weekly training program with a large language model, then runs that
 generated plan through a pure-code **safety & quality evaluator** that scores it

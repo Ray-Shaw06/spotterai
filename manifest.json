@@ -1,7 +1,7 @@
 {
-  "name": "SpotterAI — AI workout coach that audits its own safety",
+  "name": "SpotterAI — your AI fitness copilot",
   "short_name": "SpotterAI",
-  "description": "An AI fitness coach that generates a training plan, audits it for safety, adapts to your logged training, and tracks workouts + nutrition — all at $0.",
+  "description": "Your AI fitness copilot — build plans, log training and nutrition, track progress, adapt over time, and audit every plan with transparent guardrails. $0, no signup.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

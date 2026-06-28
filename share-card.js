@@ -75,7 +75,7 @@ function drawCard(stats, score) {
   x.fill();
   x.fillStyle = "rgba(255,255,255,0.55)";
   x.font = "400 28px Inter, sans-serif";
-  x.fillText("The AI coach that audits its own safety", 96, 204);
+  x.fillText("Your AI fitness copilot — plan, track, adapt, audit", 96, 204);
 
   // Central ring — safety score if there's a plan, else rank progress
   const cx = W / 2;

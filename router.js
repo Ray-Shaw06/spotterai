@@ -9,7 +9,7 @@
 
 const ROUTES = ["home", "dashboard", "nutrition", "progress", "form-check", "evals"];
 const TITLES = {
-  home: "SpotterAI — AI workout coach that audits its own safety",
+  home: "SpotterAI — your AI fitness copilot (plan, track, adapt, audit)",
   dashboard: "Dashboard · SpotterAI",
   nutrition: "Nutrition · SpotterAI",
   progress: "Progress · SpotterAI",
