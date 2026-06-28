@@ -958,6 +958,48 @@ table {
 .trust__list li::before { content: "·"; position: absolute; left: 4px; color: var(--accent); }
 .trust__disclaimer { font-size: 0.8rem; color: var(--text-faint); border-top: 1px solid var(--border); padding-top: var(--space-3); }
 
+/* ----------------------------------------------------------------------------
+   Safety Lab content — benchmark, catches/misses, bad-plan examples, architecture
+---------------------------------------------------------------------------- */
+.bench__status { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 4px 11px; border-radius: var(--r-full); white-space: nowrap; align-self: center; }
+.bench__status--pass { color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-ring); }
+.bench__status--fail { color: var(--danger); background: var(--danger-soft); border: 1px solid var(--danger); }
+.bench { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-3); margin: 0; }
+.bench__item { padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-md); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.bench__item dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); }
+.bench__item dd { margin-top: 6px; font-family: var(--font-mono); font-size: 1.45rem; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+.bench__item dd.is-ok { color: var(--accent); }
+.bench__item dd.is-warn { color: var(--warn); }
+
+.lab-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); }
+.lab-col { padding: var(--space-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-md); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.lab-col h4 { font-size: 1rem; font-weight: 600; margin-bottom: var(--space-3); }
+.lab-col--good h4 { color: var(--accent); }
+.lab-col--bad h4 { color: var(--warn); }
+.lab-col ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.lab-col li { position: relative; padding-left: var(--space-5); font-size: var(--fs-small); color: var(--text-muted); }
+.lab-col li::before { position: absolute; left: 0; top: 0; font-weight: 700; }
+.lab-col--good li::before { content: "✓"; color: var(--accent); }
+.lab-col--bad li::before { content: "—"; color: var(--warn); }
+
+.badplan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); margin-top: var(--space-5); }
+.badplan { padding: var(--space-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-md); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); display: flex; flex-direction: column; gap: var(--space-3); }
+.badplan__title { font-size: 1.05rem; font-weight: 600; }
+.badplan__plan, .badplan__repair { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; }
+.badplan__tag { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 7px; border-radius: var(--r-sm); margin-right: 6px; }
+.badplan__tag--bad { color: var(--danger); background: var(--danger-soft); }
+.badplan__tag--fix { color: var(--accent); background: var(--accent-soft); }
+.badplan__label { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); }
+.badplan__caught { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.badplan__caught li { position: relative; padding-left: var(--space-4); font-size: var(--fs-small); color: var(--text); }
+.badplan__caught li::before { content: "!"; position: absolute; left: 4px; color: var(--warn); font-weight: 700; }
+.badplan__repair { border-top: 1px solid var(--border); padding-top: var(--space-3); margin-top: auto; }
+
+.tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-3); margin-top: var(--space-5); }
+.tech { padding: var(--space-4); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); }
+.tech h5 { font-size: 0.92rem; font-weight: 600; color: var(--accent); margin-bottom: 5px; }
+.tech p { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; }
+
 .hero__stats {
   list-style: none;
   padding: 0;

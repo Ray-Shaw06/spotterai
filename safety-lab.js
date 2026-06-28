@@ -1,0 +1,174 @@
+/**
+ * SpotterAI — Safety Lab content
+ * ============================================================================
+ * Renders the explanatory + benchmark content above the live red-team report:
+ *   - Evaluator Benchmark (computed from the real eval-suite + measured timing)
+ *   - What SpotterAI catches well / may miss
+ *   - Worked bad-plan examples
+ *   - Technical Architecture
+ *
+ * Everything here is derived from the same pure evaluator that runs in the app
+ * and in CI — no mock numbers where a real one is available.
+ */
+
+import { CASES, runEvalSuite } from "./eval-suite.js";
+import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
+
+const mount = document.getElementById("safety-lab");
+
+function esc(t) {
+  const d = document.createElement("div");
+  d.textContent = t == null ? "" : String(t);
+  return d.innerHTML;
+}
+
+// A case is "risky" if it expects the evaluator to flag something.
+const isRisky = (c) => c.expect.some((e) => (e.status && e.status !== "pass") || "scoreAtMost" in e);
+
+/** Real benchmark numbers from the suite + a measured average audit time. */
+function benchmark() {
+  const results = runEvalSuite();
+  const paired = CASES.map((c, i) => ({ c, r: results[i] }));
+  const risky = paired.filter((x) => isRisky(x.c));
+  const safe = paired.filter((x) => !isRisky(x.c));
+
+  const riskyCaught = risky.filter((x) => x.r.passed).length;
+  const falsePositives = safe.filter((x) => !x.r.passed).length;
+  const casesPass = results.filter((r) => r.passed).length;
+
+  // Measure average audit time over many runs (warm) for a stable number.
+  const N = 40;
+  const t0 = performance.now();
+  for (let n = 0; n < N; n++) for (const c of CASES) evaluatePlan(c.plan, c.inputs || {});
+  const avgMs = (performance.now() - t0) / (N * CASES.length);
+
+  return {
+    total: results.length,
+    riskyTotal: risky.length,
+    riskyCaught,
+    falsePositives,
+    avgMs,
+    passing: casesPass === results.length,
+  };
+}
+
+const CATCHES = [
+  "Excessive weekly volume",
+  "Poor recovery spacing",
+  "Push / pull imbalance",
+  "Beginner overload",
+  "Conflicts with stated limitations",
+  "Missing goal alignment",
+];
+const MISSES = [
+  "Poor exercise form",
+  "Undiagnosed injuries",
+  "Pain during actual sets",
+  "Bad load selection by the user",
+  "Medical contraindications",
+  "Incomplete or inaccurate user input",
+];
+
+const BAD_PLANS = [
+  {
+    title: "Beginner overload",
+    plan: "A beginner is given six training days, heavy compound lifts every day, and repeated max-effort sets.",
+    caught: ["Too many weekly sessions for a beginner", "Excessive intensity", "Poor recovery", "Too much compound-lift frequency"],
+    repair: "Reduce to 3–4 days, remove max-effort language, add rest days, and lower weekly volume.",
+  },
+  {
+    title: "Knee limitation conflict",
+    plan: "A user with knee pain receives high-frequency squats, lunges, and jump training.",
+    caught: ["Conflict with the stated knee limitation", "Too much knee-dominant volume", "No lower-impact alternatives"],
+    repair: "Swap some knee-dominant exercises for hip thrusts, hamstring curls, glute bridges, and controlled step-ups.",
+  },
+  {
+    title: "Push / pull imbalance",
+    plan: "A hypertrophy plan includes heavy pressing 4 days per week but almost no rowing or pulling.",
+    caught: ["Poor upper-body balance", "Excess pressing volume", "Missing back volume"],
+    repair: "Add rows, pulldowns, and face pulls, and reduce redundant pressing.",
+  },
+];
+
+const ARCH = [
+  ["AI plan generation", "A serverless function holds the API key and prompts Gemini for a strict-JSON weekly plan."],
+  ["Deterministic evaluator", "Pure code (no LLM) scores the plan against a fixed, versioned rubric — the same logic in the app and in CI."],
+  ["Structured exercise data", "Muscle, movement-pattern, and contraindication metadata back the checks, with keyword fallback."],
+  ["Plan repair engine", "Rule-based fixes turn each flag into a concrete, safer edit."],
+  ["Re-audit loop", "Every revised or adapted plan is re-scored before it's recommended."],
+  ["Local-first tracking", "Workouts, meals, and progress live in the browser; nothing requires an account."],
+  ["Safety Lab benchmarks", "A red-team suite measures what the evaluator catches and what it misses."],
+  ["CI-backed eval tests", "The exact suite runs on every push, so the auditor can't silently regress."],
+];
+
+function render() {
+  if (!mount) return;
+  const b = benchmark();
+  const row = (label, value, cls = "") => `<div class="bench__item"><dt>${label}</dt><dd class="${cls}">${value}</dd></div>`;
+
+  const bench = `
+    <div class="lab-block">
+      <div class="lab-block__head">
+        <div>
+          <h3 class="lab-block__title">Evaluator benchmark</h3>
+          <p class="lab-block__sub">Measured live from the red-team suite below — the same pure evaluator that ships in the app.</p>
+        </div>
+        <span class="bench__status bench__status--${b.passing ? "pass" : "fail"}">${b.passing ? "Passing" : "Regression"}</span>
+      </div>
+      <dl class="bench">
+        ${row("Test cases run", b.total)}
+        ${row("Risky plans caught", `${b.riskyCaught}/${b.riskyTotal}`, "is-ok")}
+        ${row("Safe plans incorrectly flagged", b.falsePositives, b.falsePositives ? "is-warn" : "is-ok")}
+        ${row("Average audit time", `${b.avgMs < 1 ? b.avgMs.toFixed(2) : Math.round(b.avgMs)} ms`)}
+        ${row("Evaluator version", esc(EVALUATOR_VERSION))}
+        ${row("Regression status", b.passing ? "Passing" : "Failing", b.passing ? "is-ok" : "is-warn")}
+      </dl>
+    </div>`;
+
+  const cols = `
+    <div class="lab-block">
+      <div class="lab-cols">
+        <div class="lab-col lab-col--good">
+          <h4>What SpotterAI catches well</h4>
+          <ul>${CATCHES.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
+        </div>
+        <div class="lab-col lab-col--bad">
+          <h4>What SpotterAI may miss</h4>
+          <ul>${MISSES.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
+        </div>
+      </div>
+    </div>`;
+
+  const examples = `
+    <div class="lab-block">
+      <h3 class="lab-block__title">Worked examples — bad plans it catches</h3>
+      <p class="lab-block__sub">Three intentionally bad inputs, what the evaluator flags, and the safer version it points toward.</p>
+      <div class="badplan-grid">
+        ${BAD_PLANS.map(
+          (e) => `
+          <article class="badplan">
+            <h4 class="badplan__title">${esc(e.title)}</h4>
+            <p class="badplan__plan"><span class="badplan__tag badplan__tag--bad">Bad plan</span> ${esc(e.plan)}</p>
+            <p class="badplan__label">What's caught &amp; why it matters</p>
+            <ul class="badplan__caught">${e.caught.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
+            <p class="badplan__repair"><span class="badplan__tag badplan__tag--fix">Safer version</span> ${esc(e.repair)}</p>
+          </article>`
+        ).join("")}
+      </div>
+    </div>`;
+
+  const tech = `
+    <div class="lab-block">
+      <h3 class="lab-block__title">Technical architecture</h3>
+      <p class="lab-block__sub">SpotterAI separates creative AI generation from deterministic safety checks. The AI drafts flexible plans; the evaluator applies consistent rules, structured exercise metadata, and regression-tested checks before a plan is recommended.</p>
+      <div class="tech-grid">
+        ${ARCH.map(
+          ([t, d]) => `<div class="tech"><h5>${esc(t)}</h5><p>${esc(d)}</p></div>`
+        ).join("")}
+      </div>
+    </div>`;
+
+  mount.innerHTML = bench + cols + examples + tech;
+}
+
+if (mount) render();
