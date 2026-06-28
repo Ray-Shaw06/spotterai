@@ -144,28 +144,32 @@ const INJURY_RULES = {
     aliases: ["lower back", "low back", "back pain", "lumbar", "herniat", "disc", "sciatic"],
     riskyKeywords: ["deadlift", "conventional deadlift", "back squat", "barbell squat", "good morning", "bent over row", "bent-over row", "barbell row", "clean", "snatch"],
     regression:
-      "Swap heavy axial loading for back-friendly variations — trap-bar or Romanian deadlifts from blocks, goblet or box squats, chest-supported rows, and hip thrusts. Keep loads moderate and brace hard.",
+      "Swap heavy axial loading for back-friendly variations and keep loads moderate while bracing hard.",
+    alternatives: ["Trap-bar deadlift", "Goblet or box squat", "Chest-supported row", "Hip thrust", "Romanian deadlift from blocks"],
   },
   knee: {
     label: "Knee",
     aliases: ["knee", "patell", "acl", "mcl", "meniscus"],
     riskyKeywords: ["lunge", "walking lunge", "deep squat", "jump squat", "sissy squat", "leg extension", "step-up", "step up", "pistol squat", "box jump", "plyometric", "jump"],
     regression:
-      "Limit deep knee flexion and impact — box squats to a comfortable depth, leg press through a partial range, split squats instead of walking lunges, and no plyometrics until pain-free.",
+      "Limit deep knee flexion and impact: train through a comfortable range and drop plyometrics until pain-free.",
+    alternatives: ["Hip thrust", "Hamstring curl", "Glute bridge", "Controlled step-up", "Leg press (partial range)"],
   },
   shoulder: {
     label: "Shoulder",
     aliases: ["shoulder", "rotator cuff", "rotator", "ac joint", "labrum", "impingement"],
     riskyKeywords: ["overhead press", "shoulder press", "military press", "behind the neck", "behind-the-neck", "wide grip bench", "wide-grip bench", "upright row", "dip", "snatch", "push press"],
     regression:
-      "Favor neutral-grip and landmine pressing, keep presses below any pain threshold, narrow your bench grip, and replace dips/upright rows with cable or dumbbell alternatives.",
+      "Keep presses below any pain threshold and favor neutral-grip, shoulder-friendly variations.",
+    alternatives: ["Neutral-grip dumbbell press", "Landmine press", "Cable lateral raise", "Floor press", "Face pull"],
   },
   wrist: {
     label: "Wrist",
     aliases: ["wrist", "carpal", "forearm"],
     riskyKeywords: ["barbell bench", "straight bar curl", "straight-bar curl", "barbell curl", "front squat", "clean", "overhead press", "push-up", "push up", "handstand"],
     regression:
-      "Keep the wrist neutral with dumbbells, an EZ-bar, or neutral-grip handles, consider wrist wraps for support, and use push-up handles rather than flat-palm push-ups.",
+      "Keep the wrist neutral and supported (consider wraps) rather than loading a flat-palm or straight-bar position.",
+    alternatives: ["Dumbbell press / curl", "EZ-bar curl", "Neutral-grip handles", "Push-up handles", "Cable work"],
   },
 };
 
@@ -399,7 +403,7 @@ function checkInjuries(plan, userInputs) {
     }
 
     const status = unique.length >= THRESHOLDS.INJURY_MATCHES_FOR_FAIL ? "fail" : "warn";
-    const detail = `Given your reported ${rule.label.toLowerCase()} issue, these may aggravate it: ${unique.join(", ")}. ${rule.regression}`;
+    const detail = `Given your reported ${rule.label.toLowerCase()} issue, these may aggravate it: ${unique.join(", ")}.`;
     checks.push(finalize(id, label, status, detail, "injury"));
   }
 
@@ -463,7 +467,70 @@ function checkGoalFit(plan, userInputs, goal) {
 }
 
 // ============================================================================
-// 7. ASSEMBLY + SCORING
+// 7. SEVERITY TIERS + REMEDIES
+//    The UI leads with flags (not the score), so each check is sorted into a
+//    severity tier and — when flagged — carries a suggested fix and safer
+//    alternatives. This same structured data feeds the plan-repair engine.
+// ============================================================================
+
+/** A stable version string surfaced in the Trust Report. Bump on rubric change. */
+export const EVALUATOR_VERSION = "v1.0.0";
+
+/** Suggested fixes for the non-injury checks, keyed by check id. */
+const REMEDIES = {
+  rest_days: { fix: "Schedule at least one full rest day — or convert a training day to active recovery." },
+  weekly_volume: {
+    fix: "Trim sets on the most overrepresented muscle group and remove redundant accessory work; add a little volume to anything under-stimulated.",
+  },
+  muscle_balance: {
+    fix: "Even out the push:pull ratio — add pulling volume, or trim excess pressing.",
+    alternatives: ["Barbell / dumbbell row", "Lat pulldown", "Face pull", "Rear-delt fly", "Chest-supported row"],
+  },
+  beginner_load: {
+    fix: "Lower intensity (leave 1–3 reps in reserve), drop max-effort sets, and build volume gradually.",
+  },
+  goal_fit: { fix: "Shift rep ranges toward your goal — lower reps (≈3–6) for strength, ≈6–15 for hypertrophy." },
+};
+
+/**
+ * Sort a check into a severity tier:
+ *   critical  — safety-relevant failures (no rest, junk volume, injury conflicts…)
+ *   warning   — concerns worth reviewing before training
+ *   suggestion— quality/optimization notes (goal fit), not safety
+ *   pass      — no concern
+ */
+function tierFor(check) {
+  if (check.status === "pass") return "pass";
+  if (check.id === "invalid_plan") return "critical";
+  if (check.id === "goal_fit") return "suggestion";
+  if (check.id.startsWith("injury_")) return check.status === "fail" ? "critical" : "warning";
+  const CRITICAL_ON_FAIL = new Set(["rest_days", "weekly_volume", "beginner_load"]);
+  if (check.status === "fail" && CRITICAL_ON_FAIL.has(check.id)) return "critical";
+  return "warning";
+}
+
+/** Structured remedy (fix + safer alternatives) for a flagged check. */
+function remedyFor(check) {
+  if (check.status === "pass") return {};
+  if (check.id.startsWith("injury_")) {
+    const rule = INJURY_RULES[check.id.replace("injury_", "")];
+    return rule ? { fix: rule.regression, alternatives: rule.alternatives || [] } : {};
+  }
+  const r = REMEDIES[check.id];
+  return r ? { fix: r.fix, alternatives: r.alternatives || [] } : {};
+}
+
+/** Roll the checks up into the counts the flags-first UI leads with. */
+function summarize(checks) {
+  const s = { critical: 0, warning: 0, suggestion: 0, pass: 0, total: checks.length };
+  for (const c of checks) s[c.tier] = (s[c.tier] || 0) + 1;
+  s.passed = s.pass;
+  s.flags = s.critical + s.warning + s.suggestion;
+  return s;
+}
+
+// ============================================================================
+// 8. ASSEMBLY + SCORING
 // ============================================================================
 
 /**
@@ -487,10 +554,8 @@ function finalize(id, label, status, detail, penaltyKey) {
 export function evaluatePlan(plan, userInputs = {}) {
   // Defensive: never throw on a malformed plan — return a transparent failure.
   if (!plan || !Array.isArray(plan.days)) {
-    return {
-      score: 0,
-      checks: [{ id: "invalid_plan", label: "Plan structure", status: "fail", detail: "The plan could not be read, so no safety checks could run." }],
-    };
+    const bad = [{ id: "invalid_plan", label: "Plan structure", status: "fail", tier: "critical", detail: "The plan could not be read, so no safety checks could run." }];
+    return { score: 0, summary: summarize(bad), checks: bad };
   }
 
   const goal = goalBucket(userInputs.goal || plan.goal);
@@ -510,8 +575,12 @@ export function evaluatePlan(plan, userInputs = {}) {
   const totalPenalty = checks.reduce((sum, c) => sum + (c.penalty || 0), 0);
   const score = Math.max(0, Math.min(100, Math.round(100 - totalPenalty)));
 
-  // Strip the internal `penalty` field from the public output.
-  const publicChecks = checks.map(({ penalty, ...rest }) => rest);
+  // Public output: strip the internal `penalty`, add the severity tier and
+  // (for flagged checks) a structured fix + safer alternatives.
+  const publicChecks = checks.map(({ penalty, ...rest }) => {
+    const tier = tierFor(rest);
+    return { ...rest, tier, ...remedyFor(rest) };
+  });
 
-  return { score, checks: publicChecks };
+  return { score, summary: summarize(publicChecks), checks: publicChecks };
 }

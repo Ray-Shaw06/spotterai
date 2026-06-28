@@ -13,7 +13,7 @@
  * No build step: this is a native ES module that imports the evaluator.
  */
 
-import { evaluatePlan } from "./evaluator.js";
+import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
 import { setPlan, store } from "./store.js";
 import { getContext as getTrackerContext } from "./tracker-store.js";
 
@@ -36,13 +36,15 @@ const loadingStepEl = document.getElementById("loading-step");
 const errorText = document.getElementById("error-text");
 const fallbackNotice = document.getElementById("fallback-notice");
 
-const gaugeProgress = document.getElementById("gauge-progress");
 const scoreValueEl = document.getElementById("score-value");
-const scoreBandEl = document.getElementById("score-band");
-const countPass = document.getElementById("count-pass");
-const countWarn = document.getElementById("count-warn");
-const countFail = document.getElementById("count-fail");
+const auditVerdict = document.getElementById("audit-verdict");
+const auditScore = document.getElementById("audit-score");
+const auditCounts = document.getElementById("audit-counts");
 const checksList = document.getElementById("checks-list");
+const countPass = document.getElementById("count-pass");
+const auditPassed = document.getElementById("audit-passed");
+const auditPassedList = document.getElementById("audit-passed-list");
+const trustReportEl = document.getElementById("trust-report");
 const planOutput = document.getElementById("plan-output");
 
 // Adaptive coach loop (re-tune the plan from logged training, then re-audit).
@@ -75,14 +77,9 @@ function showState(name) {
   }
 }
 
-/** Inline status icons for the check rows. */
-const STATUS_ICON = {
-  pass: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  warn: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4m0 4h.01" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  fail: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM15 9l-6 6m0-6l6 6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-};
-
-const STATUS_LABEL = { pass: "Pass", warn: "Review", fail: "Flagged" };
+/** Plain-English label per severity tier. */
+const TIER_LABEL = { critical: "Critical", warning: "Warning", suggestion: "Suggestion" };
+const TIER_ORDER = { critical: 0, warning: 1, suggestion: 2, pass: 3 };
 
 // ----------------------------------------------------------------------------
 // Reading the form
@@ -240,10 +237,11 @@ async function generate() {
 function renderResults(plan, inputs, usedFallback, { focus = true } = {}) {
   fallbackNotice.hidden = !usedFallback;
 
-  // Run the pure-code audit.
+  // Run the pure-code audit, then render it flags-first.
   const audit = evaluatePlan(plan, inputs);
 
-  renderChecks(audit.checks);
+  renderAudit(audit);
+  renderTrustReport(plan, inputs, audit);
   renderPlan(plan);
 
   // Reveal the "adapt from your training" control; clear any stale change log.
@@ -255,9 +253,6 @@ function renderResults(plan, inputs, usedFallback, { focus = true } = {}) {
 
   showState("results");
 
-  // Animate the gauge once the panel is visible.
-  renderScore(audit.score);
-
   if (focus) {
     // Move focus to the results for keyboard + screen-reader users.
     states.results.setAttribute("tabindex", "-1");
@@ -266,86 +261,144 @@ function renderResults(plan, inputs, usedFallback, { focus = true } = {}) {
   }
 }
 
-/** Map a score to a band: color class + plain-language label (never "safe"). */
-function scoreBand(score) {
-  if (score >= 85) return { cls: "is-excellent", label: "Few concerns flagged" };
-  if (score >= 70) return { cls: "is-good", label: "Some concerns to review" };
-  if (score >= 50) return { cls: "is-caution", label: "Several concerns" };
-  return { cls: "is-danger", label: "Multiple serious flags" };
+// ----------------------------------------------------------------------------
+// Audit — flags first. The numeric score is demoted to an optional footnote.
+// ----------------------------------------------------------------------------
+
+/** Plain-English verdict, led by severity (never "safe"). */
+function auditVerdictText(summary) {
+  const { critical, warning, suggestion } = summary;
+  if (critical > 0) return { tone: "critical", text: `${critical} critical issue${critical > 1 ? "s" : ""} to resolve before training` };
+  if (warning > 0) return { tone: "warning", text: `${warning} issue${warning > 1 ? "s" : ""} to review before training` };
+  if (suggestion > 0) return { tone: "suggestion", text: `No safety flags — ${suggestion} optional suggestion${suggestion > 1 ? "s" : ""}` };
+  return { tone: "ok", text: "No issues flagged by the audit" };
 }
 
-function renderScore(score) {
-  const band = scoreBand(score);
+function renderAudit(audit) {
+  const s = audit.summary;
+  const verdict = auditVerdictText(s);
 
-  // Color the gauge + band by removing prior band classes and adding the new one.
-  const bandClasses = ["is-excellent", "is-good", "is-caution", "is-danger"];
-  gaugeProgress.classList.remove(...bandClasses);
-  scoreBandEl.classList.remove(...bandClasses);
-  gaugeProgress.classList.add(band.cls);
-  scoreBandEl.classList.add(band.cls);
-  scoreBandEl.textContent = band.label;
+  auditVerdict.textContent = verdict.text;
+  auditVerdict.className = `audit__verdict is-${verdict.tone}`;
 
-  // Ring geometry: r = 84 → circumference.
-  const r = 84;
-  const circumference = 2 * Math.PI * r;
-  gaugeProgress.style.strokeDasharray = `${circumference}`;
+  // Count chips: critical / warnings / suggestions / passed.
+  auditCounts.innerHTML = [
+    { cls: "is-crit", n: s.critical, label: "critical" },
+    { cls: "is-warn", n: s.warning, label: "warnings" },
+    { cls: "is-sugg", n: s.suggestion, label: "suggestions" },
+    { cls: "is-ok", n: `${s.passed}/${s.total}`, label: "passed" },
+  ]
+    .map((c) => `<li class="${c.cls}"><strong>${esc(c.n)}</strong> ${c.label}</li>`)
+    .join("");
 
-  if (prefersReducedMotion) {
-    gaugeProgress.style.strokeDashoffset = `${circumference * (1 - score / 100)}`;
-    scoreValueEl.textContent = String(score);
-    return;
-  }
+  // Flag cards (critical → warning → suggestion). Passed checks go in the
+  // collapsed disclosure below, so the page leads with what needs attention.
+  const flagged = audit.checks
+    .filter((c) => c.tier !== "pass")
+    .sort((a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier]);
 
-  // Start empty, then animate the ring fill on the next frame (CSS transition).
-  gaugeProgress.style.strokeDashoffset = `${circumference}`;
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      gaugeProgress.style.strokeDashoffset = `${circumference * (1 - score / 100)}`;
-    });
-  });
+  checksList.innerHTML = flagged.length
+    ? flagged.map(renderFlagCard).join("")
+    : `<p class="audit__clear">Every automated check passed. Still your call — the evaluator catches common mistakes, not everything.</p>`;
 
-  // Count the number up to the score.
-  animateCount(scoreValueEl, score, 1100);
+  // Passed checks (collapsed).
+  const passed = audit.checks.filter((c) => c.tier === "pass");
+  countPass.textContent = passed.length;
+  auditPassed.hidden = passed.length === 0;
+  auditPassedList.innerHTML = passed
+    .map((c) => `<li><span class="audit__passed-label">${esc(c.label)}</span><span class="audit__passed-detail">${esc(c.detail)}</span></li>`)
+    .join("");
+
+  // Demoted quality score (no big gauge).
+  if (prefersReducedMotion) scoreValueEl.textContent = String(audit.score);
+  else animateCount(scoreValueEl, audit.score, 900);
+  auditScore.className = `audit__score is-${verdict.tone}`;
+}
+
+/** One flag card: what / why it matters / suggested fix / safer alternatives. */
+function renderFlagCard(c, i) {
+  const alts = Array.isArray(c.alternatives) && c.alternatives.length
+    ? `<p class="flag__row"><span class="flag__row-label">Safer alternatives</span> ${esc(c.alternatives.join(" · "))}</p>`
+    : "";
+  const fix = c.fix ? `<p class="flag__row"><span class="flag__row-label">Suggested fix</span> ${esc(c.fix)}</p>` : "";
+  return `
+    <article class="flag flag--${c.tier}" style="--i:${i}">
+      <header class="flag__head">
+        <span class="flag__sev">${TIER_LABEL[c.tier] || c.tier}</span>
+        <span class="flag__label">${esc(c.label)}</span>
+      </header>
+      <p class="flag__why">${esc(c.detail)}</p>
+      ${fix}
+      ${alts}
+    </article>`;
 }
 
 function animateCount(el, target, duration) {
   const start = performance.now();
   function tick(now) {
     const t = Math.min(1, (now - start) / duration);
-    // easeOutCubic for a lively-but-settling count.
-    const eased = 1 - Math.pow(1 - t, 3);
+    const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
     el.textContent = String(Math.round(eased * target));
     if (t < 1) requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
 }
 
-function renderChecks(checks) {
-  const counts = { pass: 0, warn: 0, fail: 0 };
-  for (const c of checks) counts[c.status] = (counts[c.status] || 0) + 1;
-  countPass.textContent = counts.pass;
-  countWarn.textContent = counts.warn;
-  countFail.textContent = counts.fail;
+// ----------------------------------------------------------------------------
+// Trust Report — a transparent "who made this / what was checked / how confident"
+// summary attached to every generated plan.
+// ----------------------------------------------------------------------------
 
-  // Sort so the most serious flags surface first.
-  const order = { fail: 0, warn: 1, pass: 2 };
-  const sorted = [...checks].sort((a, b) => order[a.status] - order[b.status]);
+/** Confidence: Low if critical/injury concerns or thin input; High only if clean. */
+function confidenceFor(summary, inputs, hasInjuries) {
+  if (summary.critical > 0 || hasInjuries) return { level: "Low", why: "critical or injury-related concerns were flagged" };
+  if (summary.warning > 0) return { level: "Medium", why: "warnings exist but no critical issues" };
+  return { level: "High", why: "no critical issues or warnings, and inputs look complete" };
+}
 
-  checksList.innerHTML = sorted
-    .map(
-      (c, i) => `
-      <li class="check check--${c.status}" style="--i:${i}">
-        <span class="check__icon">${STATUS_ICON[c.status] || ""}</span>
-        <div class="check__body">
-          <div class="check__head">
-            <span class="check__label">${esc(c.label)}</span>
-            <span class="check__badge check__badge--${c.status}">${STATUS_LABEL[c.status]}</span>
-          </div>
-          <p class="check__detail">${esc(c.detail)}</p>
-        </div>
-      </li>`
-    )
-    .join("");
+function renderTrustReport(plan, inputs, audit) {
+  if (!trustReportEl) return;
+  const s = audit.summary;
+  const injuries = (inputs?.injuries || []).filter((v) => v && v !== "none");
+  const hasInjuries = injuries.length > 0 || !!(inputs?.injuryNotes || "").trim();
+  const conf = confidenceFor(s, inputs, hasInjuries);
+
+  const limitations = [
+    injuries.length ? `Injuries: ${injuries.join(", ")}` : null,
+    (inputs?.injuryNotes || "").trim() ? `Notes: ${inputs.injuryNotes.trim()}` : null,
+    inputs?.experience ? `Experience: ${inputs.experience}` : null,
+    inputs?.equipment?.length ? `Equipment: ${inputs.equipment.join(", ")}` : null,
+    inputs?.daysPerWeek ? `Schedule: ${inputs.daysPerWeek} days/week` : null,
+  ].filter(Boolean);
+
+  const concerns = audit.checks.filter((c) => c.tier === "critical" || c.tier === "warning").map((c) => c.label);
+  const edits = audit.checks.filter((c) => c.fix).map((c) => c.fix);
+
+  const row = (dt, dd) => `<div class="trust__row"><dt>${dt}</dt><dd>${dd}</dd></div>`;
+  const list = (arr, empty) => (arr.length ? `<ul class="trust__list">${arr.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : `<span class="muted">${empty}</span>`);
+
+  trustReportEl.innerHTML = `
+    <details class="card trust">
+      <summary class="trust__summary">
+        <span class="trust__title">Trust Report</span>
+        <span class="trust__conf trust__conf--${conf.level.toLowerCase()}">Confidence: ${conf.level}</span>
+      </summary>
+      <div class="trust__body">
+        <dl class="trust__grid">
+          ${row("Plan version", `${esc(plan.version || "v1")}`)}
+          ${row("Generated by", "AI workout generator")}
+          ${row("Audited by", "SpotterAI deterministic evaluator")}
+          ${row("Evaluator version", esc(EVALUATOR_VERSION))}
+          ${row("Checks run", `${s.total}`)}
+          ${row("Checks passed", `${s.passed}/${s.total}`)}
+          ${row("Confidence", `${conf.level} — ${esc(conf.why)}`)}
+        </dl>
+        <div class="trust__block"><h5>User limitations considered</h5>${list(limitations, "No limitations were provided.")}</div>
+        <div class="trust__block"><h5>Main concerns</h5>${list(concerns, "No critical issues or warnings.")}</div>
+        <div class="trust__block"><h5>Recommended edits</h5>${list(edits, "No edits recommended.")}</div>
+        <p class="trust__disclaimer">SpotterAI can catch common programming issues, but it cannot guarantee safety or replace a qualified coach, clinician, or medical professional.</p>
+      </div>
+    </details>`;
 }
 
 function renderPlan(plan) {

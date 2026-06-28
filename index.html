@@ -376,39 +376,32 @@
               <span>Live generation was unavailable, so we're <strong>showing a saved example</strong>. The safety audit below still runs on it in full.</span>
             </div>
 
-            <!-- Safety score gauge -->
-            <div class="card score-card">
-              <div class="score-card__gauge">
-                <svg class="gauge" viewBox="0 0 200 200" role="img" aria-labelledby="score-aria">
-                  <title id="score-aria">Automated safety and quality score</title>
-                  <circle class="gauge__track" cx="100" cy="100" r="84" />
-                  <circle class="gauge__progress" id="gauge-progress" cx="100" cy="100" r="84" transform="rotate(-90 100 100)" />
-                </svg>
-                <div class="gauge__center">
-                  <span class="gauge__value" id="score-value">0</span>
-                  <span class="gauge__max">/ 100</span>
+            <!-- Audit summary — flags first, quality score demoted -->
+            <div class="card audit">
+              <div class="audit__head">
+                <div class="audit__headline">
+                  <p class="audit__eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span> Safety audit · deterministic</p>
+                  <h3 class="audit__verdict" id="audit-verdict">Reviewing…</h3>
+                </div>
+                <div class="audit__score" id="audit-score" title="Optional quality score">
+                  <span><span class="audit__score-num" id="score-value">0</span><span class="audit__score-den">/100</span></span>
+                  <span class="audit__score-label">quality score</span>
                 </div>
               </div>
-              <div class="score-card__meta">
-                <p class="score-card__eyebrow">Automated audit</p>
-                <h3 class="score-card__title" id="score-band">Scoring…</h3>
-                <p class="score-card__text">
-                  A code-based evaluator — no AI — scored this plan against a fixed rubric.
-                  It <strong>flags potential concerns</strong>; it does not certify the plan as safe.
-                </p>
-                <ul class="score-legend" id="score-legend">
-                  <li><span class="dot dot--pass"></span><span id="count-pass">0</span> passed</li>
-                  <li><span class="dot dot--warn"></span><span id="count-warn">0</span> to review</li>
-                  <li><span class="dot dot--fail"></span><span id="count-fail">0</span> flagged</li>
-                </ul>
-              </div>
+              <ul class="audit__counts" id="audit-counts" aria-label="Audit summary"></ul>
+              <div class="audit__flags" id="checks-list"></div>
+              <details class="audit__passed" id="audit-passed">
+                <summary><span id="count-pass">0</span> checks passed</summary>
+                <ul class="audit__passed-list" id="audit-passed-list"></ul>
+              </details>
+              <p class="audit__foot">
+                A code-based evaluator — no AI — checked this plan against a fixed rubric. It
+                <strong>flags potential concerns</strong>; it does not certify the plan as safe.
+              </p>
             </div>
 
-            <!-- Check list -->
-            <div class="card checks-card">
-              <h3 class="card-title">Automated checks</h3>
-              <ul class="checks" id="checks-list"></ul>
-            </div>
+            <!-- Trust report (expandable) — populated by app.js -->
+            <div id="trust-report"></div>
 
             <!-- The plan itself -->
             <div class="plan" id="plan-output"></div>

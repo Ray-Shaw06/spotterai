@@ -141,3 +141,25 @@ test("every check exposes the public shape and never leaks the internal penalty"
     assert.equal(c.penalty, undefined);
   }
 });
+
+test("every check carries a severity tier and the audit returns a summary", () => {
+  const audit = evaluatePlan(goodPlan(), { goal: "Hypertrophy", experience: "Intermediate" });
+  for (const c of audit.checks) {
+    assert.ok(["critical", "warning", "suggestion", "pass"].includes(c.tier), `bad tier: ${c.tier}`);
+  }
+  const s = audit.summary;
+  assert.equal(s.total, audit.checks.length);
+  assert.equal(s.critical + s.warning + s.suggestion + s.passed, audit.checks.length);
+});
+
+test("a flagged check carries a structured fix and injury flags carry safer alternatives", () => {
+  const p = plan([
+    day("Lower Body", [ex("Walking Lunge", 3, "12", 8), ex("Leg Extension", 3, "15", 9), ex("Jump Squat", 3, "10", 8)]),
+    day("Rest", []),
+  ]);
+  const audit = evaluatePlan(p, { goal: "General", injuries: ["knee"] });
+  const injury = audit.checks.find((c) => c.id === "injury_knee");
+  assert.equal(injury.tier, "critical");
+  assert.equal(typeof injury.fix, "string");
+  assert.ok(Array.isArray(injury.alternatives) && injury.alternatives.length > 0);
+});
