@@ -17,6 +17,7 @@ import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
 import { repairPlan } from "./repair.js";
 import { screenRequest, GENERATOR_BOUNDARY } from "./safety-boundaries.js";
 import { ruleForCheck } from "./rule-explanations.js";
+import { planConfidence } from "./trust.js";
 import { setPlan, store } from "./store.js";
 import { getContext as getTrackerContext } from "./tracker-store.js";
 
@@ -369,19 +370,12 @@ function animateCount(el, target, duration) {
 // summary attached to every generated plan.
 // ----------------------------------------------------------------------------
 
-/** Confidence: Low if critical/injury concerns or thin input; High only if clean. */
-function confidenceFor(summary, inputs, hasInjuries) {
-  if (summary.critical > 0 || hasInjuries) return { level: "Low", why: "critical or injury-related concerns were flagged" };
-  if (summary.warning > 0) return { level: "Medium", why: "warnings exist but no critical issues" };
-  return { level: "High", why: "no critical issues or warnings, and inputs look complete" };
-}
-
 function renderTrustReport(plan, inputs, audit) {
   if (!trustReportEl) return;
   const s = audit.summary;
   const injuries = (inputs?.injuries || []).filter((v) => v && v !== "none");
   const hasInjuries = injuries.length > 0 || !!(inputs?.injuryNotes || "").trim();
-  const conf = confidenceFor(s, inputs, hasInjuries);
+  const conf = planConfidence(s, { hasInjuries });
 
   const limitations = [
     injuries.length ? `Injuries: ${injuries.join(", ")}` : null,

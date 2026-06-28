@@ -18,6 +18,7 @@
  */
 
 import { EXERCISES, RepCounter, AdaptiveRepCounter, OneEuroFilter } from "./form-evaluator.js";
+import { frameConfidence, confidenceLevel, canJudge } from "./form-confidence.js";
 
 // Pinned MediaPipe Tasks Vision build + a free, hosted pose model.
 const TASKS_VISION_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
@@ -59,9 +60,7 @@ const el = {
   painMsg: document.getElementById("form-pain-msg"),
 };
 
-// Key landmarks whose visibility tells us if we can actually judge the rep.
-const CONF_LANDMARKS = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
-const LOW_CONFIDENCE = 0.5; // below this we refuse strong feedback
+// Confidence landmarks + thresholds live in form-confidence.js (pure, tested).
 
 const hasUI = el.video && el.canvas && el.start;
 
@@ -232,22 +231,11 @@ function resetReadout() {
   if (el.lastRep) el.lastRep.innerHTML = "";
 }
 
-/** Mean visibility of the key joints — our "can we even judge this?" confidence. */
-function frameConfidence(image) {
-  let sum = 0;
-  let n = 0;
-  for (const i of CONF_LANDMARKS) {
-    const v = image[i]?.visibility;
-    if (typeof v === "number") { sum += v; n += 1; }
-  }
-  return n ? sum / n : 0;
-}
-
 function updateConfidence(conf) {
   if (!el.conf) return;
   el.conf.hidden = false;
   const pct = Math.round(conf * 100);
-  const level = conf >= 0.75 ? "high" : conf >= LOW_CONFIDENCE ? "med" : "low";
+  const level = confidenceLevel(conf);
   if (el.confBar) {
     el.confBar.style.width = `${pct}%`;
     el.confBar.dataset.level = level;
@@ -301,7 +289,7 @@ function loop() {
       }
 
       // Low confidence: refuse strong form advice rather than guess.
-      const lowConf = conf < LOW_CONFIDENCE;
+      const lowConf = !canJudge(conf);
       if (lowConf) cues = [{ level: "warn", text: "Camera angle or visibility is too limited for useful feedback — step fully into frame, side-on." }];
 
       draw(image, metrics, cues);
