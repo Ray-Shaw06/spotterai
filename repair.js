@@ -79,7 +79,7 @@ function repairInjury(plan, check, changes) {
     for (const ex of day.exercises || []) {
       if (riskyForInjury(ex.name, key, rule)) {
         const alt = bestAlternative(ex.name, alts, key);
-        changes.push({ issue: `${rule.label}: “${ex.name}” may aggravate the injury`, fix: `Replaced with ${alt}` });
+        changes.push({ issue: `${rule.label}: “${ex.name}” may aggravate the injury`, fix: `Replaced with ${alt}`, why: `Keeps training the same muscle while removing the movement most likely to aggravate a ${rule.label.toLowerCase()} issue.`, tradeoff: "A slightly different stimulus than the original lift." });
         ex.name = alt;
         ex.notes = ex.notes ? `${ex.notes} · ${rule.label}-friendly swap` : `${rule.label}-friendly swap`;
       }
@@ -92,7 +92,7 @@ function repairRest(plan, changes) {
   if (trainingDays.length < THRESHOLDS.TRAINING_DAYS_FAIL) return; // only the no-rest-day case
   const last = [...(plan.days || [])].reverse().find((d) => !isRestDay(d));
   if (last) {
-    changes.push({ issue: "No rest day in the week", fix: `Converted ${last.day || "the last training day"} to active recovery` });
+    changes.push({ issue: "No rest day in the week", fix: `Converted ${last.day || "the last training day"} to active recovery`, why: "Recovery is when you actually adapt — at least one rest day lowers injury and burnout risk.", tradeoff: "One fewer training day this week." });
     last.focus = "Rest / active recovery";
     last.exercises = [];
   }
@@ -124,7 +124,7 @@ function repairVolume(plan, changes) {
       const idx = arr.indexOf(victim.ex);
       if (idx >= 0) { current -= Number(victim.ex.sets) || 0; arr.splice(idx, 1); }
     }
-    changes.push({ issue: `Excessive weekly volume for ${group} (${sets} sets)`, fix: `Trimmed redundant ${group} work down to about ${Math.max(current, target)} sets/week` });
+    changes.push({ issue: `Excessive weekly volume for ${group} (${sets} sets)`, fix: `Trimmed redundant ${group} work down to about ${Math.max(current, target)} sets/week`, why: "Brings junk volume back into a productive range, so the sets that remain actually drive progress.", tradeoff: `Less direct ${group} volume this week.` });
   }
 }
 
@@ -145,7 +145,7 @@ function repairBalance(plan, changes) {
 
   if (push < pull) {
     days[0].exercises.push({ name: "Dumbbell Bench Press", sets: 3, reps: "8-12", rpe: 8, notes: "Added to balance push/pull" });
-    changes.push({ issue: "Pulling volume far outweighs pushing", fix: "Added Dumbbell Bench Press to even the ratio" });
+    changes.push({ issue: "Pulling volume far outweighs pushing", fix: "Added Dumbbell Bench Press to even the ratio", why: "Balances pressing against the heavier pulling volume.", tradeoff: "A little more total weekly volume." });
     return;
   }
 
@@ -172,6 +172,8 @@ function repairBalance(plan, changes) {
   changes.push({
     issue: "Pushing volume far outweighs pulling",
     fix: `Added ${needed} pulling exercise${needed > 1 ? "s" : ""}${trimmed ? ` and trimmed ${trimmed} pressing set${trimmed > 1 ? "s" : ""}` : ""} to even the ratio`,
+    why: "A more even push:pull ratio supports shoulder health and posture.",
+    tradeoff: trimmed ? "A little less pressing volume this week." : "A little more total weekly volume.",
   });
 }
 
@@ -185,7 +187,7 @@ function repairBeginner(plan, changes) {
       }
     }
   }
-  if (capped) changes.push({ issue: "Intensity too high for a beginner", fix: `Capped RPE at ${THRESHOLDS.BEGINNER_MAX_RPE} on ${capped} exercise${capped > 1 ? "s" : ""} — leave reps in reserve` });
+  if (capped) changes.push({ issue: "Intensity too high for a beginner", fix: `Capped RPE at ${THRESHOLDS.BEGINNER_MAX_RPE} on ${capped} exercise${capped > 1 ? "s" : ""}`, why: "Leaving 1–3 reps in reserve lets a new lifter build technique and recover between sessions.", tradeoff: "Lighter top-end intensity than originally prescribed." });
 }
 
 // ----------------------------------------------------------------------------

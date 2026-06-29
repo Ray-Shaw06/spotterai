@@ -79,6 +79,14 @@ export const RULE_EXPLANATIONS = [
     action: "Reports the recognition rate so you know how sharp the audit is.",
     limitations: "Unusual or custom exercise names lower recognition and estimate quality.",
   },
+  {
+    id: "substitution",
+    name: "Exercise substitution quality",
+    checks: "When the plan-repair engine swaps a flagged movement, whether the replacement still trains the original muscle.",
+    why: "A safer swap shouldn't quietly delete training stimulus — e.g. swapping a knee-aggravating lunge for a hip thrust would drop quad work.",
+    action: "Prefers an alternative from the structured DB that preserves the original's primary muscle, and shows the tradeoff.",
+    limitations: "Substitutions are template-based, not personalized to your equipment access or preferences.",
+  },
 ];
 
 /** Map an evaluator check id (e.g. "injury_knee") to its rule explanation. */

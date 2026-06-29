@@ -465,7 +465,16 @@ function renderRepair(plan, inputs, audit) {
         </div>
       </div>
       <ul class="repair__changes">
-        ${repair.changes.map((c) => `<li><span class="repair__issue">${esc(c.issue)}</span><span class="repair__fix">${esc(c.fix)}</span></li>`).join("")}
+        ${repair.changes
+          .map(
+            (c) => `<li>
+              <span class="repair__issue">${esc(c.issue)}</span>
+              <span class="repair__fix">${esc(c.fix)}</span>
+              ${c.why ? `<span class="repair__why"><span class="repair__k">Why this helps</span> ${esc(c.why)}</span>` : ""}
+              ${c.tradeoff ? `<span class="repair__tradeoff"><span class="repair__k">Tradeoff</span> ${esc(c.tradeoff)}</span>` : ""}
+            </li>`
+          )
+          .join("")}
       </ul>
       <div class="repair__actions">
         <button type="button" class="btn btn--primary btn--sm" data-repair="apply">Apply safer version</button>
