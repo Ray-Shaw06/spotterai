@@ -1010,6 +1010,50 @@ table {
 .detail-uncertainty strong { color: var(--warn); }
 
 /* ----------------------------------------------------------------------------
+   Exercise Library
+---------------------------------------------------------------------------- */
+.lib-controls { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; margin-bottom: var(--space-5); }
+.lib-search { max-width: 320px; }
+.lib-filters { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.lib-chip { padding: 0.4rem 0.85rem; font-size: var(--fs-small); font-weight: 500; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition); }
+.lib-chip:hover { color: var(--text); border-color: var(--accent-ring); }
+.lib-chip.is-active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-ring); }
+.lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-3); }
+.lib-card { text-align: left; display: flex; flex-direction: column; gap: 4px; padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-md); cursor: pointer; transition: var(--transition); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.lib-card:hover { border-color: var(--accent-ring); transform: translateY(-1px); }
+.lib-card__name { font-weight: 600; font-size: var(--fs-small); letter-spacing: -0.01em; }
+.lib-card__meta { font-size: 0.78rem; color: var(--text-muted); }
+.lib-card__diff { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); }
+.lib-tag { font-size: 0.75rem; }
+.lib-tag--fav { color: var(--warn); }
+.lib-tag--dis { color: var(--text-faint); }
+.lib-empty { grid-column: 1 / -1; padding: var(--space-6); text-align: center; }
+
+/* Exercise detail modal */
+.exercise-dialog { max-width: 620px; }
+.lib-badges { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-4); }
+.lib-badge { font-size: 0.66rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: var(--r-full); padding: 3px 9px; }
+.lib-cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-4); }
+.lib-block { margin-bottom: var(--space-4); }
+.lib-block--safety { padding: var(--space-3) var(--space-4); background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); border-radius: var(--r-sm); }
+.lib-h5 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-faint); font-weight: 600; margin-bottom: var(--space-2); }
+.lib-h3 { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em; }
+.lib-p { font-size: var(--fs-small); color: var(--text); line-height: 1.55; }
+.lib-muted { font-size: 0.8rem; color: var(--text-faint); line-height: 1.45; }
+.lib-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.lib-list li { position: relative; padding-left: var(--space-4); font-size: var(--fs-small); color: var(--text-muted); }
+.lib-list li::before { content: "·"; position: absolute; left: 5px; color: var(--accent); }
+.lib-inplan { margin-top: var(--space-2); padding: var(--space-2) var(--space-3); font-size: var(--fs-small); color: var(--accent); background: var(--accent-soft); border-radius: var(--r-sm); }
+.lib-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+.lib-swaps { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.lib-swap { padding: 0.5rem 0.85rem; font-size: var(--fs-small); color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; transition: var(--transition); }
+.lib-swap:hover { border-color: var(--accent); color: var(--accent); }
+.lib-fallback { padding: var(--space-4); font-size: var(--fs-small); color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); line-height: 1.55; }
+.lib-swapdone { text-align: center; padding: var(--space-4); }
+.lib-swapdone .lib-actions { justify-content: center; }
+@media (max-width: 560px) { .lib-cols2 { grid-template-columns: 1fr; } }
+
+/* ----------------------------------------------------------------------------
    Pain Mode modal
 ---------------------------------------------------------------------------- */
 .pain-dialog { max-width: 540px; }

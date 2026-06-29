@@ -5,7 +5,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { lookupExercise, isContraindicated } from "../exercise-data.js";
+import { lookupExercise, isContraindicated, suggestAlternatives } from "../exercise-data.js";
 import { evaluatePlan } from "../evaluator.js";
 
 const ex = (name, sets, reps, rpe = null) => ({ name, sets, reps, rpe, notes: "" });
@@ -37,4 +37,26 @@ test("the evaluator trusts the structured DB over the keyword list", () => {
   };
   const audit = evaluatePlan(plan, { goal: "General", injuries: ["knee"] });
   assert.equal(audit.checks.find((c) => c.id === "injury_knee").status, "pass");
+});
+
+test("suggestAlternatives returns categorised swaps for a known lift, empty for unknown", () => {
+  const a = suggestAlternatives("Walking Lunge");
+  assert.ok(a.known);
+  assert.ok(a.recommended.length || a.easier.length, "has some alternatives");
+  const u = suggestAlternatives("Some Made-up Lift");
+  assert.equal(u.known, false);
+  assert.deepEqual(u.recommended, []);
+});
+
+test("safer alternatives exclude movements contraindicated for the user's limitation", () => {
+  const a = suggestAlternatives("Back Squat", { limitations: ["knee"] });
+  for (const name of a.safer) assert.equal(isContraindicated(name, "knee"), false, `${name} should be knee-safe`);
+});
+
+test("equipment-filtered alternatives only include compatible equipment", () => {
+  const a = suggestAlternatives("Barbell Bench Press", { equipment: ["dumbbell", "bench"] });
+  for (const name of a.recommended) {
+    const e = lookupExercise(name);
+    if (e && e.equipment.length) assert.ok(e.equipment.some((q) => ["dumbbell", "bench"].includes(q)), `${name} should be dumbbell/bench compatible`);
+  }
 });

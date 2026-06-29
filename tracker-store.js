@@ -25,6 +25,7 @@ const DEFAULTS = {
   customFoods: [], // user-added foods { name, serving, kcal, protein, carbs, fat }
   water: {}, // { 'YYYY-MM-DD': ml }
   painReports: [], // { id, date, location, severity, timing, note, injuryKey }
+  exercisePrefs: { favorites: [], disliked: [] }, // exercise names
   unit: "kg",
 };
 
@@ -261,6 +262,28 @@ export function addWater(deltaMl, date) {
 }
 export function getWater(date) {
   return state.water[date || today()] || 0;
+}
+
+// --- Exercise preferences (favorite / disliked) ----------------------------
+function ensurePrefs() {
+  if (!state.exercisePrefs || typeof state.exercisePrefs !== "object") state.exercisePrefs = { favorites: [], disliked: [] };
+  state.exercisePrefs.favorites ||= [];
+  state.exercisePrefs.disliked ||= [];
+  return state.exercisePrefs;
+}
+export function getExercisePrefs() {
+  const p = ensurePrefs();
+  return { favorites: [...p.favorites], disliked: [...p.disliked] };
+}
+/** Toggle an exercise in "favorites" or "disliked" (mutually exclusive). Returns the new state. */
+export function toggleExercisePref(name, kind) {
+  const p = ensurePrefs();
+  const other = kind === "favorites" ? "disliked" : "favorites";
+  const has = p[kind].includes(name);
+  p[kind] = has ? p[kind].filter((n) => n !== name) : [...p[kind], name];
+  if (!has) p[other] = p[other].filter((n) => n !== name); // can't be both
+  persist();
+  return { favorite: p.favorites.includes(name), disliked: p.disliked.includes(name) };
 }
 
 // --- Pain reports (Pain Mode) ----------------------------------------------

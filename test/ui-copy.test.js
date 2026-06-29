@@ -30,6 +30,13 @@ test("a Pain Mode modal exists", () => {
   assert.ok(/id="pain-modal"/.test(html));
 });
 
+test("an Exercise Library exists in the nav, routes, and has a detail modal", () => {
+  assert.ok(html.includes("<span>Library</span>"), "Library nav label present");
+  assert.ok(/data-view="library"/.test(html), "Library view present");
+  assert.ok(router.includes('"library"'), "library route registered");
+  assert.ok(/id="exercise-modal"/.test(html), "exercise detail modal present");
+});
+
 test("positioning is the AI fitness copilot promise, not the old coach line", () => {
   assert.ok(/AI fitness copilot/i.test(html), "copilot positioning present");
   // The old tagline must be gone from user-facing copy (title + footer).

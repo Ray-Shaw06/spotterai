@@ -145,6 +145,43 @@ export function isContraindicated(name, injuryKey) {
 const VOLUME_GROUPS = new Set(["chest", "back", "shoulders", "biceps", "triceps", "quads", "hamstrings", "glutes", "calves", "core"]);
 
 /**
+ * Categorised swap suggestions for an exercise: recommended (same movement),
+ * safer (filtered to avoid the user's active limitations), easier regressions,
+ * and harder progressions. Used by the Exercise Library's substitution UX and
+ * the plan-repair engine. Returns empty arrays for unknown exercises.
+ */
+export function suggestAlternatives(name, { limitations = [], equipment = [] } = {}) {
+  const e = lookupExercise(name);
+  if (!e) return { recommended: [], safer: [], easier: [], harder: [], known: false };
+
+  const lim = new Set(limitations.filter(Boolean));
+  const safeFor = (altName) => {
+    const a = lookupExercise(altName);
+    if (!a) return true; // unknown alt — don't assume unsafe
+    return !a.contraindications.some((c) => lim.has(c)) && !a.jointStress.some((j) => lim.has(j));
+  };
+  const eqOk = (altName) => {
+    if (!equipment.length) return true;
+    const a = lookupExercise(altName);
+    if (!a || !a.equipment.length) return true;
+    const have = new Set(equipment.map((x) => String(x).toLowerCase()));
+    return a.equipment.some((x) => have.has(String(x).toLowerCase()));
+  };
+
+  const subs = e.commonSubstitutions || [];
+  const recommended = equipment.length ? subs.filter(eqOk) : subs.slice();
+  const saferPool = [...new Set([...subs, ...(e.regressionOptions || [])])];
+  const safer = lim.size ? saferPool.filter(safeFor) : [];
+  return {
+    recommended,
+    safer,
+    easier: (e.regressionOptions || []).slice(),
+    harder: (e.progressionOptions || []).slice(),
+    known: true,
+  };
+}
+
+/**
  * Per-set volume contribution for an exercise, by muscle group: a working set
  * counts 1.0 toward each primary mover and 0.5 toward each secondary (the
  * standard "direct vs indirect" convention) — far more accurate than counting a

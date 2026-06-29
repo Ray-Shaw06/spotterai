@@ -7,10 +7,11 @@
  * react (e.g. the form-check stops the camera when you navigate away).
  */
 
-const ROUTES = ["home", "today", "dashboard", "nutrition", "progress", "form-check", "evals"];
+const ROUTES = ["home", "today", "dashboard", "nutrition", "progress", "form-check", "library", "evals"];
 const TITLES = {
   home: "SpotterAI — your AI fitness copilot (plan, track, adapt, audit)",
   today: "Today · SpotterAI",
+  library: "Exercise library · SpotterAI",
   dashboard: "Dashboard · SpotterAI",
   nutrition: "Nutrition · SpotterAI",
   progress: "Progress · SpotterAI",
