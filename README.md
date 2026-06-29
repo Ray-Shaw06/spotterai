@@ -1,24 +1,34 @@
-# SpotterAI 🟢
+# SpotterAI 🔵
 
 [![CI](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml/badge.svg)](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml)
-&nbsp;[![License: MIT](https://img.shields.io/badge/License-MIT-ff3b3b.svg)](LICENSE)
+&nbsp;[![License: MIT](https://img.shields.io/badge/License-MIT-3b8ef5.svg)](LICENSE)
 
 **Your AI fitness copilot — plan, track, adapt, and audit your training.** &nbsp;·&nbsp; **[▶ Live demo](https://spotterai.vercel.app)**
 
 <p align="center">
-  <img src="og-image.png" alt="SpotterAI — an AI coach that audits its own safety, showing a plan safety score of 86/100 and the auditor's checks (rest & recovery, weekly volume, push/pull balance, injury contraindications)." width="700" />
+  <img src="og-image.png" alt="SpotterAI — your AI fitness copilot. A flags-first plan safety audit: issues to review, severity tiers, and a demoted quality score." width="700" />
 </p>
 
-I built an AI fitness copilot — and a separate, code-based system that
-audits the AI's plans for unsafe or low-quality advice. SpotterAI generates a
-personalized weekly training program with a large language model, then runs that
-generated plan through a pure-code **safety & quality evaluator** that scores it
-0–100 and flags risky programming (no rest days, lopsided volume, injury
-contraindications, beginner overload, and more) *before* you trust it. The
-interesting engineering isn't the model writing a workout — anyone can prompt for
-that. It's the second system that checks the first one's work, which is exactly
-the kind of evaluation and AI-safety thinking that matters when you ship LLM
-features to real users.
+SpotterAI is an AI fitness copilot built around one idea: **don't blindly trust
+the AI.** It generates a personalized weekly training program with a large
+language model, then runs that plan through a separate, **pure-code safety &
+quality evaluator** that surfaces issues *flags-first* — critical problems,
+warnings, and suggestions, each with a plain-English why-it-matters, a suggested
+fix, and a safer alternative — *before* you train. A numeric quality score still
+exists, but it's demoted to a footnote; the **flags and explanations** are the
+point. The interesting engineering isn't the model writing a workout — anyone can
+prompt for that. It's the second, deterministic system that checks the first
+one's work, which is exactly the evaluation and AI-safety thinking that matters
+when you ship LLM features to real users.
+
+The copilot closes the loop — **Plan → Train → Log → Adapt → Re-audit** — and
+the same transparent, safety-first philosophy runs through every feature: a
+**structured exercise knowledge layer** backing the checks, a deterministic
+**plan-repair engine** that turns each flag into a concrete safer edit, a
+per-plan **Trust Report** (confidence + limitations), **nutrition guardrails**
+with their own Trust Report, deterministic **safety boundaries** that refuse
+pain / injury-diagnosis / disordered-eating requests, and a **Safety Lab** proof
+page that benchmarks the evaluator against a red-team suite live in your browser.
 
 SpotterAI then goes a step further with two features built on the same
 transparent, safety-first philosophy: a **real-time form check** that uses
@@ -26,7 +36,7 @@ on-device pose estimation to count reps and flag form issues live through your
 webcam (the video never leaves your device), and a **plan-aware coach chatbot**
 that answers questions about your program and training in general. The app is
 organized into clean, separate **pages** (Plan · Dashboard · Nutrition ·
-Progress · Form check) via a tiny client-side router, with optional local
+Progress · Form check · Safety Lab) via a tiny client-side router, with optional local
 **profiles** so different people can keep separate data on the same browser —
 all still backend-free.
 
@@ -121,57 +131,90 @@ safe.**
 | # | Check | What it does | Flags when… |
 |---|-------|--------------|-------------|
 | 1 | **Recovery & rest days** | Counts training days in the week | `warn` at 6 training days (one rest day); `fail` at 7 (no rest at all) |
-| 2 | **Weekly volume sanity** | Estimates weekly working sets per muscle group via exercise-name keyword matching | `warn` above ~24 sets/muscle or when a prime mover is under-stimulated for a muscle-building goal; `fail` above ~32 sets/muscle |
+| 2 | **Weekly volume sanity** | Estimates weekly working sets per muscle group with a **fractional model** (1.0 set to primary movers, 0.5 to secondaries) via the structured exercise DB | `warn` above ~24 sets/muscle or when a prime mover is under-stimulated for a muscle-building goal; `fail` above ~32 sets/muscle |
 | 3 | **Push / pull balance** | Compares upper-body pushing vs pulling volume | `warn` when one side is >2× the other; `fail` when >3× or one side is entirely absent (e.g. all push, no pull) |
-| 4 | **Injury contraindications** | Maps each stated injury to risky movement keywords and suggests regressions | `warn` on one contraindicated movement, `fail` on two or more — e.g. lower back → heavy axial loading, shoulder → heavy overhead, knee → deep loaded knee flexion, wrist → straight-bar pressing |
-| 5 | **Beginner load sanity** | Checks intensity/volume against the beginner level | `warn` when multiple exercises exceed RPE 8 or volume is high; `fail` when RPE 10 (max effort) is prescribed to a beginner |
-| 6 | **Goal fit** | Checks average rep ranges and structure against the goal | `warn` when rep ranges don't match the stated goal (e.g. very high reps for a strength goal) |
+| 4 | **Quad / hamstring balance** | Antagonist check that supports knee health | `warn` when quad volume far outweighs direct hamstring work (or hamstrings are neglected) |
+| 5 | **Injury & limitation conflicts** | Looks up each prescribed lift in the structured DB's curated contraindications (keyword fallback for unknown names) and suggests regressions | `warn` on one contraindicated movement, `fail` on two or more — knee, lower back, shoulder, wrist |
+| 6 | **Beginner load sanity** | Checks intensity/volume against the beginner level | `warn` when multiple exercises exceed RPE 8 or volume is high; `fail` when RPE 10 (max effort) is prescribed to a beginner |
+| 7 | **Session length sanity** | Total working sets in a single workout | `warn` past ~30 sets; `fail` past ~40 (an extreme, form-degrading session) |
+| 8 | **Goal fit** | Checks average rep ranges and structure against the goal | `warn` when rep ranges don't match the stated goal |
+| 9 | **Exercise recognition** | Transparency: how much of the plan matched the structured DB vs fell back to keywords | `warn` (suggestion) when recognition is low, so the audit is honest about its own estimate quality |
 
 > Injuries generate **one check row per injury** so each gets its own explanation
 > and regression suggestion.
 
-### The scoring rubric
+### Flags first, score demoted
 
-The score starts at **100** and **deducts points per `warn`/`fail`, weighted by
-severity** (see the `PENALTY` constant). More safety-critical checks deduct more:
-
-| Check | `warn` | `fail` |
-|-------|:------:|:------:|
-| Injury contraindications | −12 | −24 |
-| Push / pull balance | −10 | −18 |
-| Beginner load sanity | −10 | −18 |
-| Weekly volume sanity | −9 | −16 |
-| Recovery & rest days | −8 | −16 |
-| Goal fit | −6 | −12 |
-
-The final score is clamped to `[0, 100]` and mapped to a color-coded band in the
-UI — but the **individual checks, not the single number, are the point**: each row
-explains *why* it flagged so the user can make an informed decision.
+Each check carries a **severity tier** — `critical`, `warning`, `suggestion`, or
+`pass` — and (when flagged) a structured **fix** and safer **alternatives**. The
+UI leads with a plain-English verdict ("2 issues to review before training"),
+severity counts, and per-flag cards (what / why it matters / suggested fix /
+safer alternative / *why this rule exists*). A 0–100 quality score is still
+computed (start at 100, deduct per `warn`/`fail` weighted by severity in the
+`PENALTY` constant) but is **demoted to a footnote** — the flags and
+explanations are the product.
 
 > **Heuristics, not medical rules.** The muscle mapping and injury rules are
-> intentionally simple keyword heuristics. They will occasionally over- or
-> under-flag. That's an honest reflection of what a lightweight automated auditor
-> can and can't do — which is itself part of the lesson.
+> conservative heuristics (structured-data-backed where possible, keyword
+> fallback otherwise). They will occasionally over- or under-flag — an honest
+> reflection of what a lightweight automated auditor can and can't do.
 
-### Tested + CI, and a live "red-team" page
+### Building on the audit: structured data, repair, Trust Reports
 
-Because the evaluator is the trust centerpiece, it's covered by a unit-test
-suite (plus the search, progression, and chat-guard logic). It uses **Node's
-built-in test runner** — still **zero dependencies** — and runs on every push via
-**GitHub Actions** (the badge up top). The tests assert the auditor actually
-catches what it claims: missing rest days, RPE 10 for a beginner, all-push/no-pull
-imbalance, injury contraindications, excessive volume, and that a malformed plan
-never throws.
+- **Structured exercise knowledge layer** ([`exercise-data.js`](exercise-data.js)) —
+  ~80 lifts with primary/secondary muscles, movement pattern, joint stress,
+  contraindications, and substitution / regression / progression options. The
+  evaluator consults it first (keyword fallback for unknown names), which makes
+  volume and injury checks both more precise *and* honest about coverage.
+- **Plan repair engine** ([`repair.js`](repair.js)) — turns each flag into a
+  concrete, rule-based edit (injury-risky lifts → a muscle-preserving safer
+  swap, push/pull imbalance → add pulling + trim pressing, junk volume → trim
+  the overrepresented muscle, beginner overload → cap RPE), then **re-audits** and
+  shows a before/after with *Apply safer version* / *Keep original*.
+- **Trust Report** — every generated plan gets an expandable report: plan +
+  evaluator versions, checks run/passed, limitations considered, main concerns,
+  recommended edits, and a **Low / Medium / High confidence** ([`trust.js`](trust.js))
+  with a clear reason and a "can't guarantee safety / not a coach" disclaimer.
+- **Safety boundaries** ([`safety-boundaries.js`](safety-boundaries.js)) — a
+  deterministic screen that refuses pain / injury-diagnosis / medical-rehab /
+  extreme-loss / disordered-eating / "ignore the warnings" requests *before* any
+  API call (coach) and surfaces a prominent boundary instead of burying it
+  (generator).
+- **Nutrition guardrails** ([`nutrition-safety.js`](nutrition-safety.js)) —
+  conservative, one-directional checks on calorie/protein/fat targets (it flags
+  aggressive targets, never prescribes one) plus a lightweight Nutrition Trust
+  Report.
+
+### Tested + CI, and a live "red-team" proof page
+
+The trust logic is covered by **70+ tests** across the evaluator (tiers, the
+fractional volume model, structured-data injury matching), the plan-repair
+engine, safety boundaries, nutrition guardrails, rule explanations, plan/nutrition
+**Trust Report confidence**, **form-check confidence** thresholds, the benchmark
+computations, and UI-copy/positioning guards — plus the search, progression, and
+chat-guard logic. It uses **Node's built-in test runner** — still **zero
+dependencies** — and runs on every push via **GitHub Actions** (the badge up top).
 
 ```bash
 npm test          # or: node --test
 ```
 
-The same battery is also a **page in the app** — **Evals** ([`eval-suite.js`](eval-suite.js)
-+ [`eval-ui.js`](eval-ui.js)) — that runs the evaluator against good and
-intentionally-bad plans and renders a model-eval-style **pass/fail report** you
-can click into. One source of truth powers both the page and the CI gate, so the
-auditor can't silently regress.
+The same battery is also a **page in the app — the [Safety Lab](eval-ui.js)** — a
+proof center, not just an explanation page. It runs the evaluator against a
+**red-team suite** ([`eval-suite.js`](eval-suite.js)) of known-good and
+intentionally-bad plans — *including false-positive guards* that must **not** be
+flagged — and renders, live in your browser:
+
+- an **Evaluator Benchmark** panel (test cases run, expectations passed/failed,
+  risky plans caught, safe plans incorrectly flagged, average audit time,
+  evaluator version, regression status);
+- a filterable **pass/fail report** with scenario types (Good / Risky / Edge /
+  False-positive guard), expected-vs-actual, and the flags each case triggered;
+- **"Why these rules exist"** explanation cards and the conservative training
+  principles behind the checks.
+
+One source of truth powers the page *and* the CI gate, so the auditor can't
+silently regress.
 
 ---
 
@@ -350,11 +393,18 @@ spotterai/
 ├─ index.html             # markup + semantic structure
 ├─ style.css              # design tokens + all components
 ├─ app.js                 # controller: form → API → evaluator → render
-├─ evaluator.js           # ⭐ pure-code safety & quality auditor (the plan)
-├─ eval-suite.js          # ⭐ red-team fixtures + runner (powers Evals page + CI)
-├─ eval-ui.js             # Evals page renderer (live pass/fail report)
+├─ evaluator.js           # ⭐ pure-code safety & quality auditor (flags-first, tiers)
+├─ exercise-data.js       # ⭐ structured exercise knowledge layer (backs the checks)
+├─ repair.js              # ⭐ deterministic plan-repair engine (flag → safer edit)
+├─ trust.js               # ⭐ pure plan Trust Report confidence
+├─ safety-boundaries.js   # ⭐ deterministic refusals (pain / diagnosis / ED / extreme)
+├─ eval-suite.js          # ⭐ red-team fixtures + runner (powers Safety Lab + CI)
+├─ eval-ui.js             # Safety Lab report (filters, scenario types, pass/fail)
+├─ safety-lab.js          # Safety Lab content (benchmark, rule cards, principles)
+├─ rule-explanations.js   # ⭐ "why this rule exists" (Safety Lab + audit flags)
 ├─ chat-guard.js          # ⭐ pure-code auditor for the chatbot's own replies
 ├─ form-evaluator.js      # ⭐ pure-code form auditor (joint angles → cues, reps)
+├─ form-confidence.js     # ⭐ pure form-check confidence thresholds
 ├─ form-coach.js          # webcam + MediaPipe Pose + skeleton overlay
 ├─ chat.js                # floating coach chatbot (UI)
 ├─ store.js               # tiny shared state (latest plan → chatbot context)
@@ -366,6 +416,7 @@ spotterai/
 ├─ workout-ui.js          # Hevy-style workout session (per-set logging, routines, history)
 ├─ exercises.js           # searchable exercise library
 ├─ nutrition-ui.js        # MyFitnessPal-style food diary (meals, macros, water)
+├─ nutrition-safety.js    # ⭐ nutrition guardrails + Nutrition Trust Report
 ├─ foods.js               # built-in food DB + Open Food Facts search
 ├─ ai.js                  # client for /api/estimate (AI food macros + exercise tags)
 ├─ quick-log.js           # natural-language + voice quick logging (→ /api/parse)
