@@ -256,6 +256,7 @@ export function addWater(deltaMl, date) {
   const d = date || today();
   state.water[d] = Math.max(0, (state.water[d] || 0) + (Number(deltaMl) || 0));
   persist();
+  unlockAchievements(); // "Hydration Habit"
   return state.water[d];
 }
 export function getWater(date) {
@@ -268,6 +269,7 @@ export function addPainReport({ location, severity, timing = "", note = "", inju
   if (!Array.isArray(state.painReports)) state.painReports = [];
   state.painReports.push(entry);
   persist();
+  unlockAchievements(); // "Body Awareness" — reporting pain is healthy, not a failure
   return entry;
 }
 export function getPainReports() {
@@ -509,7 +511,11 @@ function baseStats() {
   const prs = {};
   for (const w of workouts) for (const e of w.exercises) for (const s of setsOf(e)) if (s.weight > 0) prs[e.name] = Math.max(prs[e.name] || 0, s.weight);
 
-  return { workoutCount, maxSessionVolume, streakDays, nutritionDays, proteinTargetDays, bodyweightCount: state.bodyweight.length, thisWeek, byDay, prs };
+  // Healthy-habit signals (recovery + honest logging + hydration).
+  const painReportsCount = (state.painReports || []).length;
+  const waterTargetDays = Object.values(state.water || {}).filter((ml) => ml >= (state.targets.waterMl || 2500)).length;
+
+  return { workoutCount, maxSessionVolume, streakDays, nutritionDays, proteinTargetDays, bodyweightCount: state.bodyweight.length, painReportsCount, waterTargetDays, thisWeek, byDay, prs };
 }
 
 function unlockAchievements() {

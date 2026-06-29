@@ -20,6 +20,16 @@ test("nav uses 'Safety Lab', not the old 'Evals' label", () => {
   assert.ok(router.includes("Safety Lab · SpotterAI"));
 });
 
+test("a 'Today' daily home base exists in the nav and routes", () => {
+  assert.ok(html.includes("<span>Today</span>"), "Today nav label present");
+  assert.ok(/data-view="today"/.test(html), "Today view present");
+  assert.ok(router.includes('"today"'), "today route registered");
+});
+
+test("a Pain Mode modal exists", () => {
+  assert.ok(/id="pain-modal"/.test(html));
+});
+
 test("positioning is the AI fitness copilot promise, not the old coach line", () => {
   assert.ok(/AI fitness copilot/i.test(html), "copilot positioning present");
   // The old tagline must be gone from user-facing copy (title + footer).

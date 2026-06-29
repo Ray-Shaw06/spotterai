@@ -74,6 +74,10 @@ export const ACHIEVEMENTS = [
   { id: "nutrition1", name: "Fueled", desc: "Log nutrition for a day", icon: "apple", xp: 40, test: (s) => s.nutritionDays >= 1 },
   { id: "protein5", name: "Macro Master", desc: "Hit your protein target 5 days", icon: "apple", xp: 120, test: (s) => s.proteinTargetDays >= 5 },
   { id: "weigh", name: "Tracking Progress", desc: "Log your bodyweight", icon: "chart", xp: 40, test: (s) => s.bodyweightCount >= 1 },
+  // Healthy habits — reward consistency, recovery, and honest logging (never "never miss").
+  { id: "consistency", name: "Consistency Builder", desc: "Completed 3 workouts in a week", icon: "calendar", xp: 80, test: (s) => s.thisWeek.sessions >= 3 },
+  { id: "bodyaware", name: "Body Awareness", desc: "Reported pain instead of pushing through", icon: "flag", xp: 60, test: (s) => (s.painReportsCount || 0) >= 1 },
+  { id: "hydration", name: "Hydration Habit", desc: "Hit your water target 3 days", icon: "apple", xp: 50, test: (s) => (s.waterTargetDays || 0) >= 3 },
 ];
 
 /** Sum XP awarded by the currently-unlocked achievement ids. */
