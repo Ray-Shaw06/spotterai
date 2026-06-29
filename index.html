@@ -63,6 +63,9 @@
       </a>
 
       <nav id="primary-nav" class="sidebar__nav" aria-label="Primary">
+        <a href="#/today" data-nav="today" class="nav-link">
+          <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19" /></svg><span>Today</span>
+        </a>
         <a href="#/" data-nav="home" class="nav-link">
           <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="5" width="12" height="16" rx="2" /><path d="M9 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1M9 12h6M9 16h4" /></svg><span>Plan</span>
         </a>
@@ -570,6 +573,18 @@
     </section>
 
     </div><!-- /home view -->
+
+    <!-- ============================ TODAY PAGE ============================ -->
+    <section id="today" class="view section section--alt" data-view="today" hidden>
+      <div class="container">
+        <header class="section-head section-head--start">
+          <p class="eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span> <span id="today-date">Today</span></p>
+          <h2 class="section-title section-title--lg">What to do today</h2>
+          <p class="section-subtitle">Your daily home base — train, log, recover, and adapt, all in one place.</p>
+        </header>
+        <div id="today-content" aria-live="polite"></div>
+      </div>
+    </section>
 
     <!-- ============================ DASHBOARD PAGE ============================ -->
     <section id="dashboard" class="view section section--alt" data-view="dashboard" hidden>
@@ -1118,6 +1133,7 @@
   <script type="module" src="chat.js"></script>
   <script type="module" src="form-coach.js"></script>
   <script type="module" src="tracker-ui.js"></script>
+  <script type="module" src="today-ui.js"></script>
   <script type="module" src="workout-ui.js"></script>
   <script type="module" src="nutrition-ui.js"></script>
   <script type="module" src="quick-log.js"></script>
