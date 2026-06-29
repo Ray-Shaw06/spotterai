@@ -122,8 +122,8 @@ function render() {
     <div class="lab-block">
       <div class="lab-block__head">
         <div>
-          <h3 class="lab-block__title">Evaluator benchmark</h3>
-          <p class="lab-block__sub">SpotterAI runs known-good and intentionally risky plans through the same evaluator used in the app. These tests help catch regressions and make the guardrails more transparent. Computed live in your browser from the bundled suite — also gated in CI.</p>
+          <h3 class="lab-block__title">Evaluator benchmark <span class="bench__tag">Bundled local benchmark</span></h3>
+          <p class="lab-block__sub">SpotterAI runs known-good and intentionally risky plans through the same evaluator used in the app. These tests help catch regressions and make the guardrails more transparent. Computed live in your browser from the bundled suite — the same suite is gated in CI.</p>
         </div>
         <span class="bench__status bench__status--${b.passing ? "pass" : "fail"}">${b.passing ? "Passing" : "Needs review"}</span>
       </div>
@@ -228,4 +228,15 @@ function render() {
   mount.innerHTML = bench + cols + rules + examples + privacy + principles + tech;
 }
 
-if (mount) render();
+// Render off the critical path (the benchmark + timing loop shouldn't block first
+// paint) and never let a benchmark failure blank the page.
+if (mount) {
+  const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1));
+  idle(() => {
+    try {
+      render();
+    } catch {
+      mount.innerHTML = `<div class="lab-block"><p class="eval-error">Safety Lab couldn't run the local benchmark just now. The app can still audit plans — benchmark proof is temporarily unavailable.</p></div>`;
+    }
+  });
+}

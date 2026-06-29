@@ -19,21 +19,38 @@ function esc(t) {
 }
 
 const TYPE_LABEL = { good: "Good plan", risky: "Risky plan", edge: "Edge case", guard: "False-positive guard" };
-const FILTER_LABEL = { all: "All", passed: "Passed", failed: "Failed", risky: "Risky plans", guard: "False-positive guards" };
+const FILTER_LABEL = { all: "All", passed: "Passed", failed: "Failed", good: "Good plans", risky: "Risky plans", guard: "False-positive guards" };
+const FILTERS = ["all", "passed", "failed", "good", "risky", "guard"];
+const SORT_LABEL = { default: "Default order", failed: "Failed first", risk: "Highest risk first" };
 
 let filter = "all";
+let sort = "default";
 
 function matchesFilter(r) {
   if (filter === "passed") return r.passed;
   if (filter === "failed") return !r.passed;
+  if (filter === "good") return r.type === "good";
   if (filter === "risky") return r.type === "risky";
   if (filter === "guard") return r.type === "guard";
   return true;
 }
 
+function sortCases(rows) {
+  const list = rows.map((r, i) => ({ r, i }));
+  if (sort === "failed") list.sort((a, b) => Number(a.r.passed) - Number(b.r.passed) || a.i - b.i);
+  else if (sort === "risk") list.sort((a, b) => a.r.score - b.r.score || a.i - b.i); // lowest score = most flagged
+  return list.map((x) => x.r);
+}
+
 function render() {
   if (!page) return;
-  const results = runEvalSuite();
+  let results;
+  try {
+    results = runEvalSuite();
+  } catch {
+    page.innerHTML = `<p class="eval-error">Safety Lab couldn't run the local benchmark just now. The app can still audit plans — benchmark proof is temporarily unavailable.</p>`;
+    return;
+  }
   const totalExp = results.reduce((n, r) => n + r.expectations.length, 0);
   const passExp = results.reduce((n, r) => n + r.expectations.filter((e) => e.ok).length, 0);
   const casesPass = results.filter((r) => r.passed).length;
@@ -48,15 +65,16 @@ function render() {
     all: results.length,
     passed: casesPass,
     failed: results.length - casesPass,
+    good: results.filter((r) => r.type === "good").length,
     risky: results.filter((r) => r.type === "risky").length,
     guard: results.filter((r) => r.type === "guard").length,
   };
-  const filters = `<div class="eval-filters" role="tablist">${["all", "passed", "failed", "risky", "guard"]
-    .map((f) => `<button type="button" class="eval-filter ${filter === f ? "is-active" : ""}" data-filter="${f}">${FILTER_LABEL[f]} <span class="eval-filter__n">${counts[f]}</span></button>`)
-    .join("")}</div>`;
+  const filters = `<div class="eval-controls">
+    <div class="eval-filters" role="tablist">${FILTERS.map((f) => `<button type="button" class="eval-filter ${filter === f ? "is-active" : ""}" data-filter="${f}">${FILTER_LABEL[f]} <span class="eval-filter__n">${counts[f]}</span></button>`).join("")}</div>
+    <label class="eval-sort">Sort <select id="eval-sort-select">${Object.entries(SORT_LABEL).map(([k, v]) => `<option value="${k}"${sort === k ? " selected" : ""}>${v}</option>`).join("")}</select></label>
+  </div>`;
 
-  const cards = results
-    .filter(matchesFilter)
+  const cards = sortCases(results.filter(matchesFilter))
     .map(
       (r) => `
     <div class="eval-case eval-case--${r.type} ${r.passed ? "is-pass" : "is-fail"}">
@@ -81,6 +99,13 @@ function render() {
 
   page.innerHTML = summary + filters + `<div class="eval-cases">${cards || '<p class="muted eval-empty">No cases match this filter.</p>'}</div>`;
 }
+
+page?.addEventListener("change", (e) => {
+  if (e.target.id === "eval-sort-select") {
+    sort = e.target.value;
+    render();
+  }
+});
 
 page?.addEventListener("click", (e) => {
   const filterBtn = e.target.closest(".eval-filter");

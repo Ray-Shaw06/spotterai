@@ -2290,6 +2290,12 @@ table {
   font-size: var(--fs-small);
 }
 /* Filters + scenario types (red-team report) */
+.eval-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-4) 0; }
+.eval-controls .eval-filters { margin: 0; }
+.eval-sort { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-small); color: var(--text-muted); }
+.eval-sort select { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 5px 9px; font: inherit; font-size: var(--fs-small); cursor: pointer; }
+.eval-error { padding: var(--space-5); background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); border-radius: var(--r-md); color: var(--text-muted); font-size: var(--fs-small); }
+.bench__tag { display: inline-block; font-size: 0.58rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); padding: 3px 9px; vertical-align: middle; margin-left: 8px; }
 .eval-filters { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-4) 0; }
 .eval-filter { display: inline-flex; align-items: center; gap: 6px; padding: 0.4rem 0.85rem; font-size: var(--fs-small); font-weight: 500; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition); }
 .eval-filter:hover { color: var(--text); border-color: var(--accent-ring); }
