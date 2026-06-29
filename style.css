@@ -1007,6 +1007,30 @@ table {
 .tech p { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; }
 
 /* ----------------------------------------------------------------------------
+   Pain Mode modal
+---------------------------------------------------------------------------- */
+.pain-dialog { max-width: 540px; }
+.pain-intro { font-size: var(--fs-small); color: var(--text-muted); margin-bottom: var(--space-4); }
+.pain-field { margin-bottom: var(--space-4); }
+.pain-label { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); font-weight: 600; margin-bottom: var(--space-2); }
+.pain-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.pain-chip { padding: 0.5rem 0.9rem; font-size: var(--fs-small); font-weight: 500; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition); }
+.pain-chip:hover { color: var(--text); border-color: var(--accent-ring); }
+.pain-chip.is-active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-ring); }
+.pain-result { padding: var(--space-4); border: 1px solid var(--border); border-left-width: 3px; border-radius: var(--r-md); background: var(--surface-2); }
+.pain-result--critical { border-left-color: var(--danger); }
+.pain-result--warning { border-left-color: var(--warn); }
+.pain-result__headline { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
+.pain-result--critical .pain-result__headline { color: var(--danger); }
+.pain-result--warning .pain-result__headline { color: var(--warn); }
+.pain-result__advice { list-style: none; padding: 0; margin: var(--space-3) 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.pain-result__advice li { position: relative; padding-left: var(--space-4); font-size: var(--fs-small); color: var(--text); line-height: 1.5; }
+.pain-result__advice li::before { content: "•"; position: absolute; left: 4px; color: var(--text-faint); }
+.pain-changed { margin-top: var(--space-2); font-size: var(--fs-small); color: var(--success); }
+.pain-disclaimer { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--text-faint); }
+.pain-result__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+
+/* ----------------------------------------------------------------------------
    Today screen (consumer daily home base)
 ---------------------------------------------------------------------------- */
 .today-quick { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-5); }

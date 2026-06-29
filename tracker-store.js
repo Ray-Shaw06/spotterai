@@ -24,6 +24,7 @@ const DEFAULTS = {
   customExercises: [], // user-added exercises { name, muscle, cardio }
   customFoods: [], // user-added foods { name, serving, kcal, protein, carbs, fat }
   water: {}, // { 'YYYY-MM-DD': ml }
+  painReports: [], // { id, date, location, severity, timing, note, injuryKey }
   unit: "kg",
 };
 
@@ -259,6 +260,29 @@ export function addWater(deltaMl, date) {
 }
 export function getWater(date) {
   return state.water[date || today()] || 0;
+}
+
+// --- Pain reports (Pain Mode) ----------------------------------------------
+export function addPainReport({ location, severity, timing = "", note = "", injuryKey = null, date } = {}) {
+  const entry = { id: uid(), date: date || today(), location, severity, timing, note: String(note || ""), injuryKey: injuryKey || null };
+  if (!Array.isArray(state.painReports)) state.painReports = [];
+  state.painReports.push(entry);
+  persist();
+  return entry;
+}
+export function getPainReports() {
+  return [...(state.painReports || [])];
+}
+/** Evaluator injury keys from pain reports in the last `days` (active limitations). */
+export function getActiveLimitations(days = 14) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cut = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, "0")}-${String(cutoff.getDate()).padStart(2, "0")}`;
+  const keys = new Set();
+  for (const r of state.painReports || []) {
+    if (r.injuryKey && r.date >= cut) keys.add(r.injuryKey);
+  }
+  return [...keys];
 }
 
 /** Most recent distinct foods (for quick re-add). */
@@ -606,6 +630,8 @@ export function getContext() {
     bodyweight: { latest: d.bodyweight.latest, change: d.bodyweight.change, unit: state.unit },
     personalRecords: d.prs,
     achievementsUnlocked: d.achievements.filter((a) => a.unlocked).map((a) => a.name),
+    activeLimitations: getActiveLimitations(),
+    recentPain: (state.painReports || []).slice(-5).map((r) => ({ date: r.date, location: r.location, severity: r.severity })),
   };
 }
 
