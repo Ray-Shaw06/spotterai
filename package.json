@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "An AI fitness coach that audits its own safety. Generates a personalized weekly training program with Gemini, then runs a pure-code evaluator that scores the plan for safety and quality.",
+  "description": "Your AI fitness copilot — plan, track, adapt, and audit your training. Generates a weekly plan with Gemini, then a deterministic evaluator flags risky/low-quality programming (flags-first, with fixes) before you trust it.",
   "scripts": {
     "dev": "vercel dev",
     "start": "vercel dev",
-    "test": "node --test"
+    "test": "node --test",
+    "check": "node --test",
+    "eval": "node eval.mjs"
   },
   "license": "MIT",
   "engines": {
