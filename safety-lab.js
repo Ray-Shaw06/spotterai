@@ -228,15 +228,27 @@ function render() {
   mount.innerHTML = bench + cols + rules + examples + privacy + principles + tech;
 }
 
+// Compact live benchmark summary for the homepage teaser.
+function renderTeaser() {
+  const el = document.getElementById("home-safety-teaser");
+  if (!el) return;
+  const b = benchmark();
+  const stat = (n, label, cls = "") => `<div class="lab-teaser__stat"><span class="lab-teaser__num ${cls}">${n}</span><span class="lab-teaser__label">${label}</span></div>`;
+  el.innerHTML =
+    stat(b.total, "test cases") +
+    stat(`${b.riskyCaught}/${b.riskyTotal}`, "risky plans caught", "is-ok") +
+    stat(b.falsePositives, "false positives", b.falsePositives ? "is-warn" : "is-ok") +
+    stat(`${b.expPass}/${b.expTotal}`, "expectations passed", "is-ok");
+}
+
 // Render off the critical path (the benchmark + timing loop shouldn't block first
 // paint) and never let a benchmark failure blank the page.
-if (mount) {
-  const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1));
-  idle(() => {
-    try {
-      render();
-    } catch {
-      mount.innerHTML = `<div class="lab-block"><p class="eval-error">Safety Lab couldn't run the local benchmark just now. The app can still audit plans — benchmark proof is temporarily unavailable.</p></div>`;
-    }
-  });
-}
+const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1));
+idle(() => {
+  try {
+    if (mount) render();
+    renderTeaser();
+  } catch {
+    if (mount) mount.innerHTML = `<div class="lab-block"><p class="eval-error">Safety Lab couldn't run the local benchmark just now. The app can still audit plans — benchmark proof is temporarily unavailable.</p></div>`;
+  }
+});

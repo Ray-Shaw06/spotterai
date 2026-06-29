@@ -239,6 +239,28 @@
             <p class="scenario__row"><span class="scenario__k">What it changes</span> Suggests fewer weekly sessions or shorter workouts, then re-audits the adapted plan before recommending it.</p>
             <p class="scenario__why"><span class="scenario__k">Why that builds trust</span> Changes come from what you really did — and the new plan still passes the safety audit.</p>
           </article>
+          <article class="scenario">
+            <h3 class="scenario__title">Aggressive nutrition goal</h3>
+            <p class="scenario__input"><span class="scenario__k">Input</span> Sets a very low calorie target to lose weight fast.</p>
+            <p class="scenario__row"><span class="scenario__k">What it checks</span> Calorie, protein, and fat targets against a safe floor and rough maintenance.</p>
+            <p class="scenario__row"><span class="scenario__k">What it changes</span> Flags the aggressive target, suggests a moderate range, and refuses starvation/purging language outright.</p>
+            <p class="scenario__why"><span class="scenario__k">Why that builds trust</span> Nutrition gets the same conservative guardrails as training — it never prescribes an extreme diet.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== SAFETY LAB TEASER ===================== -->
+    <section class="section" aria-labelledby="lab-teaser-title">
+      <div class="container">
+        <div class="card lab-teaser">
+          <div class="lab-teaser__copy">
+            <p class="eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span> Visible evaluation proof</p>
+            <h2 class="section-title" id="lab-teaser-title">The auditor is tested in the open</h2>
+            <p class="section-subtitle">SpotterAI doesn't just claim it's safe — it runs the evaluator against known-good and intentionally risky plans, live in your browser, and shows the results.</p>
+            <a href="#/evals" data-nav="evals" class="btn btn--primary">Explore the Safety Lab</a>
+          </div>
+          <div class="lab-teaser__stats" id="home-safety-teaser" aria-live="polite"></div>
         </div>
       </div>
     </section>
@@ -471,6 +493,44 @@
       </div>
     </section>
 
+    <!-- ===================== ARCHITECTURE ===================== -->
+    <section class="section" aria-labelledby="arch-title">
+      <div class="container">
+        <header class="section-head section-head--start">
+          <p class="eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span> Under the hood</p>
+          <h2 class="section-title" id="arch-title">How SpotterAI is built</h2>
+          <p class="section-subtitle">SpotterAI separates creative AI generation from deterministic safety checks. The AI can draft flexible plans, but the evaluator applies consistent rules, structured exercise metadata, repair logic, and regression-tested checks before a plan is recommended.</p>
+        </header>
+        <ol class="arch-flow" aria-label="Architecture flow">
+          <li class="arch-flow__node">Your input</li>
+          <li class="arch-flow__arrow" aria-hidden="true">→</li>
+          <li class="arch-flow__node arch-flow__node--ai">AI draft <span>(Gemini)</span></li>
+          <li class="arch-flow__arrow" aria-hidden="true">→</li>
+          <li class="arch-flow__node arch-flow__node--code">Evaluator <span>(pure code)</span></li>
+          <li class="arch-flow__arrow" aria-hidden="true">→</li>
+          <li class="arch-flow__node arch-flow__node--code">Repair</li>
+          <li class="arch-flow__arrow" aria-hidden="true">→</li>
+          <li class="arch-flow__node arch-flow__node--code">Re-audit</li>
+          <li class="arch-flow__arrow" aria-hidden="true">→</li>
+          <li class="arch-flow__node arch-flow__node--code">Trust Report</li>
+          <li class="arch-flow__arrow" aria-hidden="true">→</li>
+          <li class="arch-flow__node">Logs</li>
+          <li class="arch-flow__arrow" aria-hidden="true">→</li>
+          <li class="arch-flow__node arch-flow__node--loop">Adaptation ↺</li>
+        </ol>
+        <ul class="arch-grid">
+          <li><strong>Deterministic evaluator</strong> — pure code, no LLM; tiers + fixes; CI-gated.</li>
+          <li><strong>Structured exercise DB</strong> — muscles, joint stress, contraindications, substitutions.</li>
+          <li><strong>Plan repair engine</strong> — flag → safer edit → re-audit.</li>
+          <li><strong>Trust Reports</strong> — confidence + limitations on every plan.</li>
+          <li><strong>Safety boundaries</strong> — refuse pain / diagnosis / ED requests pre-call.</li>
+          <li><strong>Nutrition guardrails</strong> — conservative target checks + Trust Report.</li>
+          <li><strong>Local-first tracking</strong> — workouts, meals, progress in your browser.</li>
+          <li><strong>70+ tests</strong> — evaluator, repair, boundaries, trust, benchmark, UI labels.</li>
+        </ul>
+      </div>
+    </section>
+
     <!-- ===================== LIMITATIONS ===================== -->
     <section class="section" aria-labelledby="limits-title">
       <div class="container">
@@ -491,6 +551,20 @@
             <li>Handling medical conditions without professional guidance</li>
           </ul>
           <p class="limits__redirect">SpotterAI <strong>can</strong> still help you create a more conservative general plan, track habits, and identify obvious programming issues.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== FINAL CTA ===================== -->
+    <section class="section" aria-labelledby="cta-title">
+      <div class="container">
+        <div class="final-cta">
+          <h2 class="final-cta__title" id="cta-title">Build a plan you can actually trust.</h2>
+          <p class="final-cta__sub">Generate a plan, see every flag with a fix, and audit it before you train — free, no signup, runs on your device.</p>
+          <div class="final-cta__actions">
+            <a href="#generator" class="btn btn--primary">Build my plan</a>
+            <button type="button" id="cta-demo" class="btn btn--ghost">Try the live demo</button>
+          </div>
         </div>
       </div>
     </section>

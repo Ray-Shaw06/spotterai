@@ -1024,6 +1024,36 @@ table {
 .limits__list li { position: relative; padding-left: var(--space-5); font-size: var(--fs-small); color: var(--text-muted); }
 .limits__list li::before { content: "✕"; position: absolute; left: 2px; color: var(--danger); font-size: 0.8rem; font-weight: 700; }
 .limits__redirect { padding: var(--space-3) var(--space-4); font-size: var(--fs-small); color: var(--text); background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: var(--r-sm); }
+
+/* Safety Lab teaser (homepage) */
+.lab-teaser { display: grid; grid-template-columns: 1.15fr 1fr; gap: var(--space-6); padding: var(--space-6); align-items: center; }
+.lab-teaser__copy .btn { margin-top: var(--space-4); }
+.lab-teaser__stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.lab-teaser__stat { padding: var(--space-4); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); }
+.lab-teaser__num { display: block; font-family: var(--font-mono); font-size: 1.5rem; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+.lab-teaser__num.is-ok { color: var(--success); }
+.lab-teaser__num.is-warn { color: var(--warn); }
+.lab-teaser__label { font-size: 0.78rem; color: var(--text-muted); }
+@media (max-width: 760px) { .lab-teaser { grid-template-columns: 1fr; } }
+
+/* Architecture flow (homepage) */
+.arch-flow { list-style: none; padding: 0; margin: var(--space-6) 0 var(--space-5); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.arch-flow__node { padding: 0.55rem 0.85rem; font-size: var(--fs-small); font-weight: 500; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-md); white-space: nowrap; }
+.arch-flow__node span { color: var(--text-faint); font-size: 0.74rem; }
+.arch-flow__node--ai { border-color: var(--accent-ring); color: var(--accent); }
+.arch-flow__node--code { border-left: 3px solid var(--accent); }
+.arch-flow__node--loop { border-color: var(--accent-ring); color: var(--accent); background: var(--accent-soft); }
+.arch-flow__arrow { color: var(--text-faint); }
+.arch-grid { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-2) var(--space-5); }
+.arch-grid li { position: relative; padding-left: var(--space-4); font-size: var(--fs-small); color: var(--text-muted); }
+.arch-grid li::before { content: ""; position: absolute; left: 2px; top: 9px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.arch-grid strong { color: var(--text); font-weight: 600; }
+
+/* Final CTA (homepage) */
+.final-cta { text-align: center; padding: var(--space-8) var(--space-5); background: radial-gradient(80% 130% at 50% 0%, var(--accent-soft), transparent 70%); border: 1px solid var(--border); border-radius: var(--r-xl); }
+.final-cta__title { font-size: clamp(1.6rem, 4vw, 2.6rem); font-weight: 700; letter-spacing: -0.03em; }
+.final-cta__sub { margin: var(--space-3) auto 0; max-width: 56ch; color: var(--text-muted); }
+.final-cta__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: center; margin-top: var(--space-5); }
 .limits__redirect strong { color: var(--accent); }
 
 /* Rule explanation cards + training principles */

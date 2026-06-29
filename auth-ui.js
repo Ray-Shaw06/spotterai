@@ -29,6 +29,7 @@ const els = {
   syncBody: $("sync-body"),
   demo: $("account-demo"),
   heroDemo: $("hero-demo"),
+  ctaDemo: $("cta-demo"),
   welcomeDemo: $("welcome-demo"),
 };
 
@@ -251,6 +252,7 @@ function init() {
   // Triggerable from the account modal AND the hero "Try the live demo" button.
   els.demo?.addEventListener("click", () => runDemo(els.demo));
   els.heroDemo?.addEventListener("click", () => runDemo(els.heroDemo));
+  els.ctaDemo?.addEventListener("click", () => runDemo(els.ctaDemo));
   els.welcomeDemo?.addEventListener("click", () => runDemo(els.welcomeDemo));
 
   // Keep header + modal in sync when the profile changes.
