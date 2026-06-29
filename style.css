@@ -1079,6 +1079,17 @@ table {
 /* Nutrition safety section spacing (reuses .audit / .flag / .trust styling) */
 .nut-safety { margin-top: var(--space-5); }
 .nut-trust { margin-top: var(--space-4); }
+.nut-wontdo { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-4); margin-top: var(--space-4); }
+.nut-wontdo__col { padding: var(--space-4); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); border-top-width: 3px; }
+.nut-wontdo__col--no { border-top-color: var(--danger); }
+.nut-wontdo__col--yes { border-top-color: var(--success); }
+.nut-wontdo__col h5 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-2); }
+.nut-wontdo__col--no h5 { color: var(--danger); }
+.nut-wontdo__col--yes h5 { color: var(--success); }
+.nut-wontdo__col ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.nut-wontdo__col li { position: relative; padding-left: var(--space-4); font-size: var(--fs-small); color: var(--text-muted); }
+.nut-wontdo__col--no li::before { content: "✕"; position: absolute; left: 2px; color: var(--danger); font-size: 0.8rem; font-weight: 700; }
+.nut-wontdo__col--yes p { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.55; }
 
 /* ----------------------------------------------------------------------------
    Plan repair — before/after comparison

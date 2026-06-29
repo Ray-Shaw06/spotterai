@@ -13,7 +13,7 @@ import { addCustomFood, addNutrition, addWater, deriveStats, getCustomFoods, get
 import { searchFoods, searchOpenFoodFacts } from "./foods.js";
 import { estimateFood, estimateMealPhoto } from "./ai.js";
 import { ring } from "./charts.js";
-import { evaluateNutrition, NUTRITION_DISCLAIMER } from "./nutrition-safety.js";
+import { evaluateNutrition, NUTRITION_DISCLAIMER, NUTRITION_WONT_DO } from "./nutrition-safety.js";
 import { store } from "./store.js";
 
 const $ = (id) => document.getElementById(id);
@@ -134,13 +134,26 @@ function renderNutritionSafety() {
             ${row("Goal", esc(trust.goal))}
             ${row("Calorie target", trust.kcalTarget ? `${trust.kcalTarget} kcal` : "—")}
             ${row("Protein target", trust.proteinTarget ? `${trust.proteinTarget} g` : "—")}
+            ${row("Fat target", trust.fatTarget ? `${trust.fatTarget} g` : "—")}
             ${row("Confidence", `${trust.confidence} — ${esc(trust.whyLimited)}`)}
           </dl>
+          <div class="trust__block"><h5>Safer target range</h5><span class="muted">${esc(trust.saferSuggestion)}</span></div>
           <div class="trust__block"><h5>What data was used</h5>${list(trust.dataUsed, "—")}</div>
           <div class="trust__block"><h5>What's missing</h5>${list(trust.dataMissing, "Nothing major.")}</div>
           <p class="trust__disclaimer">${esc(NUTRITION_DISCLAIMER)}</p>
         </div>
       </details>
+
+      <div class="nut-wontdo">
+        <div class="nut-wontdo__col nut-wontdo__col--no">
+          <h5>What SpotterAI will not do with nutrition</h5>
+          <ul>${NUTRITION_WONT_DO.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+        </div>
+        <div class="nut-wontdo__col nut-wontdo__col--yes">
+          <h5>What it focuses on instead</h5>
+          <p>Sustainable habits: regular meals, protein consistency, hydration, moderate targets, and progress trends — not rapid weight loss or extreme restriction.</p>
+        </div>
+      </div>
     </div>`;
 }
 
