@@ -607,9 +607,35 @@ security rules below (each user can read/write only their own document), so
   hurts. It runs entirely on-device and uploads/stores nothing.
 - **The chatbot is educational.** It can be wrong or out of date and is not a
   substitute for a qualified coach, dietitian, or clinician.
+- **Nutrition is general habit support, not a diet.** The guardrails flag
+  aggressive calorie/macro targets and refuse starvation / purging / extreme-loss
+  language, but SpotterAI can't diagnose, prescribe a diet, or replace a
+  registered dietitian.
 - **Tracker data is local and unsynced.** Workouts, nutrition, and progress live
   only in the browser that created them — clearing site data wipes them, and
   there's no cross-device sync or global leaderboard (both would need a backend).
+
+### What not to trust SpotterAI for
+
+Diagnosing pain or injuries · medical rehab plans · eating-disorder support or
+treatment · extreme weight-loss plans · training through severe pain · replacing
+professional coaching for complex cases · guaranteeing exercise safety · judging
+true lifting form from one camera with certainty · handling medical conditions
+without professional guidance. It **can** still help you build a conservative
+general plan, track habits, and catch obvious programming issues.
+
+---
+
+## Future improvements
+
+- **Per-muscle weekly frequency** analysis (sets spread across the week vs
+  concentrated in one session), not just total volume.
+- **Broader structured exercise coverage** so the recognition rate approaches
+  100% and fewer lifts fall back to keyword logic.
+- A **fully deterministic adaptation engine** (the current adapt loop is
+  AI-assisted) so re-tuning works offline and is unit-testable end-to-end.
+- **Trust Report history** — track audits across plan versions over time.
+- **Equipment-fit and movement-pattern coverage** checks in the evaluator.
 
 ---
 
