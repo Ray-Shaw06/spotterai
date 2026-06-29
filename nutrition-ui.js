@@ -420,6 +420,7 @@ function showDetail(food, quick = false, opts = {}) {
   el.detail.innerHTML = `
     <button type="button" class="detail-back" data-act="detail-back">← Back</button>
     <p class="detail-food">${esc(food.name)}<span class="muted"> · per ${esc(food.serving || "serving")}</span></p>
+    ${food.source === "ai" ? `<p class="detail-uncertainty"><strong>AI estimate · confidence Medium.</strong> Portions, brands, and cooking oils vary a lot — adjust the servings to match what you actually ate before saving.</p>` : ""}
     <div class="detail-qty">
       <label class="field-label-sm">Servings<input id="detail-qty" class="input input--sm" type="number" min="0" step="0.25" value="1" inputmode="decimal" /></label>
       <label class="field-label-sm">Meal<select id="detail-meal" class="form-select">${mealOpts}</select></label>

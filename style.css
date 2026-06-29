@@ -1006,6 +1006,9 @@ table {
 .tech h5 { font-size: 0.92rem; font-weight: 600; color: var(--accent); margin-bottom: 5px; }
 .tech p { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; }
 
+.detail-uncertainty { margin: var(--space-2) 0 var(--space-3); padding: var(--space-2) var(--space-3); font-size: 0.8rem; color: var(--text-muted); background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); border-radius: var(--r-sm); line-height: 1.45; }
+.detail-uncertainty strong { color: var(--warn); }
+
 /* ----------------------------------------------------------------------------
    Pain Mode modal
 ---------------------------------------------------------------------------- */

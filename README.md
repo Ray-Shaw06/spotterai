@@ -118,6 +118,48 @@ the loop spans days, not just one session.
 
 ---
 
+## Consumer-readiness features
+
+Beyond the evaluator, SpotterAI is built to be opened **every day**:
+
+- **Today screen** — a daily home base that answers "what should I do today?":
+  today's workout (warm-up, exercises, start/skip/substitute), a coach note
+  derived from your real logs + limitations, a nutrition focus (protein / kcal /
+  water remaining), a recovery + pain check-in, and quick actions. Friendly
+  empty state until you have a plan.
+- **Pain Mode** — a conservative pain check-in (location / severity / timing).
+  It never diagnoses or prescribes rehab; mild → modify, moderate → stop +
+  swap, severe → stop, see a professional, and block aggressive training of
+  that area. Mapped locations become a limitation and **re-audit your plan**.
+- **Healthy streaks & achievements** — reward consistency, recovery, and honest
+  logging (reporting pain *earns* XP). No "never miss" / shame language.
+- **Nutrition guardrails** — conservative target checks + a Nutrition Trust
+  Report + a "what we won't do" panel, with disordered-eating language refused
+  up front.
+- **Local-first** — workouts, meals, progress, and pain reports live in your
+  browser; export/import a JSON backup any time.
+
+### Manual QA checklist
+
+A quick pass before shipping (no automation required):
+
+| Area | Check |
+|---|---|
+| Browsers | Desktop Chrome · Desktop Safari · iPhone Safari · Android Chrome · small phone |
+| Network | Slow network · **no API available** (generation falls back to a saved sample) |
+| Today | Empty state with no plan · workout shown with a plan · recovery state on a rest day |
+| Generate | Knee limitation · lower-back limitation · all-push plan → flags + repair |
+| Pain Mode | Mild → modify · severe → stop + professional, no rehab · re-audit after mapped pain |
+| Adapt | Missed workouts → fewer/shorter sessions · re-audited + Trust Report |
+| Nutrition | Extreme calorie target flagged · ED language refused · reasonable target not over-flagged |
+| Form check | Camera denied · camera unavailable · low confidence → no strong advice · pain → stop |
+| Data | Export → import across browsers · bad backup file rejected · local-storage reset |
+| Safety Lab | Benchmark runs · filters/sort work · benchmark failure shows a friendly message |
+
+Run the evaluator benchmark from the CLI any time: `npm run eval`.
+
+---
+
 ## Evaluation methodology
 
 The evaluator is the centerpiece. It is **deterministic, code-based, and
