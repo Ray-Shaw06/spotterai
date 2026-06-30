@@ -37,6 +37,16 @@ Guidelines:
 
   if (plan && typeof plan === "object") {
     s += `\n\nThe user's CURRENT generated plan (JSON):\n${JSON.stringify(plan).slice(0, MAX_PLAN_CHARS)}`;
+    s += `\n\nYOU CAN EDIT THE PLAN FOR THE USER. When — and ONLY when — they explicitly ask you to change, substitute, swap, add, remove, or retune an exercise, append a fenced action block at the VERY END of your reply:
+\`\`\`spotter-action
+[{"type":"swap_exercise","from":"<exact plan exercise>","to":"<new exercise>"}]
+\`\`\`
+Action rules:
+- Allowed types only: swap_exercise {from,to,day?}, remove_exercise {name,day?}, add_exercise {name,day?,sets?,reps?}, retune_exercise {name,sets?,reps?,rpe?,day?}.
+- "day" is optional — a day label ("Day 2") or focus ("Upper Body"); omit to apply across the plan.
+- Use EXACT exercise names from the plan JSON above for "from"/"name".
+- Briefly explain the change in your normal reply text BEFORE the block; put the block ONLY at the end.
+- The app applies the edit and AUTO-RE-AUDITS the plan (showing any safety flags), so keep edits sensible: balanced push/pull and volume, safe substitutions, never anything that trains through pain. If the user is just asking a question, do NOT include a block.`;
   } else {
     s += `\n\nThe user has not generated a plan yet. If they ask about "my plan", invite them to generate one first.`;
   }

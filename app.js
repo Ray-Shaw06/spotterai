@@ -20,6 +20,9 @@ import { ruleForCheck } from "./rule-explanations.js";
 import { planConfidence } from "./trust.js";
 import { setPlan, store } from "./store.js";
 import { getContext as getTrackerContext } from "./tracker-store.js";
+import { swapExercise, removeExercise, addExercise } from "./plan-edit.js";
+import { suggestAlternatives } from "./exercise-data.js";
+import { searchExercises } from "./exercises.js";
 
 // ----------------------------------------------------------------------------
 // Element references
@@ -506,13 +509,14 @@ function renderPlan(plan) {
           <h4 class="day-card__focus">${esc(day.focus)}</h4>
         </header>
         <div class="day-card__table-wrap">
-          <table class="ex-table">
+          <table class="ex-table ex-table--editable">
             <thead>
               <tr>
                 <th scope="col">Exercise</th>
                 <th scope="col" class="num">Sets</th>
                 <th scope="col" class="num">Reps</th>
                 <th scope="col" class="num">RPE</th>
+                <th scope="col" class="num"><span class="sr-only">Edit</span></th>
               </tr>
             </thead>
             <tbody>
@@ -527,12 +531,18 @@ function renderPlan(plan) {
                   <td class="num">${esc(ex.sets)}</td>
                   <td class="num">${esc(ex.reps)}</td>
                   <td class="num">${ex.rpe == null || ex.rpe === "" ? "—" : esc(ex.rpe)}</td>
+                  <td class="ex-row-acts">
+                    <button type="button" class="ex-act" data-act="ex-swap" data-day="${idx}" data-name="${esc(ex.name)}" title="Substitute" aria-label="Substitute ${esc(ex.name)}">⇄</button>
+                    <button type="button" class="ex-act ex-act--del" data-act="ex-remove" data-day="${idx}" data-name="${esc(ex.name)}" title="Remove" aria-label="Remove ${esc(ex.name)}">×</button>
+                  </td>
                 </tr>`
                 )
                 .join("")}
             </tbody>
           </table>
         </div>
+        <div class="day-edit" data-day-edit="${idx}"></div>
+        <button type="button" class="day-add" data-act="day-add" data-day="${idx}">+ Add exercise</button>
       </article>`
     )
     .join("");
@@ -699,6 +709,86 @@ window.addEventListener("spotter:plan", (e) => {
 // Logging a workout enables the adapt button live (if results are on screen).
 window.addEventListener("spotter:tracker", () => {
   if (adaptCard && !adaptCard.hidden) updateAdaptHint();
+});
+
+// ----------------------------------------------------------------------------
+// Plan editor: substitute / remove / add exercises on the plan page. Every edit
+// goes through the shared plan-edit primitives, then setPlan → full re-audit.
+// ----------------------------------------------------------------------------
+function planLimitations() { return store.inputs?.injuries || []; }
+function planEquipment() {
+  const eq = store.inputs?.equipment || [];
+  return eq.some((x) => /gym/i.test(x)) ? [] : eq; // a full gym → don't filter
+}
+function commitPlan(result) {
+  if (result && result.changed) setPlan(result.plan, store.inputs); // → re-audit + re-render
+}
+function dayEditBox(day) {
+  return planOutput.querySelector(`[data-day-edit="${day}"]`);
+}
+function altPool(name) {
+  const a = suggestAlternatives(name, { limitations: planLimitations(), equipment: planEquipment() });
+  return [...new Set([...(a.safer || []), ...(a.recommended || []), ...(a.easier || []), ...(a.harder || [])])].slice(0, 8);
+}
+function renderSwapPanel(day, name) {
+  const box = dayEditBox(day);
+  if (!box) return;
+  const chips = altPool(name);
+  box.innerHTML = `
+    <div class="ex-edit-panel">
+      <p class="ex-edit-title">Substitute <strong>${esc(name)}</strong></p>
+      ${chips.length ? `<div class="ex-edit-chips">${chips.map((n) => `<button type="button" class="ex-edit-chip" data-act="ex-swap-to" data-day="${day}" data-from="${esc(name)}" data-to="${esc(n)}">${esc(n)}</button>`).join("")}</div>` : `<p class="ex-edit-muted">No structured alternatives — search any exercise below.</p>`}
+      <input type="search" class="input ex-edit-search" data-edit-search="swap" data-day="${day}" data-from="${esc(name)}" placeholder="…or search any exercise" aria-label="Search a replacement exercise" />
+      <div class="ex-edit-results" data-edit-results></div>
+      <button type="button" class="btn-link ex-edit-cancel" data-act="ex-edit-cancel" data-day="${day}">Cancel</button>
+    </div>`;
+  box.querySelector(".ex-edit-search")?.focus();
+}
+function renderAddPanel(day) {
+  const box = dayEditBox(day);
+  if (!box) return;
+  box.innerHTML = `
+    <div class="ex-edit-panel">
+      <p class="ex-edit-title">Add an exercise</p>
+      <input type="search" class="input ex-edit-search" data-edit-search="add" data-day="${day}" placeholder="Search exercises…" aria-label="Search an exercise to add" />
+      <div class="ex-edit-results" data-edit-results></div>
+      <button type="button" class="btn-link ex-edit-cancel" data-act="ex-edit-cancel" data-day="${day}">Cancel</button>
+    </div>`;
+  box.querySelector(".ex-edit-search")?.focus();
+}
+function renderEditResults(inp) {
+  const panel = inp.closest(".ex-edit-panel");
+  const box = panel?.querySelector("[data-edit-results]");
+  if (!box) return;
+  const mode = inp.dataset.editSearch;
+  const day = inp.dataset.day;
+  const from = inp.dataset.from || "";
+  const q = inp.value.trim();
+  const act = mode === "swap" ? "ex-swap-to" : "ex-add";
+  const data = (name) => (mode === "swap" ? `data-from="${esc(from)}" data-to="${esc(name)}"` : `data-name="${esc(name)}"`);
+  const results = q.length >= 2 ? searchExercises(q, 8).map((e) => e.name) : [];
+  let html = results.map((n) => `<button type="button" class="ex-edit-result" data-act="${act}" data-day="${day}" ${data(n)}>${esc(n)}</button>`).join("");
+  if (q.length >= 2 && !results.some((n) => n.toLowerCase() === q.toLowerCase())) {
+    html += `<button type="button" class="ex-edit-result ex-edit-result--custom" data-act="${act}" data-day="${day}" ${data(q)}>Use “${esc(q)}”</button>`;
+  }
+  box.innerHTML = html;
+}
+
+planOutput.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-act]");
+  if (!btn) return;
+  const act = btn.dataset.act;
+  const day = btn.dataset.day != null ? Number(btn.dataset.day) : null;
+  if (act === "ex-remove") commitPlan(removeExercise(store.plan, { name: btn.dataset.name, day }));
+  else if (act === "ex-swap") renderSwapPanel(day, btn.dataset.name);
+  else if (act === "day-add") renderAddPanel(day);
+  else if (act === "ex-swap-to") commitPlan(swapExercise(store.plan, { from: btn.dataset.from, to: btn.dataset.to, day }));
+  else if (act === "ex-add") commitPlan(addExercise(store.plan, { name: btn.dataset.name, day }));
+  else if (act === "ex-edit-cancel") { const b = dayEditBox(day); if (b) b.innerHTML = ""; }
+});
+planOutput.addEventListener("input", (e) => {
+  const inp = e.target.closest("[data-edit-search]");
+  if (inp) renderEditResults(inp);
 });
 
 wireInjuryExclusivity();

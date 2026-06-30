@@ -2182,6 +2182,24 @@ table {
 .ex-table {
   font-size: 0.875rem;
 }
+/* Plan editor — per-exercise substitute/remove + per-day add */
+.ex-row-acts { white-space: nowrap; text-align: right; padding-right: var(--space-3); }
+.ex-act { width: 26px; height: 26px; margin-left: 2px; font-size: 0.95rem; line-height: 1; color: var(--text-faint); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; transition: var(--transition); }
+.ex-act:hover { color: var(--accent); border-color: var(--accent-ring); }
+.ex-act--del:hover { color: var(--danger); border-color: var(--danger); }
+.day-add { width: 100%; margin-top: var(--space-2); padding: 0.5rem; font-size: var(--fs-small); font-weight: 600; color: var(--text-muted); background: none; border: 1px dashed var(--border); border-radius: var(--r-sm); cursor: pointer; transition: var(--transition); }
+.day-add:hover { color: var(--accent); border-color: var(--accent-ring); }
+.day-edit:empty { display: none; }
+.ex-edit-panel { margin-top: var(--space-2); padding: var(--space-3); background: var(--surface-2); border: 1px solid var(--accent-ring); border-radius: var(--r-md); }
+.ex-edit-title { font-size: var(--fs-small); color: var(--text-muted); margin-bottom: var(--space-2); }
+.ex-edit-muted { font-size: 0.78rem; color: var(--text-faint); margin-bottom: var(--space-2); }
+.ex-edit-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--space-2); }
+.ex-edit-chip, .ex-edit-result { padding: 0.35rem 0.7rem; font-size: 0.78rem; font-weight: 500; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition); }
+.ex-edit-chip:hover, .ex-edit-result:hover { color: var(--accent); border-color: var(--accent); }
+.ex-edit-search { width: 100%; margin-bottom: var(--space-2); }
+.ex-edit-results { display: flex; flex-wrap: wrap; gap: 6px; }
+.ex-edit-result--custom { border-style: dashed; color: var(--text-muted); }
+.ex-edit-cancel { display: inline-block; margin-top: var(--space-2); font-size: 0.78rem; }
 .ex-table thead th {
   text-align: left;
   font-size: 0.68rem;
@@ -2658,6 +2676,16 @@ table {
   background: color-mix(in srgb, var(--warn) 10%, transparent);
   font-size: 0.8rem;
 }
+/* Coach applied a plan edit */
+.chat-applied {
+  display: flex; gap: var(--space-2); margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3); font-size: 0.8rem;
+  border: 1px solid var(--success-ring); background: var(--success-soft); border-radius: var(--r-sm);
+}
+.chat-applied__tick { color: var(--success); font-weight: 700; }
+.chat-applied strong { color: var(--text); }
+.chat-applied ul { margin: 4px 0 4px; padding-left: 1.1em; color: var(--text-muted); }
+.chat-applied__link { display: inline-block; margin-top: 2px; color: var(--accent); font-weight: 600; }
 .chat-guard--warn {
   border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
   background: color-mix(in srgb, var(--danger) 10%, transparent);

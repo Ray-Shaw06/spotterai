@@ -9,10 +9,12 @@
  * context ("ask about my plan").
  */
 
-import { store } from "./store.js";
+import { store, setPlan } from "./store.js";
 import { getContext as getTrackerContext } from "./tracker-store.js";
 import { auditReply } from "./chat-guard.js";
 import { screenRequest, SAFE_REDIRECT } from "./safety-boundaries.js";
+import { parseCoachActions, describeAction } from "./chat-actions.js";
+import { applyPlanAction } from "./plan-edit.js";
 
 const fab = document.getElementById("chat-fab");
 const panel = document.getElementById("chat-panel");
@@ -101,6 +103,29 @@ function scrollToBottom() {
 }
 
 // A code-based "safety note" appended under a reply flagged by chat-guard.js.
+// Apply the coach's plan edits through the shared primitives, then setPlan once
+// → the app re-audits + re-renders the plan (so safety flags always update).
+function applyCoachActions(actions) {
+  if (!store.plan) return [];
+  let plan = store.plan;
+  const summaries = [];
+  for (const a of actions) {
+    const { plan: next, changed } = applyPlanAction(plan, a);
+    if (changed) { plan = next; summaries.push(describeAction(a)); }
+  }
+  if (summaries.length) setPlan(plan, store.inputs);
+  return summaries;
+}
+
+function renderApplied(summaries) {
+  const div = document.createElement("div");
+  div.className = "chat-applied";
+  div.innerHTML = `<span class="chat-applied__tick" aria-hidden="true">✓</span><div><strong>Updated your plan</strong><ul>${summaries
+    .map((s) => `<li>${escapeHtml(s)}</li>`)
+    .join("")}</ul><a href="#/" data-nav="home" class="chat-applied__link">View the re-audited plan →</a></div>`;
+  return div;
+}
+
 function renderGuard(flags) {
   const box = document.createElement("div");
   const worst = flags.some((f) => f.severity === "warn") ? "warn" : "caution";
@@ -234,11 +259,18 @@ async function send() {
     } else {
       const data = await res.json();
       const reply = data.reply || "Sorry, I didn't catch that — could you rephrase?";
-      messages.push({ role: "assistant", content: reply });
-      const bubble = addBubble("assistant", formatReply(reply), { raw: true });
+      // The coach may append a plan-edit action block; pull it out + apply it.
+      const { actions, text: cleanReply } = parseCoachActions(reply);
+      const shown = cleanReply || reply;
+      messages.push({ role: "assistant", content: shown });
+      const bubble = addBubble("assistant", formatReply(shown), { raw: true });
       // Audit the coach's OWN reply with pure code — flag any unsafe advice.
-      const flags = auditReply(reply);
+      const flags = auditReply(shown);
       if (flags.length) bubble.appendChild(renderGuard(flags));
+      if (actions.length) {
+        const applied = applyCoachActions(actions);
+        if (applied.length) bubble.appendChild(renderApplied(applied));
+      }
     }
   } catch {
     hideTyping();
