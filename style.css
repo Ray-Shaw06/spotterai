@@ -4238,6 +4238,19 @@ table {
   border-color: var(--danger);
 }
 
+/* Units (metric / imperial) segmented toggle */
+.unit-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.unit-opt {
+  display: flex; flex-direction: column; gap: 2px; align-items: flex-start; text-align: left;
+  padding: var(--space-3) var(--space-4); color: var(--text-muted);
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); cursor: pointer; transition: var(--transition);
+}
+.unit-opt strong { color: var(--text); font-size: 0.92rem; }
+.unit-opt span { font-size: 0.72rem; color: var(--text-faint); }
+.unit-opt:hover { border-color: var(--accent-ring); }
+.unit-opt.is-active { border-color: var(--accent); background: var(--accent-soft); }
+.unit-opt.is-active strong { color: var(--accent); }
+
 /* Header responsive: hamburger + dropdown nav */
 @media (max-width: 860px) {
   /* Right group, in visual order: …  profile-avatar  hamburger */

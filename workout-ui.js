@@ -460,7 +460,7 @@ function renderSession() {
           const prevCell = prevSet ? `${prevSet.weight ? prevSet.weight + "×" : ""}${prevSet.reps || "–"}` : "–";
           const cells = cardio
             ? `<td><input class="input set-in" data-f="durationMin" type="number" inputmode="decimal" value="${esc(s.durationMin ?? "")}" placeholder="min" /></td>
-               <td><input class="input set-in" data-f="distance" type="number" inputmode="decimal" value="${esc(s.distance ?? "")}" placeholder="km" /></td>`
+               <td><input class="input set-in" data-f="distance" type="number" inputmode="decimal" value="${esc(s.distance ?? "")}" placeholder="${unit() === "lb" ? "mi" : "km"}" /></td>`
             : `<td><input class="input set-in" data-f="weight" type="number" inputmode="decimal" value="${esc(s.weight ?? "")}" placeholder="${esc(sug?.weight ?? prevSet?.weight ?? "")}" /></td>
                <td><input class="input set-in" data-f="reps" type="number" inputmode="numeric" value="${esc(s.reps ?? "")}" placeholder="${esc(prevSet?.reps ?? "")}" /></td>`;
           return `<tr class="set-row ${s.done ? "is-done" : ""}" data-set="${si}">

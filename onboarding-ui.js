@@ -23,7 +23,7 @@ import {
   bodyweightKg,
 } from "./onboarding.js";
 import { saferTargets } from "./nutrition-safety.js";
-import { setTargets } from "./tracker-store.js";
+import { setTargets, setUnit } from "./tracker-store.js";
 
 const $ = (id) => document.getElementById(id);
 const overlay = $("onboarding");
@@ -146,6 +146,8 @@ function close() {
 
 function finish() {
   const inputs = mapOnboardingToInputs(data);
+  // Apply the chosen measurement system (kg/lb → also drives ml/floz, km/mi).
+  setUnit(data.units === "lb" ? "lb" : "kg");
   // Seed conservative nutrition targets from bodyweight + goal.
   const kg = bodyweightKg(data);
   if (kg) {

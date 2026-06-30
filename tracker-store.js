@@ -494,9 +494,43 @@ export function setTargets(t) {
   persist();
 }
 
+/**
+ * Switch weight units (kg ⇄ lb), which also flips the whole imperial/metric
+ * system used for display (water → fl oz, distance → mi). Stored weights are in
+ * the active unit, so we convert all of them — bodyweight, logged set weights,
+ * saved-routine weights, and cardio distances — so the numbers stay physically
+ * correct rather than just being relabelled. (Water is stored canonically in ml,
+ * so it needs no conversion — only display.)
+ */
 export function setUnit(unit) {
-  state.unit = unit === "lb" ? "lb" : "kg";
+  const next = unit === "lb" ? "lb" : "kg";
+  if (next === state.unit) return;
+  const wf = next === "lb" ? 2.2046226218 : 1 / 2.2046226218; // kg⇄lb
+  const df = next === "lb" ? 0.62137119 : 1.609344; // km⇄mi
+  const r1 = (n, f) => (Number(n) > 0 ? Math.round(Number(n) * f * 10) / 10 : n);
+
+  state.bodyweight = (state.bodyweight || []).map((b) => ({ ...b, value: r1(b.value, wf) }));
+  if (state.targets && state.targets.weight) state.targets.weight = r1(state.targets.weight, wf);
+  const convSets = (list) => {
+    for (const w of list || []) {
+      for (const e of w.exercises || []) {
+        for (const s of e.sets || []) {
+          if (s.weight) s.weight = r1(s.weight, wf);
+          if (s.distance) s.distance = r1(s.distance, df);
+        }
+      }
+    }
+  };
+  convSets(state.workouts);
+  convSets(state.routines);
+
+  state.unit = next;
   persist();
+}
+
+/** True when the user is on imperial (lb / fl oz / mi). */
+export function isImperial() {
+  return state.unit === "lb";
 }
 
 export function removeEntry(kind, id) {

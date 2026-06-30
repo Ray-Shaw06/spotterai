@@ -9,7 +9,7 @@
  */
 
 import { createProfile, deleteProfile, getActive, listProfiles, signIn, signOut, subscribe } from "./profile-store.js";
-import { clearAllData, exportData, importData } from "./tracker-store.js";
+import { clearAllData, exportData, getState, importData, setUnit } from "./tracker-store.js";
 import { SYNC_CONFIGURED, initSync, signInWithGoogle, signOutGoogle } from "./sync.js";
 import { seedDemo } from "./demo-data.js";
 
@@ -20,6 +20,7 @@ const els = {
   name: $("profile-name"),
   avatar: $("profile-avatar"),
   clear: $("account-clear"),
+  unitToggle: $("unit-toggle"),
   modal: $("account-modal"),
   close: $("account-close"),
   current: $("account-current"),
@@ -99,9 +100,15 @@ function renderHeader() {
 // ----------------------------------------------------------------------------
 let lastFocus = null;
 
+function renderUnits() {
+  const u = getState().unit;
+  els.unitToggle?.querySelectorAll(".unit-opt").forEach((b) => b.classList.toggle("is-active", b.dataset.unit === u));
+}
+
 function openModal() {
   renderModal();
   renderSync();
+  renderUnits();
   els.modal.classList.add("is-open");
   els.modal.setAttribute("aria-hidden", "false");
   els.btn.setAttribute("aria-expanded", "true");
@@ -203,6 +210,14 @@ function init() {
 
   els.btn.addEventListener("click", openModal);
   els.navBtn?.addEventListener("click", openModal); // mobile bottom-nav "Account"
+
+  // Units (metric/imperial)
+  els.unitToggle?.addEventListener("click", (e) => {
+    const opt = e.target.closest("[data-unit]");
+    if (!opt) return;
+    setUnit(opt.dataset.unit);
+    renderUnits();
+  });
   els.close?.addEventListener("click", closeModal);
   els.modal.addEventListener("click", (e) => {
     if (e.target === els.modal) closeModal(); // click backdrop

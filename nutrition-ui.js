@@ -224,22 +224,35 @@ function formatQty(e) {
   return e.qty && e.qty !== 1 ? `${e.qty} servings` : "1 serving";
 }
 
+const ML_PER_OZ = 29.5735;
+const isImperial = () => getState().unit === "lb";
+const waterStepMl = () => (isImperial() ? 240 : 250); // ~8 fl oz
+const fmtWater = (ml) => (isImperial() ? `${Math.round(ml / ML_PER_OZ)} fl oz` : `${Math.round(ml)} ml`);
+
 function renderWater() {
   if (!el.water) return;
+  const imperial = isImperial();
   const ml = getWater(selected);
   const target = getState().targets.waterMl || 2500;
   const glasses = Math.round(ml / 250);
   el.water.innerHTML = `
-    <div class="water__info"><span class="water__amt">${ml} ml</span><span class="muted"> / ${target} ml · ~${glasses} glasses</span></div>
+    <div class="water__info"><span class="water__amt">${fmtWater(ml)}</span><span class="muted"> / ${fmtWater(target)} · ~${glasses} glasses</span></div>
     <div class="water__bar"><span style="width:${Math.min(100, (ml / target) * 100).toFixed(0)}%"></span></div>
     <div class="water__btns">
-      <button type="button" class="btn btn--ghost btn--sm" data-act="water-minus">− 250</button>
-      <button type="button" class="btn btn--ghost btn--sm" data-act="water-plus">+ 250 ml</button>
+      <button type="button" class="btn btn--ghost btn--sm" data-act="water-minus">− ${imperial ? "8 oz" : "250"}</button>
+      <button type="button" class="btn btn--ghost btn--sm" data-act="water-plus">+ ${imperial ? "8 oz" : "250 ml"}</button>
       <span class="water__custom">
-        <input id="water-custom" class="water-custom" type="number" min="1" max="3000" inputmode="numeric" placeholder="ml" aria-label="Custom water amount in ml" />
+        <input id="water-custom" class="water-custom" type="number" min="1" max="3000" inputmode="numeric" placeholder="${imperial ? "oz" : "ml"}" aria-label="Custom water amount" />
         <button type="button" class="btn btn--ghost btn--sm" data-act="water-custom">Add</button>
       </span>
     </div>`;
+}
+
+// Custom amount → ml (the canonical storage unit).
+function customWaterMl(value) {
+  const v = Number(value) || 0;
+  if (v <= 0) return 0;
+  return isImperial() ? Math.round(v * ML_PER_OZ) : Math.round(v);
 }
 
 // ----------------------------------------------------------------------------
@@ -463,20 +476,20 @@ function init() {
     else if (del) removeEntry("nutrition", del.closest(".food-row").dataset.id);
   });
   el.water?.addEventListener("click", (e) => {
-    if (e.target.closest('[data-act="water-plus"]')) addWater(250, selected);
-    else if (e.target.closest('[data-act="water-minus"]')) addWater(-250, selected);
+    if (e.target.closest('[data-act="water-plus"]')) addWater(waterStepMl(), selected);
+    else if (e.target.closest('[data-act="water-minus"]')) addWater(-waterStepMl(), selected);
     else if (e.target.closest('[data-act="water-custom"]')) {
       const inp = document.getElementById("water-custom");
-      const v = Math.round(Number(inp?.value) || 0);
-      if (v > 0) addWater(v, selected); // re-render clears the field
+      const ml = customWaterMl(inp?.value);
+      if (ml > 0) addWater(ml, selected); // re-render clears the field
     }
   });
   // Enter in the custom field adds it too.
   el.water?.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && e.target.id === "water-custom") {
       e.preventDefault();
-      const v = Math.round(Number(e.target.value) || 0);
-      if (v > 0) addWater(v, selected);
+      const ml = customWaterMl(e.target.value);
+      if (ml > 0) addWater(ml, selected);
     }
   });
 
