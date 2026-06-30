@@ -668,6 +668,11 @@ window.addEventListener("spotter:generate", (e) => {
   if (e.detail) generate(e.detail);
 });
 
+// First-week "Adapt next week" CTA — run the adaptive loop once results are up.
+window.addEventListener("spotter:adapt-request", () => {
+  setTimeout(() => { if (store.plan && adaptBtn && !adaptBtn.disabled) adapt(); }, 350);
+});
+
 retryBtn.addEventListener("click", () => generate());
 
 regenerateBtn.addEventListener("click", () => {

@@ -1134,6 +1134,29 @@ table {
 .pain-result__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
 
 /* ----------------------------------------------------------------------------
+   First-week guided experience
+---------------------------------------------------------------------------- */
+.fw-card { position: relative; padding: var(--space-5); margin-bottom: var(--space-5); border-color: var(--accent-ring); box-shadow: var(--shadow-md), 0 0 0 1px var(--accent-ring); }
+.fw-card--review { background: radial-gradient(120% 130% at 100% 0%, var(--accent-soft), transparent 60%), var(--surface); }
+.fw-dismiss { position: absolute; top: var(--space-3); right: var(--space-3); width: 28px; height: 28px; display: grid; place-items: center; font-size: 1.1rem; color: var(--text-faint); background: none; border: none; border-radius: var(--r-sm); cursor: pointer; }
+.fw-dismiss:hover { color: var(--text); background: var(--surface-2); }
+.fw-eyebrow { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); font-weight: 600; }
+.fw-title { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; margin-top: 4px; padding-right: var(--space-5); }
+.fw-line { margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text-muted); line-height: 1.55; }
+.fw-k { display: inline-block; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); font-weight: 600; margin-right: 6px; }
+.fw-items { list-style: none; padding: 0; margin: var(--space-4) 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.fw-item { display: flex; align-items: center; gap: var(--space-3); font-size: var(--fs-small); color: var(--text-muted); }
+.fw-item.is-done { color: var(--text); }
+.fw-check { flex: none; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border); font-size: 0.75rem; color: var(--success); }
+.fw-item.is-done .fw-check { border-color: var(--success); background: var(--success-soft); }
+.fw-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-2); margin: var(--space-4) 0; }
+.fw-stat { padding: var(--space-3); text-align: center; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); }
+.fw-stat__v { display: block; font-family: var(--font-mono); font-size: 1.2rem; font-weight: 600; color: var(--text); }
+.fw-stat__l { font-size: 0.64rem; color: var(--text-muted); }
+.fw-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+@media (max-width: 560px) { .fw-stats { grid-template-columns: repeat(3, 1fr); } }
+
+/* ----------------------------------------------------------------------------
    Today screen (consumer daily home base)
 ---------------------------------------------------------------------------- */
 .today-quick { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-5); }
