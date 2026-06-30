@@ -29,3 +29,16 @@ test("the demo is decorative for assistive tech (aria-hidden svg + labelled figu
   assert.match(html, /aria-label="Animated movement demonstration"/);
   assert.match(html, /aria-hidden="true"/);
 });
+
+test("limbs are tapered filled paths shaded by the depth gradient", () => {
+  const html = patternAnimation("squat", ["quads"]);
+  assert.match(html, /class="ex-limbfill"/);
+  assert.match(html, /id="exBody"/); // front-lit depth gradient
+});
+
+test("worked muscles get a highlight node; none is added when unknown/empty", () => {
+  assert.match(patternAnimation("isolation", ["biceps"]), /class="ex-musc"/);
+  assert.match(patternAnimation("squat", ["quads", "glutes"]).match(/ex-musc/g).length >= 2 ? "ok" : "", /ok/);
+  assert.doesNotMatch(patternAnimation("squat", []), /class="ex-musc"/);
+  assert.doesNotMatch(patternAnimation("squat", ["nonsense"]), /class="ex-musc"/);
+});

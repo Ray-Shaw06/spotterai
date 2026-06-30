@@ -1047,9 +1047,16 @@ table {
   background: radial-gradient(120% 90% at 50% 0%, var(--accent-soft), transparent 62%), var(--surface-2);
   border: 1px solid var(--border); border-radius: var(--r-lg); }
 .ex-anim__svg { width: 152px; height: 190px; }
-.ex-cap { stroke: var(--accent); stroke-linecap: round; stroke-linejoin: round; fill: none; }
-.ex-fill { fill: var(--accent); }
-.ex-head { fill: var(--accent); }
+.ex-limbfill, .ex-head { fill: url(#exBody); }
+/* Front-lit gradient (back edge shadowed → front edge highlit) for 3D depth. */
+.ex-stop-dark { stop-color: color-mix(in srgb, var(--accent) 56%, #07030f); }
+.ex-stop-mid { stop-color: var(--accent); }
+.ex-stop-light { stop-color: color-mix(in srgb, var(--accent) 70%, #ffffff); }
+/* Worked-muscle highlight — a soft pulsing bloom. */
+.ex-musc { fill: url(#exMusc); mix-blend-mode: screen; animation: ex-musc-pulse 1.7s ease-in-out infinite; }
+.ex-stop-musc0 { stop-color: color-mix(in srgb, var(--accent) 22%, #ffffff); stop-opacity: 0.95; }
+.ex-stop-musc1 { stop-color: var(--accent); stop-opacity: 0; }
+@keyframes ex-musc-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.95; } }
 .ex-bar { stroke: #cbd1df; stroke-width: 4; stroke-linecap: round; }
 .ex-plate { fill: #aeb6c6; }
 .ex-ground { stroke: var(--border); stroke-width: 2; stroke-linecap: round; }
