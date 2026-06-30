@@ -4350,6 +4350,23 @@ table {
 }
 .routine__del:hover { color: var(--danger); border-color: var(--danger); }
 
+/* Saved workouts — prominent "tap to load into the tracker" cards */
+.saved-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-2); margin-top: var(--space-2); }
+.saved-w { position: relative; display: flex; }
+.saved-w__load {
+  flex: 1; display: flex; flex-direction: column; gap: 3px; text-align: left;
+  padding: 0.85rem 0.95rem; padding-right: 2.4rem;
+  font-family: var(--font-body); color: var(--text); cursor: pointer;
+  background: radial-gradient(120% 120% at 100% 0%, var(--accent-soft), transparent 70%), var(--surface-2);
+  border: 1px solid var(--accent-ring); border-radius: var(--r-md); transition: var(--transition);
+}
+.saved-w__load:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--glow-accent); }
+.saved-w__load--plan { padding-right: 0.95rem; }
+.saved-w__name { font-size: 0.92rem; font-weight: 600; }
+.saved-w__meta { font-size: 0.72rem; color: var(--accent); font-weight: 500; }
+.saved-w .routine__del { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; padding: 0; line-height: 1; border-color: transparent; background: transparent; }
+.workout-hint { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; margin-top: var(--space-2); padding: var(--space-3); background: var(--surface-2); border: 1px dashed var(--border); border-radius: var(--r-sm); }
+
 /* Active session */
 .session-head {
   display: flex;

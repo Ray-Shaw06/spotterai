@@ -456,21 +456,26 @@ function renderIdle() {
   let html = "";
 
   if (routines.length) {
-    html += `<p class="workout-grouplabel">Routines</p>`;
-    html += routines
+    html += `<p class="workout-grouplabel">Saved workouts · tap to load every exercise</p>`;
+    html += `<div class="saved-grid">${routines
       .map(
-        (r) => `<div class="routine" data-id="${r.id}">
-          <button type="button" class="routine__start" data-act="start-routine">${esc(r.name)}<span class="routine__meta">${r.exercises.length} exercises</span></button>
-          <button type="button" class="routine__del" data-act="del-routine" aria-label="Delete routine">×</button>
+        (r) => `<div class="saved-w" data-id="${r.id}">
+          <button type="button" class="saved-w__load" data-act="start-routine">
+            <span class="saved-w__name">${esc(r.name)}</span>
+            <span class="saved-w__meta">${r.exercises.length} exercise${r.exercises.length === 1 ? "" : "s"} · load &amp; start</span>
+          </button>
+          <button type="button" class="routine__del" data-act="del-routine" aria-label="Delete saved workout">×</button>
         </div>`
       )
-      .join("");
+      .join("")}</div>`;
+  } else {
+    html += `<p class="workout-hint">Build a workout below, then tap <strong>“Save this workout”</strong> — it'll appear here to load in one tap next time, so there's no scrolling to re-add exercises at the gym.</p>`;
   }
   if (planDays.length) {
-    html += `<p class="workout-grouplabel">From your plan</p>`;
-    html += planDays
-      .map((d, i) => `<button type="button" class="routine__start routine__start--plan" data-act="start-plan" data-i="${i}">${esc(d.focus || d.day || "Session")}<span class="routine__meta">${(d.exercises || []).length} exercises</span></button>`)
-      .join("");
+    html += `<p class="workout-grouplabel">From your plan · tap to load</p>`;
+    html += `<div class="saved-grid">${planDays
+      .map((d, i) => `<button type="button" class="saved-w__load saved-w__load--plan" data-act="start-plan" data-i="${i}"><span class="saved-w__name">${esc(d.focus || d.day || "Session")}</span><span class="saved-w__meta">${(d.exercises || []).length} exercise${(d.exercises || []).length === 1 ? "" : "s"} · load &amp; start</span></button>`)
+      .join("")}</div>`;
   }
   el.routineList.innerHTML = html;
 }
@@ -641,10 +646,10 @@ function init() {
   el.ormReps?.addEventListener("input", renderOrm);
   el.saveRoutine?.addEventListener("click", () => {
     if (!session?.exercises.length) return;
-    const name = prompt("Name this routine:", session.name);
+    const name = prompt("Name this workout (saved to load in one tap next time):", session.name);
     if (name == null) return;
     addRoutine({ name: name || session.name, exercises: session.exercises });
-    toast(`<strong>Routine saved</strong> · ${esc(name || session.name)}`);
+    toast(`<strong>Workout saved</strong> · ${esc(name || session.name)} — load it any time from “Start a workout”.`);
   });
 
   // Session exercise interactions (delegated)
