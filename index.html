@@ -692,6 +692,15 @@
                   <div id="orm-out" class="tool__out"></div>
                 </div>
               </div>
+              <div class="session-feedback">
+                <span class="session-feedback__label">How did it feel?</span>
+                <div class="session-diff" id="session-diff" role="group" aria-label="Workout difficulty">
+                  <button type="button" class="session-diff__chip" data-diff="easy">Too easy</button>
+                  <button type="button" class="session-diff__chip" data-diff="just_right">Just right</button>
+                  <button type="button" class="session-diff__chip" data-diff="hard">Too hard</button>
+                </div>
+                <button type="button" id="session-pain" class="btn-link session-pain">Report pain</button>
+              </div>
               <div class="session-actions">
                 <button type="button" id="session-discard" class="btn-link-danger">Discard</button>
                 <div class="session-actions__right">
@@ -1085,6 +1094,19 @@
           <button id="onb-next" class="btn btn--primary btn--sm" type="button">Next</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ===================== WORKOUT COMPLETION SUMMARY ===================== -->
+  <div id="workout-summary" class="account-modal" role="dialog" aria-modal="true" aria-label="Workout complete" aria-hidden="true">
+    <div class="account-dialog summary-dialog">
+      <div class="account-dialog__head">
+        <h2 class="account-dialog__title">Workout complete</h2>
+        <button id="summary-close" class="icon-btn" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+        </button>
+      </div>
+      <div id="summary-content"></div>
     </div>
   </div>
 

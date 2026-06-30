@@ -163,7 +163,7 @@ function exerciseSummary(ex) {
 // ----------------------------------------------------------------------------
 // Mutations
 // ----------------------------------------------------------------------------
-export function addWorkout({ name, focus, exercises = [], date, durationSec } = {}) {
+export function addWorkout({ name, focus, exercises = [], date, durationSec, difficulty } = {}) {
   const clean = exercises
     .map((e) => {
       const sets = setsOf(e)
@@ -188,6 +188,7 @@ export function addWorkout({ name, focus, exercises = [], date, durationSec } = 
     exercises: clean,
     volume: Math.round(volume),
     xp: workoutXp(volume),
+    ...(difficulty ? { difficulty: String(difficulty) } : {}),
   };
   state.workouts.push(workout);
   const unlocked = unlockAchievements();

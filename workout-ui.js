@@ -11,11 +11,12 @@
  * re-rendering, so inputs never lose focus; structural changes re-render.
  */
 
-import { addCustomExercise, addRoutine, addWorkout, getCustomExercises, getLoggedExerciseNames, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, subscribe, suggestProgression, updateCustomExercise } from "./tracker-store.js";
+import { addCustomExercise, addRoutine, addWorkout, deriveStats, getCustomExercises, getLoggedExerciseNames, getPainReports, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, subscribe, suggestProgression, updateCustomExercise } from "./tracker-store.js";
 import { findExercise, isCardio, searchExercises } from "./exercises.js";
 import { classifyExercise } from "./ai.js";
 import { epley1RM } from "./progression.js";
 import { store } from "./store.js";
+import { buildWorkoutSummary } from "./workout-summary.js";
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -30,6 +31,11 @@ const el = {
   finish: $("session-finish"),
   discard: $("session-discard"),
   saveRoutine: $("session-save-routine"),
+  diff: $("session-diff"),
+  pain: $("session-pain"),
+  summaryModal: $("workout-summary"),
+  summaryContent: $("summary-content"),
+  summaryClose: $("summary-close"),
   history: $("workout-history"),
   // rest timer + tools
   restTimer: $("rest-timer"),
@@ -242,6 +248,8 @@ function startSession(preset) {
   el.idle.hidden = true;
   el.session.hidden = false;
   el.name.value = session.name;
+  // Reflect any saved difficulty rating on the chips.
+  el.diff?.querySelectorAll(".session-diff__chip").forEach((c) => c.classList.toggle("is-active", session.difficulty === c.dataset.diff));
   renderSession();
   startTimer();
   saveDraft();
@@ -275,12 +283,49 @@ function finishSession() {
     return;
   }
   const durationSec = Math.floor((Date.now() - session.startedAt) / 1000);
-  const { workout, newAchievements } = addWorkout({ name: el.name.value.trim() || session.name, exercises, durationSec });
-  toast(`<strong>+${workout.xp} XP</strong> · ${esc(workout.name)} · ${fmtTime(durationSec)}`);
+  const priorPRs = deriveStats().prs || {}; // capture BEFORE the workout is added
+  const { workout, newAchievements } = addWorkout({ name: el.name.value.trim() || session.name, exercises, durationSec, difficulty: session.difficulty });
   for (const a of newAchievements) toast(`Achievement · <strong>${esc(a.name)}</strong> · +${a.xp} XP`);
   session = null;
   saveDraft();
   showIdle();
+
+  // Completion summary (PRs, difficulty, next action, recovery nudge).
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const painToday = getPainReports().filter((r) => r.date === todayStr);
+  showSummary(buildWorkoutSummary({ workout, priorPRs, painToday }));
+}
+
+// ----------------------------------------------------------------------------
+// Completion summary modal
+// ----------------------------------------------------------------------------
+function showSummary(s) {
+  if (!el.summaryModal || !el.summaryContent) return;
+  const stat = (v, label) => `<div class="summary-stat"><span class="summary-stat__v">${esc(v)}</span><span class="summary-stat__l">${esc(label)}</span></div>`;
+  const u = getState().unit;
+  el.summaryContent.innerHTML = `
+    <p class="summary-name">${esc(s.name)} · ${fmtTime(s.durationSec)}</p>
+    <div class="summary-stats">
+      ${stat(s.exerciseCount, "exercises")}
+      ${stat(s.setCount, "sets")}
+      ${stat(`${(s.volume / 1000).toFixed(1)}k`, `${u} moved`)}
+      ${stat(`+${s.xp}`, "XP")}
+    </div>
+    ${s.prs.length ? `<div class="summary-prs"><span class="summary-prs__badge">New PR${s.prs.length > 1 ? "s" : ""}</span> ${s.prs.map((p) => `${esc(p.name)} ${esc(p.weight)}${esc(u)}`).join(" · ")}</div>` : ""}
+    ${s.difficultyLabel ? `<p class="summary-row"><span class="summary-k">Felt</span> ${esc(s.difficultyLabel)}</p>` : ""}
+    <p class="summary-row"><span class="summary-k">Next time</span> ${esc(s.nextAction)}</p>
+    ${s.painFlag ? `<p class="summary-pain">You reported pain today — SpotterAI has logged it as a limitation. Don't train through pain.</p>` : ""}
+    <p class="summary-nudge">${esc(s.recoveryNudge)}</p>
+    <div class="summary-actions">
+      <button type="button" class="btn btn--primary btn--sm" data-summary="done">Done</button>
+      <button type="button" class="btn btn--ghost btn--sm" data-summary="progress">View progress</button>
+    </div>`;
+  el.summaryModal.classList.add("is-open");
+  el.summaryModal.setAttribute("aria-hidden", "false");
+}
+function closeSummary() {
+  el.summaryModal?.classList.remove("is-open");
+  el.summaryModal?.setAttribute("aria-hidden", "true");
 }
 
 // ----------------------------------------------------------------------------
@@ -551,6 +596,27 @@ function init() {
   el.finish?.addEventListener("click", finishSession);
   el.discard?.addEventListener("click", discardSession);
   el.addEx?.addEventListener("click", openPicker);
+
+  // Difficulty feedback ("too easy / just right / too hard")
+  el.diff?.addEventListener("click", (e) => {
+    const chip = e.target.closest("[data-diff]");
+    if (!chip || !session) return;
+    session.difficulty = session.difficulty === chip.dataset.diff ? null : chip.dataset.diff;
+    el.diff.querySelectorAll(".session-diff__chip").forEach((c) => c.classList.toggle("is-active", c === chip && session.difficulty));
+    saveDraft();
+  });
+
+  // Report pain mid-workout → Pain Mode
+  el.pain?.addEventListener("click", () => window.dispatchEvent(new CustomEvent("spotter:report-pain")));
+
+  // Completion summary actions
+  el.summaryClose?.addEventListener("click", closeSummary);
+  el.summaryModal?.addEventListener("click", (e) => {
+    if (e.target === el.summaryModal) return closeSummary();
+    const a = e.target.closest("[data-summary]")?.dataset.summary;
+    if (a === "done") closeSummary();
+    else if (a === "progress") { closeSummary(); location.hash = "#/progress"; }
+  });
 
   // Rest timer controls
   el.restTimer?.addEventListener("click", (e) => {

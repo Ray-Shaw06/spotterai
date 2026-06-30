@@ -1085,6 +1085,31 @@ table {
 @media (max-width: 560px) { .lib-cols2 { grid-template-columns: 1fr; } }
 
 /* ----------------------------------------------------------------------------
+   Workout session — difficulty feedback + completion summary
+---------------------------------------------------------------------------- */
+.session-feedback { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; margin-top: var(--space-3); border-top: 1px solid var(--border); }
+.session-feedback__label { font-size: var(--fs-small); color: var(--text-muted); }
+.session-diff { display: flex; gap: var(--space-2); }
+.session-diff__chip { padding: 0.4rem 0.8rem; font-size: var(--fs-small); color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition); }
+.session-diff__chip:hover { color: var(--text); border-color: var(--accent-ring); }
+.session-diff__chip.is-active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-ring); }
+.session-pain { margin-left: auto; color: var(--warn); }
+
+.summary-dialog { max-width: 480px; }
+.summary-name { font-size: var(--fs-small); color: var(--text-muted); margin-bottom: var(--space-4); }
+.summary-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); margin-bottom: var(--space-4); }
+.summary-stat { padding: var(--space-3); text-align: center; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); }
+.summary-stat__v { display: block; font-family: var(--font-mono); font-size: 1.25rem; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+.summary-stat__l { font-size: 0.66rem; color: var(--text-muted); }
+.summary-prs { padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); font-size: var(--fs-small); color: var(--text); background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: var(--r-sm); }
+.summary-prs__badge { display: inline-block; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); margin-right: 6px; }
+.summary-row { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; margin-bottom: var(--space-2); }
+.summary-k { display: inline-block; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-faint); font-weight: 600; margin-right: 6px; }
+.summary-pain { margin: var(--space-3) 0; padding: var(--space-3) var(--space-4); font-size: var(--fs-small); color: var(--text); background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); border-left: 3px solid var(--warn); border-radius: var(--r-sm); }
+.summary-nudge { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--text-faint); }
+.summary-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+
+/* ----------------------------------------------------------------------------
    Pain Mode modal
 ---------------------------------------------------------------------------- */
 .pain-dialog { max-width: 540px; }
