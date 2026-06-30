@@ -10,29 +10,29 @@
    1. Design tokens
 ---------------------------------------------------------------------------- */
 :root {
-  /* Color — base: deep slate-black with a faint cool-slate undertone ("Nightfall") */
-  --bg: #090a10;
-  --bg-soft: #0a0b12;
+  /* Color — base: deep slate-black with a faint iris undertone ("Nightfall") */
+  --bg: #0a090f;
+  --bg-soft: #0c0b13;
   /* Surfaces are translucent glass — the ambient iris bloom tints through them. */
-  --surface: rgba(23, 25, 35, 0.74); /* card / elevated */
-  --surface-solid: #161824; /* opaque variant where blur isn't wanted */
-  --surface-2: rgba(34, 37, 52, 0.85); /* control / hover */
+  --surface: rgba(25, 23, 34, 0.74); /* card / elevated */
+  --surface-solid: #181522; /* opaque variant where blur isn't wanted */
+  --surface-2: rgba(38, 35, 52, 0.85); /* control / hover */
   --border: rgba(255, 255, 255, 0.10); /* hairline */
   --border-soft: rgba(255, 255, 255, 0.06);
   --sheen: rgba(255, 255, 255, 0.06); /* top-edge highlight on glass */
 
   /* Color — text: crisp near-white → cool greys */
   --text: #f4f4f8;
-  --text-muted: #9a9cae;
-  --text-faint: #6b6d82; /* still WCAG-AA on small captions */
+  --text-muted: #9c9aae;
+  --text-faint: #6d6b80; /* still WCAG-AA on small captions */
 
-  /* Color — accent: a cool periwinkle-violet — distinctive, calm, premium */
-  --accent: #828dff;
-  --accent-hover: #9ba3ff;
-  --accent-soft: rgba(130, 141, 255, 0.16);
-  --accent-ring: rgba(130, 141, 255, 0.38);
-  --accent-ink: #070b1a; /* dark iris ink on accent fills (AA-strong) */
-  --accent-2: #6f9bf0; /* cool periwinkle-sky companion — used only in ambient blooms */
+  /* Color — accent: a refined electric "iris" violet — distinctive, premium */
+  --accent: #8a6dff;
+  --accent-hover: #a48dff;
+  --accent-soft: rgba(138, 109, 255, 0.16);
+  --accent-ring: rgba(138, 109, 255, 0.38);
+  --accent-ink: #0c0717; /* dark iris ink on accent fills (AA-strong) */
+  --accent-2: #c878f0; /* orchid companion — used only in ambient blooms */
 
   /* Color — status. Green is reserved for "passed / safe", never the brand. */
   --success: #2dd4a2;
@@ -65,8 +65,8 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-md: 0 18px 44px -22px rgba(0, 0, 0, 0.8), inset 0 1px 0 var(--sheen);
   --shadow-lg: 0 50px 100px -40px rgba(0, 0, 0, 0.9), 0 16px 36px -24px rgba(0, 0, 0, 0.7), inset 0 1px 0 var(--sheen);
-  --glow-accent: 0 10px 30px -8px rgba(130, 141, 255, 0.5);
-  --glow-accent-strong: 0 0 0 1px var(--accent-ring), 0 12px 36px -6px rgba(130, 141, 255, 0.55);
+  --glow-accent: 0 10px 30px -8px rgba(138, 109, 255, 0.5);
+  --glow-accent-strong: 0 0 0 1px var(--accent-ring), 0 12px 36px -6px rgba(138, 109, 255, 0.55);
 
   /* Typography — Sora (display) + Inter (UI) + JetBrains Mono (data) */
   --font-display: "Sora", "Inter", system-ui, sans-serif;
@@ -128,10 +128,10 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(58rem 42rem at 82% -12%, rgba(130, 141, 255, 0.20), transparent 60%),
-    radial-gradient(52rem 40rem at 6% 2%, rgba(111, 155, 240, 0.12), transparent 58%),
-    radial-gradient(46rem 40rem at 50% 116%, rgba(130, 141, 255, 0.13), transparent 60%),
-    radial-gradient(30rem 30rem at 96% 70%, rgba(111, 155, 240, 0.07), transparent 60%);
+    radial-gradient(58rem 42rem at 82% -12%, rgba(138, 109, 255, 0.20), transparent 60%),
+    radial-gradient(52rem 40rem at 6% 2%, rgba(200, 120, 240, 0.12), transparent 58%),
+    radial-gradient(46rem 40rem at 50% 116%, rgba(138, 109, 255, 0.13), transparent 60%),
+    radial-gradient(30rem 30rem at 96% 70%, rgba(200, 120, 240, 0.07), transparent 60%);
 }
 
 h1, h2, h3, h4, h5 {
@@ -307,7 +307,7 @@ table {
   box-shadow: var(--glow-accent), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .btn--primary:hover {
-  background: linear-gradient(180deg, #aeb8ff, var(--accent-hover));
+  background: linear-gradient(180deg, #bcaaff, var(--accent-hover));
   box-shadow: var(--glow-accent-strong), inset 0 1px 0 rgba(255, 255, 255, 0.3);
   transform: translateY(-1px);
 }
