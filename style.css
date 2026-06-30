@@ -1010,6 +1010,37 @@ table {
 .detail-uncertainty strong { color: var(--warn); }
 
 /* ----------------------------------------------------------------------------
+   Guided onboarding overlay
+---------------------------------------------------------------------------- */
+.onb { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: var(--space-4); background: rgba(4, 5, 8, 0.72); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.onb.is-open { display: flex; }
+.onb__panel { width: 100%; max-width: 560px; max-height: 92vh; display: flex; flex-direction: column; background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--r-xl); box-shadow: var(--shadow-lg); overflow: hidden; }
+.onb__head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-5) 0; }
+.onb__progress { flex: 1; display: flex; gap: 6px; }
+.onb-step { flex: 1; font-size: 0; height: 4px; border-radius: var(--r-full); background: var(--surface-2); position: relative; }
+.onb-step.is-active { background: var(--accent); }
+.onb-step.is-done { background: var(--accent-ring); }
+.onb__close { flex: none; }
+.onb__body { padding: var(--space-5); overflow-y: auto; }
+.onb-title { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; }
+.onb-sub { margin-top: var(--space-2); margin-bottom: var(--space-4); font-size: var(--fs-small); color: var(--text-muted); }
+.onb-field { margin-bottom: var(--space-4); }
+.onb-flabel { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); font-weight: 600; margin-bottom: var(--space-2); }
+.onb-fhint { display: block; font-size: 0.75rem; color: var(--text-faint); margin-bottom: var(--space-2); margin-top: -4px; }
+.onb-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.onb-chip { padding: 0.55rem 0.95rem; font-size: var(--fs-small); font-weight: 500; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition); }
+.onb-chip:hover { color: var(--text); border-color: var(--accent-ring); }
+.onb-chip.is-active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-ring); }
+.onb-input { max-width: 100%; }
+.onb-cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.onb-ack { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; }
+.onb-ack input { margin-top: 3px; flex: none; accent-color: var(--accent); }
+.onb-ack strong { color: var(--text); }
+.onb__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-4) var(--space-5); border-top: 1px solid var(--border); }
+.onb__foot-right { display: flex; align-items: center; gap: var(--space-3); }
+@media (max-width: 480px) { .onb-cols { grid-template-columns: 1fr; } }
+
+/* ----------------------------------------------------------------------------
    Exercise Library
 ---------------------------------------------------------------------------- */
 .lib-controls { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; margin-bottom: var(--space-5); }

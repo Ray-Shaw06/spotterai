@@ -183,8 +183,8 @@ async function getFallbackPlan(inputs) {
 
 let lastInputs = null;
 
-async function generate() {
-  const inputs = getFormData();
+async function generate(inputsOverride) {
+  const inputs = inputsOverride || getFormData();
   lastInputs = inputs;
 
   generateBtn.disabled = true;
@@ -661,6 +661,11 @@ async function adapt() {
 form.addEventListener("submit", (e) => {
   e.preventDefault();
   generate();
+});
+
+// Guided onboarding finishes with a mapped input set and asks us to generate.
+window.addEventListener("spotter:generate", (e) => {
+  if (e.detail) generate(e.detail);
 });
 
 retryBtn.addEventListener("click", () => generate());

@@ -55,7 +55,7 @@ function render() {
       `<div class="today-empty">
         <h3 class="today-card__title">Create your first plan to unlock Today</h3>
         <p class="today-card__text">Today gives you a daily workout, nutrition focus, recovery check-in, and a coach note — once you have a plan to work from.</p>
-        <a href="#/" data-nav="home" class="btn btn--primary">Build my plan</a>
+        <a href="#/" data-nav="home" class="btn btn--primary" data-onboard>Build my plan</a>
       </div>`,
       "today-card--empty"
     );

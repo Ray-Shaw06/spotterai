@@ -121,7 +121,7 @@
             log your workouts and meals, track progress, and adapt your plan as you improve.
           </p>
           <div class="hero__actions">
-            <a href="#generator" class="btn btn--primary">Build my plan</a>
+            <a href="#generator" class="btn btn--primary" data-onboard>Build my plan</a>
             <a href="#/evals" data-nav="evals" class="btn btn--ghost">See how safety checks work</a>
           </div>
           <p class="hero__trust">
@@ -568,7 +568,7 @@
           <h2 class="final-cta__title" id="cta-title">Build a plan you can actually trust.</h2>
           <p class="final-cta__sub">Generate a plan, see every flag with a fix, and audit it before you train — free, no signup, runs on your device.</p>
           <div class="final-cta__actions">
-            <a href="#generator" class="btn btn--primary">Build my plan</a>
+            <a href="#generator" class="btn btn--primary" data-onboard>Build my plan</a>
             <button type="button" id="cta-demo" class="btn btn--ghost">Try the live demo</button>
           </div>
         </div>
@@ -1068,6 +1068,26 @@
   </div>
 
   <!-- ===================== ACCOUNT MODAL ===================== -->
+  <!-- ===================== GUIDED ONBOARDING ===================== -->
+  <div id="onboarding" class="onb" role="dialog" aria-modal="true" aria-label="Set up your plan" aria-hidden="true">
+    <div class="onb__panel">
+      <div class="onb__head">
+        <div class="onb__progress" id="onb-progress" aria-hidden="true"></div>
+        <button id="onb-close" class="icon-btn onb__close" type="button" aria-label="Close setup">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+        </button>
+      </div>
+      <div class="onb__body" id="onb-body" aria-live="polite"></div>
+      <div class="onb__foot">
+        <button id="onb-back" class="btn btn--ghost btn--sm" type="button">Back</button>
+        <div class="onb__foot-right">
+          <button id="onb-skip" class="btn-link" type="button">Skip</button>
+          <button id="onb-next" class="btn btn--primary btn--sm" type="button">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===================== PAIN MODE ===================== -->
   <div id="pain-modal" class="account-modal" role="dialog" aria-modal="true" aria-label="Report pain or discomfort" aria-hidden="true">
     <div class="account-dialog pain-dialog">
@@ -1175,6 +1195,7 @@
   <script type="module" src="router.js"></script>
   <script type="module" src="auth-ui.js"></script>
   <script type="module" src="app.js"></script>
+  <script type="module" src="onboarding-ui.js"></script>
   <script type="module" src="chat.js"></script>
   <script type="module" src="form-coach.js"></script>
   <script type="module" src="tracker-ui.js"></script>
