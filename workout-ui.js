@@ -41,6 +41,7 @@ const el = {
   restTimer: $("rest-timer"),
   restTime: $("rest-time"),
   restPresets: $("rest-presets"),
+  restCustom: $("rest-custom"),
   restFill: $("rest-fill"),
   toolsToggle: $("session-tools-toggle"),
   tools: $("session-tools"),
@@ -140,7 +141,21 @@ const REST_KEY = "spotterai.rest.default";
 let restDefault = clampRest(Number(localStorage.getItem(REST_KEY)) || 120);
 
 function clampRest(s) {
-  return Math.max(10, Math.min(600, Math.round(s) || 120));
+  return Math.max(5, Math.min(3600, Math.round(s) || 120));
+}
+// Parse a custom rest entry: "m:ss" / "mm:ss", or a bare number ("3" → 3 min,
+// "150" → 150 s). Returns clamped seconds, or null if it can't be read.
+function parseRestInput(str) {
+  const t = String(str || "").trim();
+  if (!t) return null;
+  if (t.includes(":")) {
+    const [m, s] = t.split(":");
+    const sec = (Number(m) || 0) * 60 + (Number(s) || 0);
+    return sec > 0 ? clampRest(sec) : null;
+  }
+  const n = Number(t);
+  if (!isFinite(n) || n <= 0) return null;
+  return clampRest(n <= 10 ? n * 60 : n);
 }
 function setRestDefault(sec) {
   restDefault = clampRest(sec);
@@ -665,6 +680,16 @@ function init() {
     if (a === "start") startRest();
     else if (a === "add") addRest(15);
     else if (a === "skip") skipRest();
+  });
+  // Custom rest time: set on change/blur, set + start on Enter.
+  el.restCustom?.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const sec = parseRestInput(el.restCustom.value);
+    if (sec) { setRestDefault(sec); el.restCustom.value = ""; startRest(sec); }
+  });
+  el.restCustom?.addEventListener("change", () => {
+    const sec = parseRestInput(el.restCustom.value);
+    if (sec) { setRestDefault(sec); el.restCustom.value = ""; }
   });
   renderRestIdle();
 

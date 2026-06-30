@@ -235,6 +235,10 @@ function renderWater() {
     <div class="water__btns">
       <button type="button" class="btn btn--ghost btn--sm" data-act="water-minus">− 250</button>
       <button type="button" class="btn btn--ghost btn--sm" data-act="water-plus">+ 250 ml</button>
+      <span class="water__custom">
+        <input id="water-custom" class="water-custom" type="number" min="1" max="3000" inputmode="numeric" placeholder="ml" aria-label="Custom water amount in ml" />
+        <button type="button" class="btn btn--ghost btn--sm" data-act="water-custom">Add</button>
+      </span>
     </div>`;
 }
 
@@ -461,6 +465,19 @@ function init() {
   el.water?.addEventListener("click", (e) => {
     if (e.target.closest('[data-act="water-plus"]')) addWater(250, selected);
     else if (e.target.closest('[data-act="water-minus"]')) addWater(-250, selected);
+    else if (e.target.closest('[data-act="water-custom"]')) {
+      const inp = document.getElementById("water-custom");
+      const v = Math.round(Number(inp?.value) || 0);
+      if (v > 0) addWater(v, selected); // re-render clears the field
+    }
+  });
+  // Enter in the custom field adds it too.
+  el.water?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.id === "water-custom") {
+      e.preventDefault();
+      const v = Math.round(Number(e.target.value) || 0);
+      if (v > 0) addWater(v, selected);
+    }
   });
 
   // Picker
