@@ -2200,6 +2200,15 @@ table {
 .ex-edit-results { display: flex; flex-wrap: wrap; gap: 6px; }
 .ex-edit-result--custom { border-style: dashed; color: var(--text-muted); }
 .ex-edit-cancel { display: inline-block; margin-top: var(--space-2); font-size: 0.78rem; }
+/* On phones the editable table is tight — stack the action buttons + trim
+   padding so Substitute AND Remove both stay on-screen (no sideways scroll). */
+@media (max-width: 600px) {
+  .day-card__table-wrap { overflow-x: visible; }
+  .ex-table--editable th, .ex-table--editable td { padding-left: var(--space-2); padding-right: var(--space-2); }
+  .ex-table--editable .num { padding-left: 5px; padding-right: 5px; }
+  .ex-row-acts { padding-left: 2px; padding-right: 2px; }
+  .ex-row-acts .ex-act { display: block; width: 30px; height: 28px; margin: 0 0 4px auto; }
+}
 .ex-table thead th {
   text-align: left;
   font-size: 0.68rem;
