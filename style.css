@@ -4125,6 +4125,20 @@ table {
 .account-actions .btn-link-danger { margin-left: auto; }
 .account-flash { margin-top: var(--space-1); font-size: 0.74rem; color: var(--accent); }
 
+/* Danger zone — destructive "clear all data" */
+.account-danger { padding-top: var(--space-4); border-top: 1px solid color-mix(in srgb, var(--danger) 26%, var(--border-soft)); }
+.account-danger .account-h { color: var(--danger); }
+.btn--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+}
+.btn--danger:hover {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+
 /* Header responsive: hamburger + dropdown nav */
 @media (max-width: 860px) {
   /* Right group, in visual order: …  profile-avatar  hamburger */

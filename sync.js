@@ -66,9 +66,32 @@ export async function initSync() {
   try {
     const { auth, A } = await ensureFirebase();
     A.onAuthStateChanged(auth, (user) => (user ? onSignedIn(user) : onSignedOut()));
+    // Surface errors from a redirect-based sign-in (the popup fallback).
+    A.getRedirectResult?.(auth).catch((e) => emit("error", { error: friendlyAuthError(e) }));
   } catch (e) {
     emit("error", { error: e?.message || "Failed to init sync" });
   }
+}
+
+/** Map raw Firebase auth errors to a clear, actionable message. */
+function friendlyAuthError(e) {
+  const code = e?.code || "";
+  const msg = e?.message || "";
+  if (/requests-from-referer/i.test(code) || /are[- ]blocked|referer/i.test(msg))
+    return "Sign-in is blocked by this Firebase project's API-key restrictions. In Google Cloud Console → APIs & Services → Credentials, open the API key and either add this site to the HTTP-referrer allow-list or set Application restrictions to “None”.";
+  if (code === "auth/unauthorized-domain")
+    return "This domain isn't authorised for sign-in. Add it under Firebase → Authentication → Settings → Authorized domains.";
+  if (code === "auth/operation-not-allowed")
+    return "Google sign-in isn't enabled for this project. Turn it on under Firebase → Authentication → Sign-in method → Google.";
+  if (code === "auth/network-request-failed")
+    return "Network error — check your connection and try again.";
+  if (code === "auth/popup-blocked")
+    return "Your browser blocked the sign-in popup — allow popups for this site and try again.";
+  if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request")
+    return "Sign-in cancelled.";
+  if (/api-key-not-valid/i.test(code + msg) || code === "auth/configuration-not-found")
+    return "The Firebase config looks invalid — double-check firebase-config.js against your project's web-app settings.";
+  return msg || "Sign-in failed.";
 }
 
 export async function signInWithGoogle() {
@@ -77,8 +100,16 @@ export async function signInWithGoogle() {
     const { auth, A } = await ensureFirebase();
     await A.signInWithPopup(auth, new A.GoogleAuthProvider());
   } catch (e) {
-    // Popup blocked/closed is common and not fatal.
-    emit("error", { error: e?.code === "auth/popup-closed-by-user" ? "Sign-in cancelled." : e?.message || "Sign-in failed." });
+    // A blocked popup is recoverable — fall back to a full-page redirect.
+    if (e?.code === "auth/popup-blocked") {
+      try {
+        const { auth, A } = await ensureFirebase();
+        return await A.signInWithRedirect(auth, new A.GoogleAuthProvider());
+      } catch (e2) {
+        return emit("error", { error: friendlyAuthError(e2) });
+      }
+    }
+    emit("error", { error: friendlyAuthError(e) });
   }
 }
 

@@ -72,6 +72,26 @@ export function exportData() {
   return JSON.stringify({ app: "spotterai", version: 1, exportedAt: new Date().toISOString(), data: state }, null, 2);
 }
 
+/**
+ * Wipe ALL SpotterAI data from this browser — every profile's tracker + plan,
+ * onboarding/first-week progress, reminders, streak and session drafts. The
+ * caller should reload afterwards so every module re-initialises from empty.
+ * Returns the number of keys removed. Cloud data (if synced) is untouched.
+ */
+export function clearAllData() {
+  const keys = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("spotterai")) keys.push(k);
+    }
+    keys.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    /* storage unavailable */
+  }
+  return keys.length;
+}
+
 /** Replace the active profile's data from a parsed backup object. Returns ok. */
 export function importData(obj) {
   const incoming = obj && obj.data && typeof obj.data === "object" ? obj.data : obj;

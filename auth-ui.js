@@ -9,7 +9,7 @@
  */
 
 import { createProfile, deleteProfile, getActive, listProfiles, signIn, signOut, subscribe } from "./profile-store.js";
-import { exportData, importData } from "./tracker-store.js";
+import { clearAllData, exportData, importData } from "./tracker-store.js";
 import { SYNC_CONFIGURED, initSync, signInWithGoogle, signOutGoogle } from "./sync.js";
 import { seedDemo } from "./demo-data.js";
 
@@ -18,6 +18,7 @@ const els = {
   btn: $("profile-btn"),
   name: $("profile-name"),
   avatar: $("profile-avatar"),
+  clear: $("account-clear"),
   modal: $("account-modal"),
   close: $("account-close"),
   current: $("account-current"),
@@ -239,6 +240,16 @@ function init() {
   els.signout?.addEventListener("click", () => {
     signOut();
     closeModal();
+  });
+
+  // Clear ALL local data (every profile), then reload to a fresh state.
+  els.clear?.addEventListener("click", () => {
+    const ok = confirm(
+      "Clear ALL SpotterAI data in this browser?\n\nThis removes every profile and all workouts, nutrition, plans, settings and progress — permanently. It can't be undone.\n\nTip: cancel and use “Export backup” first if you might want it back."
+    );
+    if (!ok) return;
+    clearAllData();
+    location.replace(location.pathname); // reload at the root, fresh
   });
 
   els.exportBtn?.addEventListener("click", downloadBackup);
