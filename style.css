@@ -1046,10 +1046,12 @@ table {
 .ex-anim { margin: 0 0 var(--space-4); padding: var(--space-3); display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
   background: radial-gradient(120% 90% at 50% 0%, var(--accent-soft), transparent 62%), var(--surface-2);
   border: 1px solid var(--border); border-radius: var(--r-lg); }
-.ex-anim__svg { width: 150px; height: 168px; }
-.ex-limb { stroke: var(--accent); stroke-width: 5; stroke-linecap: round; fill: none; }
-.ex-spine { stroke-width: 5.5; }
-.ex-head { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 4; }
+.ex-anim__svg { width: 152px; height: 190px; }
+.ex-cap { stroke: var(--accent); stroke-linecap: round; stroke-linejoin: round; fill: none; }
+.ex-fill { fill: var(--accent); }
+.ex-head { fill: var(--accent); }
+.ex-bar { stroke: #cbd1df; stroke-width: 4; stroke-linecap: round; }
+.ex-plate { fill: #aeb6c6; }
 .ex-ground { stroke: var(--border); stroke-width: 2; stroke-linecap: round; }
 .ex-shadow { fill: rgba(0, 0, 0, 0.32); }
 .ex-anim__cap { font-size: 0.8rem; color: var(--text-muted); text-align: center; line-height: 1.4; }
@@ -1058,8 +1060,8 @@ table {
 /* Joint pivots (view-box units). */
 .ex-fig, .ex-torso, .ex-arm, .ex-forearm, .ex-thigh, .ex-shin { transform-box: view-box; }
 .ex-torso, .ex-thigh { transform-origin: 70px 92px; }   /* hip */
-.ex-arm { transform-origin: 70px 47px; }                 /* shoulder */
-.ex-forearm { transform-origin: 72px 71px; }             /* elbow */
+.ex-arm { transform-origin: 71px 53px; }                 /* shoulder */
+.ex-forearm { transform-origin: 74px 73px; }             /* elbow */
 .ex-shin { transform-origin: 70px 121px; }               /* knee */
 
 @keyframes ex-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
