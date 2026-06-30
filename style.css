@@ -1041,6 +1041,120 @@ table {
 @media (max-width: 480px) { .onb-cols { grid-template-columns: 1fr; } }
 
 /* ----------------------------------------------------------------------------
+   Exercise Library — animated movement demos
+---------------------------------------------------------------------------- */
+.ex-anim { margin: 0 0 var(--space-4); padding: var(--space-3); display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
+  background: radial-gradient(120% 90% at 50% 0%, var(--accent-soft), transparent 62%), var(--surface-2);
+  border: 1px solid var(--border); border-radius: var(--r-lg); }
+.ex-anim__svg { width: 150px; height: 168px; }
+.ex-limb { stroke: var(--accent); stroke-width: 5; stroke-linecap: round; fill: none; }
+.ex-spine { stroke-width: 5.5; }
+.ex-head { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 4; }
+.ex-ground { stroke: var(--border); stroke-width: 2; stroke-linecap: round; }
+.ex-shadow { fill: rgba(0, 0, 0, 0.32); }
+.ex-anim__cap { font-size: 0.8rem; color: var(--text-muted); text-align: center; line-height: 1.4; }
+.ex-anim__dot { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--accent); vertical-align: middle; box-shadow: 0 0 8px 1px var(--accent); animation: ex-pulse 1.7s ease-in-out infinite; }
+
+/* Joint pivots (view-box units). */
+.ex-fig, .ex-torso, .ex-arm, .ex-forearm, .ex-thigh, .ex-shin { transform-box: view-box; }
+.ex-torso, .ex-thigh { transform-origin: 70px 92px; }   /* hip */
+.ex-arm { transform-origin: 70px 47px; }                 /* shoulder */
+.ex-forearm { transform-origin: 72px 71px; }             /* elbow */
+.ex-shin { transform-origin: 70px 121px; }               /* knee */
+
+@keyframes ex-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* Each pattern animates the joints it cares about, ping-ponging (alternate). */
+[data-anim] .ex-fig, [data-anim] .ex-torso, [data-anim] .ex-arm,
+[data-anim] .ex-forearm, [data-anim] .ex-thigh, [data-anim] .ex-shin {
+  animation-duration: 1.8s; animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite; animation-direction: alternate;
+}
+
+/* Squat — hips drop, knees forward, slight lean */
+[data-anim="squat"] .ex-fig { animation-name: ex-drop; }
+[data-anim="squat"] .ex-thigh { animation-name: ex-sq-thigh; }
+[data-anim="squat"] .ex-shin { animation-name: ex-sq-shin; }
+[data-anim="squat"] .ex-torso { animation-name: ex-lean-s; }
+[data-anim="squat"] .ex-arm { animation-name: ex-arm-fwd; }
+@keyframes ex-drop { to { transform: translateY(22px); } }
+@keyframes ex-sq-thigh { to { transform: rotate(-32deg); } }
+@keyframes ex-sq-shin { to { transform: rotate(36deg); } }
+@keyframes ex-lean-s { to { transform: rotate(12deg); } }
+@keyframes ex-arm-fwd { to { transform: rotate(-46deg); } }
+
+/* Lunge — same family, a touch shallower */
+[data-anim="lunge"] .ex-fig { animation-name: ex-drop-l; }
+[data-anim="lunge"] .ex-thigh { animation-name: ex-sq-thigh; }
+[data-anim="lunge"] .ex-shin { animation-name: ex-lu-shin; }
+[data-anim="lunge"] .ex-torso { animation-name: ex-lean-s; }
+@keyframes ex-drop-l { to { transform: translateY(18px); } }
+@keyframes ex-lu-shin { to { transform: rotate(44deg); } }
+
+/* Hip hinge — torso folds at the hip, arms hang */
+[data-anim="hinge"] .ex-torso { animation-name: ex-hinge; }
+[data-anim="hinge"] .ex-arm { animation-name: ex-arm-hang; }
+[data-anim="hinge"] .ex-thigh { animation-name: ex-hinge-knee; }
+@keyframes ex-hinge { to { transform: rotate(56deg); } }
+@keyframes ex-arm-hang { to { transform: rotate(-54deg); } }
+@keyframes ex-hinge-knee { to { transform: rotate(-8deg); } }
+
+/* Horizontal push — press forward from the chest */
+[data-anim="horizontal_push"] .ex-arm { animation-name: ex-hp-arm; }
+[data-anim="horizontal_push"] .ex-forearm { animation-name: ex-extend; }
+@keyframes ex-hp-arm { from { transform: rotate(-86deg); } to { transform: rotate(-96deg); } }
+@keyframes ex-extend { from { transform: rotate(78deg); } to { transform: rotate(4deg); } }
+
+/* Vertical push — press overhead */
+[data-anim="vertical_push"] .ex-arm { animation-name: ex-vp-arm; }
+[data-anim="vertical_push"] .ex-forearm { animation-name: ex-vp-fore; }
+@keyframes ex-vp-arm { from { transform: rotate(-150deg); } to { transform: rotate(-178deg); } }
+@keyframes ex-vp-fore { from { transform: rotate(62deg); } to { transform: rotate(2deg); } }
+
+/* Horizontal pull — row the elbow back */
+[data-anim="horizontal_pull"] .ex-torso { animation-name: ex-row-torso; }
+[data-anim="horizontal_pull"] .ex-arm { animation-name: ex-hpull-arm; }
+[data-anim="horizontal_pull"] .ex-forearm { animation-name: ex-hpull-fore; }
+@keyframes ex-row-torso { from { transform: rotate(18deg); } to { transform: rotate(14deg); } }
+@keyframes ex-hpull-arm { from { transform: rotate(-104deg); } to { transform: rotate(-58deg); } }
+@keyframes ex-hpull-fore { from { transform: rotate(6deg); } to { transform: rotate(48deg); } }
+
+/* Vertical pull — pull down from overhead */
+[data-anim="vertical_pull"] .ex-arm { animation-name: ex-vpull-arm; }
+[data-anim="vertical_pull"] .ex-forearm { animation-name: ex-vpull-fore; }
+@keyframes ex-vpull-arm { from { transform: rotate(-176deg); } to { transform: rotate(-56deg); } }
+@keyframes ex-vpull-fore { from { transform: rotate(2deg); } to { transform: rotate(72deg); } }
+
+/* Isolation — a biceps curl at the elbow */
+[data-anim="isolation"] .ex-arm { animation-name: ex-iso-arm; }
+[data-anim="isolation"] .ex-forearm { animation-name: ex-curl; }
+@keyframes ex-iso-arm { from { transform: rotate(-4deg); } to { transform: rotate(-8deg); } }
+@keyframes ex-curl { from { transform: rotate(2deg); } to { transform: rotate(-128deg); } }
+
+/* Plyometric — load then explode up, arms swing */
+[data-anim="plyometric"] .ex-fig { animation-name: ex-jump; animation-timing-function: cubic-bezier(.4, 0, .3, 1); }
+[data-anim="plyometric"] .ex-thigh { animation-name: ex-ply-thigh; }
+[data-anim="plyometric"] .ex-shin { animation-name: ex-ply-shin; }
+[data-anim="plyometric"] .ex-arm { animation-name: ex-ply-arm; }
+@keyframes ex-jump { from { transform: translateY(10px); } to { transform: translateY(-26px); } }
+@keyframes ex-ply-thigh { from { transform: rotate(-16deg); } to { transform: rotate(0); } }
+@keyframes ex-ply-shin { from { transform: rotate(20deg); } to { transform: rotate(0); } }
+@keyframes ex-ply-arm { from { transform: rotate(-18deg); } to { transform: rotate(-150deg); } }
+
+/* Isometric — a steady brace with a subtle settle */
+[data-anim="isometric"] .ex-fig { animation-name: ex-brace; animation-duration: 3.2s; }
+[data-anim="isometric"] .ex-arm { animation-name: ex-brace-arm; animation-duration: 3.2s; }
+@keyframes ex-brace { from { transform: translateY(0); } to { transform: translateY(3px); } }
+@keyframes ex-brace-arm { from { transform: rotate(-26deg); } to { transform: rotate(-30deg); } }
+
+/* Unknown — a gentle idle breath */
+[data-anim="idle"] .ex-fig { animation-name: ex-brace; animation-duration: 3.4s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ex-anim__svg *, .ex-anim__dot { animation: none !important; }
+}
+
+/* ----------------------------------------------------------------------------
    Exercise Library
 ---------------------------------------------------------------------------- */
 .lib-controls { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; margin-bottom: var(--space-5); }

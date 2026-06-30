@@ -10,6 +10,7 @@
 
 import { EXERCISE_DATA, lookupExercise, suggestAlternatives } from "./exercise-data.js";
 import { cuesFor, PATTERN_LABEL } from "./movement-cues.js";
+import { patternAnimation } from "./exercise-anim.js";
 import { getExercisePrefs, toggleExercisePref, getActiveLimitations } from "./tracker-store.js";
 import { store, setPlan } from "./store.js";
 
@@ -108,6 +109,7 @@ function renderDetail() {
   const badge = (t) => `<span class="lib-badge">${esc(t)}</span>`;
 
   detailEl.innerHTML = `
+    ${patternAnimation(e.movementPattern)}
     <div class="lib-badges">${badge(PATTERN_LABEL[e.movementPattern] || e.movementPattern)}${(e.equipment || []).map((q) => badge(cap(q))).join("")}${e.difficulty ? badge(cap(e.difficulty)) : ""}</div>
     <div class="lib-cols2">
       <div><h5 class="lib-h5">Primary muscles</h5>${list(e.primaryMuscles)}</div>
