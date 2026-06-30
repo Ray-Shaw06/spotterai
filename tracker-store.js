@@ -75,13 +75,26 @@ export function exportData() {
 /**
  * Wipe ALL local data from this browser — every profile's tracker + plan,
  * onboarding/first-week progress, reminders, streak, session drafts and any
- * Firebase auth cache. The caller MUST hard-reload afterwards (location.reload)
- * so every module re-initialises from empty — otherwise the still-live in-memory
- * state simply re-persists itself. Cloud data (if synced) is untouched.
+ * Firebase auth cache — AND the PWA offline cache + service worker, so the next
+ * load is fully fresh (no stale code/assets). The caller MUST hard-reload
+ * afterwards so every module re-initialises from empty. Cloud data (if synced)
+ * is untouched. Returns a promise that resolves once the wipe is done.
  */
-export function clearAllData() {
+export async function clearAllData() {
   try { localStorage.clear(); } catch { /* storage unavailable */ }
   try { sessionStorage.clear(); } catch { /* storage unavailable */ }
+  // Drop the PWA caches so the reload re-fetches everything from the network.
+  try {
+    if (typeof caches !== "undefined") {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch { /* no Cache API */ }
+  // Unregister the service worker so it can't serve stale assets after reload.
+  try {
+    const regs = (await navigator.serviceWorker?.getRegistrations?.()) || [];
+    await Promise.all(regs.map((r) => r.unregister()));
+  } catch { /* no SW */ }
 }
 
 /** Replace the active profile's data from a parsed backup object. Returns ok. */

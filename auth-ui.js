@@ -242,15 +242,18 @@ function init() {
     closeModal();
   });
 
-  // Clear ALL local data (every profile), then reload to a fresh state.
-  els.clear?.addEventListener("click", () => {
+  // Clear ALL local data (every profile) + the offline cache, then hard-reload.
+  els.clear?.addEventListener("click", async () => {
     const ok = confirm(
       "Clear ALL SpotterAI data in this browser?\n\nThis removes every profile and all workouts, nutrition, plans, settings and progress — permanently. It can't be undone.\n\nTip: cancel and use “Export backup” first if you might want it back."
     );
     if (!ok) return;
-    clearAllData();
-    location.hash = "#/"; // land on home, not a data-expecting route
-    location.reload(); // HARD reload so in-memory state can't re-persist itself
+    els.clear.disabled = true;
+    els.clear.textContent = "Clearing…";
+    await clearAllData(); // wipes storage + PWA cache + service worker
+    // Cache-busting navigation → guarantees a fresh load (no stale code/state).
+    location.replace(location.pathname + "?fresh=" + Date.now() + "#/");
+    location.reload();
   });
 
   els.exportBtn?.addEventListener("click", downloadBackup);
