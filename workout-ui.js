@@ -735,6 +735,18 @@ function init() {
     if (!el.idle.hidden) renderIdle();
   });
 
+  // Quick-start a saved workout from the Split Lab (or anywhere): jump to the
+  // Dashboard if needed, then open the session prefilled from the routine.
+  window.addEventListener("spotter:start-routine", (e) => {
+    const r = getRoutines().find((x) => x.id === e.detail?.id);
+    if (!r) return;
+    const begin = () => startSession(sessionFromRoutine(r));
+    if (location.hash.replace(/^#\/?/, "") !== "dashboard") {
+      location.hash = "#/dashboard";
+      setTimeout(begin, 60); // let the router reveal the dashboard view first
+    } else begin();
+  });
+
   // Restore an in-progress draft, else show idle.
   const draft = loadDraft();
   if (draft && Array.isArray(draft.exercises) && draft.exercises.length) startSession(draft);
