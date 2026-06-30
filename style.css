@@ -2521,15 +2521,14 @@ table {
    13e. Session tools — rest timer + plate/1RM calculators
 ---------------------------------------------------------------------------- */
 .rest-timer {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
   margin: var(--space-3) 0;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3) 0;
   border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
   background: color-mix(in srgb, var(--accent) 9%, transparent);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
+  overflow: hidden;
 }
+.rest-timer__row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; padding-bottom: var(--space-2); }
 .rest-timer__label {
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -2539,15 +2538,28 @@ table {
 .rest-timer__time {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 1.3rem;
+  font-size: 1.35rem;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
+  min-width: 3.2ch;
 }
-.rest-timer__btns {
-  margin-left: auto;
-  display: flex;
-  gap: var(--space-2);
+.rest-presets { display: flex; gap: 4px; }
+.rest-preset {
+  padding: 0.3rem 0.55rem; font-size: 0.74rem; font-weight: 600; color: var(--text-muted);
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition);
 }
+.rest-preset:hover { color: var(--text); border-color: var(--accent-ring); }
+.rest-preset.is-active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-ring); }
+.rest-timer__btns { margin-left: auto; display: flex; gap: var(--space-2); }
+/* Toggle controls by state: idle shows presets + Start, running shows +15s/Skip. */
+.rest-timer.is-running .rest-presets,
+.rest-timer.is-running [data-rest="start"],
+.rest-timer:not(.is-running) [data-rest="add"],
+.rest-timer:not(.is-running) [data-rest="skip"] { display: none; }
+.rest-timer.is-running .rest-timer__time { animation: rest-pulse 1s ease-in-out infinite; }
+@keyframes rest-pulse { 50% { opacity: 0.55; } }
+.rest-timer__bar { height: 4px; background: color-mix(in srgb, var(--accent) 16%, transparent); border-radius: var(--r-full); overflow: hidden; }
+.rest-timer__fill { display: block; height: 100%; width: 0%; background: var(--accent); border-radius: var(--r-full); transition: width 0.95s linear; }
 .session-tools {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

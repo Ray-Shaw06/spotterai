@@ -666,14 +666,25 @@
                 <span id="session-timer" class="session-timer" aria-label="Duration">0:00</span>
               </div>
 
-              <!-- Rest timer (auto-starts when a set is marked done) -->
-              <div id="rest-timer" class="rest-timer" hidden>
-                <span class="rest-timer__label">Rest</span>
-                <span id="rest-time" class="rest-timer__time">0:00</span>
-                <div class="rest-timer__btns">
-                  <button type="button" class="btn btn--ghost btn--sm" data-rest="add">+15s</button>
-                  <button type="button" class="btn btn--ghost btn--sm" data-rest="skip">Skip</button>
+              <!-- Rest timer — pick a duration, start manually, or it auto-starts
+                   when you mark a set done -->
+              <div id="rest-timer" class="rest-timer">
+                <div class="rest-timer__row">
+                  <span class="rest-timer__label">Rest</span>
+                  <span id="rest-time" class="rest-timer__time">2:00</span>
+                  <div class="rest-presets" id="rest-presets" role="group" aria-label="Rest duration">
+                    <button type="button" class="rest-preset" data-rest-set="60">1:00</button>
+                    <button type="button" class="rest-preset" data-rest-set="90">1:30</button>
+                    <button type="button" class="rest-preset" data-rest-set="120">2:00</button>
+                    <button type="button" class="rest-preset" data-rest-set="180">3:00</button>
+                  </div>
+                  <div class="rest-timer__btns">
+                    <button type="button" class="btn btn--primary btn--sm" data-rest="start">Start</button>
+                    <button type="button" class="btn btn--ghost btn--sm" data-rest="add">+15s</button>
+                    <button type="button" class="btn btn--ghost btn--sm" data-rest="skip">Skip</button>
+                  </div>
                 </div>
+                <div class="rest-timer__bar"><span class="rest-timer__fill" id="rest-fill"></span></div>
               </div>
 
               <div id="session-exercises" class="session-exercises"></div>

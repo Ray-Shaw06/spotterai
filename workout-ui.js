@@ -40,6 +40,8 @@ const el = {
   // rest timer + tools
   restTimer: $("rest-timer"),
   restTime: $("rest-time"),
+  restPresets: $("rest-presets"),
+  restFill: $("rest-fill"),
   toolsToggle: $("session-tools-toggle"),
   tools: $("session-tools"),
   plateTarget: $("plate-target"),
@@ -133,19 +135,45 @@ function stopTimer() {
 // ----------------------------------------------------------------------------
 let restId = null;
 let restRemaining = 0;
-const REST_DEFAULT = 120;
+let restTotal = 120;
+const REST_KEY = "spotterai.rest.default";
+let restDefault = clampRest(Number(localStorage.getItem(REST_KEY)) || 120);
 
-function startRest(sec = REST_DEFAULT) {
+function clampRest(s) {
+  return Math.max(10, Math.min(600, Math.round(s) || 120));
+}
+function setRestDefault(sec) {
+  restDefault = clampRest(sec);
+  try { localStorage.setItem(REST_KEY, String(restDefault)); } catch {}
+  renderRestIdle();
+}
+function renderRestPresets() {
+  el.restPresets?.querySelectorAll(".rest-preset").forEach((b) => b.classList.toggle("is-active", Number(b.dataset.restSet) === restDefault));
+}
+// Idle state: show the chosen default + presets, clear the progress bar.
+function renderRestIdle() {
+  el.restTimer?.classList.remove("is-running");
+  if (el.restTime) el.restTime.textContent = fmtTime(restDefault);
+  if (el.restFill) el.restFill.style.width = "0%";
+  renderRestPresets();
+}
+
+function startRest(sec = restDefault) {
   if (!el.restTimer) return;
   stopRest();
-  restRemaining = sec;
-  el.restTimer.hidden = false;
-  el.restTime.textContent = fmtTime(restRemaining);
+  restTotal = clampRest(sec);
+  restRemaining = restTotal;
+  el.restTimer.classList.add("is-running");
+  tickRest();
   restId = setInterval(() => {
     restRemaining -= 1;
     if (restRemaining <= 0) return restDone();
-    el.restTime.textContent = fmtTime(restRemaining);
+    tickRest();
   }, 1000);
+}
+function tickRest() {
+  if (el.restTime) el.restTime.textContent = fmtTime(Math.max(0, restRemaining));
+  if (el.restFill) el.restFill.style.width = `${Math.max(0, (restRemaining / restTotal) * 100)}%`;
 }
 function stopRest() {
   if (restId) clearInterval(restId);
@@ -153,25 +181,25 @@ function stopRest() {
 }
 function skipRest() {
   stopRest();
-  if (el.restTimer) el.restTimer.hidden = true;
+  renderRestIdle();
 }
 function addRest(sec) {
-  if (!el.restTimer || el.restTimer.hidden) return;
+  if (!el.restTimer || !el.restTimer.classList.contains("is-running")) return;
   restRemaining = Math.max(1, restRemaining + sec);
-  el.restTime.textContent = fmtTime(restRemaining);
+  restTotal = Math.max(restTotal, restRemaining); // keep the bar sane when extending
+  tickRest();
 }
 function restDone() {
   stopRest();
-  if (el.restTime) el.restTime.textContent = "0:00";
+  restRemaining = 0;
+  tickRest();
   try {
-    navigator.vibrate?.(200);
+    navigator.vibrate?.([200, 80, 200]);
   } catch {
     /* ignore */
   }
   beep();
-  setTimeout(() => {
-    if (el.restTimer && !restId) el.restTimer.hidden = true;
-  }, 1500);
+  setTimeout(renderRestIdle, 1200);
 }
 function beep() {
   try {
@@ -623,12 +651,22 @@ function init() {
     else if (a === "progress") { closeSummary(); location.hash = "#/progress"; }
   });
 
-  // Rest timer controls
+  // Rest timer controls: duration presets + start / +15s / skip
   el.restTimer?.addEventListener("click", (e) => {
+    const preset = e.target.closest("[data-rest-set]");
+    if (preset) {
+      const sec = Number(preset.dataset.restSet);
+      const wasRunning = el.restTimer.classList.contains("is-running");
+      setRestDefault(sec);
+      if (wasRunning) startRest(sec); // retarget a running timer
+      return;
+    }
     const a = e.target.closest("[data-rest]")?.dataset.rest;
-    if (a === "add") addRest(15);
+    if (a === "start") startRest();
+    else if (a === "add") addRest(15);
     else if (a === "skip") skipRest();
   });
+  renderRestIdle();
 
   // Tools: plate calculator + 1RM estimate
   el.toolsToggle?.addEventListener("click", () => {
