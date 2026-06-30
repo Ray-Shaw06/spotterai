@@ -73,23 +73,15 @@ export function exportData() {
 }
 
 /**
- * Wipe ALL SpotterAI data from this browser — every profile's tracker + plan,
- * onboarding/first-week progress, reminders, streak and session drafts. The
- * caller should reload afterwards so every module re-initialises from empty.
- * Returns the number of keys removed. Cloud data (if synced) is untouched.
+ * Wipe ALL local data from this browser — every profile's tracker + plan,
+ * onboarding/first-week progress, reminders, streak, session drafts and any
+ * Firebase auth cache. The caller MUST hard-reload afterwards (location.reload)
+ * so every module re-initialises from empty — otherwise the still-live in-memory
+ * state simply re-persists itself. Cloud data (if synced) is untouched.
  */
 export function clearAllData() {
-  const keys = [];
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith("spotterai")) keys.push(k);
-    }
-    keys.forEach((k) => localStorage.removeItem(k));
-  } catch {
-    /* storage unavailable */
-  }
-  return keys.length;
+  try { localStorage.clear(); } catch { /* storage unavailable */ }
+  try { sessionStorage.clear(); } catch { /* storage unavailable */ }
 }
 
 /** Replace the active profile's data from a parsed backup object. Returns ok. */

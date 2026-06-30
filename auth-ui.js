@@ -249,7 +249,8 @@ function init() {
     );
     if (!ok) return;
     clearAllData();
-    location.replace(location.pathname); // reload at the root, fresh
+    location.hash = "#/"; // land on home, not a data-expecting route
+    location.reload(); // HARD reload so in-memory state can't re-persist itself
   });
 
   els.exportBtn?.addEventListener("click", downloadBackup);
