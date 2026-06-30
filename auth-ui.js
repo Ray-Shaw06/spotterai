@@ -16,6 +16,7 @@ import { seedDemo } from "./demo-data.js";
 const $ = (id) => document.getElementById(id);
 const els = {
   btn: $("profile-btn"),
+  navBtn: $("nav-account"),
   name: $("profile-name"),
   avatar: $("profile-avatar"),
   clear: $("account-clear"),
@@ -201,6 +202,7 @@ function init() {
   renderHeader();
 
   els.btn.addEventListener("click", openModal);
+  els.navBtn?.addEventListener("click", openModal); // mobile bottom-nav "Account"
   els.close?.addEventListener("click", closeModal);
   els.modal.addEventListener("click", (e) => {
     if (e.target === els.modal) closeModal(); // click backdrop
