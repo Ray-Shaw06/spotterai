@@ -11,7 +11,7 @@
  * re-rendering, so inputs never lose focus; structural changes re-render.
  */
 
-import { addCustomExercise, addRoutine, addWorkout, deriveStats, getCustomExercises, getLoggedExerciseNames, getPainReports, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, subscribe, suggestProgression, updateCustomExercise } from "./tracker-store.js";
+import { addCustomExercise, addRoutine, addWorkout, deriveStats, getCustomExercises, getLoggedExerciseNames, getPainReports, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, setUnit, subscribe, suggestProgression, updateCustomExercise } from "./tracker-store.js";
 import { findExercise, isCardio, searchExercises } from "./exercises.js";
 import { classifyExercise } from "./ai.js";
 import { epley1RM } from "./progression.js";
@@ -25,6 +25,7 @@ const el = {
   startEmpty: $("start-empty"),
   session: $("workout-session"),
   name: $("session-name"),
+  unitToggle: $("session-unit"),
   timer: $("session-timer"),
   exercises: $("session-exercises"),
   addEx: $("session-add-exercise"),
@@ -67,6 +68,36 @@ function esc(t) {
   return d.innerHTML;
 }
 const unit = () => getState().unit || "kg";
+
+function renderUnitBtn() {
+  const u = unit();
+  el.unitToggle?.querySelectorAll(".session-unit__opt").forEach((b) => b.classList.toggle("is-active", b.dataset.u === u));
+}
+
+// Switch the weight unit mid-session: flips the global unit (so it stays the
+// single source of truth + converts saved history) AND converts the weights
+// already typed into the live, unsaved session, then re-renders.
+function switchUnit(next) {
+  if ((next !== "kg" && next !== "lb") || next === unit()) return;
+  const wf = next === "lb" ? 2.2046226218 : 1 / 2.2046226218;
+  if (session) {
+    for (const ex of session.exercises) {
+      for (const s of ex.sets || []) {
+        const w = Number(s.weight);
+        if (s.weight !== "" && s.weight != null && Number.isFinite(w) && w > 0) {
+          s.weight = String(Math.round(w * wf * 10) / 10);
+        }
+      }
+    }
+  }
+  setUnit(next); // converts saved bodyweight/sets + flips the global unit
+  if (session) {
+    session.exercises.forEach((ex) => (ex.prev = lastSetFor(ex.name)));
+    renderSession();
+    saveDraft();
+  }
+  renderUnitBtn();
+}
 
 // ----------------------------------------------------------------------------
 // Toast (shares #toast-root with the dashboard)
@@ -291,6 +322,7 @@ function startSession(preset) {
   el.idle.hidden = true;
   el.session.hidden = false;
   el.name.value = session.name;
+  renderUnitBtn();
   // Reflect any saved difficulty rating on the chips.
   el.diff?.querySelectorAll(".session-diff__chip").forEach((c) => c.classList.toggle("is-active", session.difficulty === c.dataset.diff));
   renderSession();
@@ -652,6 +684,12 @@ function init() {
     session.difficulty = session.difficulty === chip.dataset.diff ? null : chip.dataset.diff;
     el.diff.querySelectorAll(".session-diff__chip").forEach((c) => c.classList.toggle("is-active", c === chip && session.difficulty));
     saveDraft();
+  });
+
+  // Mid-session kg/lb toggle
+  el.unitToggle?.addEventListener("click", (e) => {
+    const opt = e.target.closest("[data-u]");
+    if (opt) switchUnit(opt.dataset.u);
   });
 
   // Report pain mid-workout → Pain Mode

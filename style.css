@@ -4420,6 +4420,13 @@ table {
   margin-bottom: var(--space-4);
 }
 .session-name { flex: 1; font-weight: 600; }
+.session-unit { flex: none; display: inline-flex; padding: 2px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); }
+.session-unit__opt {
+  padding: 0.3rem 0.7rem; font-size: 0.8rem; font-weight: 600; color: var(--text-muted);
+  background: none; border: none; border-radius: var(--r-full); cursor: pointer; transition: var(--transition);
+}
+.session-unit__opt:hover { color: var(--text); }
+.session-unit__opt.is-active { color: var(--accent-ink); background: var(--accent); }
 .session-timer {
   flex: none;
   padding: 0.4rem 0.7rem;
