@@ -72,26 +72,26 @@
         <a href="#/dashboard" data-nav="dashboard" class="nav-link">
           <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></svg><span>Dashboard</span>
         </a>
-        <a href="#/split" data-nav="split" class="nav-link">
+        <a href="#/split" data-nav="split" class="nav-link nav-link--sec">
           <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5h2v11h-2zM15.5 6.5h2v11h-2z" /><path d="M4 9v6M20 9v6M8.5 12h7" /></svg><span>Split Lab</span>
         </a>
         <a href="#/nutrition" data-nav="nutrition" class="nav-link">
           <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8c-2.6-1.7-6.5 0-6.5 5.2 0 4.7 3.2 8.8 6.5 8.8s6.5-4.1 6.5-8.8C18.5 8 14.6 6.3 12 8z" /><path d="M12 8c0-2.2 1.5-4 3.8-4.2" /></svg><span>Nutrition</span>
         </a>
-        <a href="#/progress" data-nav="progress" class="nav-link">
+        <a href="#/progress" data-nav="progress" class="nav-link nav-link--sec">
           <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l5.5-5.5 3 3L20 8" /><path d="M15 8h5v5" /></svg><span>Progress</span>
         </a>
-        <a href="#/form-check" data-nav="form-check" class="nav-link">
+        <a href="#/form-check" data-nav="form-check" class="nav-link nav-link--sec">
           <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2" /><path d="M16 10l5-3v10l-5-3z" /></svg><span>Form check</span>
         </a>
-        <a href="#/library" data-nav="library" class="nav-link">
+        <a href="#/library" data-nav="library" class="nav-link nav-link--sec">
           <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h6v18H6a2 2 0 0 1-2-2z" /><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2h-6" /></svg><span>Library</span>
         </a>
-        <a href="#/evals" data-nav="evals" class="nav-link">
+        <a href="#/evals" data-nav="evals" class="nav-link nav-link--sec">
           <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.6v5.4c0 4.4-3 7.6-7 8.9-4-1.3-7-4.5-7-8.9V5.6L12 3z" /><path d="M9.2 12l2 2 3.6-4" /></svg><span>Safety Lab</span>
         </a>
-        <button type="button" id="nav-account" class="nav-link nav-link--account" aria-haspopup="dialog">
-          <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6" /></svg><span>Account</span>
+        <button type="button" id="nav-more" class="nav-link nav-link--more" aria-haspopup="true" aria-expanded="false" aria-controls="more-sheet">
+          <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" /></svg><span>More</span>
         </button>
       </nav>
 
@@ -1225,6 +1225,29 @@
         <button type="button" id="account-clear" class="btn btn--danger btn--sm">Clear all data</button>
       </div>
     </div>
+  </div>
+
+  <!-- Mobile "More" sheet: the secondary destinations + Account (bottom nav
+       shows 5 fixed tabs; this holds the rest). Hidden entirely on desktop. -->
+  <div id="more-sheet" class="more-sheet" hidden>
+    <a href="#/split" data-nav="split" class="more-sheet__link">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5h2v11h-2zM15.5 6.5h2v11h-2z" /><path d="M4 9v6M20 9v6M8.5 12h7" /></svg><span>Split Lab</span>
+    </a>
+    <a href="#/progress" data-nav="progress" class="more-sheet__link">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18l5.5-5.5 3 3L20 8" /><path d="M15 8h5v5" /></svg><span>Progress</span>
+    </a>
+    <a href="#/form-check" data-nav="form-check" class="more-sheet__link">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2" /><path d="M16 10l5-3v10l-5-3z" /></svg><span>Form check</span>
+    </a>
+    <a href="#/library" data-nav="library" class="more-sheet__link">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h6v18H6a2 2 0 0 1-2-2z" /><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2h-6" /></svg><span>Library</span>
+    </a>
+    <a href="#/evals" data-nav="evals" class="more-sheet__link">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 2.6v5.4c0 4.4-3 7.6-7 8.9-4-1.3-7-4.5-7-8.9V5.6L12 3z" /><path d="M9.2 12l2 2 3.6-4" /></svg><span>Safety Lab</span>
+    </a>
+    <button type="button" id="nav-account" class="more-sheet__link" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6" /></svg><span>Account</span>
+    </button>
   </div>
 
   <!-- ===================== COACH CHATBOT ===================== -->

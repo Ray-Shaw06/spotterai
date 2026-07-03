@@ -65,6 +65,32 @@ nav?.addEventListener("click", (e) => {
 });
 
 // ----------------------------------------------------------------------------
+// Mobile "More" sheet — the bottom bar keeps 5 fixed tabs; the rest live here.
+// ----------------------------------------------------------------------------
+const moreBtn = document.getElementById("nav-more");
+const moreSheet = document.getElementById("more-sheet");
+function setMore(open) {
+  if (!moreSheet || !moreBtn) return;
+  moreSheet.hidden = !open;
+  moreBtn.setAttribute("aria-expanded", String(open));
+  moreBtn.classList.toggle("is-active", open);
+}
+moreBtn?.addEventListener("click", (e) => {
+  e.stopPropagation(); // keep the document-level closer from re-toggling
+  setMore(moreSheet.hidden);
+});
+moreSheet?.addEventListener("click", (e) => {
+  // Any selection (a route link, or the Account button) closes the sheet.
+  if (e.target.closest("a, button")) setMore(false);
+});
+document.addEventListener("click", (e) => {
+  if (moreSheet && !moreSheet.hidden && !e.target.closest("#more-sheet")) setMore(false);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") setMore(false);
+});
+
+// ----------------------------------------------------------------------------
 // Wire up
 // ----------------------------------------------------------------------------
 // Only `#/route` hashes drive navigation; plain `#anchor` links (e.g. the hero's

@@ -11,7 +11,7 @@
  * re-rendering, so inputs never lose focus; structural changes re-render.
  */
 
-import { addCustomExercise, addRoutine, addWorkout, deriveStats, getCustomExercises, getLoggedExerciseNames, getPainReports, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, setUnit, subscribe, suggestProgression, updateCustomExercise } from "./tracker-store.js";
+import { addCustomExercise, addRoutine, addWorkout, deriveStats, getCustomExercises, getLoggedExerciseNames, getPainReports, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, setUnit, subscribe, suggestProgression, updateCustomExercise, updateWorkout } from "./tracker-store.js";
 import { findExercise, isCardio, searchExercises } from "./exercises.js";
 import { classifyExercise } from "./ai.js";
 import { epley1RM } from "./progression.js";
@@ -322,6 +322,7 @@ function startSession(preset) {
   el.idle.hidden = true;
   el.session.hidden = false;
   el.name.value = session.name;
+  if (el.finish) el.finish.textContent = session.editingId ? "Save changes" : "Finish";
   renderUnitBtn();
   // Reflect any saved difficulty rating on the chips.
   el.diff?.querySelectorAll(".session-diff__chip").forEach((c) => c.classList.toggle("is-active", session.difficulty === c.dataset.diff));
@@ -355,6 +356,16 @@ function finishSession() {
     .filter((ex) => ex.sets.length);
   if (!exercises.length) {
     toast("<strong>Log a set first</strong> — add weight &amp; reps to at least one set.");
+    return;
+  }
+  // Editing an already-logged workout → update it in place (keeps its date +
+  // original duration, recomputes volume/XP). No summary — nothing new happened.
+  if (session.editingId) {
+    const w = updateWorkout(session.editingId, { name: el.name.value.trim() || session.name, exercises, difficulty: session.difficulty });
+    session = null;
+    saveDraft();
+    showIdle();
+    toast(w ? `<strong>Workout updated</strong> · ${esc(w.name)}` : "Couldn't update that workout.");
     return;
   }
   const durationSec = Math.floor((Date.now() - session.startedAt) / 1000);
@@ -567,6 +578,29 @@ function sessionFromRoutine(r) {
     })),
   };
 }
+// Reopen a LOGGED workout for editing: sets come back pre-filled and marked
+// done; `editingId` makes finishSession update in place instead of adding.
+function sessionFromWorkout(w) {
+  return {
+    name: w.name,
+    startedAt: Date.now(),
+    editingId: w.id,
+    difficulty: w.difficulty || null,
+    exercises: (w.exercises || []).map((e) => ({
+      name: e.name,
+      muscle: e.muscle || findExercise(e.name)?.muscle || "",
+      cardio: isCardio(e.name),
+      sets: (e.sets?.length ? e.sets : [{}]).map((s) => ({
+        weight: s.weight || "",
+        reps: s.reps || "",
+        ...(s.durationMin ? { durationMin: s.durationMin } : {}),
+        ...(s.distance ? { distance: s.distance } : {}),
+        done: true,
+      })),
+    })),
+  };
+}
+
 function sessionFromPlanDay(day) {
   return {
     name: day.focus || "Session",
@@ -609,7 +643,12 @@ function renderHistory() {
               <span class="hist__main"><span class="hist__name">${esc(w.name)}</span><span class="hist__sub">${esc(w.date)}${dur} · ${setCount} ${setCount === 1 ? "set" : "sets"}</span></span>
               <span class="hist__vol">${w.volume ? (w.volume / 1000).toFixed(1) + "k" : "—"}</span>
             </button>
-            <div class="hist__detail" hidden>${detail}<button type="button" class="btn-link-danger" data-act="del-workout">Delete workout</button></div>
+            <div class="hist__detail" hidden>${detail}
+              <div class="hist__acts">
+                <button type="button" class="btn-link" data-act="edit-workout">Edit workout</button>
+                <button type="button" class="btn-link-danger" data-act="del-workout">Delete workout</button>
+              </div>
+            </div>
           </li>`;
         })
         .join("")
@@ -829,6 +868,17 @@ function init() {
       d.hidden = !d.hidden;
     } else if (e.target.closest('[data-act="del-workout"]')) {
       if (confirm("Delete this workout?")) removeEntry("workouts", li.dataset.id);
+    } else if (e.target.closest('[data-act="edit-workout"]')) {
+      if (session) {
+        toast("<strong>Finish or discard your current session first</strong> — then you can edit a logged workout.");
+        return;
+      }
+      const w = getState().workouts.find((x) => x.id === li.dataset.id);
+      if (w) {
+        startSession(sessionFromWorkout(w));
+        el.session?.scrollIntoView({ behavior: "smooth", block: "start" });
+        toast(`<strong>Editing “${esc(w.name)}”</strong> — Finish saves your changes to the original entry.`);
+      }
     }
   });
 

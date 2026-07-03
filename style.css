@@ -432,7 +432,9 @@ table {
 .sidebar__nav button.nav-link { font: inherit; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; text-align: left; }
 /* Account lives in the sidebar foot on desktop; only surface it in the mobile
    bottom nav (where there's no visible foot). */
-.sidebar__nav .nav-link--account { display: none; }
+.sidebar__nav .nav-link--more { display: none; }
+/* Mobile "More" sheet (secondary destinations + Account) — desktop never shows it. */
+.more-sheet { display: none; }
 .sidebar__foot {
   display: flex;
   align-items: center;
@@ -496,7 +498,40 @@ table {
   .profile-btn__chev { display: none; }
   .profile-btn__name { display: inline-block; max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; font-size: 0.8rem; }
   /* Surface "Account" as a real tab in the bottom nav. */
-  .sidebar__nav .nav-link--account { display: flex; }
+  .sidebar__nav .nav-link--more { display: flex; }
+  /* Keep 5 fixed tabs; the rest move into the More sheet. */
+  .sidebar__nav .nav-link--sec { display: none; }
+  .more-sheet:not([hidden]) {
+    position: fixed;
+    right: var(--space-3);
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    z-index: 70;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: var(--space-2);
+    background: var(--surface-solid);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-lg);
+  }
+  .more-sheet__link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0.65rem 0.8rem;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-decoration: none;
+    background: none;
+    border: none;
+    border-radius: var(--r-md);
+    cursor: pointer;
+  }
+  .more-sheet__link:hover, .more-sheet__link:active { color: var(--text); background: var(--surface-2); }
+  .more-sheet__link.is-active { color: var(--accent); background: var(--accent-soft); }
   .sidebar__nav {
     position: fixed;
     left: 0;
@@ -4726,6 +4761,9 @@ table {
   border-radius: var(--r-md);
 }
 .meal__head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-2); }
+.meal__head-right { display: inline-flex; align-items: baseline; gap: var(--space-3); }
+.meal__act { padding: 2px 9px; font-size: 0.7rem; font-weight: 600; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: var(--r-full); cursor: pointer; transition: var(--transition); }
+.meal__act:hover { background: var(--accent); color: var(--accent-ink); }
 .meal__name { font-family: var(--font-display); font-size: 1rem; font-weight: 600; color: var(--text); margin: 0; }
 .meal__kcal { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); }
 .meal__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
@@ -4743,6 +4781,21 @@ table {
 .food-row__kcal { flex: none; font-size: var(--fs-small); font-weight: 600; color: var(--text-muted); }
 .food-row__del { flex: none; width: 22px; height: 22px; font-size: 0.95rem; color: var(--text-faint); background: transparent; border: none; border-radius: var(--r-sm); cursor: pointer; }
 .food-row__del:hover { color: var(--danger); }
+/* The row body is a button (tap to edit) — reset button chrome, keep layout. */
+button.food-row__main { font: inherit; text-align: left; background: none; border: none; padding: 0; cursor: pointer; color: inherit; border-radius: var(--r-sm); }
+button.food-row__main:hover .food-row__name { color: var(--accent); }
+/* Inline diary-row editor */
+.food-row.is-editing { display: block; }
+.food-edit { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2) 0; }
+.food-edit__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); }
+.food-edit__grid label { display: flex; flex-direction: column; gap: 2px; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); }
+.food-edit__acts { display: flex; align-items: center; gap: var(--space-3); }
+/* Saved-meal rows in the picker */
+.food-tpl { display: flex; align-items: center; gap: var(--space-1); }
+.food-tpl .food-opt { flex: 1; min-width: 0; }
+.food-tpl__del { flex: none; width: 24px; height: 24px; font-size: 1rem; color: var(--text-faint); background: none; border: none; border-radius: var(--r-sm); cursor: pointer; }
+.food-tpl__del:hover { color: var(--danger); }
+.hist__acts { display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-2); }
 .meal__add {
   margin-top: var(--space-2);
   padding: 0.4rem;

@@ -23,6 +23,7 @@ const DEFAULTS = {
   routines: [], // saved workout templates
   customExercises: [], // user-added exercises { name, muscle, cardio }
   customFoods: [], // user-added foods { name, serving, kcal, protein, carbs, fat }
+  mealTemplates: [], // saved meals { id, name, items:[{name,qty,unit,kcal,protein,carbs,fat}] }
   water: {}, // { 'YYYY-MM-DD': ml }
   painReports: [], // { id, date, location, severity, timing, note, injuryKey }
   exercisePrefs: { favorites: [], disliked: [] }, // exercise names
@@ -114,6 +115,7 @@ export function importData(obj) {
     routines: Array.isArray(incoming.routines) ? incoming.routines : [],
     customExercises: Array.isArray(incoming.customExercises) ? incoming.customExercises : [],
     customFoods: Array.isArray(incoming.customFoods) ? incoming.customFoods : [],
+    mealTemplates: Array.isArray(incoming.mealTemplates) ? incoming.mealTemplates : [],
     water: incoming.water && typeof incoming.water === "object" ? incoming.water : {},
     updatedAt: incoming.updatedAt || Date.now(),
   };
@@ -188,8 +190,8 @@ function exerciseSummary(ex) {
 // ----------------------------------------------------------------------------
 // Mutations
 // ----------------------------------------------------------------------------
-export function addWorkout({ name, focus, exercises = [], date, durationSec, difficulty } = {}) {
-  const clean = exercises
+function cleanExercises(exercises) {
+  return exercises
     .map((e) => {
       const sets = setsOf(e)
         .map((s) => ({
@@ -202,8 +204,10 @@ export function addWorkout({ name, focus, exercises = [], date, durationSec, dif
       return { name: String(e.name || "Exercise"), muscle: e.muscle || "", notes: String(e.notes || ""), sets };
     })
     .filter((e) => e.name && e.sets.length);
-
-  const volume = clean.reduce((v, e) => v + e.sets.reduce((sv, s) => sv + s.weight * s.reps, 0), 0);
+}
+export function addWorkout({ name, focus, exercises = [], date, durationSec, difficulty } = {}) {
+  const clean = cleanExercises(exercises);
+  const volume = workoutVolume({ exercises: clean });
   const workout = {
     id: uid(),
     date: date || today(),
@@ -219,6 +223,26 @@ export function addWorkout({ name, focus, exercises = [], date, durationSec, dif
   const unlocked = unlockAchievements();
   persist();
   return { workout, newAchievements: unlocked };
+}
+
+/**
+ * Replace a logged workout's contents (edit after saving). Keeps its id + date,
+ * recomputes volume + XP from the edited sets. Returns the workout or null.
+ */
+export function updateWorkout(id, { name, exercises = [], durationSec, difficulty } = {}) {
+  const w = state.workouts.find((x) => x.id === id);
+  if (!w) return null;
+  const clean = cleanExercises(exercises);
+  if (!clean.length) return null; // an edit can't empty a workout — delete instead
+  const volume = workoutVolume({ exercises: clean });
+  w.name = String(name || w.name);
+  w.exercises = clean;
+  w.volume = Math.round(volume);
+  w.xp = workoutXp(volume);
+  if (durationSec != null) w.durationSec = Number(durationSec) || w.durationSec;
+  if (difficulty != null) difficulty ? (w.difficulty = String(difficulty)) : delete w.difficulty;
+  persist();
+  return w;
 }
 
 // --- Routines (saved workout templates) -------------------------------------
@@ -276,6 +300,78 @@ export function addNutrition({ name, meal, qty, unit, kcal, protein, carbs, fat,
   const unlocked = unlockAchievements();
   persist();
   return { entry, newAchievements: unlocked };
+}
+
+/** Edit a logged food in place (name/qty/kcal/macros/meal) — no delete+re-add. */
+export function updateNutrition(id, patch = {}) {
+  const e = state.nutrition.find((x) => x.id === id);
+  if (!e) return null;
+  const num = (v, dp = 1) => Math.max(0, Math.round((Number(v) || 0) * 10 ** dp) / 10 ** dp);
+  if (patch.name != null && String(patch.name).trim()) e.name = String(patch.name).trim();
+  if (patch.meal != null && MEALS.includes(patch.meal)) e.meal = patch.meal;
+  if (patch.qty != null) e.qty = Number(patch.qty) || e.qty;
+  for (const k of ["kcal", "protein", "carbs", "fat"]) {
+    if (patch[k] != null && patch[k] !== "") e[k] = num(patch[k], k === "kcal" ? 0 : 1);
+  }
+  persist();
+  return e;
+}
+
+/**
+ * Copy one meal's entries from another day (default: yesterday) onto `date`.
+ * Returns the number of entries copied.
+ */
+export function copyMeal({ meal, fromDate, date } = {}) {
+  const to = date || today();
+  const from = fromDate || ymdOffset(to, -1);
+  const src = state.nutrition.filter((e) => e.date === from && e.meal === meal);
+  for (const e of src) {
+    state.nutrition.push({ ...e, id: uid(), date: to });
+  }
+  if (src.length) {
+    unlockAchievements();
+    persist();
+  }
+  return src.length;
+}
+
+function ymdOffset(ymdStr, days) {
+  const d = new Date(ymdStr + "T12:00:00"); // noon avoids DST edge-cases
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// --- Saved meals (templates): log a whole meal in one tap -------------------
+export function saveMealTemplate({ name, entries = [] } = {}) {
+  const items = entries
+    .map((e) => ({ name: e.name, qty: e.qty || 1, unit: e.unit || "", kcal: e.kcal || 0, protein: e.protein || 0, carbs: e.carbs || 0, fat: e.fat || 0 }))
+    .filter((i) => i.name);
+  if (!items.length) return null;
+  const t = { id: uid(), name: String(name || "My meal").slice(0, 40), items };
+  state.mealTemplates = state.mealTemplates || [];
+  // Same name → replace (updating your usual breakfast shouldn't duplicate).
+  state.mealTemplates = state.mealTemplates.filter((x) => x.name.toLowerCase() !== t.name.toLowerCase());
+  state.mealTemplates.push(t);
+  persist();
+  return t;
+}
+export function getMealTemplates() {
+  return state.mealTemplates || [];
+}
+export function removeMealTemplate(id) {
+  state.mealTemplates = (state.mealTemplates || []).filter((t) => t.id !== id);
+  persist();
+}
+/** Log every item of a saved meal to `meal` on `date`. Returns entries added. */
+export function logMealTemplate(id, meal, date) {
+  const t = (state.mealTemplates || []).find((x) => x.id === id);
+  if (!t) return 0;
+  for (const i of t.items) {
+    state.nutrition.push({ id: uid(), date: date || today(), meal: MEALS.includes(meal) ? meal : "snacks", ...i });
+  }
+  unlockAchievements();
+  persist();
+  return t.items.length;
 }
 
 // --- Water -----------------------------------------------------------------

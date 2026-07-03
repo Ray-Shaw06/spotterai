@@ -9,7 +9,7 @@
  * Display areas re-render on change; inputs in the food picker are short-lived.
  */
 
-import { addCustomFood, addNutrition, addWater, deriveStats, getCustomFoods, getRecentFoods, getState, getWater, removeEntry, resetAll, setTargets, subscribe } from "./tracker-store.js";
+import { addCustomFood, addNutrition, addWater, copyMeal, deriveStats, getCustomFoods, getMealTemplates, getRecentFoods, getState, getWater, logMealTemplate, removeEntry, removeMealTemplate, resetAll, saveMealTemplate, setTargets, subscribe, updateNutrition } from "./tracker-store.js";
 import { searchFoods, searchOpenFoodFacts } from "./foods.js";
 import { estimateFood, estimateMealPhoto } from "./ai.js";
 import { ring } from "./charts.js";
@@ -198,26 +198,66 @@ function macroRow(label, value, target, color) {
   </div>`;
 }
 
+function ymdAdd(ymdStr, days) {
+  const d = new Date(ymdStr + "T12:00:00"); // noon avoids DST edge-cases
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function renderMeals(entries) {
   if (!el.meals) return;
+  const yest = ymdAdd(selected, -1);
+  const all = getState().nutrition || [];
   el.meals.innerHTML = MEALS.map(([id, label]) => {
     const items = entries.filter((e) => (e.meal || "snacks") === id);
     const kcal = Math.round(items.reduce((v, e) => v + e.kcal, 0));
+    const yestCount = all.filter((e) => e.date === yest && (e.meal || "snacks") === id).length;
+    // Empty meal + logged yesterday → one-tap repeat. Has items → save as reusable.
+    const act = !items.length && yestCount
+      ? `<button type="button" class="meal__act" data-act="copy-yest" data-meal="${id}" title="Log the same as yesterday">⟳ Yesterday</button>`
+      : items.length
+      ? `<button type="button" class="meal__act" data-act="save-meal" data-meal="${id}" title="Save this meal to log in one tap">Save meal</button>`
+      : "";
     const rows = items
       .map(
         (e) => `<li class="food-row" data-id="${e.id}">
-          <div class="food-row__main"><span class="food-row__name">${esc(e.name)}</span><span class="food-row__sub">${esc(formatQty(e))} · ${e.protein}P ${e.carbs || 0}C ${e.fat || 0}F</span></div>
+          <button type="button" class="food-row__main" data-act="edit-food" title="Edit">
+            <span class="food-row__name">${esc(e.name)}</span><span class="food-row__sub">${esc(formatQty(e))} · ${e.protein}P ${e.carbs || 0}C ${e.fat || 0}F</span>
+          </button>
           <span class="food-row__kcal">${e.kcal}</span>
           <button type="button" class="food-row__del" data-act="del-food" aria-label="Remove">×</button>
         </li>`
       )
       .join("");
     return `<div class="meal">
-      <div class="meal__head"><h4 class="meal__name">${label}</h4><span class="meal__kcal">${kcal} kcal</span></div>
+      <div class="meal__head"><h4 class="meal__name">${label}</h4><span class="meal__head-right">${act}<span class="meal__kcal">${kcal} kcal</span></span></div>
       <ul class="meal__list">${rows || '<li class="muted meal__empty">No food logged.</li>'}</ul>
       <button type="button" class="meal__add" data-act="add-food" data-meal="${id}">+ Add food</button>
     </div>`;
   }).join("");
+}
+
+/** Swap a diary row for a compact inline editor (name + totals). */
+function openRowEditor(li) {
+  const id = li.dataset.id;
+  const e = (getState().nutrition || []).find((x) => x.id === id);
+  if (!e) return;
+  li.classList.add("is-editing");
+  li.innerHTML = `
+    <form class="food-edit" data-id="${esc(id)}">
+      <input class="input input--sm food-edit__name" name="name" value="${esc(e.name)}" aria-label="Food name" />
+      <div class="food-edit__grid">
+        <label>kcal<input class="input input--sm" name="kcal" type="number" min="0" inputmode="numeric" value="${Math.round(e.kcal)}" /></label>
+        <label>P<input class="input input--sm" name="protein" type="number" min="0" inputmode="decimal" value="${e.protein || 0}" /></label>
+        <label>C<input class="input input--sm" name="carbs" type="number" min="0" inputmode="decimal" value="${e.carbs || 0}" /></label>
+        <label>F<input class="input input--sm" name="fat" type="number" min="0" inputmode="decimal" value="${e.fat || 0}" /></label>
+      </div>
+      <div class="food-edit__acts">
+        <button type="submit" class="btn btn--primary btn--sm">Save</button>
+        <button type="button" class="btn-link" data-act="edit-cancel">Cancel</button>
+      </div>
+    </form>`;
+  li.querySelector(".food-edit__name")?.focus();
 }
 function formatQty(e) {
   if (e.unit) return `${e.qty || 1} × ${e.unit}`;
@@ -298,6 +338,22 @@ function renderResults(q) {
       <span class="food-opt__main"><span class="food-opt__name">Estimate “${esc(query)}” with AI</span><span class="food-opt__sub">calories &amp; macros for anything you type</span></span>
       <span class="food-opt__tag food-opt__tag--ai">AI</span></button></li>`;
   } else {
+    // Saved meals — log a whole meal in one tap.
+    const templates = getMealTemplates();
+    if (templates.length) {
+      html += `<li class="food-grouplabel">My meals</li>` + templates
+        .map((t) => {
+          const kcal = Math.round(t.items.reduce((s, i) => s + (i.kcal || 0), 0));
+          return `<li class="food-tpl">
+            <button type="button" class="food-opt" data-act="log-template" data-id="${esc(t.id)}">
+              <span class="food-opt__main"><span class="food-opt__name">${esc(t.name)}</span><span class="food-opt__sub">${t.items.length} item${t.items.length === 1 ? "" : "s"} · ${kcal} kcal · logs all in one tap</span></span>
+              <span class="food-opt__tag">⟳</span>
+            </button>
+            <button type="button" class="food-tpl__del" data-act="del-template" data-id="${esc(t.id)}" aria-label="Delete saved meal">×</button>
+          </li>`;
+        })
+        .join("");
+    }
     const recent = getRecentFoods(8);
     if (recent.length) html += `<li class="food-grouplabel">Recent</li>` + recent.map((f) => foodOptHtml({ ...f, serving: f.unit || "1 serving" }, "recent")).join("");
     html += `<li class="food-grouplabel">Common foods</li>`;
@@ -494,8 +550,38 @@ function init() {
   el.meals?.addEventListener("click", (e) => {
     const add = e.target.closest('[data-act="add-food"]');
     const del = e.target.closest('[data-act="del-food"]');
+    const edit = e.target.closest('[data-act="edit-food"]');
+    const copyYest = e.target.closest('[data-act="copy-yest"]');
+    const saveMeal = e.target.closest('[data-act="save-meal"]');
     if (add) openPicker(add.dataset.meal);
     else if (del) removeEntry("nutrition", del.closest(".food-row").dataset.id);
+    else if (edit) openRowEditor(edit.closest(".food-row"));
+    else if (e.target.closest('[data-act="edit-cancel"]')) render();
+    else if (copyYest) {
+      copyMeal({ meal: copyYest.dataset.meal, date: selected }); // re-renders via spotter:tracker
+    } else if (saveMeal) {
+      const meal = saveMeal.dataset.meal;
+      const items = (getState().nutrition || []).filter((x) => x.date === selected && (x.meal || "snacks") === meal);
+      const label = MEALS.find((m) => m[0] === meal)?.[1] || "Meal";
+      const name = prompt("Name this meal (it'll appear at the top of “Add food” to log in one tap):", `My usual ${label.toLowerCase()}`);
+      if (name == null) return;
+      saveMealTemplate({ name: name || `My ${label}`, entries: items });
+      render();
+    }
+  });
+  // Inline row editor → save the edited totals in place.
+  el.meals?.addEventListener("submit", (e) => {
+    const form = e.target.closest(".food-edit");
+    if (!form) return;
+    e.preventDefault();
+    const fd = new FormData(form);
+    updateNutrition(form.dataset.id, {
+      name: fd.get("name"),
+      kcal: fd.get("kcal"),
+      protein: fd.get("protein"),
+      carbs: fd.get("carbs"),
+      fat: fd.get("fat"),
+    }); // persist() fires spotter:tracker → re-render
   });
   el.water?.addEventListener("click", (e) => {
     if (e.target.closest('[data-act="water-plus"]')) addWater(waterStepMl(), selected);
@@ -538,6 +624,19 @@ function init() {
     if (e.target.closest('[data-act="snap-meal"]')) return el.photoInput?.click();
     if (e.target.closest('[data-act="ai-estimate"]')) return aiEstimate(el.search.value.trim());
     if (e.target.closest('[data-act="quick-add"]')) return showDetail(null, true);
+    const tpl = e.target.closest('[data-act="log-template"]');
+    if (tpl) {
+      logMealTemplate(tpl.dataset.id, pickerMeal, selected);
+      return closePicker();
+    }
+    const delTpl = e.target.closest('[data-act="del-template"]');
+    if (delTpl) {
+      if (confirm("Delete this saved meal?")) {
+        removeMealTemplate(delTpl.dataset.id);
+        renderResults(el.search.value);
+      }
+      return;
+    }
     const opt = e.target.closest(".food-opt");
     if (opt?.dataset.food) showDetail(JSON.parse(opt.dataset.food));
   });
