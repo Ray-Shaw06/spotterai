@@ -140,7 +140,9 @@ export function conservativeEstimate(typical, low, high) {
 function normalizeFood(o, query) {
   if (!o || typeof o !== "object") return null;
   const name = (String(o.name || query).trim() || query).slice(0, 60);
-  const { kcal, scale } = conservativeEstimate(round(o.kcal, 0), round(o.kcal_low, 0), round(o.kcal_high, 0));
+  const lowRaw = round(o.kcal_low, 0);
+  const highRaw = round(o.kcal_high, 0);
+  const { kcal, scale } = conservativeEstimate(round(o.kcal, 0), lowRaw, highRaw);
   const macro = (v) => round((Number(v) || 0) * scale, 1);
   return {
     name,
@@ -149,6 +151,8 @@ function normalizeFood(o, query) {
     protein: macro(o.protein),
     carbs: macro(o.carbs),
     fat: macro(o.fat),
+    // The model's plausibility range (calories), for an honest "varies a lot" hint.
+    ...(highRaw > 0 && highRaw >= lowRaw ? { kcalLow: lowRaw, kcalHigh: highRaw } : {}),
     source: "ai",
   };
 }

@@ -434,10 +434,18 @@ function showDetail(food, quick = false, opts = {}) {
     setTimeout(() => (opts.name ? $("qa-kcal") : $("qa-name"))?.focus(), 0);
     return;
   }
+  const ai = food.source === "ai";
+  const rangeHint = ai && food.kcalLow && food.kcalHigh ? ` AI range ${food.kcalLow}–${food.kcalHigh} kcal.` : "";
   el.detail.innerHTML = `
     <button type="button" class="detail-back" data-act="detail-back">← Back</button>
     <p class="detail-food">${esc(food.name)}<span class="muted"> · per ${esc(food.serving || "serving")}</span></p>
-    ${food.source === "ai" ? `<p class="detail-uncertainty"><strong>AI estimate · confidence Medium.</strong> Portions, brands, and cooking oils vary a lot — adjust the servings to match what you actually ate before saving.</p>` : ""}
+    ${ai ? `<p class="detail-uncertainty"><strong>AI estimate — these vary a lot.</strong>${esc(rangeHint)} Tweak the numbers below to match what you actually ate before saving.</p>` : ""}
+    ${ai ? `<div class="detail-grid">
+      <label class="field-label-sm">Calories<input id="detail-kcal" class="input" type="number" min="0" inputmode="numeric" value="${Math.round(food.kcal)}" /></label>
+      <label class="field-label-sm">Protein (g)<input id="detail-protein" class="input" type="number" min="0" inputmode="decimal" value="${round1(food.protein)}" /></label>
+      <label class="field-label-sm">Carbs (g)<input id="detail-carbs" class="input" type="number" min="0" inputmode="decimal" value="${round1(food.carbs)}" /></label>
+      <label class="field-label-sm">Fat (g)<input id="detail-fat" class="input" type="number" min="0" inputmode="decimal" value="${round1(food.fat)}" /></label>
+    </div>` : ""}
     <div class="detail-qty">
       <label class="field-label-sm">Servings<input id="detail-qty" class="input input--sm" type="number" min="0" step="0.25" value="1" inputmode="decimal" /></label>
       <label class="field-label-sm">Meal<select id="detail-meal" class="form-select">${mealOpts}</select></label>
@@ -445,14 +453,28 @@ function showDetail(food, quick = false, opts = {}) {
     <div id="detail-preview" class="detail-preview"></div>
     <button type="button" class="btn btn--primary btn--block" data-act="detail-save">Add to diary</button>`;
   updatePreview();
-  $("detail-qty")?.addEventListener("input", updatePreview);
+  ["detail-qty", "detail-kcal", "detail-protein", "detail-carbs", "detail-fat"].forEach((id) => $(id)?.addEventListener("input", updatePreview));
+}
+// Per-serving macros to log: the user's edited values for an AI estimate, else
+// the food's stored values.
+function detailMacros() {
+  const f = detailFood;
+  if (f && f.source === "ai" && $("detail-kcal")) {
+    return {
+      kcal: Number($("detail-kcal").value) || 0,
+      protein: Number($("detail-protein").value) || 0,
+      carbs: Number($("detail-carbs").value) || 0,
+      fat: Number($("detail-fat").value) || 0,
+    };
+  }
+  return { kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat };
 }
 function updatePreview() {
   const q = Number($("detail-qty")?.value) || 0;
-  const f = detailFood;
+  const m = detailMacros();
   const p = $("detail-preview");
-  if (!p || !f) return;
-  p.innerHTML = `<span class="detail-cal">${Math.round(f.kcal * q)} kcal</span><span class="muted">${round1(f.protein * q)}P · ${round1(f.carbs * q)}C · ${round1(f.fat * q)}F</span>`;
+  if (!p || !detailFood) return;
+  p.innerHTML = `<span class="detail-cal">${Math.round(m.kcal * q)} kcal</span><span class="muted">${round1(m.protein * q)}P · ${round1(m.carbs * q)}C · ${round1(m.fat * q)}F</span>`;
 }
 const round1 = (v) => Math.round((Number(v) || 0) * 10) / 10;
 
@@ -529,8 +551,9 @@ function init() {
       const qty = Number($("detail-qty").value) || 1;
       const f = detailFood;
       const meal = $("detail-meal").value;
-      addNutrition({ name: f.name, meal, qty, unit: f.serving || "serving", kcal: f.kcal * qty, protein: f.protein * qty, carbs: f.carbs * qty, fat: f.fat * qty, date: selected });
-      if (f.source === "off" || f.source === "ai") addCustomFood(f); // remember online/AI foods for instant reuse
+      const m = detailMacros(); // edited per-serving values for AI estimates
+      addNutrition({ name: f.name, meal, qty, unit: f.serving || "serving", kcal: m.kcal * qty, protein: m.protein * qty, carbs: m.carbs * qty, fat: m.fat * qty, date: selected });
+      if (f.source === "off" || f.source === "ai") addCustomFood({ ...f, ...m }); // remember with the corrected macros
       closePicker();
     } else if (e.target.closest('[data-act="quick-save"]')) {
       const name = $("qa-name").value.trim() || "Quick add";
