@@ -34,12 +34,14 @@ const FOOD_SCHEMA = {
   properties: {
     name: { type: "string" },
     serving: { type: "string" },
-    kcal: { type: "number" },
+    kcal: { type: "number" }, // best TYPICAL estimate
+    kcal_low: { type: "number" }, // lean / small-portion end of a realistic range
+    kcal_high: { type: "number" }, // rich / large-portion end
     protein: { type: "number" },
     carbs: { type: "number" },
     fat: { type: "number" },
   },
-  required: ["name", "serving", "kcal", "protein", "carbs", "fat"],
+  required: ["name", "serving", "kcal", "kcal_low", "kcal_high", "protein", "carbs", "fat"],
 };
 const EXERCISE_SCHEMA = {
   type: "object",
@@ -52,25 +54,26 @@ const EXERCISE_SCHEMA = {
   required: ["name", "muscle", "equipment", "cardio"],
 };
 
-const FOOD_INSTRUCTION = `You are a precise nutrition-estimation engine. Given a food or drink described in plain language, estimate its nutrition using typical real-world values.
+const FOOD_INSTRUCTION = `You are a careful, CONSERVATIVE nutrition estimator. People over-log food, so err toward realistic, slightly conservative numbers — never inflate portions or hidden fats.
 
 Rules:
-- Estimate the TOTAL for the WHOLE amount described. If a quantity is stated ("2 omelettes", "3 eggs", "a large latte"), give the combined total for all of it, not per-unit.
-- If no amount is given, assume one normal serving.
-- "serving" restates the amount you estimated (e.g. "2 omelettes", "1 bowl", "100 g").
-- "kcal" is calories (a number). "protein", "carbs", "fat" are grams (numbers, up to one decimal).
-- Keep "name" a short, clean label of the food (Title Case, no quantity).
-- If the input is clearly not a food or drink, return kcal 0 and zero macros.
+- Estimate the TOTAL for the WHOLE amount described (sum multiple/large quantities). If no amount is given, assume ONE normal serving — not a large one.
+- Estimate grams per component and look up typical per-100g (USDA-style) values, then sum. Do not round portions up. Prefer the plainer, leaner interpretation when ambiguous (grilled not fried, light not creamy); only count oils/butter/sauces the description implies.
+- Give a realistic range: "kcal_low" (lean / small portion) and "kcal_high" (rich / large portion). "kcal" is your single best TYPICAL estimate and MUST lie between them.
+- "protein"/"carbs"/"fat" are grams for the TYPICAL estimate (up to one decimal).
+- "serving" restates the amount (e.g. "2 omelettes", "1 bowl", "100 g"). "name": short clean label (Title Case, no quantity).
+- If the input is clearly not a food or drink, return kcal 0 (and 0 for the range) and zero macros.
 Return ONLY the JSON object.`;
 
-const FOOD_VISION_INSTRUCTION = `You are a precise nutrition-estimation engine analyzing a PHOTO of food or drink.
+const FOOD_VISION_INSTRUCTION = `You are a careful, CONSERVATIVE nutrition estimator analyzing a PHOTO of food or drink. People consistently over-log photo meals, so err toward realistic, slightly conservative numbers — NEVER inflate portion size or hidden fats.
 
-Rules:
-- Identify what's shown and estimate the TOTAL nutrition for the WHOLE portion visible. If several items are on the plate, sum them into one estimate.
-- Judge portion size from the image (use a plate, utensil, or hand for scale if visible); assume a normal home/restaurant portion if unsure.
-- "name" is a short, clean label of the meal (Title Case). "serving" describes the portion you estimated (e.g. "1 plate", "1 bowl", "2 tacos").
-- "kcal" is calories. "protein", "carbs", "fat" are grams (numbers, up to one decimal).
-- If there is no food or drink in the image, return name "No food detected" with kcal 0 and zero macros.
+How to estimate:
+- Identify each item, then estimate grams for each using visible scale cues (dinner plate ~26 cm, fork ~19 cm, a hand, a standard cup/can). If scale is unclear, assume a NORMAL HOME portion, not a large restaurant one, and do not round portions up.
+- Look up typical per-100g (USDA-style) values for each item and sum them.
+- Only count oil, butter, dressing or sauce you can actually SEE. Do not assume heavy hidden oils. When ambiguous, choose the leaner, plainer interpretation (grilled not deep-fried, light not creamy) unless the photo clearly shows otherwise.
+- Give a realistic range: "kcal_low" (lean interpretation / smaller portion) and "kcal_high" (rich interpretation / larger portion). "kcal" is your single best TYPICAL estimate and MUST lie between them.
+- "protein"/"carbs"/"fat" are grams for the TYPICAL estimate. "name": short clean meal label (Title Case). "serving": the portion you assumed (e.g. "1 plate", "1 bowl").
+- If there is no food or drink in the image, return name "No food detected" with kcal 0 (and 0 for the range) and zero macros.
 Return ONLY the JSON object.`;
 
 const EXERCISE_INSTRUCTION = `You classify a single strength, gym, or fitness exercise by name.
@@ -113,16 +116,39 @@ function validImage(img) {
   return { mimeType, data };
 }
 
+// How far up the model's low→high range to report. AI food estimates skew high,
+// so we sit in the lower-middle (0 = low end, 1 = high end).
+const RANGE_LEAN = 0.35;
+const MIN_SCALE = 0.6; // never cut a typical estimate by more than 40%
+
+/**
+ * Report a CONSERVATIVE calorie point from the model's own uncertainty range and
+ * the factor to scale the (typical-estimate) macros by, so kcal + macros stay
+ * consistent. Only ever reduces (scale ≤ 1) — this exists to curb overshoot.
+ * @returns {{ kcal: number, scale: number }}
+ */
+export function conservativeEstimate(typical, low, high) {
+  const t = Number(typical) || 0;
+  const lo = Number(low) || 0;
+  const hi = Number(high) || 0;
+  if (t <= 0 || hi <= 0 || hi < lo || lo <= 0) return { kcal: Math.max(0, Math.round(t)), scale: 1 };
+  const point = lo + RANGE_LEAN * (hi - lo);
+  const scale = Math.min(1, Math.max(MIN_SCALE, point / t));
+  return { kcal: Math.round(t * scale), scale };
+}
+
 function normalizeFood(o, query) {
   if (!o || typeof o !== "object") return null;
   const name = (String(o.name || query).trim() || query).slice(0, 60);
+  const { kcal, scale } = conservativeEstimate(round(o.kcal, 0), round(o.kcal_low, 0), round(o.kcal_high, 0));
+  const macro = (v) => round((Number(v) || 0) * scale, 1);
   return {
     name,
     serving: (String(o.serving || "1 serving").trim() || "1 serving").slice(0, 40),
-    kcal: round(o.kcal, 0),
-    protein: round(o.protein, 1),
-    carbs: round(o.carbs, 1),
-    fat: round(o.fat, 1),
+    kcal,
+    protein: macro(o.protein),
+    carbs: macro(o.carbs),
+    fat: macro(o.fat),
     source: "ai",
   };
 }
