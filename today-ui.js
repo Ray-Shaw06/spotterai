@@ -152,7 +152,13 @@ content?.addEventListener("click", (e) => {
   const btn = e.target.closest(".today-qa");
   if (!btn) return;
   const act = btn.dataset.act;
-  if (act === "start" || act === "skip" || act === "substitute") location.hash = "#/dashboard";
+  if (act === "start") {
+    // Open the workout tracker WITH today's session loaded — no hunting for it.
+    const workout = store.plan ? todaysWorkout(store.plan, deriveStats().thisWeek.sessions || 0) : null;
+    const index = workout ? (store.plan.days || []).indexOf(workout) : -1;
+    if (index >= 0) window.dispatchEvent(new CustomEvent("spotter:start-plan-day", { detail: { index } }));
+    else location.hash = "#/dashboard";
+  } else if (act === "skip" || act === "substitute") location.hash = "#/dashboard";
   else if (act === "meal") location.hash = "#/nutrition";
   else if (act === "weight") location.hash = "#/progress";
   else if (act === "adapt") location.hash = "#/";

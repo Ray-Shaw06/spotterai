@@ -841,16 +841,25 @@ function init() {
     if (!el.idle.hidden) renderIdle();
   });
 
-  // Quick-start a saved workout from the Split Lab (or anywhere): jump to the
-  // Dashboard if needed, then open the session prefilled from the routine.
-  window.addEventListener("spotter:start-routine", (e) => {
-    const r = getRoutines().find((x) => x.id === e.detail?.id);
-    if (!r) return;
-    const begin = () => startSession(sessionFromRoutine(r));
+  // Quick-start from elsewhere in the app (Split Lab routines, Today's plan
+  // day). Jumps to the Dashboard and opens the session prefilled. If a session
+  // is already in progress, just show it — never clobber typed sets.
+  const quickStart = (makeSession) => {
+    const begin = () => {
+      if (!session) startSession(makeSession());
+    };
     if (location.hash.replace(/^#\/?/, "") !== "dashboard") {
       location.hash = "#/dashboard";
       setTimeout(begin, 60); // let the router reveal the dashboard view first
     } else begin();
+  };
+  window.addEventListener("spotter:start-routine", (e) => {
+    const r = getRoutines().find((x) => x.id === e.detail?.id);
+    if (r) quickStart(() => sessionFromRoutine(r));
+  });
+  window.addEventListener("spotter:start-plan-day", (e) => {
+    const day = store.plan?.days?.[e.detail?.index];
+    if (day) quickStart(() => sessionFromPlanDay(day));
   });
 
   // Restore an in-progress draft, else show idle.

@@ -15,7 +15,7 @@
  * Bump CACHE when shipping changes so old caches are cleaned on activate.
  */
 
-const CACHE = "spotterai-v24";
+const CACHE = "spotterai-v25";
 const CORE = [
   "./",
   "index.html",

@@ -528,7 +528,9 @@ table {
   .sidebar__nav .nav-link span { white-space: nowrap; }
   .sidebar__nav .nav-link.is-active { background: transparent; color: var(--accent); }
   .app-main { padding-top: 54px; padding-bottom: 64px; }
-  .chat-fab { bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
+  /* #id specificity: the base .chat-fab rule is declared LATER in the file and
+     would otherwise win, dropping the FAB onto the bottom tab bar. */
+  #chat-fab { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* ----------------------------------------------------------------------------
