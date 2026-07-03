@@ -10,7 +10,7 @@
  */
 
 import { addCustomFood, addNutrition, addWater, copyMeal, deriveStats, getCustomFoods, getMealTemplates, getRecentFoods, getState, getWater, logMealTemplate, removeEntry, removeMealTemplate, resetAll, saveMealTemplate, setTargets, subscribe, updateNutrition } from "./tracker-store.js";
-import { searchFoods, searchOpenFoodFacts } from "./foods.js";
+import { lookupBarcode, searchFoods, searchOpenFoodFacts } from "./foods.js";
 import { estimateFood, estimateMealPhoto } from "./ai.js";
 import { ring } from "./charts.js";
 import { evaluateNutrition, NUTRITION_DISCLAIMER, NUTRITION_WONT_DO } from "./nutrition-safety.js";
@@ -315,6 +315,66 @@ function closePicker() {
   el.picker.setAttribute("aria-hidden", "true");
   if (offController) offController.abort();
   if (aiController) aiController.abort();
+  stopBarcodeScan();
+}
+
+// ----------------------------------------------------------------------------
+// Barcode scanner (built-in BarcodeDetector + Open Food Facts — $0, no deps)
+// ----------------------------------------------------------------------------
+let scanStream = null;
+let scanTimer = null;
+
+function stopBarcodeScan() {
+  clearInterval(scanTimer);
+  scanTimer = null;
+  if (scanStream) {
+    scanStream.getTracks().forEach((t) => t.stop());
+    scanStream = null;
+  }
+}
+
+async function startBarcodeScan() {
+  el.results.hidden = true;
+  el.search.parentElement.hidden = true;
+  el.detail.hidden = false;
+  el.detail.innerHTML = `
+    <button type="button" class="detail-back" data-act="detail-back">← Back</button>
+    <div class="scan-box">
+      <video id="scan-video" class="scan-box__video" playsinline muted></video>
+      <div class="scan-box__frame" aria-hidden="true"></div>
+      <p class="scan-box__hint" id="scan-hint">Point the camera at the barcode…</p>
+    </div>`;
+  const hint = () => document.getElementById("scan-hint");
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    const video = document.getElementById("scan-video");
+    if (!video) return stopBarcodeScan(); // user backed out during the permission prompt
+    video.srcObject = scanStream;
+    await video.play();
+    const detector = new window.BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e"] });
+    let busy = false;
+    scanTimer = setInterval(async () => {
+      if (busy || !scanStream) return;
+      busy = true;
+      try {
+        const codes = await detector.detect(video);
+        const code = codes?.[0]?.rawValue;
+        if (code) {
+          stopBarcodeScan();
+          if (hint()) hint().textContent = `Found ${code} — looking it up…`;
+          const food = await lookupBarcode(code).catch(() => null);
+          if (food) showDetail(food);
+          else showDetail(null, true, { name: "", note: `Barcode ${code} isn't in Open Food Facts (or has no calorie data) — add it manually.` });
+        }
+      } catch {
+        /* detector hiccup on a frame — keep scanning */
+      }
+      busy = false;
+    }, 280);
+  } catch {
+    stopBarcodeScan();
+    if (hint()) hint().textContent = "Couldn't access the camera — check permissions, or add the food by search instead.";
+  }
 }
 
 function foodOptHtml(f, source) {
@@ -332,6 +392,12 @@ function renderResults(q) {
   html += `<li><button type="button" class="food-opt food-opt--ai" data-act="snap-meal">
     <span class="food-opt__main"><span class="food-opt__name">Snap a meal — macros from a photo</span><span class="food-opt__sub">use your camera to estimate calories</span></span>
     <span class="food-opt__tag food-opt__tag--ai">AI</span></button></li>`;
+  // Barcode scan — only where the browser has a built-in detector (Chrome/Edge/Android).
+  if ("BarcodeDetector" in window) {
+    html += `<li><button type="button" class="food-opt food-opt--ai" data-act="scan-barcode">
+      <span class="food-opt__main"><span class="food-opt__name">Scan a barcode</span><span class="food-opt__sub">packaged food → exact label data (Open Food Facts)</span></span>
+      <span class="food-opt__tag">|||</span></button></li>`;
+  }
   // Estimate-anything: turn whatever the user typed into macros via the AI.
   if (query) {
     html += `<li><button type="button" class="food-opt food-opt--ai" data-act="ai-estimate">
@@ -622,6 +688,7 @@ function init() {
   el.search?.addEventListener("input", () => renderResults(el.search.value));
   el.results?.addEventListener("click", (e) => {
     if (e.target.closest('[data-act="snap-meal"]')) return el.photoInput?.click();
+    if (e.target.closest('[data-act="scan-barcode"]')) return startBarcodeScan();
     if (e.target.closest('[data-act="ai-estimate"]')) return aiEstimate(el.search.value.trim());
     if (e.target.closest('[data-act="quick-add"]')) return showDetail(null, true);
     const tpl = e.target.closest('[data-act="log-template"]');
@@ -643,6 +710,7 @@ function init() {
   el.detail?.addEventListener("click", (e) => {
     if (e.target.closest('[data-act="detail-back"]')) {
       if (aiController) aiController.abort();
+      stopBarcodeScan();
       el.detail.hidden = true;
       el.results.hidden = false;
       el.search.parentElement.hidden = false;

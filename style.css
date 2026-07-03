@@ -1401,6 +1401,16 @@ table {
    Today screen (consumer daily home base)
 ---------------------------------------------------------------------------- */
 .today-quick { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-5); }
+/* Week at a glance — one chip per planned session */
+.week-strip { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: calc(-1 * var(--space-2)) 0 var(--space-4); }
+.week-strip__label { font-size: 0.66rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-faint); margin-right: var(--space-1); }
+.week-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 5px; font-size: 0.74rem; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); }
+.week-chip__dot { display: inline-grid; place-items: center; width: 16px; height: 16px; font-size: 0.6rem; border-radius: 50%; border: 1px solid var(--border); color: var(--success); }
+.week-chip--done { color: var(--text); }
+.week-chip--done .week-chip__dot { border-color: var(--success); background: var(--success-soft); }
+.week-chip--today { color: var(--accent); border-color: var(--accent-ring); background: var(--accent-soft); }
+.week-chip--today .week-chip__dot { border-color: var(--accent); box-shadow: 0 0 7px 0 var(--accent); }
+.week-chip--upcoming { opacity: 0.75; }
 .today-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
 .today-col { display: flex; flex-direction: column; gap: var(--space-4); }
 .today-card { padding: var(--space-5); }
@@ -4796,6 +4806,11 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
 .food-tpl__del { flex: none; width: 24px; height: 24px; font-size: 1rem; color: var(--text-faint); background: none; border: none; border-radius: var(--r-sm); cursor: pointer; }
 .food-tpl__del:hover { color: var(--danger); }
 .hist__acts { display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-2); }
+/* Barcode scanner */
+.scan-box { position: relative; margin-top: var(--space-3); border-radius: var(--r-md); overflow: hidden; background: #000; }
+.scan-box__video { display: block; width: 100%; max-height: 340px; object-fit: cover; }
+.scan-box__frame { position: absolute; inset: 18% 12%; border: 2px solid var(--accent); border-radius: var(--r-sm); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.35); pointer-events: none; }
+.scan-box__hint { position: absolute; left: 0; right: 0; bottom: 0; padding: var(--space-2) var(--space-3); text-align: center; font-size: var(--fs-small); color: #fff; background: rgba(0, 0, 0, 0.55); }
 .meal__add {
   margin-top: var(--space-2);
   padding: 0.4rem;

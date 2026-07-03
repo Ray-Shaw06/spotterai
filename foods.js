@@ -301,3 +301,31 @@ export async function searchOpenFoodFacts(query, signal) {
 function round1(v) {
   return Math.round((Number(v) || 0) * 10) / 10;
 }
+
+/**
+ * Look up ONE product by barcode (EAN/UPC) on Open Food Facts — powers the
+ * camera barcode scanner. Same field mapping as the text search. Returns a
+ * food object or null when the product is unknown / has no calorie data.
+ */
+export async function lookupBarcode(code, signal) {
+  const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,brands,nutriments`;
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new Error(`Open Food Facts ${res.status}`);
+  const data = await res.json();
+  const p = data && data.product;
+  if (!p) return null;
+  const n = p.nutriments || {};
+  let kcal = n["energy-kcal_100g"];
+  if (kcal == null && n["energy_100g"] != null) kcal = n["energy_100g"] / 4.184; // kJ → kcal
+  if (!p.product_name || kcal == null) return null;
+  const brand = p.brands ? p.brands.split(",")[0].trim() + " " : "";
+  return {
+    name: (brand + p.product_name).slice(0, 60),
+    serving: "100 g",
+    kcal: Math.round(kcal),
+    protein: round1(n.proteins_100g),
+    carbs: round1(n.carbohydrates_100g),
+    fat: round1(n.fat_100g),
+    source: "off",
+  };
+}

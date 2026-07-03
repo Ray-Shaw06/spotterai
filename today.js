@@ -9,11 +9,28 @@
 export const isRestDay = (d) => /\b(rest|recovery|off day|day off)\b/i.test(`${d?.day || ""} ${d?.focus || ""}`);
 export const trainingDays = (plan) => (plan?.days || []).filter((d) => !isRestDay(d));
 
-/** The next recommended workout in the plan's rotation (by sessions logged this week). */
+/**
+ * The next recommended workout in the plan's rotation (by sessions logged this
+ * week) — or null once the week's training days are DONE. Honest rest beats
+ * prescribing a 5th session in a 4-day plan.
+ */
 export function todaysWorkout(plan, sessionsThisWeek = 0) {
   const days = trainingDays(plan);
   if (!days.length) return null;
+  if (sessionsThisWeek >= days.length) return null; // week complete → rest
   return days[sessionsThisWeek % days.length];
+}
+
+/**
+ * Week-at-a-glance: one chip per planned training session, in order, marked
+ * done / today / upcoming. Pure data for the Today strip.
+ */
+export function weekStrip(plan, sessionsThisWeek = 0) {
+  const days = trainingDays(plan);
+  return days.map((d, i) => ({
+    label: d.focus || d.day || `Session ${i + 1}`,
+    state: i < sessionsThisWeek ? "done" : i === sessionsThisWeek ? "today" : "upcoming",
+  }));
 }
 
 /**

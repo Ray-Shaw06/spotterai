@@ -5,7 +5,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { todaysWorkout, coachNote, trainingDays } from "../today.js";
+import { weekStrip, todaysWorkout, coachNote, trainingDays } from "../today.js";
 
 const day = (focus, exs = [{ name: "Bench", sets: 3, reps: "8" }]) => ({ day: focus, focus, exercises: exs });
 const plan = (days) => ({ program_name: "P", goal: "Hypertrophy", days });
@@ -15,11 +15,12 @@ test("trainingDays excludes rest/recovery days", () => {
   assert.equal(trainingDays(p).length, 2);
 });
 
-test("todaysWorkout rotates through training days by sessions logged", () => {
+test("todaysWorkout advances through training days by sessions logged", () => {
   const p = plan([day("Upper A"), day("Lower A"), day("Upper B")]);
   assert.equal(todaysWorkout(p, 0).focus, "Upper A");
   assert.equal(todaysWorkout(p, 1).focus, "Lower A");
-  assert.equal(todaysWorkout(p, 3).focus, "Upper A"); // wraps
+  assert.equal(todaysWorkout(p, 2).focus, "Upper B");
+  assert.equal(todaysWorkout(p, 3), null); // week complete → honest rest, no wrap
 });
 
 test("a plan with no training days (all rest) has no workout today", () => {
@@ -44,4 +45,26 @@ test("hitting the weekly target is celebrated; being behind is encouraged withou
 test("easy completion last week suggests a small progression, not a big jump", () => {
   const n = coachNote({ sessions: 0, target: 4, lastWeekSessions: 4 });
   assert.match(n.text, /small|gradual progression/i);
+});
+
+test("a completed week yields REST (null), not an endless rotation", () => {
+  const plan = { days: [
+    { day: "Day 1", focus: "Upper", exercises: [{ name: "Bench", sets: 3 }] },
+    { day: "Day 2", focus: "Lower", exercises: [{ name: "Squat", sets: 3 }] },
+  ] };
+  assert.ok(todaysWorkout(plan, 0)); // week starts → session 1
+  assert.ok(todaysWorkout(plan, 1)); // session 2
+  assert.equal(todaysWorkout(plan, 2), null); // all done → rest, honestly
+  assert.equal(todaysWorkout(plan, 5), null);
+});
+
+test("weekStrip marks done / today / upcoming in order", () => {
+  const plan = { days: [
+    { day: "Day 1", focus: "Push", exercises: [] },
+    { day: "Day 2", focus: "Pull", exercises: [] },
+    { day: "Day 3", focus: "Legs", exercises: [] },
+  ] };
+  const strip = weekStrip(plan, 1);
+  assert.deepEqual(strip.map((s) => s.state), ["done", "today", "upcoming"]);
+  assert.equal(strip[1].label, "Pull");
 });

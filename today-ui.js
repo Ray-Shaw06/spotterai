@@ -10,7 +10,7 @@
 import { store } from "./store.js";
 import { deriveStats, getWater, getState } from "./tracker-store.js";
 import { evaluateNutrition } from "./nutrition-safety.js";
-import { todaysWorkout, coachNote, trainingDays } from "./today.js";
+import { todaysWorkout, coachNote, trainingDays, weekStrip } from "./today.js";
 
 const content = document.getElementById("today-content");
 const dateEl = document.getElementById("today-date");
@@ -67,14 +67,20 @@ function render() {
   const note = coachNote({ sessions: stats.thisWeek.sessions, target: stats.thisWeek.target, lastWeekSessions, injuries: inputs.injuries });
   const workout = todaysWorkout(plan, stats.thisWeek.sessions || 0);
 
-  // --- A. Today's workout (or a recovery day) ------------------------------
+  // --- A. Today's workout (or an honest rest day) --------------------------
+  const weekDone = (stats.thisWeek.sessions || 0) >= trainingDays(plan).length;
   let workoutCard;
   if (!workout) {
     workoutCard = card(
-      `<p class="today-card__eyebrow">Today</p>
-       <h3 class="today-card__title">No workout planned today</h3>
-       <p class="today-card__text">Recovery is part of the plan. Light movement, good food, and sleep are doing real work.</p>
-       <div class="today-card__actions"><button type="button" class="btn btn--ghost btn--sm today-qa" data-act="weight">Log recovery / bodyweight</button></div>`,
+      weekDone
+        ? `<p class="today-card__eyebrow">Rest day — earned</p>
+           <h3 class="today-card__title">Week complete: ${stats.thisWeek.sessions}/${trainingDays(plan).length} sessions</h3>
+           <p class="today-card__text">You've done every planned session this week. More isn't better here — recovery is where the adaptation happens. Next week picks up fresh.</p>
+           <div class="today-card__actions"><button type="button" class="btn btn--ghost btn--sm today-qa" data-act="weight">Log recovery / bodyweight</button><button type="button" class="btn btn--ghost btn--sm today-qa" data-act="adapt">Adapt next week</button></div>`
+        : `<p class="today-card__eyebrow">Today</p>
+           <h3 class="today-card__title">No workout planned today</h3>
+           <p class="today-card__text">Recovery is part of the plan. Light movement, good food, and sleep are doing real work.</p>
+           <div class="today-card__actions"><button type="button" class="btn btn--ghost btn--sm today-qa" data-act="weight">Log recovery / bodyweight</button></div>`,
       "today-card--rest"
     );
   } else {
@@ -139,8 +145,24 @@ function render() {
     "today-card--recovery"
   );
 
+  // --- Week at a glance ----------------------------------------------------
+  const strip = weekStrip(plan, stats.thisWeek.sessions || 0);
+  const stripHtml = strip.length
+    ? `<div class="week-strip" role="list" aria-label="This week's sessions">
+        <span class="week-strip__label">This week</span>
+        ${strip
+          .map(
+            (s) => `<span role="listitem" class="week-chip week-chip--${s.state}" title="${esc(s.label)}">
+              <span class="week-chip__dot" aria-hidden="true">${s.state === "done" ? "✓" : ""}</span>${esc(s.label)}
+            </span>`
+          )
+          .join("")}
+      </div>`
+    : "";
+
   content.innerHTML = `
     ${quickActions(true)}
+    ${stripHtml}
     <div class="today-grid">
       ${workoutCard}
       <div class="today-col">${coachCard}${nutritionCard}${recoveryCard}</div>
