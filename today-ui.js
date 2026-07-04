@@ -84,25 +84,30 @@ function render() {
       "today-card--rest"
     );
   } else {
+    // Command-center hero: giant session readout left, numbered exercise
+    // manifest right, one dominant START control.
     const exRows = (workout.exercises || [])
       .slice(0, 8)
-      .map((e) => `<li><span class="today-ex__name">${esc(e.name)}</span><span class="today-ex__sr">${esc(e.sets)}×${esc(e.reps)}${e.rpe ? ` · RPE ${esc(e.rpe)}` : ""}</span></li>`)
+      .map((e) => `<li class="cmd-ex"><span class="cmd-ex__name">${esc(e.name)}</span><span class="cmd-ex__rx">${esc(e.sets)}×${esc(e.reps)}${e.rpe ? ` <em>@${esc(e.rpe)}</em>` : ""}</span></li>`)
       .join("");
-    workoutCard = card(
-      `<div class="today-card__head">
-        <div><p class="today-card__eyebrow">Today's workout · ${esc(estDuration(workout, inputs))}</p><h3 class="today-card__title">${esc(workout.focus || workout.day || "Workout")}</h3></div>
-        <span class="today-badge">${esc(plan.goal || "Training")}</span>
-      </div>
-      <p class="today-warmup"><strong>Warm-up</strong> 5–10 min easy cardio, then 2–3 light ramp-up sets on your first lift.</p>
-      <ul class="today-ex">${exRows}</ul>
-      ${workout.notes ? `<p class="today-card__text">${esc(workout.notes)}</p>` : ""}
-      <div class="today-card__actions">
-        <button type="button" class="btn btn--primary btn--sm today-qa" data-act="start">Start workout</button>
-        <button type="button" class="btn btn--ghost btn--sm today-qa" data-act="skip">Skip / reschedule</button>
-        <button type="button" class="btn btn--ghost btn--sm today-qa" data-act="substitute">Substitute an exercise</button>
-      </div>`,
-      "today-card--workout"
-    );
+    workoutCard = `
+      <div class="cmd today-card--workout">
+        <div class="cmd__main">
+          <p class="cmd__eyebrow">Today's session · ${esc(estDuration(workout, inputs))} · ${esc(plan.goal || "Training")}</p>
+          <h3 class="cmd__title">${esc(workout.focus || workout.day || "Workout")}</h3>
+          <p class="cmd__warmup"><strong>Warm-up</strong> 5–10 min easy cardio, then 2–3 light ramp-up sets on your first lift.</p>
+          ${workout.notes ? `<p class="cmd__note">${esc(workout.notes)}</p>` : ""}
+          <div class="cmd__actions">
+            <button type="button" class="btn btn--primary cmd__start today-qa" data-act="start">Start workout</button>
+            <button type="button" class="btn-link today-qa" data-act="skip">Skip / reschedule</button>
+            <button type="button" class="btn-link today-qa" data-act="substitute">Substitute</button>
+          </div>
+        </div>
+        <div class="cmd__manifest">
+          <p class="cmd__manifest-label">Exercise manifest</p>
+          <ol class="cmd__list">${exRows}</ol>
+        </div>
+      </div>`;
   }
 
   // --- C. Coach note -------------------------------------------------------
@@ -163,10 +168,8 @@ function render() {
   content.innerHTML = `
     ${quickActions(true)}
     ${stripHtml}
-    <div class="today-grid">
-      ${workoutCard}
-      <div class="today-col">${coachCard}${nutritionCard}${recoveryCard}</div>
-    </div>`;
+    ${workoutCard}
+    <div class="today-telemetry">${coachCard}${nutritionCard}${recoveryCard}</div>`;
 }
 
 // Quick actions route into existing flows.

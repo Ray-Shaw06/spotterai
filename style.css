@@ -4012,6 +4012,20 @@ table {
   color: var(--text-muted);
 }
 .field-label-sm .input { max-width: 120px; }
+.btn-link {
+  padding: 0;
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: var(--transition);
+}
+.btn-link:hover { color: var(--accent); }
+
 .btn-link-danger {
   padding: 0;
   font-size: 0.78rem;
@@ -5157,4 +5171,184 @@ body::after {
 .meal__kcal {
   font-family: var(--font-mono);
   font-feature-settings: "zero" 1;
+}
+
+/* ============================================================================
+   FORMAT OVERHAUL — new shell, headers, and Today command center
+   ============================================================================ */
+
+/* --- F1. Desktop shell: slim icon rail instead of a wide sidebar ----------- */
+@media (min-width: 961px) {
+  .app-shell { grid-template-columns: 96px minmax(0, 1fr); }
+  .sidebar { padding: var(--space-5) var(--space-2); align-items: center; }
+  .sidebar__brand { justify-content: center; padding: 0; }
+  .sidebar__brand .wordmark__text { display: none; }
+  .sidebar__brand .wordmark__glyph { width: 40px; height: 40px; }
+  .sidebar__nav { width: 100%; align-items: stretch; }
+  .sidebar__nav .nav-link {
+    flex-direction: column;
+    gap: 5px;
+    padding: 0.62rem 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.56rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+    align-items: center;
+  }
+  .sidebar__nav .nav-link__icon { width: 20px; height: 20px; }
+  .sidebar__nav .nav-link.is-active::before { display: none; }
+  .sidebar__nav .nav-link.is-active {
+    background: var(--accent-soft);
+    box-shadow: inset 0 0 0 1px var(--accent-ring);
+  }
+  .sidebar__foot { flex-direction: column; gap: var(--space-3); align-items: center; }
+  .sidebar__foot .profile-btn { flex: none; padding: 3px; gap: 0; }
+  .sidebar__foot .profile-btn__name,
+  .sidebar__foot .profile-btn__chev { display: none; }
+  .sidebar__foot .profile-btn__avatar { width: 34px; height: 34px; }
+  /* Content breathes wider now that the rail is slim. */
+  .container { max-width: 1240px; }
+}
+
+/* --- F2. Terminal page headers: huge title, tick ruler, ghost index -------- */
+.section-head {
+  position: relative;
+  padding-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+/* tick ruler under every page header */
+.section-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 8px;
+  background:
+    linear-gradient(var(--border), var(--border)) 0 100% / 100% 1px,
+    repeating-linear-gradient(90deg, var(--hud-tick-soft) 0 1px, transparent 1px 28px) 0 100% / 100% 8px;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+/* giant ghost index numeral, per view */
+.section-head::before {
+  position: absolute;
+  right: 0;
+  top: -0.28em;
+  z-index: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(4.5rem, 10vw, 8rem);
+  font-weight: 700;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--accent) 26%, transparent);
+  pointer-events: none;
+  content: "";
+}
+[data-view="today"] .section-head::before { content: "01"; }
+[data-view="dashboard"] .section-head::before { content: "02"; }
+[data-view="split"] .section-head::before { content: "03"; }
+[data-view="nutrition"] .section-head::before { content: "04"; }
+[data-view="progress"] .section-head::before { content: "05"; }
+[data-view="form-check"] .section-head::before { content: "06"; }
+[data-view="library"] .section-head::before { content: "07"; }
+[data-view="evals"] .section-head::before { content: "08"; }
+.section-head > * { position: relative; z-index: 1; }
+.section-title--lg { font-size: clamp(2.5rem, 4.6vw, 3.7rem); line-height: 1.02; }
+
+/* --- F3. Today command center ---------------------------------------------- */
+.cmd {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: var(--space-6);
+  padding: var(--space-6);
+  margin-bottom: var(--space-4);
+  background:
+    radial-gradient(110% 130% at 0% 0%, var(--accent-soft), transparent 55%),
+    var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-md);
+}
+.cmd::after { /* focus brackets, matching the instrument panels */
+  content: "";
+  position: absolute;
+  inset: 9px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--hud-tick), var(--hud-tick)) left 0 top 0 / 15px 2px,
+    linear-gradient(var(--hud-tick), var(--hud-tick)) left 0 top 0 / 2px 15px,
+    linear-gradient(var(--hud-tick), var(--hud-tick)) right 0 top 0 / 15px 2px,
+    linear-gradient(var(--hud-tick), var(--hud-tick)) right 0 top 0 / 2px 15px,
+    linear-gradient(var(--hud-tick-soft), var(--hud-tick-soft)) left 0 bottom 0 / 15px 2px,
+    linear-gradient(var(--hud-tick-soft), var(--hud-tick-soft)) left 0 bottom 0 / 2px 15px,
+    linear-gradient(var(--hud-tick-soft), var(--hud-tick-soft)) right 0 bottom 0 / 15px 2px,
+    linear-gradient(var(--hud-tick-soft), var(--hud-tick-soft)) right 0 bottom 0 / 2px 15px;
+  background-repeat: no-repeat;
+}
+.cmd__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.cmd__title {
+  margin-top: var(--space-2);
+  font-size: clamp(2.6rem, 5.2vw, 4.2rem);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, var(--text) 45%, color-mix(in srgb, var(--accent) 62%, var(--text)) 110%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.cmd__warmup { margin-top: var(--space-4); font-size: var(--fs-small); color: var(--text-muted); line-height: 1.55; }
+.cmd__warmup strong { color: var(--text); }
+.cmd__note { margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text-faint); }
+.cmd__actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-4); margin-top: var(--space-5); }
+.cmd__start { padding: 0.85rem 2.2rem; font-size: 1rem; }
+.cmd__manifest { min-width: 0; align-self: center; }
+.cmd__manifest-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: var(--space-3);
+}
+.cmd__list { list-style: none; padding: 0; margin: 0; counter-reset: cmdex; }
+.cmd-ex {
+  counter-increment: cmdex;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 0.92rem;
+}
+.cmd-ex:last-child { border-bottom: none; }
+.cmd-ex::before {
+  content: counter(cmdex, decimal-leading-zero);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: color-mix(in srgb, var(--accent) 65%, var(--text-faint));
+}
+.cmd-ex__name { flex: 1; min-width: 0; color: var(--text); }
+.cmd-ex__rx { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
+.cmd-ex__rx em { font-style: normal; color: var(--text-faint); }
+.today-telemetry {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: stretch;
+}
+@media (max-width: 900px) {
+  .cmd { grid-template-columns: 1fr; gap: var(--space-4); padding: var(--space-5); }
+  .cmd__title { font-size: clamp(2.2rem, 9vw, 3rem); }
+  .today-telemetry { grid-template-columns: 1fr; }
+  .section-head::before { font-size: 3.4rem; top: -0.2em; opacity: 0.7; }
 }
