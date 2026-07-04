@@ -1210,6 +1210,84 @@ table {
 /* Unknown — a gentle idle breath */
 [data-anim="idle"] .ex-fig { animation-name: ex-brace; animation-duration: 3.4s; }
 
+/* --- Exercise-specific poses & motions (per-exercise realism) -------------- */
+/* Apparatus strokes */
+.ex-mount { stroke: #8a90a0; stroke-width: 3; stroke-linecap: round; }
+.ex-benchpad { fill: #3a3750; stroke: #575170; stroke-width: 1; }
+[data-pose="supine"] .ex-shadow { opacity: 0.35; }
+
+/* Arm poses: static holds that override the pattern's arm animation.
+   The gear rides in the forearm group, so it follows the hold. */
+[data-arms] .ex-arm, [data-arms] .ex-forearm { animation: none !important; }
+[data-arms="backrack"] .ex-arm { transform: rotate(-26deg); }
+[data-arms="backrack"] .ex-forearm { transform: rotate(-148deg); }
+[data-arms="frontrack"] .ex-arm { transform: rotate(-58deg); }
+[data-arms="frontrack"] .ex-forearm { transform: rotate(-118deg); }
+[data-arms="goblet"] .ex-arm { transform: rotate(-34deg); }
+[data-arms="goblet"] .ex-forearm { transform: rotate(-96deg); }
+[data-arms="sides"] .ex-arm { transform: rotate(-4deg); }
+[data-arms="sides"] .ex-forearm { transform: rotate(0deg); }
+[data-arms="overhead"] .ex-arm { transform: rotate(-176deg); }
+[data-arms="overhead"] .ex-forearm { transform: rotate(-4deg); }
+/* …but hinge still needs the racked bar to hang naturally under gravity: the
+   backrack hold rides with the torso, which is what a good morning does. */
+
+/* Pull-up: hang from the fixed bar, whole body rises and lowers. */
+[data-pose="hang"] .ex-fig { animation: ex-pullup 1.9s ease-in-out infinite alternate; }
+[data-pose="hang"] .ex-thigh { animation: none; transform: rotate(-10deg); }
+[data-pose="hang"] .ex-shin { animation: none; transform: rotate(28deg); }
+@keyframes ex-pullup { from { transform: translateY(-4px); } to { transform: translateY(-26px); } }
+[data-anim="pullup"] .ex-shadow { opacity: 0.4; }
+
+/* Bench press: supine on a bench, pressing up. */
+[data-pose="supine"] .ex-fig { animation: none; transform: translate(2px, 22px) rotate(-90deg); transform-origin: 70px 92px; }
+[data-pose="supine"] .ex-thigh { animation: none; transform: rotate(-64deg); }
+[data-pose="supine"] .ex-shin { animation: none; transform: rotate(112deg); }
+[data-pose="supine"] .ex-torso { animation: none; }
+[data-anim="benchpress"] .ex-arm { animation-name: ex-bench-arm; }
+[data-anim="benchpress"] .ex-forearm { animation-name: ex-bench-fore; }
+@keyframes ex-bench-arm { from { transform: rotate(-58deg); } to { transform: rotate(-92deg); } }
+@keyframes ex-bench-fore { from { transform: rotate(74deg); } to { transform: rotate(2deg); } }
+
+/* Calf raise: rise tall on the toes — body lifts, no joint bend. */
+[data-anim="calfraise"] .ex-fig { animation-name: ex-calf; animation-duration: 1.6s; }
+@keyframes ex-calf { from { transform: translateY(0); } to { transform: translateY(-9px); } }
+
+/* Leg extension: knee straightens from bent. */
+[data-anim="legext"] .ex-thigh { animation: none; transform: rotate(-24deg); }
+[data-anim="legext"] .ex-shin { animation-name: ex-legext-shin; }
+@keyframes ex-legext-shin { from { transform: rotate(56deg); } to { transform: rotate(-6deg); } }
+
+/* Leg curl: prone (lying), heel curls toward the glutes. */
+[data-anim="legcurl"] .ex-fig { animation: none; transform: translate(0px, 56px) rotate(90deg); transform-origin: 70px 92px; }
+[data-anim="legcurl"] .ex-torso { animation: none; }
+[data-anim="legcurl"] .ex-arm { animation: none; transform: rotate(-84deg); }
+[data-anim="legcurl"] .ex-forearm { animation: none; transform: rotate(-6deg); }
+[data-anim="legcurl"] .ex-shin { animation-name: ex-legcurl-shin; }
+[data-anim="legcurl"] .ex-shadow { opacity: 0.35; }
+@keyframes ex-legcurl-shin { from { transform: rotate(4deg); } to { transform: rotate(98deg); } }
+
+/* Triceps pushdown: elbow pinned, forearm extends down. */
+[data-anim="pushdown"] .ex-arm { animation-name: ex-pd-arm; }
+[data-anim="pushdown"] .ex-forearm { animation-name: ex-pd-fore; }
+@keyframes ex-pd-arm { from { transform: rotate(-10deg); } to { transform: rotate(-6deg); } }
+@keyframes ex-pd-fore { from { transform: rotate(-92deg); } to { transform: rotate(-2deg); } }
+
+/* Raise / fly: near-straight arm sweeps up to shoulder height. */
+[data-anim="raise"] .ex-arm { animation-name: ex-raise-arm; }
+[data-anim="raise"] .ex-forearm { animation-name: ex-raise-fore; }
+@keyframes ex-raise-arm { from { transform: rotate(-8deg); } to { transform: rotate(-86deg); } }
+@keyframes ex-raise-fore { from { transform: rotate(-4deg); } to { transform: rotate(-8deg); } }
+
+/* Give the new motions the shared timing defaults. */
+[data-anim="pullup"] .ex-arm, [data-anim="benchpress"] .ex-arm, [data-anim="benchpress"] .ex-forearm,
+[data-anim="calfraise"] .ex-fig, [data-anim="legext"] .ex-shin, [data-anim="legcurl"] .ex-shin,
+[data-anim="pushdown"] .ex-arm, [data-anim="pushdown"] .ex-forearm,
+[data-anim="raise"] .ex-arm, [data-anim="raise"] .ex-forearm {
+  animation-duration: 1.8s; animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite; animation-direction: alternate;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ex-anim__svg *, .ex-anim__dot { animation: none !important; }
 }

@@ -42,3 +42,39 @@ test("worked muscles get a highlight node; none is added when unknown/empty", ()
   assert.doesNotMatch(patternAnimation("squat", []), /class="ex-musc"/);
   assert.doesNotMatch(patternAnimation("squat", ["nonsense"]), /class="ex-musc"/);
 });
+
+test("animationSpec differentiates the squat family (the Goblet≠Back≠Front fix)", async () => {
+  const { animationSpec } = await import("../exercise-anim.js");
+  const back = animationSpec({ name: "Back Squat", movementPattern: "squat", equipment: ["barbell", "rack"] });
+  const goblet = animationSpec({ name: "Goblet Squat", movementPattern: "squat", equipment: ["dumbbell"] });
+  const front = animationSpec({ name: "Front Squat", movementPattern: "squat", equipment: ["barbell", "rack"] });
+  const body = animationSpec({ name: "Sissy Squat", movementPattern: "squat", equipment: ["bodyweight"] });
+  assert.equal(back.gear, "backbar");
+  assert.equal(goblet.gear, "goblet");
+  assert.equal(front.gear, "frontbar");
+  assert.equal(body.gear, "");
+  assert.notEqual(back.arms, goblet.arms);
+});
+
+test("name-level specifics get their own motions and apparatus", async () => {
+  const { animationSpec } = await import("../exercise-anim.js");
+  assert.deepEqual(
+    animationSpec({ name: "Pull-Up", movementPattern: "vertical_pull", equipment: ["bodyweight"] }),
+    { anim: "pullup", gear: "", apparatus: "pullupbar", arms: "overhead", pose: "hang" }
+  );
+  const bench = animationSpec({ name: "Barbell Bench Press", movementPattern: "horizontal_push", equipment: ["barbell", "bench"] });
+  assert.equal(bench.anim, "benchpress");
+  assert.equal(bench.pose, "supine");
+  assert.equal(bench.apparatus, "bench");
+  assert.equal(animationSpec({ name: "Standing Calf Raise", movementPattern: "isolation", equipment: ["bodyweight"] }).anim, "calfraise");
+  assert.equal(animationSpec({ name: "Lying Leg Curl", movementPattern: "isolation", equipment: ["machine"] }).anim, "legcurl");
+  assert.equal(animationSpec({ name: "Lateral Raise", movementPattern: "isolation", equipment: ["dumbbell"] }).anim, "raise");
+});
+
+test("equipment drives the implement for hinges, presses and curls", async () => {
+  const { animationSpec } = await import("../exercise-anim.js");
+  assert.equal(animationSpec({ name: "Romanian Deadlift", movementPattern: "hinge", equipment: ["barbell"] }).gear, "handbar");
+  assert.equal(animationSpec({ name: "DB RDL", movementPattern: "hinge", equipment: ["dumbbell"] }).gear, "dbhand");
+  assert.equal(animationSpec({ name: "Walking Lunge", movementPattern: "lunge", equipment: ["dumbbell"] }).gear, "dbsides");
+  assert.equal(animationSpec({ name: "Barbell Curl", movementPattern: "isolation", equipment: ["barbell"] }).gear, "handbar");
+});

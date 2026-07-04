@@ -1,16 +1,20 @@
 /**
  * SpotterAI — animated movement demos (pure, zero-dep)
  * ============================================================================
- * A solid, proportioned side-profile figure with TAPERED limbs (filled paths,
- * wider at the proximal joint), a front-lit gradient for 3D depth, the relevant
- * implement (barbell / dumbbell), and a soft pulsing highlight over the worked
- * muscle — rigged so CSS keyframes rotate each limb around its joint to loop
- * the core motion of every movement pattern. No video, no network, no
- * copyright; markup + CSS only, fully local-first, honours reduced-motion.
+ * A solid, proportioned side-profile figure (tapered limbs, front-lit depth,
+ * worked-muscle glow) rigged so CSS keyframes rotate each limb around its
+ * joint. The animation is chosen PER EXERCISE, not just per movement pattern:
+ * animationSpec() reads the exercise's name + equipment and picks
+ *   - the motion (anim): squat, hinge, pull-up, calf raise, leg extension…
+ *   - the implement (gear): bar on back / front-rack / goblet / DBs at the
+ *     sides / bar-or-DB in the hands / an overhead pull-up bar / none
+ *   - the arm pose (arms): racked, goblet hold, hanging, overhead hang…
+ * so a Goblet Squat, Front Squat and Back Squat all read differently — like a
+ * real app. No video, no network; markup + CSS only; honours reduced-motion.
  *
  * Joints (view-box units): hip (70,92) · shoulder (71,53) · elbow (74,73) ·
- * knee (70,121). Equipment + muscle nodes live inside the limb group they
- * belong to, so they track the motion.
+ * knee (70,121). Gear lives inside the limb group it belongs to, so it tracks
+ * the motion.
  */
 
 const KNOWN = new Set([
@@ -29,13 +33,97 @@ const CAPTION = {
   isolation: "Curl up, squeeze, lower slowly.",
   plyometric: "Load, then explode up — land soft.",
   isometric: "Brace and hold a strong neutral position.",
+  pullup: "Pull your chin over the bar, lower slow.",
+  benchpress: "Lower to your chest, press away strong.",
+  calfraise: "Rise tall on your toes, lower slowly.",
+  legext: "Straighten the knee, squeeze the quad.",
+  legcurl: "Curl the heel toward you, lower slow.",
+  pushdown: "Elbows pinned — extend, then control back.",
+  raise: "Raise with control to shoulder height.",
 };
 
-const SHOULDER_BAR = new Set(["squat", "lunge"]);
-const HAND_BAR = new Set(["hinge", "horizontal_push", "vertical_push", "horizontal_pull", "vertical_pull"]);
-const HAND_DB = new Set(["isolation"]);
+/**
+ * Decide the motion / implement / arm pose for ONE exercise.
+ * @param {{name?:string, movementPattern?:string, equipment?:string[]}} e
+ * @returns {{anim:string, gear:string, arms:string, pose:string}}
+ */
+export function animationSpec(e = {}) {
+  const name = String(e.name || "").toLowerCase();
+  const eq = new Set((e.equipment || []).map((x) => String(x).toLowerCase()));
+  const pattern = KNOWN.has(e.movementPattern) ? e.movementPattern : "idle";
+  const db = eq.has("dumbbell") || eq.has("kettlebell");
+  const bar = eq.has("barbell");
+  const spec = { anim: pattern, gear: "", arms: "", pose: "", apparatus: "" };
 
-// Worked-muscle highlight node → which limb group it lives in + where (view-box).
+  // --- name-level specifics (most distinctive first) ------------------------
+  if (/pull-?up|chin-?up/.test(name)) return { anim: "pullup", gear: "", apparatus: "pullupbar", arms: "overhead", pose: "hang" };
+  if (/calf/.test(name)) return { anim: "calfraise", gear: db ? "dbsides" : "", arms: "sides", pose: "" };
+  if (/leg extension/.test(name)) return { anim: "legext", gear: "", arms: "sides", pose: "" };
+  if (/leg curl|nordic/.test(name)) return { anim: "legcurl", gear: "", arms: "sides", pose: "" };
+  if (/pushdown|press-?down|kickback/.test(name)) return { anim: "pushdown", gear: "", arms: "", pose: "" };
+  if (/lateral raise|side raise|front raise|delt raise|reverse fly|rear delt|face pull|fly|flye|pullover/.test(name))
+    return { anim: "raise", gear: db ? "dbhand" : "", arms: "", pose: "" };
+  if (/good morning/.test(name)) return { anim: "hinge", gear: "backbar", arms: "backrack", pose: "" };
+  if (/front squat/.test(name)) return { anim: "squat", gear: "frontbar", arms: "frontrack", pose: "" };
+  if (/goblet/.test(name)) return { anim: "squat", gear: "goblet", arms: "goblet", pose: "" };
+
+  // --- pattern-level, differentiated by equipment ---------------------------
+  switch (pattern) {
+    case "squat":
+      if (bar) Object.assign(spec, { gear: "backbar", arms: "backrack" });
+      else if (db) Object.assign(spec, { gear: "goblet", arms: "goblet" });
+      // bodyweight/machine: default counterbalance arms
+      break;
+    case "lunge":
+      if (db) Object.assign(spec, { gear: "dbsides", arms: "sides" });
+      else if (bar) Object.assign(spec, { gear: "backbar", arms: "backrack" });
+      break;
+    case "hinge":
+      spec.gear = db ? "dbhand" : "handbar";
+      break;
+    case "horizontal_push":
+      if (eq.has("bench")) Object.assign(spec, { anim: "benchpress", pose: "supine", gear: db ? "dbhand" : "handbar", apparatus: "bench" });
+      else if (bar) spec.gear = "handbar";
+      else if (db) spec.gear = "dbhand";
+      break;
+    case "vertical_push":
+      spec.gear = db ? "dbhand" : bar ? "handbar" : "";
+      break;
+    case "horizontal_pull":
+      spec.gear = db ? "dbhand" : bar ? "handbar" : "handbar"; // cable rows read fine with a bar
+      break;
+    case "vertical_pull":
+      spec.gear = ""; // pulldown: hands empty (cable), motion carries it
+      break;
+    case "isolation":
+      spec.gear = bar ? "handbar" : "dbhand"; // curls etc.
+      break;
+    case "plyometric":
+    case "isometric":
+      break;
+  }
+  return spec;
+}
+
+// --- gear markup -------------------------------------------------------------
+// Placement group: torso (tracks the lean), forearm (tracks the hand), or svg
+// root (fixed apparatus like a pull-up bar or bench).
+const GEAR = {
+  backbar: { g: "torso", html: `<g class="ex-gear"><line class="ex-bar" x1="49" y1="49" x2="91" y2="49" /><rect class="ex-plate" x="47" y="42" width="5" height="14" rx="2" /><rect class="ex-plate" x="88" y="42" width="5" height="14" rx="2" /></g>` },
+  frontbar: { g: "torso", html: `<g class="ex-gear"><line class="ex-bar" x1="58" y1="54" x2="100" y2="54" /><rect class="ex-plate" x="56" y="47" width="5" height="14" rx="2" /><rect class="ex-plate" x="97" y="47" width="5" height="14" rx="2" /></g>` },
+  handbar: { g: "forearm", html: `<g class="ex-gear"><line class="ex-bar" x1="59" y1="96" x2="89" y2="96" /><rect class="ex-plate" x="57" y="90" width="5" height="12" rx="2" /><rect class="ex-plate" x="86" y="90" width="5" height="12" rx="2" /></g>` },
+  dbhand: { g: "forearm", html: `<g class="ex-gear"><line class="ex-bar" x1="68" y1="95" x2="80" y2="95" /><rect class="ex-plate" x="66" y="90" width="5" height="11" rx="2" /><rect class="ex-plate" x="77" y="90" width="5" height="11" rx="2" /></g>` },
+  goblet: { g: "forearm", html: `<g class="ex-gear"><line class="ex-bar" x1="70" y1="95" x2="80" y2="95" /><rect class="ex-plate" x="68" y="90" width="5" height="11" rx="2" /><rect class="ex-plate" x="78" y="90" width="5" height="11" rx="2" /></g>` },
+  dbsides: { g: "forearm", html: `<g class="ex-gear"><line class="ex-bar" x1="70" y1="97" x2="82" y2="97" /><rect class="ex-plate" x="68" y="92" width="5" height="11" rx="2" /><rect class="ex-plate" x="79" y="92" width="5" height="11" rx="2" /></g>` },
+};
+
+// Fixed apparatus drawn at the svg root (doesn't move with the figure).
+const APPARATUS = {
+  pullupbar: `<g class="ex-gear"><line class="ex-bar" x1="34" y1="16" x2="106" y2="16" /><line class="ex-mount" x1="38" y1="4" x2="38" y2="16" /><line class="ex-mount" x1="102" y1="4" x2="102" y2="16" /></g>`,
+  bench: `<g class="ex-gear"><rect class="ex-benchpad" x="8" y="116" width="72" height="9" rx="3" /><line class="ex-mount" x1="18" y1="125" x2="18" y2="150" /><line class="ex-mount" x1="68" y1="125" x2="68" y2="150" /></g>`,
+};
+
+// Worked-muscle highlight node → limb group + position (view-box units).
 const MUSCLE_NODE = {
   chest: { g: "torso", x: 78, y: 62, r: 9 },
   back: { g: "torso", x: 63, y: 64, r: 10 },
@@ -71,19 +159,22 @@ function highlights(muscles) {
 }
 
 /**
+ * Render the animated demo panel for an exercise.
  * @param {string} pattern movementPattern key
  * @param {string[]} [muscles] primaryMuscles to highlight
- * @returns {string} markup for an animated demo panel (safe; no user input)
+ * @param {{name?:string, equipment?:string[]}} [exercise] full entry for
+ *   per-exercise gear/pose differentiation (falls back to pattern defaults)
  */
-export function patternAnimation(pattern, muscles = []) {
-  const key = KNOWN.has(pattern) ? pattern : "idle";
-  const caption = CAPTION[pattern] || "A controlled, full-range repetition.";
-  const shoulderGear = SHOULDER_BAR.has(key) ? barAcrossShoulders : "";
-  const handGear = HAND_BAR.has(key) ? barInHands : HAND_DB.has(key) ? dumbbell : "";
+export function patternAnimation(pattern, muscles = [], exercise = null) {
+  const spec = animationSpec({ ...(exercise || {}), movementPattern: pattern });
+  const caption = CAPTION[spec.anim] || CAPTION[pattern] || "A controlled, full-range repetition.";
+  const gear = GEAR[spec.gear] || null;
+  const at = (slot) => (gear && gear.g === slot ? gear.html : "");
+  const apparatus = APPARATUS[spec.apparatus] || "";
   const hi = highlights(muscles);
   return `
     <figure class="ex-anim" aria-label="Animated movement demonstration">
-      <svg class="ex-anim__svg" data-anim="${key}" viewBox="0 0 140 175" role="img" aria-hidden="true">
+      <svg class="ex-anim__svg" data-anim="${spec.anim}"${spec.arms ? ` data-arms="${spec.arms}"` : ""}${spec.pose ? ` data-pose="${spec.pose}"` : ""} viewBox="0 0 140 175" role="img" aria-hidden="true">
         <defs>
           <linearGradient id="exBody" gradientUnits="userSpaceOnUse" x1="48" y1="0" x2="93" y2="0">
             <stop class="ex-stop-dark" offset="0" />
@@ -97,6 +188,7 @@ export function patternAnimation(pattern, muscles = []) {
         </defs>
         <ellipse class="ex-shadow" cx="70" cy="153" rx="27" ry="4.5" />
         <line class="ex-ground" x1="26" y1="152" x2="114" y2="152" />
+        ${apparatus}
         <g class="ex-fig">
           <g class="ex-thigh">
             ${limb(70, 92, 9, 70, 121, 6)}
@@ -113,13 +205,13 @@ export function patternAnimation(pattern, muscles = []) {
             ${limb(66, 52, 7, 78, 52, 7)}
             ${limb(70, 44, 4.5, 70, 52, 5)}
             <ellipse class="ex-head" cx="70" cy="33" rx="11" ry="12" />
-            ${shoulderGear}
+            ${at("torso")}
             <g class="ex-arm">
               ${limb(71, 53, 6, 74, 73, 4.5)}
               <g class="ex-forearm">
                 ${limb(74, 73, 4.5, 76, 95, 3.5)}
                 <circle class="ex-limbfill" cx="76" cy="96" r="4.5" />
-                ${handGear}
+                ${at("forearm")}
                 ${hi.forearm}
               </g>
               ${hi.arm}
@@ -131,24 +223,3 @@ export function patternAnimation(pattern, muscles = []) {
       <figcaption class="ex-anim__cap"><span class="ex-anim__dot" aria-hidden="true"></span>${caption}</figcaption>
     </figure>`;
 }
-
-// A loaded barbell across the upper back (sits in the torso group).
-const barAcrossShoulders = `<g class="ex-gear">
-  <line class="ex-bar" x1="49" y1="49" x2="91" y2="49" />
-  <rect class="ex-plate" x="47" y="42" width="5" height="14" rx="2" />
-  <rect class="ex-plate" x="88" y="42" width="5" height="14" rx="2" />
-</g>`;
-
-// A loaded barbell held in the hands (sits in the forearm group, tracks the hand).
-const barInHands = `<g class="ex-gear">
-  <line class="ex-bar" x1="59" y1="96" x2="89" y2="96" />
-  <rect class="ex-plate" x="57" y="90" width="5" height="12" rx="2" />
-  <rect class="ex-plate" x="86" y="90" width="5" height="12" rx="2" />
-</g>`;
-
-// A dumbbell in the hand (sits in the forearm group).
-const dumbbell = `<g class="ex-gear">
-  <line class="ex-bar" x1="68" y1="95" x2="80" y2="95" />
-  <rect class="ex-plate" x="66" y="90" width="5" height="11" rx="2" />
-  <rect class="ex-plate" x="77" y="90" width="5" height="11" rx="2" />
-</g>`;
