@@ -1168,8 +1168,9 @@ table {
 /* Vertical push — press overhead */
 [data-anim="vertical_push"] .ex-arm { animation-name: ex-vp-arm; }
 [data-anim="vertical_push"] .ex-forearm { animation-name: ex-vp-fore; }
-@keyframes ex-vp-arm { from { transform: rotate(-150deg); } to { transform: rotate(-178deg); } }
-@keyframes ex-vp-fore { from { transform: rotate(62deg); } to { transform: rotate(2deg); } }
+/* Arm/forearm counter-rotate so a held bar stays level through the press. */
+@keyframes ex-vp-arm { from { transform: rotate(-60deg); } to { transform: rotate(-178deg); } }
+@keyframes ex-vp-fore { from { transform: rotate(-130deg); } to { transform: rotate(-2deg); } }
 
 /* Horizontal pull — row the elbow back */
 [data-anim="horizontal_pull"] .ex-torso { animation-name: ex-row-torso; }
@@ -1196,10 +1197,10 @@ table {
 [data-anim="plyometric"] .ex-thigh { animation-name: ex-ply-thigh; }
 [data-anim="plyometric"] .ex-shin { animation-name: ex-ply-shin; }
 [data-anim="plyometric"] .ex-arm { animation-name: ex-ply-arm; }
-@keyframes ex-jump { from { transform: translateY(10px); } to { transform: translateY(-26px); } }
+@keyframes ex-jump { from { transform: translateY(10px); } to { transform: translateY(-14px); } }
 @keyframes ex-ply-thigh { from { transform: rotate(-16deg); } to { transform: rotate(0); } }
 @keyframes ex-ply-shin { from { transform: rotate(20deg); } to { transform: rotate(0); } }
-@keyframes ex-ply-arm { from { transform: rotate(-18deg); } to { transform: rotate(-150deg); } }
+@keyframes ex-ply-arm { from { transform: rotate(-18deg); } to { transform: rotate(-128deg); } }
 
 /* Isometric — a steady brace with a subtle settle */
 [data-anim="isometric"] .ex-fig { animation-name: ex-brace; animation-duration: 3.2s; }
@@ -1279,14 +1280,200 @@ table {
 @keyframes ex-raise-arm { from { transform: rotate(-8deg); } to { transform: rotate(-86deg); } }
 @keyframes ex-raise-fore { from { transform: rotate(-4deg); } to { transform: rotate(-8deg); } }
 
+/* Hanging leg raise: static hang (after the hang-pose rules so these win),
+   legs sweep up to L-sit and lower. */
+[data-anim="hangraise"] .ex-fig { animation: none; transform: translateY(-16px); }
+[data-anim="hangraise"] .ex-thigh { animation-name: ex-hlr-thigh; }
+[data-anim="hangraise"] .ex-shin { animation-name: ex-hlr-shin; }
+@keyframes ex-hlr-thigh { from { transform: rotate(-12deg); } to { transform: rotate(-80deg); } }
+@keyframes ex-hlr-shin { from { transform: rotate(30deg); } to { transform: rotate(12deg); } }
+
+/* Prone (face-down on the floor): push-up on hands / plank on forearms. */
+[data-pose="prone"] .ex-fig { animation: none; transform: translate(0px, 26px) rotate(80deg); transform-origin: 70px 92px; }
+[data-pose="prone"] .ex-torso, [data-pose="prone"] .ex-thigh, [data-pose="prone"] .ex-shin { animation: none; }
+[data-pose="prone"] .ex-shadow { opacity: 0.35; }
+[data-anim="pushup"] .ex-fig { animation-name: ex-pushup-fig; }
+[data-anim="pushup"] .ex-arm { animation-name: ex-pushup-arm; }
+[data-anim="pushup"] .ex-forearm { animation-name: ex-pushup-fore; }
+@keyframes ex-pushup-fig { from { transform: translate(0px, 26px) rotate(80deg); } to { transform: translate(0px, 40px) rotate(80deg); } }
+@keyframes ex-pushup-arm { from { transform: rotate(-96deg); } to { transform: rotate(-44deg); } }
+@keyframes ex-pushup-fore { from { transform: rotate(0deg); } to { transform: rotate(-52deg); } }
+[data-anim="plank"] .ex-fig { animation-name: ex-plank-fig; animation-duration: 3.2s; }
+[data-anim="plank"] .ex-arm { animation: none; transform: rotate(-86deg); }
+[data-anim="plank"] .ex-forearm { animation: none; transform: rotate(-88deg); }
+@keyframes ex-plank-fig { from { transform: translate(0px, 38px) rotate(81deg); } to { transform: translate(0px, 40px) rotate(81deg); } }
+
+/* Dip: suspended on the bar, shins tucked, elbows bend as the body lowers. */
+[data-anim="dip"] .ex-fig { animation-name: ex-dip-fig; }
+[data-anim="dip"] .ex-torso { animation: none; transform: rotate(8deg); }
+[data-anim="dip"] .ex-thigh { animation: none; transform: rotate(20deg); }
+[data-anim="dip"] .ex-shin { animation: none; transform: rotate(80deg); }
+[data-anim="dip"] .ex-arm { animation-name: ex-dip-arm; }
+[data-anim="dip"] .ex-forearm { animation-name: ex-dip-fore; }
+[data-anim="dip"] .ex-shadow { opacity: 0.4; }
+@keyframes ex-dip-fig { from { transform: translateY(-18px); } to { transform: translateY(-7px); } }
+@keyframes ex-dip-arm { from { transform: rotate(-4deg); } to { transform: rotate(28deg); } }
+@keyframes ex-dip-fore { from { transform: rotate(4deg); } to { transform: rotate(-36deg); } }
+
+/* Bridge (glute bridge on the floor / hip thrust off a bench): lying face-up,
+   knees bent, hips drive up — torso pivots at the shoulders, thigh follows. */
+[data-pose="supinefloor"] .ex-fig { animation: none; transform: translate(2px, 54px) rotate(-90deg); transform-origin: 70px 92px; }
+[data-pose="supinefloor"] .ex-torso { animation: none; }
+[data-pose="supinefloor"] .ex-thigh { animation: none; transform: rotate(-72deg); }
+[data-pose="supinefloor"] .ex-shin { animation: none; transform: rotate(162deg); }
+[data-pose="supinefloor"] .ex-shadow { opacity: 0.3; }
+[data-pose="thrust"] .ex-fig { animation: none; transform: translate(2px, 44px) rotate(-72deg); transform-origin: 70px 92px; }
+[data-pose="thrust"] .ex-torso { animation: none; }
+[data-pose="thrust"] .ex-thigh { animation: none; transform: rotate(-72deg); }
+[data-pose="thrust"] .ex-shin { animation: none; transform: rotate(144deg); }
+[data-pose="thrust"] .ex-shadow { opacity: 0.35; }
+[data-anim="bridge"] .ex-torso { transform-origin: 71px 53px; animation-name: ex-bridge-torso; }
+[data-anim="bridge"] .ex-thigh { animation-name: ex-bridge-thigh; }
+[data-anim="bridge"] .ex-arm { animation: none; transform: rotate(-12deg); }
+[data-anim="bridge"] .ex-forearm { animation: none; transform: rotate(0deg); }
+@keyframes ex-bridge-torso { from { transform: rotate(2deg); } to { transform: rotate(-18deg); } }
+@keyframes ex-bridge-thigh { from { transform: translate(0px, 0px) rotate(-72deg); } to { transform: translate(12px, -1px) rotate(-86deg); } }
+
+/* Kneeling family: crunch (hands at head), nordic (rigid fall), ab rollout. */
+[data-pose="kneel"] .ex-fig { animation: none; transform: translateY(27px); }
+[data-pose="kneel"] .ex-thigh { animation: none; }
+[data-pose="kneel"] .ex-shin { animation: none; transform: rotate(90deg); }
+[data-pose="kneel"] .ex-shadow { opacity: 0.5; }
+[data-anim="crunch"] .ex-torso { animation-name: ex-crunch-torso; }
+[data-anim="crunch"] .ex-arm { animation: none; transform: rotate(-150deg); }
+[data-anim="crunch"] .ex-forearm { animation: none; transform: rotate(-58deg); }
+@keyframes ex-crunch-torso { from { transform: rotate(8deg); } to { transform: rotate(46deg); } }
+[data-anim="nordic"] .ex-torso { animation-name: ex-nordic-torso; }
+[data-anim="nordic"] .ex-arm { animation-name: ex-nordic-arm; }
+[data-anim="nordic"] .ex-forearm { animation: none; transform: rotate(-6deg); }
+@keyframes ex-nordic-torso { from { transform: rotate(4deg); } to { transform: rotate(42deg); } }
+@keyframes ex-nordic-arm { from { transform: rotate(-22deg); } to { transform: rotate(-64deg); } }
+[data-anim="rollout"] .ex-torso { animation-name: ex-roll-torso; }
+[data-anim="rollout"] .ex-arm { animation-name: ex-roll-arm; }
+[data-anim="rollout"] .ex-forearm { animation: none; transform: rotate(-4deg); }
+@keyframes ex-roll-torso { from { transform: rotate(24deg); } to { transform: rotate(64deg); } }
+@keyframes ex-roll-arm { from { transform: rotate(-70deg); } to { transform: rotate(-96deg); } }
+
+/* Russian twist: v-sit, arms sweep. */
+[data-pose="vsit"] .ex-fig { animation: none; transform: translateY(50px); }
+[data-pose="vsit"] .ex-torso { animation: none; transform: rotate(-30deg); }
+[data-pose="vsit"] .ex-thigh { animation: none; transform: rotate(-100deg); }
+[data-pose="vsit"] .ex-shin { animation: none; transform: rotate(40deg); }
+[data-pose="vsit"] .ex-shadow { opacity: 0.4; }
+[data-anim="twist"] .ex-arm { animation-name: ex-twist-arm; animation-duration: 1.2s; }
+[data-anim="twist"] .ex-forearm { animation: none; transform: rotate(-12deg); }
+@keyframes ex-twist-arm { from { transform: rotate(-52deg); } to { transform: rotate(-96deg); } }
+
+/* Shrug: bar hangs at the thighs, shoulders bump straight up. */
+[data-anim="shrug"] .ex-fig { animation-name: ex-shrug-fig; animation-duration: 1.4s; }
+@keyframes ex-shrug-fig { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+
+/* Overhead triceps extension: arm up, forearm lowers behind the head. */
+[data-anim="ohext"] .ex-arm { animation: none; transform: rotate(-168deg); }
+[data-anim="ohext"] .ex-forearm { animation-name: ex-ohext-fore; }
+@keyframes ex-ohext-fore { from { transform: rotate(96deg); } to { transform: rotate(6deg); } }
+
+/* Skullcrusher: supine on the bench, upper arm fixed, forearm hinges. */
+[data-anim="skullcrusher"] .ex-arm { animation: none; transform: rotate(-88deg); }
+[data-anim="skullcrusher"] .ex-forearm { animation-name: ex-skull-fore; }
+@keyframes ex-skull-fore { from { transform: rotate(-84deg); } to { transform: rotate(-6deg); } }
+
+/* Kick-leg (hip abduction / glute kickback): leg sweeps back and out. */
+[data-anim="kickleg"] .ex-torso { animation: none; transform: rotate(6deg); }
+[data-anim="kickleg"] .ex-thigh { animation-name: ex-kickleg-thigh; }
+[data-anim="kickleg"] .ex-shin { animation: none; transform: rotate(-4deg); }
+@keyframes ex-kickleg-thigh { from { transform: rotate(-2deg); } to { transform: rotate(26deg); } }
+
+/* Face pull: arm at face height, hand pulls in with the elbow high. */
+[data-anim="facepull"] .ex-arm { animation-name: ex-fp-arm; }
+[data-anim="facepull"] .ex-forearm { animation-name: ex-fp-fore; }
+@keyframes ex-fp-arm { from { transform: rotate(-98deg); } to { transform: rotate(-64deg); } }
+@keyframes ex-fp-fore { from { transform: rotate(-2deg); } to { transform: rotate(-64deg); } }
+
+/* Triceps kickback: hinged over, upper arm pinned, forearm extends back. */
+[data-anim="kickback"] .ex-torso { animation: none; transform: rotate(38deg); }
+[data-anim="kickback"] .ex-thigh { animation: none; transform: rotate(-10deg); }
+[data-anim="kickback"] .ex-shin { animation: none; transform: rotate(12deg); }
+[data-anim="kickback"] .ex-arm { animation: none; transform: rotate(22deg); }
+[data-anim="kickback"] .ex-forearm { animation-name: ex-kb-fore; }
+@keyframes ex-kb-fore { from { transform: rotate(-86deg); } to { transform: rotate(-2deg); } }
+
+/* Leg press: reclined into the seat, legs drive the sled plate away. */
+[data-pose="recline"] .ex-fig { animation: none; transform: translate(-14px, 30px) rotate(-42deg); transform-origin: 70px 92px; }
+[data-pose="recline"] .ex-torso { animation: none; }
+[data-pose="recline"] .ex-arm { animation: none; transform: rotate(-10deg); }
+[data-pose="recline"] .ex-forearm { animation: none; transform: rotate(-6deg); }
+[data-pose="recline"] .ex-shadow { opacity: 0.4; }
+[data-anim="legpress"] .ex-thigh { animation-name: ex-lp-thigh; }
+[data-anim="legpress"] .ex-shin { animation-name: ex-lp-shin; }
+@keyframes ex-lp-thigh { from { transform: rotate(-72deg); } to { transform: rotate(-30deg); } }
+@keyframes ex-lp-shin { from { transform: rotate(84deg); } to { transform: rotate(18deg); } }
+
+/* Seated leg curl: thigh fixed on the pad, heel curls down and back. */
+[data-anim="legcurlseat"] .ex-thigh { animation: none; transform: rotate(-24deg); }
+[data-anim="legcurlseat"] .ex-shin { animation-name: ex-lcs-shin; }
+@keyframes ex-lcs-shin { from { transform: rotate(-8deg); } to { transform: rotate(58deg); } }
+
+/* Bent-over row (barbell/dumbbell): deep hinge held, bar pulls to the hip. */
+[data-anim="row"] .ex-torso { animation-name: ex-row2-torso; }
+[data-anim="row"] .ex-thigh { animation: none; transform: rotate(-14deg); }
+[data-anim="row"] .ex-shin { animation: none; transform: rotate(10deg); }
+[data-anim="row"] .ex-arm { animation-name: ex-row2-arm; }
+[data-anim="row"] .ex-forearm { animation-name: ex-row2-fore; }
+@keyframes ex-row2-torso { from { transform: rotate(40deg); } to { transform: rotate(36deg); } }
+@keyframes ex-row2-arm { from { transform: rotate(-58deg); } to { transform: rotate(-16deg); } }
+@keyframes ex-row2-fore { from { transform: rotate(-2deg); } to { transform: rotate(-30deg); } }
+
+/* Bent-over reverse fly / rear delt: hinged, straight arm sweeps up wide. */
+[data-anim="bentraise"] .ex-torso { animation: none; transform: rotate(36deg); }
+[data-anim="bentraise"] .ex-thigh { animation: none; transform: rotate(-12deg); }
+[data-anim="bentraise"] .ex-shin { animation: none; transform: rotate(10deg); }
+[data-anim="bentraise"] .ex-arm { animation-name: ex-br-arm; }
+[data-anim="bentraise"] .ex-forearm { animation: none; transform: rotate(-6deg); }
+@keyframes ex-br-arm { from { transform: rotate(-40deg); } to { transform: rotate(30deg); } }
+
+/* Seated cable row: long-sit, handle pulled to the waist. */
+[data-pose="longsit"] .ex-fig { animation: none; transform: translateY(44px); }
+[data-pose="longsit"] .ex-thigh { animation: none; transform: rotate(-70deg); }
+[data-pose="longsit"] .ex-shin { animation: none; transform: rotate(-5deg); }
+[data-pose="longsit"] .ex-shadow { opacity: 0.45; }
+[data-pose="longsit"] .ex-torso { animation-name: ex-seatrow-torso; }
+@keyframes ex-seatrow-torso { from { transform: rotate(10deg); } to { transform: rotate(-2deg); } }
+
+/* Pallof press: arms locked long in front, bracing against rotation. */
+[data-anim="pallof"] .ex-fig { animation-name: ex-brace; animation-duration: 3s; }
+[data-anim="pallof"] .ex-arm { animation: none; transform: rotate(-80deg); }
+[data-anim="pallof"] .ex-forearm { animation: none; transform: rotate(-4deg); }
+
 /* Give the new motions the shared timing defaults. */
 [data-anim="pullup"] .ex-arm, [data-anim="benchpress"] .ex-arm, [data-anim="benchpress"] .ex-forearm,
 [data-anim="calfraise"] .ex-fig, [data-anim="legext"] .ex-shin, [data-anim="legcurl"] .ex-shin,
 [data-anim="pushdown"] .ex-arm, [data-anim="pushdown"] .ex-forearm,
-[data-anim="raise"] .ex-arm, [data-anim="raise"] .ex-forearm {
+[data-anim="raise"] .ex-arm, [data-anim="raise"] .ex-forearm,
+[data-anim="hangraise"] .ex-thigh, [data-anim="hangraise"] .ex-shin,
+[data-anim="pushup"] .ex-fig, [data-anim="pushup"] .ex-arm, [data-anim="pushup"] .ex-forearm,
+[data-anim="plank"] .ex-fig,
+[data-anim="dip"] .ex-fig, [data-anim="dip"] .ex-arm, [data-anim="dip"] .ex-forearm,
+[data-anim="bridge"] .ex-torso, [data-anim="bridge"] .ex-thigh,
+[data-anim="crunch"] .ex-torso, [data-anim="nordic"] .ex-torso, [data-anim="nordic"] .ex-arm,
+[data-anim="rollout"] .ex-torso, [data-anim="rollout"] .ex-arm,
+[data-anim="twist"] .ex-arm, [data-anim="shrug"] .ex-fig,
+[data-anim="ohext"] .ex-forearm, [data-anim="skullcrusher"] .ex-forearm,
+[data-anim="kickleg"] .ex-thigh, [data-anim="facepull"] .ex-arm, [data-anim="facepull"] .ex-forearm,
+[data-anim="kickback"] .ex-forearm,
+[data-anim="legpress"] .ex-thigh, [data-anim="legpress"] .ex-shin,
+[data-anim="legcurlseat"] .ex-shin,
+[data-anim="row"] .ex-torso, [data-anim="row"] .ex-arm, [data-anim="row"] .ex-forearm,
+[data-anim="bentraise"] .ex-arm, [data-pose="longsit"] .ex-torso,
+[data-anim="pallof"] .ex-fig {
   animation-duration: 1.8s; animation-timing-function: ease-in-out;
   animation-iteration-count: infinite; animation-direction: alternate;
 }
+/* Re-assert the non-default tempos (the block above would flatten them). */
+[data-anim="plank"] .ex-fig, [data-anim="pallof"] .ex-fig { animation-duration: 3.2s; }
+[data-anim="twist"] .ex-arm { animation-duration: 1.2s; }
+[data-anim="shrug"] .ex-fig { animation-duration: 1.4s; }
+[data-anim="calfraise"] .ex-fig { animation-duration: 1.6s; }
 
 @media (prefers-reduced-motion: reduce) {
   .ex-anim__svg *, .ex-anim__dot { animation: none !important; }

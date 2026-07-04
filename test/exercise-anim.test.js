@@ -78,3 +78,52 @@ test("equipment drives the implement for hinges, presses and curls", async () =>
   assert.equal(animationSpec({ name: "Walking Lunge", movementPattern: "lunge", equipment: ["dumbbell"] }).gear, "dbsides");
   assert.equal(animationSpec({ name: "Barbell Curl", movementPattern: "isolation", equipment: ["barbell"] }).gear, "handbar");
 });
+
+test("floor/apparatus exercises leave the generic standing rig", async () => {
+  const { animationSpec } = await import("../exercise-anim.js");
+  const spec = (name, movementPattern, equipment = ["bodyweight"]) => animationSpec({ name, movementPattern, equipment });
+  // Prone on the floor — never a standing press / standing brace.
+  assert.deepEqual([spec("Push-up", "horizontal_push").anim, spec("Push-up", "horizontal_push").pose], ["pushup", "prone"]);
+  assert.deepEqual([spec("Plank", "isometric").anim, spec("Plank", "isometric").pose], ["plank", "prone"]);
+  // Suspended on apparatus.
+  assert.equal(spec("Dips", "vertical_push").apparatus, "dipbar");
+  assert.equal(spec("Hanging Leg Raise", "isolation").apparatus, "pullupbar");
+  assert.equal(spec("Hanging Leg Raise", "isolation").anim, "hangraise");
+  // Supine bridges — hip thrust gets the bench + bar, glute bridge the floor.
+  const thrust = spec("Hip Thrust", "hinge", ["barbell"]);
+  assert.deepEqual([thrust.anim, thrust.pose, thrust.apparatus, thrust.gear], ["bridge", "thrust", "hipbench", "hipbar"]);
+  assert.deepEqual([spec("Glute Bridge", "hinge").anim, spec("Glute Bridge", "hinge").pose], ["bridge", "supinefloor"]);
+  // Kneeling / seated core & machine work.
+  assert.equal(spec("Cable Crunch", "isolation", ["cable"]).pose, "kneel");
+  assert.equal(spec("Ab Wheel Rollout", "isolation").anim, "rollout");
+  assert.equal(spec("Nordic Curl", "isolation").pose, "kneel");
+  assert.equal(spec("Russian Twist", "isolation").pose, "vsit");
+  assert.equal(spec("Leg Press", "squat", ["machine"]).pose, "recline");
+  assert.equal(spec("Seated Cable Row", "horizontal_pull", ["cable"]).pose, "longsit");
+  assert.equal(spec("Seated Leg Curl", "isolation", ["machine"]).anim, "legcurlseat");
+});
+
+test("no isolation move falls back to a generic biceps curl unless it is one", async () => {
+  const { animationSpec } = await import("../exercise-anim.js");
+  const spec = (name, equipment) => animationSpec({ name, movementPattern: "isolation", equipment });
+  assert.equal(spec("Barbell Shrug", ["barbell"]).anim, "shrug");
+  assert.equal(spec("Skullcrusher", ["barbell"]).anim, "skullcrusher");
+  assert.equal(spec("Skullcrusher", ["barbell"]).pose, "supine");
+  assert.equal(spec("Overhead Triceps Extension", ["dumbbell"]).anim, "ohext");
+  assert.equal(spec("Triceps Kickback", ["dumbbell"]).anim, "kickback");
+  assert.equal(spec("Pec Deck", ["machine"]).anim, "raise");
+  assert.equal(spec("Straight-Arm Pulldown", ["cable"]).anim, "raise");
+  assert.equal(spec("Hip Abduction", ["machine"]).anim, "kickleg");
+  assert.equal(spec("Rear-Delt Fly", ["dumbbell"]).anim, "bentraise");
+  // …but actual curls still curl.
+  assert.equal(spec("Dumbbell Curl", ["dumbbell"]).anim, "isolation");
+});
+
+test("barbell rows hinge over; cable rows stay upright with a plain handle", async () => {
+  const { animationSpec } = await import("../exercise-anim.js");
+  const bb = animationSpec({ name: "Bent-Over Row", movementPattern: "horizontal_pull", equipment: ["barbell"] });
+  assert.deepEqual([bb.anim, bb.gear], ["row", "handbar"]);
+  const cable = animationSpec({ name: "Chest-Supported Row", movementPattern: "horizontal_pull", equipment: ["machine"] });
+  assert.deepEqual([cable.anim, cable.gear], ["horizontal_pull", "cablebar"]);
+  assert.equal(animationSpec({ name: "Lat Pulldown", movementPattern: "vertical_pull", equipment: ["cable"] }).gear, "cablebar");
+});

@@ -40,6 +40,26 @@ const CAPTION = {
   legcurl: "Curl the heel toward you, lower slow.",
   pushdown: "Elbows pinned — extend, then control back.",
   raise: "Raise with control to shoulder height.",
+  bentraise: "Hinge over — sweep up wide, lower slow.",
+  pushup: "Body rigid — lower, then press the floor away.",
+  plank: "Hold one straight line, head to heels.",
+  dip: "Lower until the elbows bend, press back up.",
+  bridge: "Drive the hips up, squeeze, lower slow.",
+  hangraise: "Hang tall — lift the legs, lower with control.",
+  crunch: "Round down with the abs, rise tall.",
+  rollout: "Roll out under control, pull back in.",
+  nordic: "Lower slowly — hamstrings fight the fall.",
+  twist: "Rotate side to side under control.",
+  shrug: "Shoulders straight up, squeeze, lower.",
+  ohext: "Lower behind the head, then extend up.",
+  skullcrusher: "Elbows still — lower to the forehead, press.",
+  kickleg: "Sweep the leg back, control the return.",
+  facepull: "Pull toward your face, elbows high.",
+  kickback: "Elbow pinned high — extend straight back.",
+  legpress: "Press away smooth, return with control.",
+  legcurlseat: "Curl the heel down and back, return slow.",
+  row: "Pull to your hip, squeeze the back.",
+  pallof: "Press out and hold — resist the twist.",
 };
 
 /**
@@ -53,19 +73,45 @@ export function animationSpec(e = {}) {
   const pattern = KNOWN.has(e.movementPattern) ? e.movementPattern : "idle";
   const db = eq.has("dumbbell") || eq.has("kettlebell");
   const bar = eq.has("barbell");
-  const spec = { anim: pattern, gear: "", arms: "", pose: "", apparatus: "" };
+  const S = (o) => ({ anim: pattern, gear: "", arms: "", pose: "", apparatus: "", ...o });
+  const spec = S({});
 
   // --- name-level specifics (most distinctive first) ------------------------
-  if (/pull-?up|chin-?up/.test(name)) return { anim: "pullup", gear: "", apparatus: "pullupbar", arms: "overhead", pose: "hang" };
-  if (/calf/.test(name)) return { anim: "calfraise", gear: db ? "dbsides" : "", arms: "sides", pose: "" };
-  if (/leg extension/.test(name)) return { anim: "legext", gear: "", arms: "sides", pose: "" };
-  if (/leg curl|nordic/.test(name)) return { anim: "legcurl", gear: "", arms: "sides", pose: "" };
-  if (/pushdown|press-?down|kickback/.test(name)) return { anim: "pushdown", gear: "", arms: "", pose: "" };
-  if (/lateral raise|side raise|front raise|delt raise|reverse fly|rear delt|face pull|fly|flye|pullover/.test(name))
-    return { anim: "raise", gear: db ? "dbhand" : "", arms: "", pose: "" };
-  if (/good morning/.test(name)) return { anim: "hinge", gear: "backbar", arms: "backrack", pose: "" };
-  if (/front squat/.test(name)) return { anim: "squat", gear: "frontbar", arms: "frontrack", pose: "" };
-  if (/goblet/.test(name)) return { anim: "squat", gear: "goblet", arms: "goblet", pose: "" };
+  if (/hanging (leg|knee) raise/.test(name)) return S({ anim: "hangraise", apparatus: "pullupbar", arms: "overhead", pose: "hang" });
+  if (/pull-?up|chin-?up/.test(name)) return S({ anim: "pullup", apparatus: "pullupbar", arms: "overhead", pose: "hang" });
+  if (/push-?up/.test(name)) return S({ anim: "pushup", pose: "prone" });
+  if (/plank/.test(name)) return S({ anim: "plank", pose: "prone" });
+  if (/\bdips?\b/.test(name)) return S({ anim: "dip", apparatus: "dipbar" });
+  if (/hip thrust/.test(name)) return S({ anim: "bridge", pose: "thrust", gear: "hipbar", apparatus: "hipbench" });
+  if (/glute bridge|hip bridge/.test(name)) return S({ anim: "bridge", pose: "supinefloor" });
+  if (/leg press/.test(name)) return S({ anim: "legpress", pose: "recline", gear: "sled", apparatus: "sledseat" });
+  if (/calf/.test(name)) return S({ anim: "calfraise", gear: db ? "dbsides" : "", arms: "sides" });
+  if (/leg extension/.test(name)) return S({ anim: "legext", arms: "sides", apparatus: "seat" });
+  if (/seated leg curl/.test(name)) return S({ anim: "legcurlseat", arms: "sides", apparatus: "seat" });
+  if (/nordic/.test(name)) return S({ anim: "nordic", pose: "kneel" });
+  if (/leg curl/.test(name)) return S({ anim: "legcurl" });
+  if (/skull ?crusher|lying triceps/.test(name)) return S({ anim: "skullcrusher", pose: "supine", gear: "handbar", apparatus: "bench" });
+  if (/overhead .*(triceps|tricep).*extension|french press/.test(name)) return S({ anim: "ohext", gear: db ? "dbhand" : "" });
+  if (/glute kickback|cable kickback|abduction/.test(name)) return S({ anim: "kickleg", arms: "sides" });
+  if (/kickback/.test(name)) return S({ anim: "kickback", gear: "dbhand" });
+  if (/pushdown|press-?down/.test(name)) return S({ anim: "pushdown" });
+  if (/upright row/.test(name)) return S({ anim: "raise", gear: bar ? "handbar" : "dbhand" });
+  if (/shrug/.test(name)) return S({ anim: "shrug", gear: bar ? "handbar" : "dbsides" });
+  if (/straight-?arm pulldown|pullover/.test(name)) return S({ anim: "raise", gear: db ? "dbhand" : "" });
+  if (/pec deck/.test(name)) return S({ anim: "raise" });
+  if (/face pull/.test(name)) return S({ anim: "facepull" });
+  if (/reverse fly|rear.?delt/.test(name)) return S({ anim: "bentraise", gear: db ? "dbhand" : "" });
+  if (/seated (cable )?row/.test(name)) return S({ anim: "horizontal_pull", gear: "cablebar", pose: "longsit" });
+  if (/lateral raise|side raise|front raise|delt raise|fly|flye/.test(name))
+    return S({ anim: "raise", gear: db ? "dbhand" : "" });
+  if (/good morning/.test(name)) return S({ anim: "hinge", gear: "backbar", arms: "backrack" });
+  if (/front squat/.test(name)) return S({ anim: "squat", gear: "frontbar", arms: "frontrack" });
+  if (/goblet/.test(name)) return S({ anim: "squat", gear: "goblet", arms: "goblet" });
+  if (/crunch/.test(name)) return S({ anim: "crunch", pose: "kneel" });
+  if (/rollout|ab wheel/.test(name)) return S({ anim: "rollout", pose: "kneel", gear: "wheel" });
+  if (/russian twist/.test(name)) return S({ anim: "twist", pose: "vsit" });
+  if (/pallof/.test(name)) return S({ anim: "pallof" });
+  if (/box jump/.test(name)) return S({ anim: "plyometric", apparatus: "plyobox" });
 
   // --- pattern-level, differentiated by equipment ---------------------------
   switch (pattern) {
@@ -79,7 +125,7 @@ export function animationSpec(e = {}) {
       else if (bar) Object.assign(spec, { gear: "backbar", arms: "backrack" });
       break;
     case "hinge":
-      spec.gear = db ? "dbhand" : "handbar";
+      spec.gear = bar ? "handbar" : db ? "dbhand" : "handbar";
       break;
     case "horizontal_push":
       if (eq.has("bench")) Object.assign(spec, { anim: "benchpress", pose: "supine", gear: db ? "dbhand" : "handbar", apparatus: "bench" });
@@ -90,10 +136,12 @@ export function animationSpec(e = {}) {
       spec.gear = db ? "dbhand" : bar ? "handbar" : "";
       break;
     case "horizontal_pull":
-      spec.gear = db ? "dbhand" : bar ? "handbar" : "handbar"; // cable rows read fine with a bar
+      // Barbell/dumbbell rows are bent-over; cable/machine rows stay upright.
+      if (bar || db) Object.assign(spec, { anim: "row", gear: bar ? "handbar" : "dbhand" });
+      else spec.gear = "cablebar";
       break;
     case "vertical_pull":
-      spec.gear = ""; // pulldown: hands empty (cable), motion carries it
+      spec.gear = "cablebar"; // pulldown bar, no plates
       break;
     case "isolation":
       spec.gear = bar ? "handbar" : "dbhand"; // curls etc.
@@ -115,12 +163,21 @@ const GEAR = {
   dbhand: { g: "forearm", html: `<g class="ex-gear"><line class="ex-bar" x1="68" y1="95" x2="80" y2="95" /><rect class="ex-plate" x="66" y="90" width="5" height="11" rx="2" /><rect class="ex-plate" x="77" y="90" width="5" height="11" rx="2" /></g>` },
   goblet: { g: "forearm", html: `<g class="ex-gear"><line class="ex-bar" x1="70" y1="95" x2="80" y2="95" /><rect class="ex-plate" x="68" y="90" width="5" height="11" rx="2" /><rect class="ex-plate" x="78" y="90" width="5" height="11" rx="2" /></g>` },
   dbsides: { g: "forearm", html: `<g class="ex-gear"><line class="ex-bar" x1="70" y1="97" x2="82" y2="97" /><rect class="ex-plate" x="68" y="92" width="5" height="11" rx="2" /><rect class="ex-plate" x="79" y="92" width="5" height="11" rx="2" /></g>` },
+  cablebar: { g: "forearm", html: `<g class="ex-gear"><line class="ex-bar" x1="58" y1="96" x2="92" y2="96" /></g>` },
+  wheel: { g: "forearm", html: `<g class="ex-gear"><circle class="ex-plate" cx="76" cy="99" r="6" /><circle class="ex-benchpad" cx="76" cy="99" r="2" /></g>` },
+  hipbar: { g: "torso", html: `<g class="ex-gear"><circle class="ex-plate" cx="80" cy="88" r="6.5" /><circle class="ex-benchpad" cx="80" cy="88" r="2" /></g>` },
+  sled: { g: "shin", html: `<g class="ex-gear"><line class="ex-bar" x1="58" y1="151" x2="90" y2="151" /></g>` },
 };
 
 // Fixed apparatus drawn at the svg root (doesn't move with the figure).
 const APPARATUS = {
   pullupbar: `<g class="ex-gear"><line class="ex-bar" x1="34" y1="16" x2="106" y2="16" /><line class="ex-mount" x1="38" y1="4" x2="38" y2="16" /><line class="ex-mount" x1="102" y1="4" x2="102" y2="16" /></g>`,
   bench: `<g class="ex-gear"><rect class="ex-benchpad" x="8" y="116" width="72" height="9" rx="3" /><line class="ex-mount" x1="18" y1="125" x2="18" y2="150" /><line class="ex-mount" x1="68" y1="125" x2="68" y2="150" /></g>`,
+  dipbar: `<g class="ex-gear"><line class="ex-bar" x1="64" y1="90" x2="92" y2="90" /><line class="ex-mount" x1="78" y1="90" x2="78" y2="152" /></g>`,
+  plyobox: `<g class="ex-gear"><rect class="ex-benchpad" x="92" y="126" width="26" height="26" rx="3" /></g>`,
+  seat: `<g class="ex-gear"><rect class="ex-benchpad" x="42" y="98" width="26" height="8" rx="3" /><line class="ex-mount" x1="48" y1="106" x2="48" y2="152" /><line class="ex-mount" x1="62" y1="106" x2="62" y2="152" /></g>`,
+  hipbench: `<g class="ex-gear"><rect class="ex-benchpad" x="14" y="126" width="30" height="8" rx="3" /><line class="ex-mount" x1="20" y1="134" x2="20" y2="152" /><line class="ex-mount" x1="38" y1="134" x2="38" y2="152" /></g>`,
+  sledseat: `<g class="ex-gear"><line class="ex-mount" x1="20" y1="150" x2="56" y2="98" /><line class="ex-mount" x1="20" y1="150" x2="44" y2="150" /></g>`,
 };
 
 // Worked-muscle highlight node → limb group + position (view-box units).
@@ -195,6 +252,7 @@ export function patternAnimation(pattern, muscles = [], exercise = null) {
             <g class="ex-shin">
               ${limb(70, 121, 6, 70, 148, 4.5)}
               ${limb(68, 149, 4.5, 85, 149, 3.5)}
+              ${at("shin")}
               ${hi.shin}
             </g>
             ${hi.thigh}
