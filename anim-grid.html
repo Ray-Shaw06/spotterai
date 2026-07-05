@@ -35,9 +35,17 @@
     `<div class="cell"><h4>${e.name}</h4>${patternAnimation(e.movementPattern, e.primaryMuscles, e)}</div>`
   ).join("");
   const f = params.get("f");
-  if (f === "end") {
+  const t = parseFloat(params.get("t"));
+  if (!Number.isNaN(t)) {
+    // Freeze every animation at an arbitrary progress fraction (0..1).
     const st = document.createElement("style");
-    st.textContent = ".ex-anim__svg, .ex-anim__svg * { animation-iteration-count: 1 !important; animation-direction: normal !important; animation-fill-mode: forwards !important; animation-delay: -9s !important; }";
+    st.textContent = `.ex-anim__svg, .ex-anim__svg * { animation-duration: 3s !important; animation-delay: ${-3 * t}s !important; animation-play-state: paused !important; }`;
+    document.head.appendChild(st);
+  } else if (f === "mid" || f === "end") {
+    // Cycles end where they start, so freeze mid-rep: force a common duration
+    // and pause halfway through it (≈ the bottom/squeeze of the movement).
+    const st = document.createElement("style");
+    st.textContent = ".ex-anim__svg, .ex-anim__svg * { animation-duration: 3s !important; animation-delay: -1.5s !important; animation-play-state: paused !important; }";
     document.head.appendChild(st);
   } else if (f === "start") {
     const st = document.createElement("style");

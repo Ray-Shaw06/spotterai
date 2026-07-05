@@ -13,8 +13,9 @@
  * real app. No video, no network; markup + CSS only; honours reduced-motion.
  *
  * Joints (view-box units): hip (70,92) · shoulder (71,53) · elbow (74,73) ·
- * knee (70,121). Gear lives inside the limb group it belongs to, so it tracks
- * the motion.
+ * knee (70,121) · ankle (70,148). Gear lives inside the limb group it belongs
+ * to, so it tracks the motion. Motions play as full rep cycles (eccentric /
+ * pause / drive / reset) driven by multi-keyframe CSS — see style.css.
  */
 
 const KNOWN = new Set([
@@ -251,7 +252,7 @@ export function patternAnimation(pattern, muscles = [], exercise = null) {
             ${limb(70, 92, 9, 70, 121, 6)}
             <g class="ex-shin">
               ${limb(70, 121, 6, 70, 148, 4.5)}
-              ${limb(68, 149, 4.5, 85, 149, 3.5)}
+              <g class="ex-foot">${limb(68, 149, 4.5, 85, 149, 3.5)}</g>
               ${at("shin")}
               ${hi.shin}
             </g>
