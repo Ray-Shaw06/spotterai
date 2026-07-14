@@ -53,6 +53,21 @@ export const FORM_THRESHOLDS = {
   general: { MIN_RANGE: 25, DOWN_FRAC: 0.35, UP_FRAC: 0.35, REP_DEBOUNCE_MS: 350 },
 };
 
+/**
+ * Which pose-landmarker tier to load. "heavy" gives noticeably better extremity
+ * (ankle/wrist) landmark precision — which compounds with the per-joint
+ * reliability gate — but it's a ~29 MB download and heavier to run in real time.
+ * So reserve it for desktop-class hardware (precise pointer, no touch, ≥8 cores,
+ * and — when the browser reports it — ≥8 GB RAM); everyone else, and any load
+ * failure, gets "full" (~9 MB). Pure so it's unit-testable; the browser signals
+ * are read in form-coach.js.
+ */
+export function chooseModelTier({ fine = false, coarse = false, cores = 0, mem = 0 } = {}) {
+  const desktopClass = fine && !coarse && cores >= 8;
+  const enoughMemory = mem === 0 ? true : mem >= 8; // deviceMemory unknown → don't block on it
+  return desktopClass && enoughMemory ? "heavy" : "full";
+}
+
 // ============================================================================
 // 2. GEOMETRY
 // ============================================================================

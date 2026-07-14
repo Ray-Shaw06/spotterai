@@ -6,7 +6,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { chooseSide, EXERCISES, resetSideSelector } from "../form-evaluator.js";
+import { chooseSide, chooseModelTier, EXERCISES, resetSideSelector } from "../form-evaluator.js";
 
 // ---- chooseSide (pure hysteresis) -----------------------------------------
 
@@ -28,6 +28,28 @@ test("flips only when the other side is clearly more visible", () => {
 test("an exact tie never flips (no oscillation on near-frontal views)", () => {
   assert.equal(chooseSide(0.5, 0.5, "R"), "R");
   assert.equal(chooseSide(0.5, 0.5, "L"), "L");
+});
+
+// ---- chooseModelTier (adaptive pose model) --------------------------------
+
+test("desktop-class hardware gets the heavy model", () => {
+  assert.equal(chooseModelTier({ fine: true, coarse: false, cores: 8, mem: 8 }), "heavy");
+  assert.equal(chooseModelTier({ fine: true, coarse: false, cores: 12, mem: 0 }), "heavy"); // mem unknown → allowed
+});
+
+test("touch / mobile devices stay on full", () => {
+  assert.equal(chooseModelTier({ fine: false, coarse: true, cores: 8, mem: 8 }), "full"); // phone
+  assert.equal(chooseModelTier({ fine: true, coarse: true, cores: 16, mem: 16 }), "full"); // touchscreen laptop → conservative
+});
+
+test("underpowered desktops stay on full", () => {
+  assert.equal(chooseModelTier({ fine: true, coarse: false, cores: 4, mem: 16 }), "full"); // too few cores
+  assert.equal(chooseModelTier({ fine: true, coarse: false, cores: 8, mem: 4 }), "full");  // too little RAM
+});
+
+test("no signals → safe default of full", () => {
+  assert.equal(chooseModelTier({}), "full");
+  assert.equal(chooseModelTier(), "full");
 });
 
 // ---- per-exercise reliability (F1) ----------------------------------------

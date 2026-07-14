@@ -9,7 +9,8 @@
  * starts) from a free CDN.
  *
  * Accuracy pipeline:
- *   • "full" pose model (more accurate landmarks than "lite").
+ *   • Adaptive pose model: "heavy" landmarks on desktop-class devices, "full"
+ *     on mobile/touch (and as a fallback) — pickModelTier / chooseModelTier.
  *   • Segment angles from 3D world landmarks; gravity cues from 2D landmarks.
  *   • Per-metric One-Euro smoothing removes jitter before the rules run.
  *   • Curated exercises get form cues; "Other" uses an adaptive rep counter.
@@ -17,15 +18,30 @@
  * A single 2D camera gives heuristic cues, not a coach's eye.
  */
 
-import { EXERCISES, RepCounter, AdaptiveRepCounter, OneEuroFilter, resetSideSelector } from "./form-evaluator.js";
+import { EXERCISES, RepCounter, AdaptiveRepCounter, OneEuroFilter, resetSideSelector, chooseModelTier } from "./form-evaluator.js";
 import { frameConfidence, confidenceLevel, canJudge } from "./form-confidence.js";
 
 // Pinned MediaPipe Tasks Vision build + a free, hosted pose model.
 const TASKS_VISION_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
 const WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
-// "full" model — noticeably more accurate than "lite" (a bit larger to download).
-const POSE_MODEL_URL =
-  "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task";
+// Pose model tiers. "heavy" (~29 MB) has better extremity precision but is
+// heavier to download and run; "full" (~9 MB) is the mobile/touch + fallback
+// default. The tier is chosen per-device by pickModelTier().
+const MODEL_URLS = {
+  full: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task",
+  heavy: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task",
+};
+
+/** Read this device's capability signals and pick a model tier (see chooseModelTier). */
+function pickModelTier() {
+  const mm = (q) => (typeof matchMedia === "function" ? matchMedia(q).matches : false);
+  return chooseModelTier({
+    fine: mm("(pointer: fine)"),
+    coarse: mm("(pointer: coarse)"),
+    cores: navigator.hardwareConcurrency || 0,
+    mem: navigator.deviceMemory || 0,
+  });
+}
 
 // Skeleton connections (MediaPipe Pose indices) we draw.
 const CONNECTIONS = [
@@ -134,18 +150,33 @@ function resetForExercise() {
 
 async function ensureModel() {
   if (poseLandmarker) return poseLandmarker;
-  setStatus("Loading the pose model… (first time only)");
   const vision = await import(/* @vite-ignore */ TASKS_VISION_URL);
   const { PoseLandmarker, FilesetResolver } = vision;
   const fileset = await FilesetResolver.forVisionTasks(WASM_URL);
-  poseLandmarker = await PoseLandmarker.createFromOptions(fileset, {
-    baseOptions: { modelAssetPath: POSE_MODEL_URL, delegate: "GPU" },
-    runningMode: "VIDEO",
-    numPoses: 1,
-    minPoseDetectionConfidence: 0.6,
-    minPosePresenceConfidence: 0.6,
-    minTrackingConfidence: 0.6,
-  });
+  const make = (modelAssetPath) =>
+    PoseLandmarker.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath, delegate: "GPU" },
+      runningMode: "VIDEO",
+      numPoses: 1,
+      minPoseDetectionConfidence: 0.6,
+      minPosePresenceConfidence: 0.6,
+      minTrackingConfidence: 0.6,
+    });
+
+  const tier = pickModelTier();
+  setStatus(tier === "heavy" ? "Loading the high-accuracy pose model… (first time only)" : "Loading the pose model… (first time only)");
+  try {
+    poseLandmarker = await make(MODEL_URLS[tier]);
+  } catch (err) {
+    // "heavy" is a big download and heavier to run — if it won't load, fall back
+    // to the smaller "full" model rather than failing the whole feature.
+    if (tier === "heavy") {
+      setStatus("Loading the pose model… (first time only)");
+      poseLandmarker = await make(MODEL_URLS.full);
+    } else {
+      throw err;
+    }
+  }
   return poseLandmarker;
 }
 
