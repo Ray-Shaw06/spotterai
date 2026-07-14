@@ -17,7 +17,7 @@
  * A single 2D camera gives heuristic cues, not a coach's eye.
  */
 
-import { EXERCISES, RepCounter, AdaptiveRepCounter, OneEuroFilter } from "./form-evaluator.js";
+import { EXERCISES, RepCounter, AdaptiveRepCounter, OneEuroFilter, resetSideSelector } from "./form-evaluator.js";
 import { frameConfidence, confidenceLevel, canJudge } from "./form-confidence.js";
 
 // Pinned MediaPipe Tasks Vision build + a free, hosted pose model.
@@ -123,6 +123,7 @@ function resetForExercise() {
   currentExercise = selectedExercise();
   counter = makeCounter(currentExercise);
   smoothers = new Map();
+  resetSideSelector(); // fresh side memory so hysteresis doesn't carry over
   if (el.setup) el.setup.textContent = currentExercise.setup;
   resetReadout();
 }

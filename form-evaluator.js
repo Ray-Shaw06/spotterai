@@ -99,14 +99,39 @@ function visMin(landmarks, indices) {
   return m;
 }
 
+// --- Side-selection hysteresis ---------------------------------------------
+// Near-frontal views make left/right visibility nearly equal, so a stateless
+// "pick the more visible side" flip-flops L↔R between frames. Because the two
+// sides' joint angles differ, each flip injects a discontinuity the One-Euro
+// filter can't absorb — jittering cues and miscounting reps. Stay on the current
+// side until the OTHER is clearly more visible (a margin): a stable Schmitt
+// trigger instead of a coin flip when the two sides are close.
+export const SIDE_MARGIN = 0.15;
+
+/** Pure hysteresis: which side to use, given the previously chosen one. */
+export function chooseSide(left, right, current, margin = SIDE_MARGIN) {
+  if (current !== "L" && current !== "R") return right >= left ? "R" : "L";
+  const cur = current === "R" ? right : left;
+  const other = current === "R" ? left : right;
+  return other >= cur + margin ? (current === "R" ? "L" : "R") : current;
+}
+
+let sideState = null;
+/** Forget the remembered side — call on camera start / exercise change. */
+export function resetSideSelector() {
+  sideState = null;
+}
+
 /**
  * Pick the more visible side and return its joints from BOTH the 2D image
  * landmarks (for gravity-relative cues) and the 3D world landmarks (for angles).
+ * Side choice is hysteretic (see chooseSide) so it doesn't flip frame-to-frame.
  */
 function side(image, world) {
   const left = (vis(image, LM.shoulderL) + vis(image, LM.hipL) + vis(image, LM.kneeL)) / 3;
   const right = (vis(image, LM.shoulderR) + vis(image, LM.hipR) + vis(image, LM.kneeR)) / 3;
-  const s = right >= left ? "R" : "L";
+  const s = chooseSide(left, right, sideState);
+  sideState = s;
   const pick = (name) => ({ img: image[LM[name + s]], w: world[LM[name + s]] });
   return {
     s,
