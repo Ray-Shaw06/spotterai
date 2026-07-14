@@ -18,6 +18,7 @@
 
 import { callGemini } from "../lib/gemini.js";
 import { reconcileKcal } from "../lib/nutrition-math.js";
+import { FOODS } from "../foods.js";
 
 // Must mirror MUSCLES in exercises.js so the classified group is one the UI knows.
 const MUSCLES = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Cardio", "Full body"];
@@ -85,6 +86,46 @@ Return:
 - "equipment": the main equipment, one short word/phrase (e.g. Barbell, Dumbbell, Machine, Cable, Bodyweight, Kettlebell, Smith Machine).
 - "cardio": true ONLY if it is primarily a cardio / conditioning movement (running, cycling, rowing, jump rope, etc.); otherwise false.
 Return ONLY the JSON object.`;
+
+// Words that carry no food identity — ignored when matching a query to the DB.
+const FOOD_STOPWORDS = new Set([
+  "and", "with", "the", "some", "cup", "cups", "bowl", "plate", "serving", "servings",
+  "grams", "gram", "slice", "slices", "piece", "pieces", "large", "small", "medium",
+  "cooked", "raw", "fresh", "plain", "your", "for", "from",
+]);
+
+function foodTokens(s) {
+  return String(s || "").toLowerCase().split(/[^a-z]+/).filter((t) => t.length >= 3 && !FOOD_STOPWORDS.has(t));
+}
+
+// Prefix match either direction (min length 3) — mirrors foods.js search so
+// simple plurals and partials hit: "bananas"→"banana", "oats"→"oat".
+function tokenHit(qt, ft) {
+  return qt === ft || (ft.length >= 3 && qt.startsWith(ft)) || (qt.length >= 3 && ft.startsWith(qt));
+}
+
+/**
+ * Build a compact reference block of curated DB foods that overlap the query, so
+ * the model can ANCHOR its estimate to real values (and scale for the portion)
+ * instead of guessing from scratch. Loose token-overlap match (not the app's
+ * strict AND search) so natural phrasing like "grilled chicken and rice" still
+ * surfaces the right anchors. Returns "" when nothing overlaps. Pure + testable.
+ */
+export function buildFoodReference(query, max = 4) {
+  const qtokens = foodTokens(query);
+  if (!qtokens.length) return "";
+  const scored = [];
+  for (const f of FOODS) {
+    let hits = 0;
+    for (const ft of foodTokens(f.name)) if (qtokens.some((qt) => tokenHit(qt, ft))) hits++;
+    if (hits > 0) scored.push({ f, hits });
+  }
+  if (!scored.length) return "";
+  scored.sort((a, b) => b.hits - a.hits || a.f.name.length - b.f.name.length);
+  const lines = scored.slice(0, max).map(({ f }) =>
+    `- ${f.name} (${f.serving}): ${f.kcal} kcal, ${f.protein}g P, ${f.carbs}g C, ${f.fat}g F`);
+  return `Curated reference values from our database (per the serving shown). When an item the user described clearly matches one of these, ANCHOR your estimate to it and scale to the stated portion; ignore any that don't match:\n${lines.join("\n")}`;
+}
 
 /** Strip code fences / surrounding prose and parse the first JSON object. */
 function extractJson(raw) {
@@ -213,7 +254,13 @@ export default async function handler(req, res) {
     timeoutMs = 25000;
   } else {
     contents = [{ role: "user", parts: [{ text: `${food ? "Food" : "Exercise"}: ${query}` }] }];
-    systemInstruction = food ? FOOD_INSTRUCTION : EXERCISE_INSTRUCTION;
+    if (food) {
+      // Ground the text estimate against our curated DB when the query overlaps it.
+      const ref = buildFoodReference(query);
+      systemInstruction = ref ? `${FOOD_INSTRUCTION}\n\n${ref}` : FOOD_INSTRUCTION;
+    } else {
+      systemInstruction = EXERCISE_INSTRUCTION;
+    }
     timeoutMs = 20000;
   }
 

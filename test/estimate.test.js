@@ -5,7 +5,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { conservativeEstimate } from "../api/estimate.js";
+import { conservativeEstimate, buildFoodReference } from "../api/estimate.js";
 
 test("reports a point in the lower-middle of the model's range (curbs overshoot)", () => {
   const { kcal, scale } = conservativeEstimate(500, 350, 700);
@@ -28,4 +28,32 @@ test("never inflates and never cuts by more than 40%", () => {
 test("zero / invalid input is a safe no-op", () => {
   assert.deepEqual(conservativeEstimate(0, 0, 0), { kcal: 0, scale: 1 });
   assert.equal(conservativeEstimate(300, 0, 0).scale, 1); // no usable range → unchanged
+});
+
+test("buildFoodReference anchors a matching query to curated DB values", () => {
+  const ref = buildFoodReference("one banana");
+  assert.match(ref, /Banana \(1 medium\): 105 kcal/);
+  assert.match(ref, /^Curated reference values/);
+});
+
+test("buildFoodReference surfaces every overlapping item in a phrase", () => {
+  const ref = buildFoodReference("grilled chicken breast and white rice");
+  assert.match(ref, /Chicken breast/);
+  assert.match(ref, /rice/i);
+});
+
+test("buildFoodReference matches simple plurals (the portion-variation case)", () => {
+  // "2 bananas" must still anchor to "Banana" — that's the whole point of grounding.
+  assert.match(buildFoodReference("2 bananas"), /Banana \(1 medium\): 105 kcal/);
+  assert.match(buildFoodReference("scrambled eggs"), /Egg/);
+});
+
+test("buildFoodReference returns nothing when the query doesn't overlap the DB", () => {
+  assert.equal(buildFoodReference("xyzzy qwerty zzz"), "");
+  assert.equal(buildFoodReference(""), "");
+});
+
+test("buildFoodReference ignores portion/filler words (no false matches)", () => {
+  // "large plate" is all stopwords/short → no food identity → no anchors.
+  assert.equal(buildFoodReference("a large plate"), "");
 });
