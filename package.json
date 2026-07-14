@@ -9,7 +9,8 @@
     "start": "vercel dev",
     "test": "node --test",
     "check": "node --test",
-    "eval": "node eval.mjs"
+    "eval": "node eval.mjs",
+    "eval:nutrition": "node eval-nutrition.mjs"
   },
   "license": "MIT",
   "engines": {

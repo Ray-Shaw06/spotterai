@@ -31,7 +31,7 @@ const MAX_IMAGE_CHARS = 3_800_000;
 
 // Response schemas (OpenAPI subset Gemini supports) — belt-and-braces with the
 // prompt. We still validate/normalize below in case the model drifts.
-const FOOD_SCHEMA = {
+export const FOOD_SCHEMA = {
   type: "object",
   properties: {
     name: { type: "string" },
@@ -56,7 +56,7 @@ const EXERCISE_SCHEMA = {
   required: ["name", "muscle", "equipment", "cardio"],
 };
 
-const FOOD_INSTRUCTION = `You are a careful, CONSERVATIVE nutrition estimator. People over-log food, so err toward realistic, slightly conservative numbers — never inflate portions or hidden fats.
+export const FOOD_INSTRUCTION = `You are a careful, CONSERVATIVE nutrition estimator. People over-log food, so err toward realistic, slightly conservative numbers — never inflate portions or hidden fats.
 
 Rules:
 - Estimate the TOTAL for the WHOLE amount described (sum multiple/large quantities). If no amount is given, assume ONE normal serving — not a large one.
@@ -128,7 +128,7 @@ export function buildFoodReference(query, max = 4) {
 }
 
 /** Strip code fences / surrounding prose and parse the first JSON object. */
-function extractJson(raw) {
+export function extractJson(raw) {
   if (!raw || typeof raw !== "string") return null;
   let text = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
   const first = text.indexOf("{");
@@ -179,7 +179,7 @@ export function conservativeEstimate(typical, low, high) {
   return { kcal: Math.round(t * scale), scale };
 }
 
-function normalizeFood(o, query) {
+export function normalizeFood(o, query) {
   if (!o || typeof o !== "object") return null;
   const name = (String(o.name || query).trim() || query).slice(0, 60);
   const lowRaw = round(o.kcal_low, 0);
