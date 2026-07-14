@@ -49,7 +49,7 @@ const chip = (group, value, label) => `<button type="button" class="pain-chip${s
 
 function renderIntake() {
   content.innerHTML = `
-    <p class="pain-intro">SpotterAI can't diagnose pain — this just helps it adjust your plan conservatively.</p>
+    <p class="pain-intro">SpotterAI can't diagnose pain; this just helps it adjust your plan conservatively.</p>
     <div class="pain-field"><span class="pain-label">Where is it?</span><div class="pain-chips">${PAIN_LOCATIONS.map((l) => chip("location", l, PAIN_LOCATION_LABEL[l])).join("")}</div></div>
     <div class="pain-field"><span class="pain-label">How bad?</span><div class="pain-chips">${PAIN_SEVERITIES.map((s) => chip("severity", s, PAIN_SEVERITY_LABEL[s])).join("")}</div></div>
     <div class="pain-field"><span class="pain-label">When?</span><div class="pain-chips">${PAIN_TIMINGS.map((t) => chip("timing", t, TIMING_LABEL[t])).join("")}</div></div>
@@ -84,7 +84,7 @@ function submit() {
     setPlan(store.plan, { ...inputs, injuries }); // → re-audit (app.js listens to spotter:plan)
     changed = `Logged ${res.label.toLowerCase()} as a limitation and re-audited your current plan.`;
   } else if (res.injuryKey) {
-    changed = `Logged ${res.label.toLowerCase()} as a limitation — your next plan and adaptation will account for it.`;
+    changed = `Logged ${res.label.toLowerCase()} as a limitation. Your next plan and adaptation will account for it.`;
   } else {
     changed = "Logged for your records and adaptation context.";
   }

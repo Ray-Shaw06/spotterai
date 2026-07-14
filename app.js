@@ -289,7 +289,7 @@ function auditVerdictText(summary) {
   const { critical, warning, suggestion } = summary;
   if (critical > 0) return { tone: "critical", text: `${critical} critical issue${critical > 1 ? "s" : ""} to resolve before training` };
   if (warning > 0) return { tone: "warning", text: `${warning} issue${warning > 1 ? "s" : ""} to review before training` };
-  if (suggestion > 0) return { tone: "suggestion", text: `No safety flags — ${suggestion} optional suggestion${suggestion > 1 ? "s" : ""}` };
+  if (suggestion > 0) return { tone: "suggestion", text: `No safety flags: ${suggestion} optional suggestion${suggestion > 1 ? "s" : ""}` };
   return { tone: "ok", text: "No issues flagged by the audit" };
 }
 
@@ -318,7 +318,7 @@ function renderAudit(audit) {
 
   checksList.innerHTML = flagged.length
     ? flagged.map(renderFlagCard).join("")
-    : `<p class="audit__clear">Every automated check passed. Still your call — the evaluator catches common mistakes, not everything.</p>`;
+    : `<p class="audit__clear">Every automated check passed. Still your call: the evaluator catches common mistakes, not everything.</p>`;
 
   // Passed checks (collapsed).
   const passed = audit.checks.filter((c) => c.tier === "pass");
@@ -342,7 +342,7 @@ function renderFlagCard(c, i) {
   const fix = c.fix ? `<p class="flag__row"><span class="flag__row-label">Suggested fix</span> ${esc(c.fix)}</p>` : "";
   const rule = ruleForCheck(c.id);
   const why = rule
-    ? `<details class="flag__rule"><summary>Why this rule exists</summary><p class="flag__rule-body">${esc(rule.why)} <span class="flag__rule-lim">Limitation — ${esc(rule.limitations)}</span></p></details>`
+    ? `<details class="flag__rule"><summary>Why this rule exists</summary><p class="flag__rule-body">${esc(rule.why)} <span class="flag__rule-lim">Limitation: ${esc(rule.limitations)}</span></p></details>`
     : "";
   return `
     <article class="flag flag--${c.tier}" style="--i:${i}">
@@ -408,7 +408,7 @@ function renderTrustReport(plan, inputs, audit) {
           ${row("Evaluator version", esc(EVALUATOR_VERSION))}
           ${row("Checks run", `${s.total}`)}
           ${row("Checks passed", `${s.passed}/${s.total}`)}
-          ${row("Confidence", `${conf.level} — ${esc(conf.why)}`)}
+          ${row("Confidence", `${conf.level}: ${esc(conf.why)}`)}
         </dl>
         <div class="trust__block"><h5>User limitations considered</h5>${list(limitations, "No limitations were provided.")}</div>
         <div class="trust__block"><h5>Main concerns</h5>${list(concerns, "No critical issues or warnings.")}</div>
@@ -452,7 +452,7 @@ function renderRepair(plan, inputs, audit) {
       <div class="repair__head">
         <p class="repair__eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span> Plan repair · deterministic</p>
         <h3 class="repair__title">A safer version is available</h3>
-        <p class="repair__sub">SpotterAI turned each flag into a concrete edit — preserving your goal and days — then re-audited the result.</p>
+        <p class="repair__sub">SpotterAI turned each flag into a concrete edit (preserving your goal and days), then re-audited the result.</p>
       </div>
       <div class="repair__compare">
         <div class="repair__col">
@@ -483,7 +483,7 @@ function renderRepair(plan, inputs, audit) {
         <button type="button" class="btn btn--primary btn--sm" data-repair="apply">Apply safer version</button>
         <button type="button" class="btn btn--ghost btn--sm" data-repair="keep">Keep original</button>
       </div>
-      <p class="repair__caution" hidden>Keeping the original plan — the flags above still apply. Review them before training, especially anything marked critical, and consider a qualified coach for injuries or pain.</p>
+      <p class="repair__caution" hidden>Keeping the original plan. The flags above still apply. Review them before training, especially anything marked critical, and consider a qualified coach for injuries or pain.</p>
     </div>`;
 }
 
@@ -592,7 +592,7 @@ function updateAdaptHint() {
   if (adaptHint) {
     adaptHint.hidden = hasData;
     adaptHint.classList.remove("adapt-hint--error");
-    if (!hasData) adaptHint.textContent = "Log a workout or two on the Dashboard first — then I'll tailor this plan to what you've actually been doing.";
+    if (!hasData) adaptHint.textContent = "Log a workout or two on the Dashboard first, then I'll tailor this plan to what you've actually been doing.";
   }
 }
 
@@ -642,7 +642,7 @@ async function adapt() {
         res.status === 429
           ? "Rate-limited right now (free-tier limits). Give it a moment and try again."
           : res.status === 503
-          ? "The AI's briefly overloaded — give it a few seconds and try again."
+          ? "The AI's briefly overloaded. Give it a few seconds and try again."
           : data.error || "Couldn't adapt the plan just now. Please try again shortly.";
       showAdaptError(msg);
       return;
@@ -656,7 +656,7 @@ async function adapt() {
     renderResults(adapted, store.inputs, false);
     renderAdaptChanges(data.summary, data.changes);
   } catch {
-    showAdaptError("Couldn't reach the adapt service. It needs the live backend (deployed, or `vercel dev`) — same as plan generation.");
+    showAdaptError("Couldn't reach the adapt service. It needs the live backend (deployed, or `vercel dev`), same as plan generation.");
   } finally {
     adaptBtn.classList.remove("is-loading");
     adaptBtn.textContent = label;
@@ -737,7 +737,7 @@ function renderSwapPanel(day, name) {
   box.innerHTML = `
     <div class="ex-edit-panel">
       <p class="ex-edit-title">Substitute <strong>${esc(name)}</strong></p>
-      ${chips.length ? `<div class="ex-edit-chips">${chips.map((n) => `<button type="button" class="ex-edit-chip" data-act="ex-swap-to" data-day="${day}" data-from="${esc(name)}" data-to="${esc(n)}">${esc(n)}</button>`).join("")}</div>` : `<p class="ex-edit-muted">No structured alternatives — search any exercise below.</p>`}
+      ${chips.length ? `<div class="ex-edit-chips">${chips.map((n) => `<button type="button" class="ex-edit-chip" data-act="ex-swap-to" data-day="${day}" data-from="${esc(name)}" data-to="${esc(n)}">${esc(n)}</button>`).join("")}</div>` : `<p class="ex-edit-muted">No structured alternatives. Search any exercise below.</p>`}
       <input type="search" class="input ex-edit-search" data-edit-search="swap" data-day="${day}" data-from="${esc(name)}" placeholder="…or search any exercise" aria-label="Search a replacement exercise" />
       <div class="ex-edit-results" data-edit-results></div>
       <button type="button" class="btn-link ex-edit-cancel" data-act="ex-edit-cancel" data-day="${day}">Cancel</button>

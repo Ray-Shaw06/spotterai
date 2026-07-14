@@ -59,7 +59,7 @@ async function submitText(text) {
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
       const msg =
-        res.status === 429 ? "Rate-limited right now — try again shortly." : res.status === 503 ? "The AI's briefly overloaded — try again in a few seconds." : d.error || "Couldn't log that right now.";
+        res.status === 429 ? "Rate-limited right now. Try again shortly." : res.status === 503 ? "The AI's briefly overloaded. Try again in a few seconds." : d.error || "Couldn't log that right now.";
       el.result.innerHTML = `<p class="ql-note">${esc(msg)}</p>`;
       return;
     }
@@ -93,7 +93,7 @@ function renderPreview(data) {
   let body = "";
   if (data.kind === "workout") {
     const w = data.workout;
-    body = `<p class="ql-title">Log workout — <strong>${esc(w.name)}</strong></p><ul class="ql-list">${w.exercises.map(exLine).join("")}</ul>`;
+    body = `<p class="ql-title">Log workout: <strong>${esc(w.name)}</strong></p><ul class="ql-list">${w.exercises.map(exLine).join("")}</ul>`;
   } else {
     const n = data.nutrition;
     const meal = n.meal || mealByHour();

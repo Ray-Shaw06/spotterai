@@ -44,13 +44,13 @@ export function coachNote({ sessions = 0, target = 0, lastWeekSessions = 0, inju
     return { tone: "warn", text: `Your ${inj.join(" / ")} limitation is active, so SpotterAI caps related volume today and offers joint-friendly swaps. Stop and check in if anything hurts.` };
   }
   if (target && sessions >= target) {
-    return { tone: "ok", text: `You've hit ${sessions}/${target} sessions this week — strong consistency. Keep intensity controlled and prioritise recovery.` };
+    return { tone: "ok", text: `You've hit ${sessions}/${target} sessions this week: strong consistency. Keep intensity controlled and prioritise recovery.` };
   }
   if (target && lastWeekSessions >= target) {
-    return { tone: "ok", text: "You completed last week's sessions — SpotterAI suggests a small, gradual progression rather than a big jump." };
+    return { tone: "ok", text: "You completed last week's sessions, so SpotterAI suggests a small, gradual progression rather than a big jump." };
   }
   if (target && sessions < target) {
-    return { tone: "info", text: `${sessions}/${target} sessions done this week. Today's workout keeps you on track — short and consistent beats heroic and sporadic.` };
+    return { tone: "info", text: `${sessions}/${target} sessions done this week. Today's workout keeps you on track: short and consistent beats heroic and sporadic.` };
   }
   return { tone: "info", text: "Log today's session to start building the habit. Consistency is the goal, not perfection." };
 }

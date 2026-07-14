@@ -97,7 +97,7 @@ function reviewCard() {
     <div class="card fw-card fw-card--review">
       <button type="button" class="fw-dismiss" data-fw="dismiss" aria-label="Dismiss">×</button>
       <p class="fw-eyebrow">Your first week</p>
-      <h3 class="fw-title">Week 1 review — nice work showing up</h3>
+      <h3 class="fw-title">Week 1 review: nice work showing up</h3>
       <div class="fw-stats">
         ${stat(`${r.workouts}${r.target ? "/" + r.target : ""}`, "workouts")}
         ${stat(r.mealsLogged, "days logged")}

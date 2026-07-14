@@ -92,7 +92,7 @@ function renderDetail() {
   if (titleEl) titleEl.textContent = currentName;
   const e = lookupExercise(currentName);
   if (!e) {
-    detailEl.innerHTML = `<p class="lib-fallback">SpotterAI has limited metadata for “${esc(currentName)}”. You can still log and swap it — detailed coaching cues just aren't available for this one.</p>`;
+    detailEl.innerHTML = `<p class="lib-fallback">SpotterAI has limited metadata for “${esc(currentName)}”. You can still log and swap it; detailed coaching cues just aren't available for this one.</p>`;
     return;
   }
   if (mode === "swap") return renderSwap(e);
@@ -159,7 +159,7 @@ function renderSwap(e) {
     ${group("Easier", alt.easier)}
     ${group("Harder", alt.harder)}
     ${alt.recommended.length || alt.safer.length || alt.easier.length || alt.harder.length ? "" : `<p class="lib-muted">No structured alternatives for this one.</p>`}
-    <p class="lib-muted">${where.length ? `Tap an alternative to swap it into your plan (${esc(where.join(", "))}) and re-audit.` : "No current plan uses this exercise — tap an alternative to view it."}</p>`;
+    <p class="lib-muted">${where.length ? `Tap an alternative to swap it into your plan (${esc(where.join(", "))}) and re-audit.` : "No current plan uses this exercise. Tap an alternative to view it."}</p>`;
 }
 
 function doSwap(newName) {

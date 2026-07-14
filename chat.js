@@ -33,7 +33,7 @@ const messages = [];
 let pending = false;
 
 const GREETING =
-  "Hey — I'm your SpotterAI coach. Ask me anything about your plan or training in general. I'll keep it practical and safety-first. (I'm educational, not a substitute for a professional.)";
+  "Hey! I'm your SpotterAI coach. Ask me anything about your plan or training in general. I'll keep it practical and safety-first. (I'm educational, not a substitute for a professional.)";
 
 const SUGGESTIONS_NO_PLAN = [
   "How many days a week should a beginner lift?",
@@ -253,12 +253,12 @@ async function send() {
         res.status === 429
           ? "I'm rate-limited right now (free-tier limits). Give it a moment and try again."
           : res.status === 503
-          ? "The AI's a bit overloaded at the moment — give it a few seconds and ask again."
+          ? "The AI's a bit overloaded at the moment. Give it a few seconds and ask again."
           : data.error || "I couldn't reach the coach service just now. Please try again shortly.";
       addBubble("assistant", msg);
     } else {
       const data = await res.json();
-      const reply = data.reply || "Sorry, I didn't catch that — could you rephrase?";
+      const reply = data.reply || "Sorry, I didn't catch that. Could you rephrase?";
       // The coach may append a plan-edit action block; pull it out + apply it.
       const { actions, text: cleanReply } = parseCoachActions(reply);
       const shown = cleanReply || reply;
@@ -276,7 +276,7 @@ async function send() {
     hideTyping();
     addBubble(
       "assistant",
-      "I can't reach the coach right now. This feature needs the live API — if you're previewing the static files, generation and chat both require the deployed (or `vercel dev`) backend."
+      "I can't reach the coach right now. This feature needs the live API. If you're previewing the static files, generation and chat both require the deployed (or `vercel dev`) backend."
     );
   } finally {
     pending = false;

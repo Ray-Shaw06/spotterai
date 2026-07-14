@@ -200,7 +200,7 @@ function renderRestPresets() {
 function renderRestIdle() {
   el.restTimer?.classList.remove("is-running");
   if (el.restTime) el.restTime.textContent = fmtTime(restDefault);
-  if (el.restFill) el.restFill.style.width = "0%";
+  if (el.restFill) el.restFill.style.transform = "scaleX(0)";
   renderRestPresets();
 }
 
@@ -219,7 +219,7 @@ function startRest(sec = restDefault) {
 }
 function tickRest() {
   if (el.restTime) el.restTime.textContent = fmtTime(Math.max(0, restRemaining));
-  if (el.restFill) el.restFill.style.width = `${Math.max(0, (restRemaining / restTotal) * 100)}%`;
+  if (el.restFill) el.restFill.style.transform = `scaleX(${Math.max(0, restRemaining / restTotal)})`;
 }
 function stopRest() {
   if (restId) clearInterval(restId);
@@ -292,7 +292,7 @@ function renderPlates() {
   const leftover = Math.round(perSide * 100) / 100;
   el.plateOut.innerHTML = used.length
     ? `<p class="plate-line"><span class="muted">Per side:</span> ${used.map(([p, c]) => `<span class="plate-chip">${c}×${p}</span>`).join(" ")}</p>${leftover > 0 ? `<p class="muted">~${leftover}${u} left over (no standard plate).</p>` : ""}`
-    : `<span class="muted">Just the bar — no plates needed.</span>`;
+    : `<span class="muted">Just the bar, no plates needed.</span>`;
 }
 function renderOrm() {
   if (!el.ormOut) return;
@@ -355,7 +355,7 @@ function finishSession() {
     .map((ex) => ({ name: ex.name, muscle: ex.muscle, sets: ex.sets.filter(setHasWork) }))
     .filter((ex) => ex.sets.length);
   if (!exercises.length) {
-    toast("<strong>Log a set first</strong> — add weight &amp; reps to at least one set.");
+    toast("<strong>Log a set first</strong>: add weight &amp; reps to at least one set.");
     return;
   }
   // Editing an already-logged workout → update it in place (keeps its date +
@@ -400,7 +400,7 @@ function showSummary(s) {
     ${s.prs.length ? `<div class="summary-prs"><span class="summary-prs__badge">New PR${s.prs.length > 1 ? "s" : ""}</span> ${s.prs.map((p) => `${esc(p.name)} ${esc(p.weight)}${esc(u)}`).join(" · ")}</div>` : ""}
     ${s.difficultyLabel ? `<p class="summary-row"><span class="summary-k">Felt</span> ${esc(s.difficultyLabel)}</p>` : ""}
     <p class="summary-row"><span class="summary-k">Next time</span> ${esc(s.nextAction)}</p>
-    ${s.painFlag ? `<p class="summary-pain">You reported pain today — SpotterAI has logged it as a limitation. Don't train through pain.</p>` : ""}
+    ${s.painFlag ? `<p class="summary-pain">You reported pain today, so SpotterAI logged it as a limitation. Don't train through pain.</p>` : ""}
     <p class="summary-nudge">${esc(s.recoveryNudge)}</p>
     <div class="summary-actions">
       <button type="button" class="btn btn--primary btn--sm" data-summary="done">Done</button>
@@ -502,10 +502,10 @@ function renderSession() {
           const prevSet = ex.prev?.sets?.[si];
           const prevCell = prevSet ? `${prevSet.weight ? prevSet.weight + "×" : ""}${prevSet.reps || "–"}` : "–";
           const cells = cardio
-            ? `<td><input class="input set-in" data-f="durationMin" type="number" inputmode="decimal" value="${esc(s.durationMin ?? "")}" placeholder="min" /></td>
-               <td><input class="input set-in" data-f="distance" type="number" inputmode="decimal" value="${esc(s.distance ?? "")}" placeholder="${unit() === "lb" ? "mi" : "km"}" /></td>`
-            : `<td><input class="input set-in" data-f="weight" type="number" inputmode="decimal" value="${esc(s.weight ?? "")}" placeholder="${esc(sug?.weight ?? prevSet?.weight ?? "")}" /></td>
-               <td><input class="input set-in" data-f="reps" type="number" inputmode="numeric" value="${esc(s.reps ?? "")}" placeholder="${esc(prevSet?.reps ?? "")}" /></td>`;
+            ? `<td><input class="input set-in" data-f="durationMin" type="number" inputmode="decimal" value="${esc(s.durationMin ?? "")}" placeholder="min" aria-label="Set ${si + 1} duration in minutes" /></td>
+               <td><input class="input set-in" data-f="distance" type="number" inputmode="decimal" value="${esc(s.distance ?? "")}" placeholder="${unit() === "lb" ? "mi" : "km"}" aria-label="Set ${si + 1} distance" /></td>`
+            : `<td><input class="input set-in" data-f="weight" type="number" inputmode="decimal" value="${esc(s.weight ?? "")}" placeholder="${esc(sug?.weight ?? prevSet?.weight ?? "")}" aria-label="Set ${si + 1} weight in ${u}" /></td>
+               <td><input class="input set-in" data-f="reps" type="number" inputmode="numeric" value="${esc(s.reps ?? "")}" placeholder="${esc(prevSet?.reps ?? "")}" aria-label="Set ${si + 1} reps" /></td>`;
           return `<tr class="set-row ${s.done ? "is-done" : ""}" data-set="${si}">
             <td class="set-n">${si + 1}</td>
             <td class="set-prev">${cardio ? "–" : prevCell}</td>
@@ -555,7 +555,7 @@ function renderIdle() {
       )
       .join("")}</div>`;
   } else {
-    html += `<p class="workout-hint">Build a workout below, then tap <strong>“Save this workout”</strong> — it'll appear here to load in one tap next time, so there's no scrolling to re-add exercises at the gym.</p>`;
+    html += `<p class="workout-hint">Build a workout below, then tap <strong>“Save this workout”</strong> and it'll appear here to load in one tap next time. No scrolling to re-add exercises at the gym.</p>`;
   }
   if (planDays.length) {
     html += `<p class="workout-grouplabel">From your plan · tap to load</p>`;
@@ -652,7 +652,7 @@ function renderHistory() {
           </li>`;
         })
         .join("")
-    : `<li class="muted">No workouts yet — start one above.</li>`;
+    : `<li class="muted">No workouts yet. Start one above.</li>`;
 }
 
 // ----------------------------------------------------------------------------
@@ -789,7 +789,7 @@ function init() {
     const name = prompt("Name this workout (saved to load in one tap next time):", session.name);
     if (name == null) return;
     addRoutine({ name: name || session.name, exercises: session.exercises });
-    toast(`<strong>Workout saved</strong> · ${esc(name || session.name)} — load it any time from “Start a workout”.`);
+    toast(`<strong>Workout saved</strong> · ${esc(name || session.name)}. Load it any time from “Start a workout”.`);
   });
 
   // Session exercise interactions (delegated)
@@ -870,14 +870,14 @@ function init() {
       if (confirm("Delete this workout?")) removeEntry("workouts", li.dataset.id);
     } else if (e.target.closest('[data-act="edit-workout"]')) {
       if (session) {
-        toast("<strong>Finish or discard your current session first</strong> — then you can edit a logged workout.");
+        toast("<strong>Finish or discard your current session first</strong>, then you can edit a logged workout.");
         return;
       }
       const w = getState().workouts.find((x) => x.id === li.dataset.id);
       if (w) {
         startSession(sessionFromWorkout(w));
         el.session?.scrollIntoView({ behavior: "smooth", block: "start" });
-        toast(`<strong>Editing “${esc(w.name)}”</strong> — Finish saves your changes to the original entry.`);
+        toast(`<strong>Editing “${esc(w.name)}”</strong>: Finish saves your changes to the original entry.`);
       }
     }
   });

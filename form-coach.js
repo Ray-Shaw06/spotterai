@@ -237,7 +237,7 @@ function updateConfidence(conf) {
   const pct = Math.round(conf * 100);
   const level = confidenceLevel(conf);
   if (el.confBar) {
-    el.confBar.style.width = `${pct}%`;
+    el.confBar.style.transform = `scaleX(${conf})`;
     el.confBar.dataset.level = level;
   }
   if (el.confLabel) {

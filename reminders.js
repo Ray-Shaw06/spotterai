@@ -35,7 +35,7 @@ async function enable() {
   let perm = Notification.permission;
   if (perm === "default") perm = await Notification.requestPermission();
   if (perm !== "granted") {
-    setNote("Notifications are blocked — allow them in your browser settings to use reminders.");
+    setNote("Notifications are blocked. Allow them in your browser settings to use reminders.");
     return false;
   }
   localStorage.setItem(PREF, "on");
@@ -68,7 +68,7 @@ function maybeRemind() {
   if (s.streakDays < 1) return; // only nudge when there's a streak to protect
   if (new Date().getHours() < 16) return; // afternoon onward
   localStorage.setItem(SHOWN, todayStr());
-  notify("Keep your streak alive 🔥", `You're on a ${s.streakDays}-day streak — log a workout today to keep it going.`);
+  notify("Keep your streak alive 🔥", `You're on a ${s.streakDays}-day streak. Log a workout today to keep it going.`);
 }
 
 if (toggle) {
@@ -77,7 +77,7 @@ if (toggle) {
     if (toggle.checked) {
       const ok = await enable();
       toggle.checked = ok;
-      if (ok) setNote("On — you'll get a nudge when you open the app and haven't logged today.");
+      if (ok) setNote("On: you'll get a nudge when you open the app and haven't logged today.");
     } else {
       localStorage.setItem(PREF, "off");
       setNote("Off.");

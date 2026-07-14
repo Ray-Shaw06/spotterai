@@ -48,7 +48,7 @@ function render() {
   try {
     results = runEvalSuite();
   } catch {
-    page.innerHTML = `<p class="eval-error">Safety Lab couldn't run the local benchmark just now. The app can still audit plans — benchmark proof is temporarily unavailable.</p>`;
+    page.innerHTML = `<p class="eval-error">Safety Lab couldn't run the local benchmark just now. The app can still audit plans; only the benchmark proof is temporarily unavailable.</p>`;
     return;
   }
   const totalExp = results.reduce((n, r) => n + r.expectations.length, 0);

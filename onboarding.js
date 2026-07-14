@@ -16,7 +16,7 @@ export const GOAL_OPTIONS = [
 ];
 
 export const TRAINING_AGE_OPTIONS = [
-  { value: "new", label: "New — under a year", experience: "Beginner" },
+  { value: "new", label: "New (under a year)", experience: "Beginner" },
   { value: "some", label: "1–3 years", experience: "Intermediate" },
   { value: "experienced", label: "3+ years", experience: "Advanced" },
 ];
@@ -53,8 +53,8 @@ export function mapOnboardingToInputs(d = {}) {
   if ((d.avoid || "").trim()) notes.push(d.avoid.trim());
   const unmapped = (d.safetyAreas || []).filter((a) => !INJURY_KEYS.has(a));
   if (unmapped.length) notes.push(`Take care of: ${unmapped.join(", ")}.`);
-  if (d.currentPain) notes.push("Has current discomfort — keep intensity conservative.");
-  if (d.goal === "consistency") notes.push("Returning to consistency — start conservative and build the habit.");
+  if (d.currentPain) notes.push("Has current discomfort; keep intensity conservative.");
+  if (d.goal === "consistency") notes.push("Returning to consistency; start conservative and build the habit.");
   if ((d.dislikes || "").trim()) notes.push(`Dislikes: ${d.dislikes.trim()}.`);
 
   return {

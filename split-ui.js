@@ -88,7 +88,7 @@ function balanceCard(a) {
 
 function flagsCard(a) {
   if (!a.flags.length) {
-    return `<div class="split-card"><h3 class="split-h">Findings</h3><p class="split-pass">✓ No imbalances flagged — every major muscle sits in a sensible weekly range.</p></div>`;
+    return `<div class="split-card"><h3 class="split-h">Findings</h3><p class="split-pass">✓ No imbalances flagged: every major muscle sits in a sensible weekly range.</p></div>`;
   }
   const order = { warning: 0, suggestion: 1, critical: -1 };
   const items = [...a.flags].sort((x, y) => (order[x.tier] ?? 2) - (order[y.tier] ?? 2)).map((f) => `
@@ -103,7 +103,7 @@ function workoutsCard(a, routines) {
   if (!routines.length) {
     return `<div class="split-card split-empty">
       <h3 class="split-h">Your saved workouts</h3>
-      <p class="split-note">You haven't saved any workouts yet. Build a session on the <a href="#/dashboard" data-nav="dashboard">Dashboard</a> (add your own exercises), then hit <strong>“Save as routine”</strong> — it'll show up here to quick-start at the gym and feed this analysis.</p>
+      <p class="split-note">You haven't saved any workouts yet. Build a session on the <a href="#/dashboard" data-nav="dashboard">Dashboard</a> (add your own exercises), then hit <strong>“Save as routine”</strong> and it'll show up here to quick-start at the gym and feed this analysis.</p>
     </div>`;
   }
   const cards = a.perWorkout.map((w, i) => {
@@ -137,7 +137,7 @@ function render() {
   if (!workouts.length) {
     mount.innerHTML = `<div class="split-card split-empty">
       <h3 class="split-h">Nothing to analyse yet</h3>
-      <p class="split-note">Save the workouts you run — build a session on the <a href="#/dashboard" data-nav="dashboard">Dashboard</a> and tap <strong>“Save as routine”</strong>, or <a href="#/" data-nav="home">build a plan</a>. Then come back to quick-start them and see how effective your split is.</p>
+      <p class="split-note">Save the workouts you run: build a session on the <a href="#/dashboard" data-nav="dashboard">Dashboard</a> and tap <strong>“Save as routine”</strong>, or <a href="#/" data-nav="home">build a plan</a>. Then come back to quick-start them and see how effective your split is.</p>
     </div>`;
     return;
   }

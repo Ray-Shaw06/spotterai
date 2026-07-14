@@ -135,7 +135,7 @@ function renderNutritionSafety() {
             ${row("Calorie target", trust.kcalTarget ? `${trust.kcalTarget} kcal` : "—")}
             ${row("Protein target", trust.proteinTarget ? `${trust.proteinTarget} g` : "—")}
             ${row("Fat target", trust.fatTarget ? `${trust.fatTarget} g` : "—")}
-            ${row("Confidence", `${trust.confidence} — ${esc(trust.whyLimited)}`)}
+            ${row("Confidence", `${trust.confidence}: ${esc(trust.whyLimited)}`)}
           </dl>
           <div class="trust__block"><h5>Safer target range</h5><span class="muted">${esc(trust.saferSuggestion)}</span></div>
           <div class="trust__block"><h5>What data was used</h5>${list(trust.dataUsed, "—")}</div>
@@ -151,7 +151,7 @@ function renderNutritionSafety() {
         </div>
         <div class="nut-wontdo__col nut-wontdo__col--yes">
           <h5>What it focuses on instead</h5>
-          <p>Sustainable habits: regular meals, protein consistency, hydration, moderate targets, and progress trends — not rapid weight loss or extreme restriction.</p>
+          <p>Sustainable habits: regular meals, protein consistency, hydration, moderate targets, and progress trends, not rapid weight loss or extreme restriction.</p>
         </div>
       </div>
     </div>`;
@@ -361,10 +361,10 @@ async function startBarcodeScan() {
         const code = codes?.[0]?.rawValue;
         if (code) {
           stopBarcodeScan();
-          if (hint()) hint().textContent = `Found ${code} — looking it up…`;
+          if (hint()) hint().textContent = `Found ${code}, looking it up…`;
           const food = await lookupBarcode(code).catch(() => null);
           if (food) showDetail(food);
-          else showDetail(null, true, { name: "", note: `Barcode ${code} isn't in Open Food Facts (or has no calorie data) — add it manually.` });
+          else showDetail(null, true, { name: "", note: `Barcode ${code} isn't in Open Food Facts (or has no calorie data). Add it manually.` });
         }
       } catch {
         /* detector hiccup on a frame — keep scanning */
@@ -373,7 +373,7 @@ async function startBarcodeScan() {
     }, 280);
   } catch {
     stopBarcodeScan();
-    if (hint()) hint().textContent = "Couldn't access the camera — check permissions, or add the food by search instead.";
+    if (hint()) hint().textContent = "Couldn't access the camera. Check permissions, or add the food by search instead.";
   }
 }
 
@@ -390,7 +390,7 @@ function renderResults(q) {
   let html = "";
   // Snap a meal: estimate macros from a photo (Gemini vision).
   html += `<li><button type="button" class="food-opt food-opt--ai" data-act="snap-meal">
-    <span class="food-opt__main"><span class="food-opt__name">Snap a meal — macros from a photo</span><span class="food-opt__sub">use your camera to estimate calories</span></span>
+    <span class="food-opt__main"><span class="food-opt__name">Snap a meal: macros from a photo</span><span class="food-opt__sub">use your camera to estimate calories</span></span>
     <span class="food-opt__tag food-opt__tag--ai">AI</span></button></li>`;
   // Barcode scan — only where the browser has a built-in detector (Chrome/Edge/Android).
   if ("BarcodeDetector" in window) {
@@ -446,7 +446,7 @@ async function aiEstimate(query) {
     showDetail(food);
   } catch (e) {
     if (e.name === "AbortError") return;
-    showDetail(null, true, { name: query, note: "Couldn't reach the AI — enter the macros yourself, or try again." });
+    showDetail(null, true, { name: query, note: "Couldn't reach the AI. Enter the macros yourself, or try again." });
   }
 }
 
@@ -478,7 +478,7 @@ async function handlePhoto(file) {
     showDetail(food);
   } catch (e) {
     if (e.name === "AbortError") return;
-    showDetail(null, true, { name: "", note: "Couldn't read that photo — add the food manually, or try again." });
+    showDetail(null, true, { name: "", note: "Couldn't read that photo. Add the food manually, or try again." });
   }
 }
 
@@ -561,7 +561,7 @@ function showDetail(food, quick = false, opts = {}) {
   el.detail.innerHTML = `
     <button type="button" class="detail-back" data-act="detail-back">← Back</button>
     <p class="detail-food">${esc(food.name)}<span class="muted"> · per ${esc(food.serving || "serving")}</span></p>
-    ${ai ? `<p class="detail-uncertainty"><strong>AI estimate — these vary a lot.</strong>${esc(rangeHint)} Tweak the numbers below to match what you actually ate before saving.</p>` : ""}
+    ${ai ? `<p class="detail-uncertainty"><strong>AI estimate: these vary a lot.</strong>${esc(rangeHint)} Tweak the numbers below to match what you actually ate before saving.</p>` : ""}
     ${ai ? `<div class="detail-grid">
       <label class="field-label-sm">Calories<input id="detail-kcal" class="input" type="number" min="0" inputmode="numeric" value="${Math.round(food.kcal)}" /></label>
       <label class="field-label-sm">Protein (g)<input id="detail-protein" class="input" type="number" min="0" inputmode="decimal" value="${round1(food.protein)}" /></label>

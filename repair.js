@@ -92,7 +92,7 @@ function repairRest(plan, changes) {
   if (trainingDays.length < THRESHOLDS.TRAINING_DAYS_FAIL) return; // only the no-rest-day case
   const last = [...(plan.days || [])].reverse().find((d) => !isRestDay(d));
   if (last) {
-    changes.push({ issue: "No rest day in the week", fix: `Converted ${last.day || "the last training day"} to active recovery`, why: "Recovery is when you actually adapt — at least one rest day lowers injury and burnout risk.", tradeoff: "One fewer training day this week." });
+    changes.push({ issue: "No rest day in the week", fix: `Converted ${last.day || "the last training day"} to active recovery`, why: "Recovery is when you actually adapt; at least one rest day lowers injury and burnout risk.", tradeoff: "One fewer training day this week." });
     last.focus = "Rest / active recovery";
     last.exercises = [];
   }

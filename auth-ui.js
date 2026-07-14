@@ -63,7 +63,7 @@ function renderSync() {
   const s = syncState;
 
   if (s.status === "unconfigured") {
-    els.syncBody.innerHTML = `<p class="account-note">Cross-device sync isn't set up. Add a free Firebase config to enable "Sign in with Google" — see the README → <em>Cross-device sync</em>.</p>`;
+    els.syncBody.innerHTML = `<p class="account-note">Cross-device sync isn't set up. Add a free Firebase config to enable "Sign in with Google"; see the README → <em>Cross-device sync</em>.</p>`;
     return;
   }
 
@@ -262,7 +262,7 @@ function init() {
   // Clear ALL local data (every profile) + the offline cache, then hard-reload.
   els.clear?.addEventListener("click", async () => {
     const ok = confirm(
-      "Clear ALL SpotterAI data in this browser?\n\nThis removes every profile and all workouts, nutrition, plans, settings and progress — permanently. It can't be undone.\n\nTip: cancel and use “Export backup” first if you might want it back."
+      "Clear ALL SpotterAI data in this browser?\n\nThis removes every profile and all workouts, nutrition, plans, settings and progress, permanently. It can't be undone.\n\nTip: cancel and use “Export backup” first if you might want it back."
     );
     if (!ok) return;
     els.clear.disabled = true;

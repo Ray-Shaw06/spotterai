@@ -74,12 +74,12 @@ const input = (f, ph, type = "text") => `<input class="input onb-input" data-inp
 // --- steps -----------------------------------------------------------------
 function stepGoal() {
   return `<h3 class="onb-title">What's your main goal?</h3>
-    <p class="onb-sub">SpotterAI builds a conservative plan around this — you can change it later.</p>
+    <p class="onb-sub">SpotterAI builds a conservative plan around this. You can change it later.</p>
     ${chips("goal", GOAL_OPTIONS)}`;
 }
 function stepBody() {
   return `<h3 class="onb-title">A little about you</h3>
-    <p class="onb-sub">Optional — it helps tailor volume and nutrition targets. Skip anything you'd rather not share.</p>
+    <p class="onb-sub">Optional: it helps tailor volume and nutrition targets. Skip anything you'd rather not share.</p>
     ${field("Age range", chips("ageRange", AGE_RANGES))}
     ${field("Units", chips("units", [{ value: "kg", label: "kg" }, { value: "lb", label: "lb" }]))}
     <div class="onb-cols">${field("Height", input("height", "e.g. 178"))}${field("Bodyweight", input("weight", "e.g. 75", "number"))}</div>
@@ -88,7 +88,7 @@ function stepBody() {
 }
 function stepSchedule() {
   return `<h3 class="onb-title">Your schedule</h3>
-    <p class="onb-sub">Pick what's realistic — consistency beats an ambitious plan you can't keep.</p>
+    <p class="onb-sub">Pick what's realistic. Consistency beats an ambitious plan you can't keep.</p>
     ${field("Days per week", chips("days", DAYS_OPTIONS))}
     ${field("Session length (min)", chips("sessionLength", SESSION_LENGTHS))}
     ${field("Training at", chips("location", ["Gym", "Home"]))}
@@ -104,7 +104,7 @@ function stepSafety() {
 }
 function stepPrefs() {
   return `<h3 class="onb-title">Preferences</h3>
-    <p class="onb-sub">All optional — these nudge exercise selection and tone.</p>
+    <p class="onb-sub">All optional. These nudge exercise selection and tone.</p>
     <div class="onb-cols">${field("Exercises you like", input("likes", "e.g. rows, hinges"))}${field("Exercises you dislike", input("dislikes", "e.g. burpees"))}</div>
     ${field("Cardio", chips("cardio", CARDIO_PREFS))}
     ${field("Intensity", chips("intensity", INTENSITY_PREFS))}

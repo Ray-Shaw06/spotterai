@@ -104,7 +104,7 @@ const PRIVACY = {
 
 const ARCH = [
   ["AI plan generation", "A serverless function holds the API key and prompts Gemini for a strict-JSON weekly plan."],
-  ["Deterministic evaluator", "Pure code (no LLM) scores the plan against a fixed, versioned rubric — the same logic in the app and in CI."],
+  ["Deterministic evaluator", "Pure code (no LLM) scores the plan against a fixed, versioned rubric: the same logic in the app and in CI."],
   ["Structured exercise data", "Muscle, movement-pattern, and contraindication metadata back the checks, with keyword fallback."],
   ["Plan repair engine", "Rule-based fixes turn each flag into a concrete, safer edit."],
   ["Re-audit loop", "Every revised or adapted plan is re-scored before it's recommended."],
@@ -123,7 +123,7 @@ function render() {
       <div class="lab-block__head">
         <div>
           <h3 class="lab-block__title">Evaluator benchmark <span class="bench__tag">Bundled local benchmark</span></h3>
-          <p class="lab-block__sub">SpotterAI runs known-good and intentionally risky plans through the same evaluator used in the app. These tests help catch regressions and make the guardrails more transparent. Computed live in your browser from the bundled suite — the same suite is gated in CI.</p>
+          <p class="lab-block__sub">SpotterAI runs known-good and intentionally risky plans through the same evaluator used in the app. These tests help catch regressions and make the guardrails more transparent. Computed live in your browser from the bundled suite; the same suite is gated in CI.</p>
         </div>
         <span class="bench__status bench__status--${b.passing ? "pass" : "fail"}">${b.passing ? "Passing" : "Needs review"}</span>
       </div>
@@ -143,7 +143,7 @@ function render() {
   const rules = `
     <div class="lab-block">
       <h3 class="lab-block__title">Why these rules exist</h3>
-      <p class="lab-block__sub">Every check in plain English — what it looks at, why it matters, what SpotterAI does, and where it's limited.</p>
+      <p class="lab-block__sub">Every check in plain English: what it looks at, why it matters, what SpotterAI does, and where it's limited.</p>
       <div class="rule-grid">
         ${RULE_EXPLANATIONS.map(
           (r) => `
@@ -181,7 +181,7 @@ function render() {
 
   const examples = `
     <div class="lab-block">
-      <h3 class="lab-block__title">Worked examples — bad plans it catches</h3>
+      <h3 class="lab-block__title">Worked examples: bad plans it catches</h3>
       <p class="lab-block__sub">Three intentionally bad inputs, what the evaluator flags, and the safer version it points toward.</p>
       <div class="badplan-grid">
         ${BAD_PLANS.map(
@@ -249,6 +249,6 @@ idle(() => {
     if (mount) render();
     renderTeaser();
   } catch {
-    if (mount) mount.innerHTML = `<div class="lab-block"><p class="eval-error">Safety Lab couldn't run the local benchmark just now. The app can still audit plans — benchmark proof is temporarily unavailable.</p></div>`;
+    if (mount) mount.innerHTML = `<div class="lab-block"><p class="eval-error">Safety Lab couldn't run the local benchmark just now. The app can still audit plans; only the benchmark proof is temporarily unavailable.</p></div>`;
   }
 });

@@ -54,7 +54,7 @@ function render() {
     content.innerHTML = card(
       `<div class="today-empty">
         <h3 class="today-card__title">Create your first plan to unlock Today</h3>
-        <p class="today-card__text">Today gives you a daily workout, nutrition focus, recovery check-in, and a coach note — once you have a plan to work from.</p>
+        <p class="today-card__text">Today gives you a daily workout, nutrition focus, recovery check-in, and a coach note, once you have a plan to work from.</p>
         <a href="#/" data-nav="home" class="btn btn--primary" data-onboard>Build my plan</a>
       </div>`,
       "today-card--empty"
@@ -73,9 +73,9 @@ function render() {
   if (!workout) {
     workoutCard = card(
       weekDone
-        ? `<p class="today-card__eyebrow">Rest day — earned</p>
+        ? `<p class="today-card__eyebrow">Rest day: earned</p>
            <h3 class="today-card__title">Week complete: ${stats.thisWeek.sessions}/${trainingDays(plan).length} sessions</h3>
-           <p class="today-card__text">You've done every planned session this week. More isn't better here — recovery is where the adaptation happens. Next week picks up fresh.</p>
+           <p class="today-card__text">You've done every planned session this week. More isn't better here. Recovery is where the adaptation happens. Next week picks up fresh.</p>
            <div class="today-card__actions"><button type="button" class="btn btn--ghost btn--sm today-qa" data-act="weight">Log recovery / bodyweight</button><button type="button" class="btn btn--ghost btn--sm today-qa" data-act="adapt">Adapt next week</button></div>`
         : `<p class="today-card__eyebrow">Today</p>
            <h3 class="today-card__title">No workout planned today</h3>
@@ -125,7 +125,7 @@ function render() {
   const waterLeft = Math.max(0, waterTarget - water);
   const nutAudit = evaluateNutrition({ targets, bodyweight: stats.bodyweight?.latest, unit: stats.unit, goal: inputs.goal || "" });
   const nutFlags = nutAudit.flags.length
-    ? `<p class="today-note today-note--warn">${esc(nutAudit.flags[0].label)} — ${esc(nutAudit.flags[0].fix)}</p>`
+    ? `<p class="today-note today-note--warn">${esc(nutAudit.flags[0].label)}: ${esc(nutAudit.flags[0].fix)}</p>`
     : "";
   const nutritionCard = card(
     `<p class="today-card__eyebrow">Nutrition focus</p>
@@ -144,8 +144,8 @@ function render() {
   const last = stats.recentWorkouts?.[0];
   const recoveryCard = card(
     `<p class="today-card__eyebrow">Recovery &amp; status</p>
-     <p class="today-card__text">${last ? `Last workout: <strong>${esc(last.focus || last.name)}</strong> on ${esc(last.date)}.` : "No workouts logged yet — your first one starts the streak."}</p>
-     <p class="today-card__text today-muted">Feeling sore, stiff, or in pain? Report it so SpotterAI can adjust — it never asks you to train through pain.</p>
+     <p class="today-card__text">${last ? `Last workout: <strong>${esc(last.focus || last.name)}</strong> on ${esc(last.date)}.` : "No workouts logged yet. Your first one starts the streak."}</p>
+     <p class="today-card__text today-muted">Feeling sore, stiff, or in pain? Report it so SpotterAI can adjust. It never asks you to train through pain.</p>
      <div class="today-card__actions"><button type="button" class="btn btn--ghost btn--sm today-qa" data-act="pain">Pain / soreness check-in</button></div>`,
     "today-card--recovery"
   );

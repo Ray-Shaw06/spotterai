@@ -85,7 +85,7 @@ function renderRank(s) {
         <span class="rank-streak" title="Day streak">${icon("flame")} ${s.streakDays}-day streak</span>
       </div>
       <div class="rank-bar"><span style="width:${(progress * 100).toFixed(1)}%; background:${tier.color}"></span></div>
-      <p class="rank-next">${next ? `${xpForNext.toLocaleString()} XP to <strong>${esc(next.name)}</strong>` : "Top rank reached — Champion"}</p>
+      <p class="rank-next">${next ? `${xpForNext.toLocaleString()} XP to <strong>${esc(next.name)}</strong>` : "Top rank reached: Champion"}</p>
     </div>`;
 }
 
