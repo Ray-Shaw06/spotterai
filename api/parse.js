@@ -14,6 +14,7 @@
  */
 
 import { callGemini } from "../lib/gemini.js";
+import { reconcileKcal } from "../lib/nutrition-math.js";
 
 const MAX_TEXT_CHARS = 400;
 const MAX_OUTPUT_TOKENS = 800;
@@ -73,13 +74,20 @@ function normalizeWorkout(w) {
 function normalizeNutrition(n) {
   if (!n || typeof n !== "object" || !Array.isArray(n.items)) return null;
   const items = n.items
-    .map((it) => ({
-      name: String(it?.name || "").trim().slice(0, 60),
-      kcal: Math.round(numPos(it?.kcal)),
-      protein: round1(it?.protein),
-      carbs: round1(it?.carbs),
-      fat: round1(it?.fat),
-    }))
+    .map((it) => {
+      const protein = round1(it?.protein);
+      const carbs = round1(it?.carbs);
+      const fat = round1(it?.fat);
+      return {
+        name: String(it?.name || "").trim().slice(0, 60),
+        // Keep the total consistent with its own macros (Atwater 4/4/9). The
+        // quick-log path has no low/high range, so we only reconcile, never bias.
+        kcal: reconcileKcal({ kcal: numPos(it?.kcal), protein, carbs, fat }),
+        protein,
+        carbs,
+        fat,
+      };
+    })
     .filter((it) => it.name);
   if (!items.length) return null;
   const meal = MEALS.includes(n.meal) ? n.meal : "";

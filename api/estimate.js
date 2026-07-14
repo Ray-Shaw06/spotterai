@@ -17,6 +17,7 @@
  */
 
 import { callGemini } from "../lib/gemini.js";
+import { reconcileKcal } from "../lib/nutrition-math.js";
 
 // Must mirror MUSCLES in exercises.js so the classified group is one the UI knows.
 const MUSCLES = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Cardio", "Full body"];
@@ -142,7 +143,14 @@ function normalizeFood(o, query) {
   const name = (String(o.name || query).trim() || query).slice(0, 60);
   const lowRaw = round(o.kcal_low, 0);
   const highRaw = round(o.kcal_high, 0);
-  const { kcal, scale } = conservativeEstimate(round(o.kcal, 0), lowRaw, highRaw);
+  // Make the model's own kcal consistent with its macro breakdown (Atwater
+  // 4/4/9) BEFORE the conservative scaling — otherwise a total that contradicts
+  // its macros gets carried through. Clamp inside the model's plausibility range.
+  const typical = reconcileKcal({
+    kcal: round(o.kcal, 0), protein: o.protein, carbs: o.carbs, fat: o.fat,
+    low: lowRaw || null, high: highRaw || null,
+  });
+  const { kcal, scale } = conservativeEstimate(typical, lowRaw, highRaw);
   const macro = (v) => round((Number(v) || 0) * scale, 1);
   return {
     name,

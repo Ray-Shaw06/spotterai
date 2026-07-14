@@ -87,6 +87,19 @@ function vis(landmarks, i) {
 }
 
 /**
+ * Lowest visibility across the given landmark indices — the honest reliability
+ * of an angle, which is only as trustworthy as its LEAST-visible joint. Gating a
+ * rep/cue on the joints it actually measures (e.g. the ankle for a squat's knee
+ * angle) beats the coarse shoulder+hip+knee average, which for an upper-body
+ * lift checks joints the movement never uses.
+ */
+function visMin(landmarks, indices) {
+  let m = 1;
+  for (const i of indices) m = Math.min(m, vis(landmarks, i));
+  return m;
+}
+
+/**
  * Pick the more visible side and return its joints from BOTH the 2D image
  * landmarks (for gravity-relative cues) and the 3D world landmarks (for angles).
  */
@@ -141,7 +154,8 @@ export const EXERCISES = {
         knee: angleAt(d.hip.w, d.knee.w, d.ankle.w),
         torsoLean: angleFromVertical(d.hip.img, d.shoulder.img),
         confidence: d.confidence,
-        reliable: d.confidence >= T.global.MIN_VIS,
+        // Reliable only when the joints the knee angle depends on are visible.
+        reliable: visMin(image, [LM["hip" + d.s], LM["knee" + d.s], LM["ankle" + d.s]]) >= T.global.MIN_VIS,
         focusJoints: [LM["hip" + d.s], LM["knee" + d.s], LM["ankle" + d.s], LM["shoulder" + d.s]],
       };
     },
@@ -169,7 +183,8 @@ export const EXERCISES = {
         elbow: angleAt(d.shoulder.w, d.elbow.w, d.wrist.w),
         hipDev: hipDeviation(d.shoulder.img, d.hip.img, d.ankle.img),
         confidence: d.confidence,
-        reliable: d.confidence >= T.global.MIN_VIS,
+        // Elbow angle drives the rep — gate on the arm joints, not the legs.
+        reliable: visMin(image, [LM["shoulder" + d.s], LM["elbow" + d.s], LM["wrist" + d.s]]) >= T.global.MIN_VIS,
         focusJoints: [LM["shoulder" + d.s], LM["elbow" + d.s], LM["wrist" + d.s], LM["hip" + d.s]],
       };
     },
@@ -200,7 +215,7 @@ export const EXERCISES = {
         frontKnee: front,
         torsoLean: angleFromVertical(d.hip.img, d.shoulder.img),
         confidence: d.confidence,
-        reliable: d.confidence >= T.global.MIN_VIS,
+        reliable: visMin(image, [LM["hip" + d.s], LM["knee" + d.s], LM["ankle" + d.s]]) >= T.global.MIN_VIS,
         focusJoints: [LM.kneeL, LM.kneeR, LM.hipL, LM.hipR],
       };
     },
@@ -228,7 +243,7 @@ export const EXERCISES = {
         elbow: angleAt(d.shoulder.w, d.elbow.w, d.wrist.w),
         wristAboveShoulder: d.wrist.img.y < d.shoulder.img.y,
         confidence: d.confidence,
-        reliable: d.confidence >= T.global.MIN_VIS,
+        reliable: visMin(image, [LM["shoulder" + d.s], LM["elbow" + d.s], LM["wrist" + d.s]]) >= T.global.MIN_VIS,
         focusJoints: [LM["shoulder" + d.s], LM["elbow" + d.s], LM["wrist" + d.s]],
       };
     },
@@ -255,7 +270,7 @@ export const EXERCISES = {
         // How far the upper arm swings forward from vertical (proxy for "cheating").
         upperArmSwing: angleFromVertical(d.shoulder.img, d.elbow.img),
         confidence: d.confidence,
-        reliable: d.confidence >= T.global.MIN_VIS,
+        reliable: visMin(image, [LM["shoulder" + d.s], LM["elbow" + d.s], LM["wrist" + d.s]]) >= T.global.MIN_VIS,
         focusJoints: [LM["shoulder" + d.s], LM["elbow" + d.s], LM["wrist" + d.s]],
       };
     },
@@ -285,7 +300,7 @@ export const EXERCISES = {
         hip: angleAt(d.shoulder.w, d.hip.w, d.knee.w),
         knee: angleAt(d.hip.w, d.knee.w, d.ankle.w),
         confidence: d.confidence,
-        reliable: d.confidence >= T.global.MIN_VIS,
+        reliable: visMin(image, [LM["shoulder" + d.s], LM["hip" + d.s], LM["knee" + d.s]]) >= T.global.MIN_VIS,
         focusJoints: [LM["shoulder" + d.s], LM["hip" + d.s], LM["knee" + d.s]],
       };
     },
@@ -310,7 +325,7 @@ export const EXERCISES = {
       return {
         hip: angleAt(d.shoulder.w, d.hip.w, d.knee.w),
         confidence: d.confidence,
-        reliable: d.confidence >= T.global.MIN_VIS,
+        reliable: visMin(image, [LM["shoulder" + d.s], LM["hip" + d.s], LM["knee" + d.s]]) >= T.global.MIN_VIS,
         focusJoints: [LM["shoulder" + d.s], LM["hip" + d.s], LM["knee" + d.s]],
       };
     },
