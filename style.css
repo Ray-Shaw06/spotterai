@@ -4,6 +4,25 @@
    A single, cohesive design language: dark, athletic "premium fitness tech".
    Everything is driven by design tokens (CSS variables) so spacing, color,
    radius, and shadow stay consistent across the whole product.
+
+   ── CONTENTS ────────────────────────────────────────────────────────────────
+   This sheet grew in THREE layers, applied in source order (later wins). Layers
+   B and C deliberately re-style shell / nav / title selectors from layer A — so
+   .sidebar, .container, .section-title--lg etc. appear 2–3× on purpose. Do NOT
+   "dedupe" a repeated selector without first checking what the later layers set.
+
+   A. CORE  (§1–21, from the top)
+      tokens · reset · layout · buttons · header · hero · disclaimer · cards ·
+      generator · results · plan output · how-it-works · footer · form check ·
+      coach chat · dashboard · navigation & account modal · cloud sync ·
+      workout session · nutrition diary
+   B. INSTRUMENT-HUD IDENTITY  (search: "Atmosphere: blueprint dot-grid")
+      dot-grid · mono HUD readouts · focus-bracket corners · audit-card scan ·
+      hero radar bloom · segmented meters · button sheen · display titles ·
+      data-table readouts
+   C. FORMAT OVERHAUL  (search: "FORMAT OVERHAUL")
+      icon-rail desktop shell · terminal page headers · Today command center
+   ─────────────────────────────────────────────────────────────────────────────
    ============================================================================ */
 
 /* ----------------------------------------------------------------------------
