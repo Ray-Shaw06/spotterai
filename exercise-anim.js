@@ -157,17 +157,30 @@ export function animationSpec(e = {}) {
 // --- gear markup -------------------------------------------------------------
 // Placement group: torso (tracks the lean), forearm (tracks the hand), or svg
 // root (fixed apparatus like a pull-up bar or bench).
+// A loaded barbell seen from the side reads as a big round plate at the grip
+// (the bar runs into the screen), so plates are DISCS with a hub — not thin
+// rects. A dumbbell is a short handle with a compact bell at each end. Barbells
+// are long with large discs; dumbbells are small — so the two never look alike.
+const bbar = (x1, x2, y) =>
+  `<g class="ex-gear"><line class="ex-bar" x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" />` +
+  `<ellipse class="ex-plate" cx="${x1}" cy="${y}" rx="3.4" ry="9" /><ellipse class="ex-collar" cx="${x1}" cy="${y}" rx="1.3" ry="4" />` +
+  `<ellipse class="ex-plate" cx="${x2}" cy="${y}" rx="3.4" ry="9" /><ellipse class="ex-collar" cx="${x2}" cy="${y}" rx="1.3" ry="4" /></g>`;
+const dbell = (cx, y) =>
+  `<g class="ex-gear"><line class="ex-dbhandle" x1="${cx - 5}" y1="${y}" x2="${cx + 5}" y2="${y}" />` +
+  `<ellipse class="ex-plate" cx="${cx - 5}" cy="${y}" rx="2.8" ry="5.5" />` +
+  `<ellipse class="ex-plate" cx="${cx + 5}" cy="${y}" rx="2.8" ry="5.5" /></g>`;
+
 const GEAR = {
-  backbar: { g: "torso", html: `<g class="ex-gear"><line class="ex-bar" x1="49" y1="49" x2="91" y2="49" /><rect class="ex-plate" x="47" y="42" width="5" height="14" rx="2" /><rect class="ex-plate" x="88" y="42" width="5" height="14" rx="2" /></g>` },
-  frontbar: { g: "torso", html: `<g class="ex-gear"><line class="ex-bar" x1="58" y1="54" x2="100" y2="54" /><rect class="ex-plate" x="56" y="47" width="5" height="14" rx="2" /><rect class="ex-plate" x="97" y="47" width="5" height="14" rx="2" /></g>` },
-  handbar: { g: "forearm", html: `<g class="ex-gear"><line class="ex-bar" x1="59" y1="96" x2="89" y2="96" /><rect class="ex-plate" x="57" y="90" width="5" height="12" rx="2" /><rect class="ex-plate" x="86" y="90" width="5" height="12" rx="2" /></g>` },
-  dbhand: { g: "forearm", html: `<g class="ex-gear"><line class="ex-bar" x1="68" y1="95" x2="80" y2="95" /><rect class="ex-plate" x="66" y="90" width="5" height="11" rx="2" /><rect class="ex-plate" x="77" y="90" width="5" height="11" rx="2" /></g>` },
-  goblet: { g: "forearm", html: `<g class="ex-gear"><line class="ex-bar" x1="70" y1="95" x2="80" y2="95" /><rect class="ex-plate" x="68" y="90" width="5" height="11" rx="2" /><rect class="ex-plate" x="78" y="90" width="5" height="11" rx="2" /></g>` },
-  dbsides: { g: "forearm", html: `<g class="ex-gear"><line class="ex-bar" x1="70" y1="97" x2="82" y2="97" /><rect class="ex-plate" x="68" y="92" width="5" height="11" rx="2" /><rect class="ex-plate" x="79" y="92" width="5" height="11" rx="2" /></g>` },
-  cablebar: { g: "forearm", html: `<g class="ex-gear"><line class="ex-bar" x1="58" y1="96" x2="92" y2="96" /></g>` },
+  backbar: { g: "torsoback", html: bbar(52, 88, 52) },
+  frontbar: { g: "torso", html: bbar(58, 94, 55) },
+  handbar: { g: "forearm", html: bbar(58, 94, 96) },
+  dbhand: { g: "forearm", html: dbell(76, 96) },
+  goblet: { g: "forearm", html: `<g class="ex-gear"><rect class="ex-plate" x="70" y="88" width="12" height="15" rx="4" /><circle class="ex-collar" cx="76" cy="95.5" r="2.6" /></g>` },
+  dbsides: { g: "forearm", html: dbell(76, 97) },
+  cablebar: { g: "forearm", html: `<g class="ex-gear"><line class="ex-bar" x1="60" y1="96" x2="92" y2="96" /></g>` },
   wheel: { g: "forearm", html: `<g class="ex-gear"><circle class="ex-plate" cx="76" cy="99" r="6" /><circle class="ex-benchpad" cx="76" cy="99" r="2" /></g>` },
   hipbar: { g: "torso", html: `<g class="ex-gear"><circle class="ex-plate" cx="80" cy="88" r="6.5" /><circle class="ex-benchpad" cx="80" cy="88" r="2" /></g>` },
-  sled: { g: "shin", html: `<g class="ex-gear"><line class="ex-bar" x1="58" y1="151" x2="90" y2="151" /></g>` },
+  sled: { g: "shin", html: `<g class="ex-gear"><rect class="ex-plate" x="54" y="145" width="6" height="14" rx="2" /><line class="ex-bar" x1="57" y1="151" x2="90" y2="151" /></g>` },
 };
 
 // Fixed apparatus drawn at the svg root (doesn't move with the figure).
@@ -262,6 +275,7 @@ export function patternAnimation(pattern, muscles = [], exercise = null) {
             ${limb(70, 52, 10.5, 71, 92, 9.5)}
             ${limb(65, 91, 8, 78, 91, 8)}
             ${limb(66, 52, 7, 78, 52, 7)}
+            ${at("torsoback")}
             ${limb(70, 44, 4.5, 70, 52, 5)}
             <ellipse class="ex-head" cx="70" cy="33" rx="11" ry="12" />
             ${at("torso")}
