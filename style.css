@@ -168,6 +168,11 @@ a {
 button {
   font-family: inherit;
   cursor: pointer;
+  /* Buttons don't inherit text color by default (UA sets it to canvastext/black),
+     so any button-text relying on inheritance renders black on our dark surfaces.
+     Inherit like <a> does; variants that need a specific color (.btn--primary,
+     .google-btn, …) still set it explicitly and win over this. */
+  color: inherit;
 }
 
 table {
@@ -1567,7 +1572,7 @@ table {
    of animated exercise figures only pays for the ones actually in view. */
 .lib-card { text-align: left; display: flex; flex-direction: column; gap: 4px; padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-md); cursor: pointer; transition: var(--transition); content-visibility: auto; contain-intrinsic-size: auto 250px; }
 .lib-card:hover { border-color: var(--accent-ring); transform: translateY(-1px); }
-.lib-card__name { font-weight: 600; font-size: var(--fs-small); letter-spacing: -0.01em; }
+.lib-card__name { font-weight: 600; font-size: var(--fs-small); letter-spacing: -0.01em; color: var(--text); }
 .lib-card__meta { font-size: 0.78rem; color: var(--text-muted); }
 .lib-card__diff { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); }
 .lib-tag { font-size: 0.75rem; }

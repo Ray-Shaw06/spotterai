@@ -79,7 +79,17 @@ function openDetail(name) {
   renderDetail();
   modal.classList.add("is-open");
   modal.setAttribute("aria-hidden", "false");
-  setTimeout(() => detailEl.querySelector("button")?.focus(), 50);
+  // Open at the top. The dialog is scrollable and the header close button sits
+  // OUTSIDE #exercise-detail, so focusing the first content button (Favorite,
+  // near the bottom) made the browser scroll the dialog to the bottom — hiding
+  // the exercise title and the animated figure. Reset the scroll and focus the
+  // header close button without letting focus scroll the dialog.
+  const dialog = modal.querySelector(".exercise-dialog");
+  if (dialog) dialog.scrollTop = 0;
+  setTimeout(() => {
+    if (dialog) dialog.scrollTop = 0;
+    closeBtn?.focus({ preventScroll: true });
+  }, 50);
 }
 function close() {
   modal.classList.remove("is-open");
