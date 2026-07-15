@@ -56,13 +56,34 @@ async function estimate(query, { grounded }) {
   return normalizeFood(extractJson(text), query);
 }
 
+// Pace calls so the free-tier per-minute limit isn't tripped (each estimate can
+// fan out to a few requests via callGemini's retry + fallback). Overridable:
+//   --delay=<ms between calls>   --limit=<how many foods to run>
+const argVal = (name, def) => {
+  const a = process.argv.find((x) => x.startsWith(`--${name}=`));
+  return a ? a.split("=")[1] : def;
+};
+const delayMs = Math.max(0, Number(argVal("delay", 7000)));
+const limit = Math.max(1, Number(argVal("limit", NUTRITION_CASES.length)));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const shortErr = (m = "") =>
+  /\b429\b/.test(m) ? "rate-limited (429) — free-tier quota"
+    : /\b404\b/.test(m) ? "model unavailable (404)"
+      : String(m).split("\n")[0].slice(0, 60);
+
 if (live && key) {
-  console.log("\nRunning LIVE estimates (grounded vs ungrounded)…\n");
+  const cases = NUTRITION_CASES.slice(0, limit);
+  console.log(`\nRunning LIVE estimates (grounded vs ungrounded) — ${cases.length} food(s), ~${delayMs}ms between calls to respect free-tier limits…\n`);
   const agg = { grounded: { k: 0, m: 0 }, ungrounded: { k: 0, m: 0 }, n: 0 };
   console.log(pad("Food", 34) + pad("kcal err ↓", 24) + "macro MAE ↓");
-  for (const c of NUTRITION_CASES) {
+  let consecutive429 = 0;
+  for (const c of cases) {
     try {
-      const [g, u] = await Promise.all([estimate(c.query, { grounded: true }), estimate(c.query, { grounded: false })]);
+      const g = await estimate(c.query, { grounded: true });
+      await sleep(delayMs);
+      const u = await estimate(c.query, { grounded: false });
+      await sleep(delayMs);
+      consecutive429 = 0;
       const sg = scoreEstimate(g, c.expected);
       const su = scoreEstimate(u, c.expected);
       agg.grounded.k += sg.kcalErrPct; agg.grounded.m += sg.macroMae;
@@ -70,17 +91,28 @@ if (live && key) {
       agg.n++;
       console.log(pad(c.anchor || c.query, 34) + pad(`${pct(su.kcalErrPct)} → ${pct(sg.kcalErrPct)}`, 24) + `${su.macroMae.toFixed(1)}g → ${sg.macroMae.toFixed(1)}g`);
     } catch (e) {
-      console.log(pad(c.anchor || c.query, 34) + `(skipped: ${e.message})`);
+      const m = e.message || String(e);
+      console.log(pad(c.anchor || c.query, 34) + `(skipped: ${shortErr(m)})`);
+      if (/\b429\b/.test(m) && ++consecutive429 >= 3) {
+        console.log(`\nStopped — 3 rate-limits in a row, so free-tier quota is the blocker, not the code.`);
+        console.log(`Options: wait ~60s and re-run · widen the gap (--delay=12000) · run fewer (--limit=3)`);
+        console.log(`· or raise limits with billing: https://ai.google.dev/gemini-api/docs/rate-limits`);
+        break;
+      }
+      if (/\b429\b/.test(m)) await sleep(delayMs * 2); // cool down before the next food
     }
   }
   if (agg.n) {
     console.log("-".repeat(60));
-    console.log(pad("MEAN kcal error", 34) + `${pct(agg.ungrounded.k / agg.n)} → ${pct(agg.grounded.k / agg.n)} (grounded)`);
+    console.log(pad(`MEAN kcal error (n=${agg.n})`, 34) + `${pct(agg.ungrounded.k / agg.n)} → ${pct(agg.grounded.k / agg.n)} (grounded)`);
     console.log(pad("MEAN macro MAE", 34) + `${(agg.ungrounded.m / agg.n).toFixed(1)}g → ${(agg.grounded.m / agg.n).toFixed(1)}g (grounded)`);
+  } else {
+    console.log("\nNo successful estimates — the quota note above explains why.");
   }
 } else {
-  console.log("\nAccuracy A/B skipped. To measure grounding's real payoff:");
-  console.log("  GEMINI_API_KEY=… node eval-nutrition.mjs --live");
+  console.log("\nAccuracy A/B skipped. To measure grounding's payoff (paced for free tier):");
+  console.log("  node --env-file=.env eval-nutrition.mjs --live --limit=3   # quick, low-quota check first");
+  console.log("  node --env-file=.env eval-nutrition.mjs --live             # all foods once that works");
 }
 
 process.exit(misses.length ? 1 : 0);
