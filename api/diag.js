@@ -1,7 +1,7 @@
 /**
  * TEMPORARY diagnostic — REMOVE after verifying Groq env config.
  * Reports whether GROQ_API_KEY reaches the Production runtime and what Groq
- * returns when called, WITHOUT ever exposing the key value. GET /api/_diag
+ * returns when called, WITHOUT ever exposing the key value. GET /api/diag
  */
 export default async function handler(req, res) {
   const groqKey = process.env.GROQ_API_KEY || "";
