@@ -20,7 +20,7 @@
 
 // Model name + endpoint live in one shared place (lib/gemini.js) so both
 // serverless functions stay in sync. Change the model there.
-import { GEMINI_ENDPOINT } from "../lib/gemini.js";
+import { callGemini as callLLM } from "../lib/gemini.js";
 // The plan schema + parse/validate/normalize helpers are shared with /api/adapt.
 import { SCHEMA_HINT, clampNumber, extractJson, isValidPlan, normalizePlan } from "../lib/plan.js";
 
@@ -96,63 +96,26 @@ ${SCHEMA_HINT}`;
 // Helpers
 // ----------------------------------------------------------------------------
 
-/** One round-trip to Gemini. Returns the raw model text, or throws on HTTP error. */
+/**
+ * One round-trip to the LLM, via the shared client. Returns the raw model text,
+ * or throws with `.status` set. The client forces JSON, disables Gemini
+ * "thinking" (via its defaults), falls back across Gemini models, and — when
+ * GROQ_API_KEY is set — finally to Groq, so plan generation degrades far less
+ * under Gemini overload/rate-limit than a single direct call did. The outer loop
+ * below still validates + retries on malformed JSON and maps `.status === 429`
+ * to the saved-example fallback.
+ */
 async function callGemini(apiKey, prompt, timeoutMs) {
-  // Abort a single call if it runs long, so one slow request can't consume the
-  // whole function budget and trigger a platform 504.
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  let response;
-  try {
-    response = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: TEMPERATURE,
-          maxOutputTokens: MAX_OUTPUT_TOKENS,
-          // Force syntactically valid JSON. The exact shape is specified in the
-          // prompt; we validate + retry below to catch any drift.
-          responseMimeType: "application/json",
-          // Disable "thinking" on Gemini 2.5 Flash. We don't need a chain of
-          // thought to fill a JSON template, and leaving it on roughly triples
-          // latency — which was overrunning the function time limit (HTTP 504).
-          thinkingConfig: { thinkingBudget: 0 },
-        },
-      }),
-    });
-  } catch (err) {
-    clearTimeout(timer);
-    if (err.name === "AbortError") {
-      const e = new Error("Gemini request timed out");
-      e.status = 504;
-      throw e;
-    }
-    throw err;
-  }
-  clearTimeout(timer);
-
-  // Surface rate limiting distinctly so the client can fall back to a sample.
-  if (response.status === 429) {
-    const err = new Error("Gemini rate limit reached");
-    err.status = 429;
-    throw err;
-  }
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    const err = new Error(`Gemini error ${response.status}: ${body.slice(0, 300)}`);
-    err.status = 502;
-    throw err;
-  }
-
-  const data = await response.json();
-  // Gemini returns candidates[].content.parts[].text
-  const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ?? "";
-  return text;
+  return callLLM({
+    apiKey,
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: TEMPERATURE,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      responseMimeType: "application/json",
+    },
+    timeoutMs,
+  });
 }
 
 // ----------------------------------------------------------------------------
