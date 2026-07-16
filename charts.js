@@ -1,9 +1,9 @@
 /**
  * SpotterAI — tiny SVG charts (no library, $0)
  * ============================================================================
- * Pure functions that return SVG markup strings: a trend line/area chart, a bar
- * chart, and a progress ring. Used by the dashboard. Charts scale to their
- * container via viewBox; colors accept CSS variables.
+ * Pure functions that return chart markup: SVG for populated charts and a
+ * semantic HTML empty state when no series exists. Used by the dashboard.
+ * SVG charts scale to their container via viewBox; colors accept CSS variables.
  */
 
 function emptyChart(msg = "No data yet") {

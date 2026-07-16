@@ -23,6 +23,42 @@ function rule(selector) {
   return match[1];
 }
 
+function mediaBlocks(condition) {
+  const header = `@media ${condition}`;
+  const blocks = [];
+  let cursor = 0;
+
+  while ((cursor = css.indexOf(header, cursor)) !== -1) {
+    const open = css.indexOf("{", cursor + header.length);
+    assert.notEqual(open, -1, `missing opening brace for ${header}`);
+
+    let depth = 0;
+    let close = -1;
+    for (let i = open; i < css.length; i += 1) {
+      if (css[i] === "{") depth += 1;
+      if (css[i] === "}") depth -= 1;
+      if (depth === 0) {
+        close = i;
+        break;
+      }
+    }
+
+    assert.notEqual(close, -1, `missing closing brace for ${header}`);
+    blocks.push(css.slice(open + 1, close));
+    cursor = close + 1;
+  }
+
+  assert.ok(blocks.length, `missing media query ${header}`);
+  return blocks;
+}
+
+function assertInMedia(condition, pattern) {
+  assert.ok(
+    mediaBlocks(condition).some((block) => pattern.test(block)),
+    `${pattern} is not declared inside @media ${condition}`
+  );
+}
+
 test("connected cards own their desktop inset and wide grid gutter", () => {
   assert.match(rule(".quicklog"), /padding:\s*var\(--space-5\)/);
   assert.match(rule(".dash-card"), /padding:\s*var\(--space-5\)/);
@@ -35,13 +71,13 @@ test("connected cards can shrink inside the narrow Progress grid", () => {
 });
 
 test("connected spacing compacts at the approved breakpoints", () => {
-  assert.match(
-    css,
-    /@media \(max-width: 960px\)\s*\{[\s\S]*?\.dash-grid\s*\{[^}]*gap:\s*var\(--space-4\)/
+  assertInMedia(
+    "(max-width: 960px)",
+    /\.dash-grid\s*\{[^}]*gap:\s*var\(--space-4\)/
   );
-  assert.match(
-    css,
-    /@media \(max-width: 600px\)\s*\{[\s\S]*?\.dash-card,\s*\.quicklog\s*\{[^}]*padding:\s*var\(--space-4\)/
+  assertInMedia(
+    "(max-width: 600px)",
+    /\.dash-card,\s*\.quicklog\s*\{[^}]*padding:\s*var\(--space-4\)/
   );
 });
 
@@ -80,12 +116,12 @@ test("achievement tiles have readable aligned internal rhythm", () => {
 });
 
 test("achievement columns and Nutrition targets adapt on phones", () => {
-  assert.match(
-    css,
-    /@media \(max-width: 480px\)\s*\{[\s\S]*?\.badges\s*\{[^}]*minmax\(140px,\s*1fr\)/
+  assertInMedia(
+    "(max-width: 480px)",
+    /\.badges\s*\{[^}]*minmax\(140px,\s*1fr\)/
   );
-  assert.match(
-    css,
-    /@media \(max-width: 600px\)\s*\{[\s\S]*?\.nut-targets\s*\{[^}]*grid-template-columns:\s*1fr/
+  assertInMedia(
+    "(max-width: 600px)",
+    /\.nut-targets\s*\{[^}]*grid-template-columns:\s*1fr/
   );
 });
