@@ -6,11 +6,10 @@
  * container via viewBox; colors accept CSS variables.
  */
 
-function emptyChart(w, h, msg = "No data yet") {
-  return `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="${msg}">
-    <line x1="10" y1="${h - 12}" x2="${w - 10}" y2="${h - 12}" stroke="var(--border)" stroke-width="2" />
-    <text x="${w / 2}" y="${h / 2}" text-anchor="middle" fill="var(--text-faint)" font-size="13" font-family="Inter, sans-serif">${msg}</text>
-  </svg>`;
+function emptyChart(msg = "No data yet") {
+  return `<div class="chart-empty" role="img" aria-label="${msg}">
+    <span>${msg}</span>
+  </div>`;
 }
 
 function scale01(v, min, max) {
@@ -21,7 +20,7 @@ function scale01(v, min, max) {
 /** Line + area trend chart. `series` = [{ label, value }]. */
 export function lineChart(series, { color = "var(--accent)", height = 120, pad = 12, area = true, dots = true } = {}) {
   const w = 320, h = height;
-  if (!series || !series.length) return emptyChart(w, h);
+  if (!series || !series.length) return emptyChart();
   const vals = series.map((p) => p.value);
   let min = Math.min(...vals), max = Math.max(...vals);
   if (min === max) { min -= 1; max += 1; }
@@ -40,7 +39,7 @@ export function lineChart(series, { color = "var(--accent)", height = 120, pad =
 /** Vertical bar chart. `series` = [{ label, value }]. */
 export function barChart(series, { color = "var(--accent)", height = 120, pad = 12, gap = 6 } = {}) {
   const w = 320, h = height;
-  if (!series || !series.length || series.every((p) => !p.value)) return emptyChart(w, h);
+  if (!series || !series.length || series.every((p) => !p.value)) return emptyChart();
   const max = Math.max(...series.map((p) => p.value), 1);
   const n = series.length;
   const bw = (w - 2 * pad - gap * (n - 1)) / n;

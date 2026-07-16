@@ -652,7 +652,7 @@ function renderHistory() {
           </li>`;
         })
         .join("")
-    : `<li class="muted">No workouts yet. Start one above.</li>`;
+    : `<li class="workout-empty muted">No workouts yet. Start one above.</li>`;
 }
 
 // ----------------------------------------------------------------------------
