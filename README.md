@@ -3,7 +3,7 @@
 [![CI](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml/badge.svg)](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml)
 &nbsp;[![License: MIT](https://img.shields.io/badge/License-MIT-3b8ef5.svg)](LICENSE)
 
-**Your AI fitness copilot — plan, track, adapt, and audit your training.** &nbsp;·&nbsp; **[▶ Live demo](https://spotterai.vercel.app)**
+**Your AI fitness copilot — plan, track, adapt, and audit your training.** &nbsp;·&nbsp; **[▶ Live demo](https://spotterai-flax.vercel.app)**
 
 <p align="center">
   <img src="og-image.png" alt="SpotterAI — your AI fitness copilot. A flags-first plan safety audit: issues to review, severity tiers, and a demoted quality score." width="700" />
