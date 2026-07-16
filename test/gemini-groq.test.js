@@ -12,8 +12,9 @@ import * as gemini from "../lib/gemini.js";
 const { hasImagePart, toGroqMessages } = gemini;
 
 test("Gemini fallback roster uses a live multimodal model", () => {
-  assert.equal(gemini.GEMINI_MODELS[0], "gemini-2.5-flash");
+  assert.equal(gemini.GEMINI_MODELS[0], "gemini-3.1-flash-lite");
   assert.ok(gemini.GEMINI_MODELS.includes("gemini-3.5-flash"));
+  assert.ok(!gemini.GEMINI_MODELS.includes("gemini-2.5-flash"), "a model rejected for this key must not return");
   assert.ok(!gemini.GEMINI_MODELS.includes("gemini-2.0-flash"), "the June 2026 shutdown model must not return");
 });
 
@@ -22,7 +23,7 @@ test("vision requests preserve the image and fall through after primary-model 42
   const calls = [];
   globalThis.fetch = async (url, options) => {
     calls.push({ url: String(url), body: JSON.parse(options.body) });
-    if (String(url).includes("gemini-2.5-flash")) {
+    if (String(url).includes("gemini-3.1-flash-lite")) {
       return new Response('{"error":"rate limited"}', { status: 429 });
     }
     return new Response(JSON.stringify({
@@ -55,6 +56,46 @@ test("vision requests preserve the image and fall through after primary-model 42
     assert.deepEqual(calls[2].body.generationConfig.responseSchema, { type: "object" });
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("text requests advance past Gemini timeouts and reach Groq", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalGroqKey = process.env.GROQ_API_KEY;
+  const urls = [];
+  process.env.GROQ_API_KEY = "test-groq-key";
+  globalThis.fetch = (url, options) => {
+    urls.push(String(url));
+    if (String(url).includes("generativelanguage.googleapis.com")) {
+      return new Promise((resolve, reject) => {
+        options.signal.addEventListener("abort", () => {
+          const error = new Error("aborted");
+          error.name = "AbortError";
+          reject(error);
+        }, { once: true });
+      });
+    }
+    return Promise.resolve(new Response(JSON.stringify({
+      choices: [{ message: { content: '{"name":"Banana"}' } }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+  };
+
+  try {
+    const result = await gemini.callGemini({
+      apiKey: "test-key",
+      contents: [{ role: "user", parts: [{ text: "Food: banana" }] }],
+      systemInstruction: "Return food JSON.",
+      generationConfig: { responseMimeType: "application/json" },
+      timeoutMs: 5,
+    });
+
+    assert.equal(result, '{"name":"Banana"}');
+    assert.equal(urls.filter((url) => url.includes("generativelanguage.googleapis.com")).length, 2, "one timeout per Gemini model");
+    assert.match(urls.at(-1), /api\.groq\.com\/openai\/v1\/chat\/completions/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalGroqKey == null) delete process.env.GROQ_API_KEY;
+    else process.env.GROQ_API_KEY = originalGroqKey;
   }
 });
 
