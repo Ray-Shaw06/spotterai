@@ -15,5 +15,8 @@
   "license": "MIT",
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
   }
 }
