@@ -7,7 +7,56 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { hasImagePart, toGroqMessages } from "../lib/gemini.js";
+import * as gemini from "../lib/gemini.js";
+
+const { hasImagePart, toGroqMessages } = gemini;
+
+test("Gemini fallback roster uses a live multimodal model", () => {
+  assert.equal(gemini.GEMINI_MODELS[0], "gemini-2.5-flash");
+  assert.ok(gemini.GEMINI_MODELS.includes("gemini-3.5-flash"));
+  assert.ok(!gemini.GEMINI_MODELS.includes("gemini-2.0-flash"), "the June 2026 shutdown model must not return");
+});
+
+test("vision requests preserve the image and fall through after primary-model 429s", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url: String(url), body: JSON.parse(options.body) });
+    if (String(url).includes("gemini-2.5-flash")) {
+      return new Response('{"error":"rate limited"}', { status: 429 });
+    }
+    return new Response(JSON.stringify({
+      candidates: [{ content: { parts: [{ text: '{"name":"Meal"}' }] } }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+
+  const contents = [{
+    role: "user",
+    parts: [
+      { text: "Estimate this meal." },
+      { inline_data: { mime_type: "image/jpeg", data: "photo-base64" } },
+    ],
+  }];
+
+  try {
+    const result = await gemini.callGemini({
+      apiKey: "test-key",
+      contents,
+      systemInstruction: "Return meal JSON.",
+      generationConfig: { responseMimeType: "application/json", responseSchema: { type: "object" } },
+      timeoutMs: 1000,
+    });
+
+    assert.equal(result, '{"name":"Meal"}');
+    assert.equal(calls.length, 3, "two primary attempts, then one live fallback");
+    assert.match(calls[2].url, /gemini-3\.5-flash:generateContent/);
+    assert.deepEqual(calls[2].body.contents, contents);
+    assert.equal(calls[2].body.generationConfig.responseMimeType, "application/json");
+    assert.deepEqual(calls[2].body.generationConfig.responseSchema, { type: "object" });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
 test("hasImagePart detects Gemini inline_data (vision must stay Gemini-only)", () => {
   const vision = [{ role: "user", parts: [{ text: "what is this" }, { inline_data: { mime_type: "image/jpeg", data: "…" } }] }];
