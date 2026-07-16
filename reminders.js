@@ -43,7 +43,7 @@ async function enable() {
 }
 
 async function notify(title, body) {
-  const opts = { body, icon: "icons/icon-192.png", badge: "icons/icon-192.png", tag: "spotterai-streak" };
+  const opts = { body, icon: "icons/spotterai-192.png", tag: "spotterai-streak" };
   try {
     const reg = await navigator.serviceWorker?.ready;
     if (reg?.showNotification) {

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">SpotterAI shield and barbell</title>
+  <defs>
+    <radialGradient id="glow" cx="78%" cy="18%" r="78%">
+      <stop offset="0" stop-color="#8a6dff" stop-opacity="0.2" />
+      <stop offset="0.58" stop-color="#171326" stop-opacity="0.5" />
+      <stop offset="1" stop-color="#0a090f" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="#0a090f" />
+  <rect width="512" height="512" fill="url(#glow)" />
+  <rect x="38" y="38" width="436" height="436" rx="112" fill="#12101b" stroke="#2d2750" stroke-width="4" />
+
+  <g transform="translate(96 96) scale(10)" fill="none" stroke="#8a6dff" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 3.6l9.4 3.4v7.6c0 5.7-3.8 10-9.4 12.4C10.4 24.6 6.6 20.3 6.6 14.6V7L16 3.6z" fill="#8a6dff" fill-opacity="0.08" stroke-width="1.8" />
+    <path d="M12 18h8M12 16v4M20 16v4M10.3 16.7v2.6M21.7 16.7v2.6" stroke-width="1.7" />
+    <path d="M13.6 12.4c.1-2.5 2.1-4.4 4.7-4.4 0 2.6-1.9 4.5-4.4 4.6M14.2 11.9l3-2.7" stroke-width="1.5" />
+  </g>
+</svg>

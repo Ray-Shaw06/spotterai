@@ -15,15 +15,16 @@
  * Bump CACHE when shipping changes so old caches are cleaned on activate.
  */
 
-const CACHE = "spotterai-v33";
+const CACHE = "spotterai-v34";
 const CORE = [
   "./",
   "index.html",
   "style.css",
   "manifest.json",
-  "icons/icon-192.png",
-  "icons/icon-512.png",
-  "icons/maskable-512.png",
+  "icons/spotterai-apple-touch-180.png",
+  "icons/spotterai-192.png",
+  "icons/spotterai-512.png",
+  "icons/spotterai-maskable-512.png",
 ];
 
 self.addEventListener("install", (event) => {
