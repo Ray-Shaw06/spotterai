@@ -58,3 +58,29 @@ test("History uses a centered dedicated empty row", () => {
   assert.match(empty, /justify-content:\s*center/);
   assert.match(empty, /border-bottom:\s*0/);
 });
+
+test("achievement tiles have readable aligned internal rhythm", () => {
+  assert.match(rule(".badges"), /grid-auto-rows:\s*1fr/);
+
+  const badge = rule(".badge");
+  assert.match(badge, /gap:\s*var\(--space-2\)/);
+  assert.match(badge, /padding:\s*var\(--space-4\)/);
+  assert.match(badge, /min-height:\s*10rem/);
+
+  assert.match(rule(".badge__desc"), /line-height:\s*1\.4/);
+  assert.match(rule(".badge__xp"), /margin-top:\s*auto/);
+
+  const locked = css.match(/\.badge\.is-locked\s*\{([^}]*)\}/);
+  if (locked) assert.doesNotMatch(locked[1], /opacity/);
+});
+
+test("achievement columns and Nutrition targets adapt on phones", () => {
+  assert.match(
+    css,
+    /@media \(max-width: 480px\)\s*\{[\s\S]*?\.badges\s*\{[^}]*minmax\(140px,\s*1fr\)/
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 600px\)\s*\{[\s\S]*?\.nut-targets\s*\{[^}]*grid-template-columns:\s*1fr/
+  );
+});
