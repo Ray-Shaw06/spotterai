@@ -12,6 +12,7 @@ import { dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const html = readFileSync(join(root, "index.html"), "utf8");
+const app = readFileSync(join(root, "app.js"), "utf8");
 const router = readFileSync(join(root, "router.js"), "utf8");
 
 test("nav uses 'Safety Lab', not the old 'Evals' label", () => {
@@ -58,4 +59,29 @@ test("homepage has the 'What not to trust SpotterAI for' limitations section", (
   assert.ok(/What not to trust SpotterAI for/i.test(html));
   assert.ok(/Diagnosing pain or injuries/i.test(html));
   assert.ok(/still help you create a more conservative general plan/i.test(html));
+});
+
+test("guided onboarding is the only plan builder on the landing page", () => {
+  assert.ok(!/id="plan-form"/.test(html), "duplicate inline plan form removed");
+  assert.ok(!/Build your program/i.test(html), "duplicate builder heading removed");
+  assert.match(
+    html,
+    /<section id="generator" class="section" hidden>/,
+    "results section starts hidden"
+  );
+
+  const buildPlanLinks = [...html.matchAll(/<a\b([^>]*)>Build my plan<\/a>/g)];
+  assert.ok(buildPlanLinks.length >= 2, "hero and final plan CTAs remain present");
+  for (const [, attributes] of buildPlanLinks) {
+    assert.match(attributes, /data-onboard/, "every Build my plan CTA opens onboarding");
+  }
+});
+
+test("the plan controller reveals results and returns Start over to onboarding", () => {
+  assert.ok(!/getElementById\("plan-form"\)/.test(app), "controller no longer depends on the removed form");
+  assert.ok(!/getElementById\("generate-btn"\)/.test(app), "controller no longer depends on the removed form button");
+  assert.match(app, /const inputs = inputsOverride \|\| lastInputs;/, "retry reuses the last onboarding inputs");
+  assert.match(app, /generatorSection\.hidden = false;/, "generation reveals the results section");
+  assert.match(app, /generatorSection\.hidden = true;/, "reset hides the results section");
+  assert.match(app, /new CustomEvent\("spotter:onboarding"\)/, "Start over reopens guided onboarding");
 });

@@ -2012,6 +2012,11 @@ table {
   align-items: start;
 }
 
+.generator--results-only {
+  display: block;
+  max-width: 1080px;
+}
+
 /* The form sticks while you scroll the results on desktop. */
 .form {
   padding: clamp(var(--space-5), 3vw, var(--space-6));

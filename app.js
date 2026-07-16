@@ -1,11 +1,11 @@
 /**
  * SpotterAI — front-end controller
  * ============================================================================
- * Wires the form to the serverless generator and the client-side evaluator,
- * then renders the plan, the animated safety score, and the list of checks.
+ * Wires guided onboarding to the serverless generator and the client-side
+ * evaluator, then renders the plan, safety score, and list of checks.
  *
  * Flow:
- *   submit → collect inputs → POST /api/generate
+ *   onboarding → mapped inputs → POST /api/generate
  *          → on success: render plan
  *          → on failure / 429 / offline: fall back to a saved sample plan
  *          → either way: run evaluator.js and render the audit
@@ -27,10 +27,9 @@ import { searchExercises } from "./exercises.js";
 // ----------------------------------------------------------------------------
 // Element references
 // ----------------------------------------------------------------------------
-const form = document.getElementById("plan-form");
-const generateBtn = document.getElementById("generate-btn");
 const retryBtn = document.getElementById("retry-btn");
 const regenerateBtn = document.getElementById("regenerate-btn");
+const generatorSection = document.getElementById("generator");
 
 const states = {
   empty: document.getElementById("state-empty"),
@@ -85,52 +84,23 @@ function showState(name) {
   }
 }
 
+function revealGenerator({ scroll = false } = {}) {
+  generatorSection.hidden = false;
+  if (scroll) {
+    generatorSection.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "start",
+    });
+  }
+}
+
+function hideGenerator() {
+  generatorSection.hidden = true;
+}
+
 /** Plain-English label per severity tier. */
 const TIER_LABEL = { critical: "Critical", warning: "Warning", suggestion: "Suggestion" };
 const TIER_ORDER = { critical: 0, warning: 1, suggestion: 2, pass: 3 };
-
-// ----------------------------------------------------------------------------
-// Reading the form
-// ----------------------------------------------------------------------------
-
-function getFormData() {
-  const fd = new FormData(form);
-  const equipment = fd.getAll("equipment").map(String);
-
-  // Injuries: collect checked values, but ignore the sentinel "none".
-  const injuries = fd.getAll("injuries").map(String).filter((v) => v !== "none");
-
-  return {
-    goal: fd.get("goal") || "General",
-    experience: fd.get("experience") || "Beginner",
-    daysPerWeek: Number(fd.get("daysPerWeek")) || 4,
-    sessionLength: Number(fd.get("sessionLength")) || 60,
-    equipment: equipment.length ? equipment : ["bodyweight"],
-    injuries,
-    injuryNotes: (fd.get("injuryNotes") || "").toString().trim(),
-  };
-}
-
-// ----------------------------------------------------------------------------
-// Injury chips: "None" is mutually exclusive with the specific-injury chips.
-// ----------------------------------------------------------------------------
-
-function wireInjuryExclusivity() {
-  const boxes = [...form.querySelectorAll('input[name="injuries"]')];
-  const none = boxes.find((b) => b.value === "none");
-  const others = boxes.filter((b) => b.value !== "none");
-
-  none?.addEventListener("change", () => {
-    if (none.checked) others.forEach((b) => (b.checked = false));
-  });
-  others.forEach((b) =>
-    b.addEventListener("change", () => {
-      if (b.checked && none) none.checked = false;
-      // If nothing specific is checked, re-check "None" for a tidy default.
-      if (none && !others.some((o) => o.checked)) none.checked = true;
-    })
-  );
-}
 
 // ----------------------------------------------------------------------------
 // Loading state: cycle friendly step messages
@@ -187,10 +157,15 @@ async function getFallbackPlan(inputs) {
 let lastInputs = null;
 
 async function generate(inputsOverride) {
-  const inputs = inputsOverride || getFormData();
+  const inputs = inputsOverride || lastInputs;
+  if (!inputs) {
+    window.dispatchEvent(new CustomEvent("spotter:onboarding"));
+    return;
+  }
+
   lastInputs = inputs;
 
-  generateBtn.disabled = true;
+  revealGenerator({ scroll: true });
   showState("loading");
   startLoadingSteps();
 
@@ -224,7 +199,6 @@ async function generate(inputsOverride) {
     }
     if (!plan) {
       stopLoadingSteps();
-      generateBtn.disabled = false;
       errorText.textContent =
         "We couldn't reach the generator and no saved example was available. Check your connection and try again.";
       showState("error");
@@ -233,7 +207,6 @@ async function generate(inputsOverride) {
   }
 
   stopLoadingSteps();
-  generateBtn.disabled = false;
   publishPlan(plan, inputs);
   renderResults(plan, inputs, usedFallback);
 }
@@ -246,6 +219,7 @@ const safetyBoundary = document.getElementById("safety-boundary");
 const safetyBoundaryText = document.getElementById("safety-boundary-text");
 
 function renderResults(plan, inputs, usedFallback, { focus = true } = {}) {
+  revealGenerator();
   fallbackNotice.hidden = !usedFallback;
 
   // Surface a hard safety boundary prominently (never bury it under a plan).
@@ -668,11 +642,6 @@ async function adapt() {
 // Events
 // ----------------------------------------------------------------------------
 
-form.addEventListener("submit", (e) => {
-  e.preventDefault();
-  generate();
-});
-
 // Guided onboarding finishes with a mapped input set and asks us to generate.
 window.addEventListener("spotter:generate", (e) => {
   if (e.detail) generate(e.detail);
@@ -688,7 +657,8 @@ retryBtn.addEventListener("click", () => generate());
 regenerateBtn.addEventListener("click", () => {
   if (adaptCard) adaptCard.hidden = true;
   showState("empty");
-  form.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "start" });
+  hideGenerator();
+  window.dispatchEvent(new CustomEvent("spotter:onboarding"));
 });
 
 adaptBtn?.addEventListener("click", adapt);
@@ -703,6 +673,7 @@ window.addEventListener("spotter:plan", (e) => {
   } else {
     if (adaptCard) adaptCard.hidden = true;
     showState("empty");
+    hideGenerator();
   }
 });
 
@@ -790,8 +761,6 @@ planOutput.addEventListener("input", (e) => {
   const inp = e.target.closest("[data-edit-search]");
   if (inp) renderEditResults(inp);
 });
-
-wireInjuryExclusivity();
 
 // Restore a saved plan for this profile (survives refresh) without yanking
 // scroll/focus, so the adaptive loop works across sessions.

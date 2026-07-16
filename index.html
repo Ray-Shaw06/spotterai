@@ -50,7 +50,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <a class="skip-link" href="#generator">Skip to the workout generator</a>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
 
   <!-- ===================== APP SHELL ===================== -->
   <div class="app-shell">
@@ -108,7 +108,7 @@
     </aside>
 
     <div class="app-main">
-  <main>
+  <main id="main-content">
     <!-- ============================ HOME / PLAN PAGE ============================ -->
     <div class="view" data-view="home">
     <!-- ===================== HERO ===================== -->
@@ -279,104 +279,10 @@
       </aside>
     </div>
 
-    <!-- ===================== GENERATOR ===================== -->
-    <section id="generator" class="section">
-      <div class="container generator">
-        <!-- Left: the input form -->
-        <form id="plan-form" class="card form" novalidate>
-          <div class="form__head">
-            <h2 class="section-title">Build your program</h2>
-            <p class="section-subtitle">Tell SpotterAI about you. Takes about 20 seconds.</p>
-          </div>
-
-          <!-- Goal -->
-          <fieldset class="field">
-            <legend class="field__label">Primary goal</legend>
-            <div class="chips" role="radiogroup" aria-label="Primary goal">
-              <label class="chip"><input type="radio" name="goal" value="Strength" /><span>Strength</span></label>
-              <label class="chip"><input type="radio" name="goal" value="Hypertrophy" checked /><span>Hypertrophy</span></label>
-              <label class="chip"><input type="radio" name="goal" value="Fat loss" /><span>Fat loss</span></label>
-              <label class="chip"><input type="radio" name="goal" value="General" /><span>General</span></label>
-            </div>
-          </fieldset>
-
-          <!-- Experience -->
-          <fieldset class="field">
-            <legend class="field__label">Experience level</legend>
-            <div class="chips" role="radiogroup" aria-label="Experience level">
-              <label class="chip"><input type="radio" name="experience" value="Beginner" checked /><span>Beginner</span></label>
-              <label class="chip"><input type="radio" name="experience" value="Intermediate" /><span>Intermediate</span></label>
-              <label class="chip"><input type="radio" name="experience" value="Advanced" /><span>Advanced</span></label>
-            </div>
-          </fieldset>
-
-          <div class="field-row">
-            <!-- Days per week -->
-            <fieldset class="field">
-              <legend class="field__label">Training days / week</legend>
-              <div class="chips chips--compact" role="radiogroup" aria-label="Training days per week">
-                <label class="chip chip--square"><input type="radio" name="daysPerWeek" value="2" /><span>2</span></label>
-                <label class="chip chip--square"><input type="radio" name="daysPerWeek" value="3" /><span>3</span></label>
-                <label class="chip chip--square"><input type="radio" name="daysPerWeek" value="4" checked /><span>4</span></label>
-                <label class="chip chip--square"><input type="radio" name="daysPerWeek" value="5" /><span>5</span></label>
-                <label class="chip chip--square"><input type="radio" name="daysPerWeek" value="6" /><span>6</span></label>
-              </div>
-            </fieldset>
-
-            <!-- Session length -->
-            <fieldset class="field">
-              <legend class="field__label">Session length</legend>
-              <div class="chips chips--compact" role="radiogroup" aria-label="Session length in minutes">
-                <label class="chip chip--square"><input type="radio" name="sessionLength" value="30" /><span>30m</span></label>
-                <label class="chip chip--square"><input type="radio" name="sessionLength" value="45" /><span>45m</span></label>
-                <label class="chip chip--square"><input type="radio" name="sessionLength" value="60" checked /><span>60m</span></label>
-                <label class="chip chip--square"><input type="radio" name="sessionLength" value="90" /><span>90m</span></label>
-              </div>
-            </fieldset>
-          </div>
-
-          <!-- Equipment (multi) -->
-          <fieldset class="field">
-            <legend class="field__label">Available equipment <span class="field__hint">select all that apply</span></legend>
-            <div class="chips" role="group" aria-label="Available equipment">
-              <label class="chip"><input type="checkbox" name="equipment" value="full gym" checked /><span>Full gym</span></label>
-              <label class="chip"><input type="checkbox" name="equipment" value="dumbbells" /><span>Dumbbells</span></label>
-              <label class="chip"><input type="checkbox" name="equipment" value="barbell" /><span>Barbell</span></label>
-              <label class="chip"><input type="checkbox" name="equipment" value="bodyweight" /><span>Bodyweight</span></label>
-              <label class="chip"><input type="checkbox" name="equipment" value="bands" /><span>Bands</span></label>
-            </div>
-          </fieldset>
-
-          <!-- Injuries -->
-          <fieldset class="field">
-            <legend class="field__label">Injuries or limitations <span class="field__hint">helps the safety audit</span></legend>
-            <div class="chips" role="group" aria-label="Injuries or limitations">
-              <label class="chip chip--caution"><input type="checkbox" name="injuries" value="lower_back" data-exclusive-off /><span>Lower back</span></label>
-              <label class="chip chip--caution"><input type="checkbox" name="injuries" value="knee" data-exclusive-off /><span>Knee</span></label>
-              <label class="chip chip--caution"><input type="checkbox" name="injuries" value="shoulder" data-exclusive-off /><span>Shoulder</span></label>
-              <label class="chip chip--caution"><input type="checkbox" name="injuries" value="wrist" data-exclusive-off /><span>Wrist</span></label>
-              <label class="chip"><input type="checkbox" name="injuries" value="none" data-exclusive checked /><span>None</span></label>
-            </div>
-            <label class="sr-only" for="injuryNotes">Describe any other injuries or limitations</label>
-            <textarea
-              id="injuryNotes"
-              name="injuryNotes"
-              class="textarea"
-              rows="2"
-              placeholder="Optional: anything else we should know (e.g. “tweaky right shoulder, avoid heavy overhead”)."
-            ></textarea>
-          </fieldset>
-
-          <button type="submit" class="btn btn--primary btn--block" id="generate-btn">
-            <span class="btn__label">Generate &amp; audit my plan</span>
-            <svg class="btn__icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-              <path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </button>
-          <p class="form__foot">Free to use · powered by Google Gemini · your inputs never leave the request.</p>
-        </form>
-
-        <!-- Right: results area (swaps between empty / loading / error / results) -->
+    <!-- ===================== PLAN RESULTS ===================== -->
+    <section id="generator" class="section" hidden>
+      <div class="container generator generator--results-only">
+        <!-- Results area (swaps between empty / loading / error / results) -->
         <div class="results" id="results" aria-live="polite">
           <!-- EMPTY STATE -->
           <div class="state state--empty" id="state-empty">
@@ -388,8 +294,8 @@
             </div>
             <h3 class="state__title">Your audited plan appears here</h3>
             <p class="state__text">
-              Fill in the form and hit generate. You'll get a full weekly program plus a
-              transparent safety score with every flagged concern explained.
+              Choose “Build my plan” to answer a few quick questions. You'll get a full
+              weekly program plus a transparent safety score with every flagged concern explained.
             </p>
           </div>
 
