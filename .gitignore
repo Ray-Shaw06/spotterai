@@ -9,6 +9,9 @@ node_modules/
 # Vercel
 .vercel/
 
+# Local isolated development workspaces
+.worktrees/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
