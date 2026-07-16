@@ -2927,6 +2927,7 @@ table {
   margin-bottom: var(--space-3);
 }
 .exprog__pick {
+  min-width: 0;
   max-width: 60%;
 }
 .ex-target {
@@ -4092,6 +4093,7 @@ table {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  min-width: 0;
   padding: var(--space-5);
 }
 /* Keep the history from dominating the page. */

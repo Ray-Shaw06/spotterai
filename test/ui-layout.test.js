@@ -29,6 +29,11 @@ test("connected cards own their desktop inset and wide grid gutter", () => {
   assert.match(rule(".dash-grid"), /gap:\s*var\(--space-5\)/);
 });
 
+test("connected cards can shrink inside the narrow Progress grid", () => {
+  assert.match(rule(".dash-card"), /min-width:\s*0/);
+  assert.match(rule(".exprog__pick"), /min-width:\s*0/);
+});
+
 test("connected spacing compacts at the approved breakpoints", () => {
   assert.match(
     css,
