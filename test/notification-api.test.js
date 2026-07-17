@@ -584,6 +584,7 @@ test("server configuration stays disabled/invalid in examples and pins Vercel to
   const packageLock = JSON.parse(readFileSync(new URL("../package-lock.json", import.meta.url), "utf8"));
   const vercel = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
   const envExample = readFileSync(new URL("../.env.example", import.meta.url), "utf8");
+  const releaseWorklog = readFileSync(new URL("../docs/release-1-worklog.md", import.meta.url), "utf8");
 
   assert.equal(packageJson.engines.node, "22.x");
   assert.equal(packageLock.packages[""].engines.node, "22.x");
@@ -611,4 +612,17 @@ test("server configuration stays disabled/invalid in examples and pins Vercel to
   assert.deepEqual(validateNotificationConfig(exampleEnv), { enabled: false, valid: true });
   assert.equal(validateNotificationConfig({ ...exampleEnv, NOTIFICATION_REGISTRATION_ENABLED: "true" }).valid, false);
   assert.doesNotMatch(envExample, /BEGIN (?:RSA )?PRIVATE KEY-----|AIza[0-9A-Za-z_-]{20,}/);
+
+  for (const [name, deploymentGateCopy] of [
+    ["environment example", envExample],
+    ["release worklog", releaseWorklog],
+  ]) {
+    const normalizedGateCopy = deploymentGateCopy.replace(/`/g, "").replace(/\s+/g, " ");
+    assert.match(normalizedGateCopy, /fixed-window per-IP WAF rule.{0,160}POST, PATCH, and DELETE.{0,80}\/api\/notifications/i, name);
+    assert.match(
+      normalizedGateCopy,
+      /separately prove 429 responses for excess POST registration, authenticated PATCH, and authenticated DELETE before `?NOTIFICATION_REGISTRATION_ENABLED=true`?/i,
+      name,
+    );
+  }
 });
