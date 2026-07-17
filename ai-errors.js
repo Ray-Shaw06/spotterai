@@ -20,7 +20,13 @@ export function assertPlanShape(plan) {
     typeof plan === "object" &&
     !Array.isArray(plan) &&
     Array.isArray(plan.days) &&
-    plan.days.every((day) => day && typeof day === "object" && !Array.isArray(day) && Array.isArray(day.exercises));
+    plan.days.every((day) =>
+      day &&
+      typeof day === "object" &&
+      !Array.isArray(day) &&
+      Array.isArray(day.exercises) &&
+      day.exercises.every((exercise) => exercise && typeof exercise === "object" && !Array.isArray(exercise))
+    );
   if (!hasRenderableDays) throw invalidResponseError("The generator returned an incomplete plan.");
   return plan;
 }

@@ -56,6 +56,8 @@ test("a malformed food response is marked invalid_response", async () => {
 
 test("an incomplete plan shape is rejected for fallback recovery", () => {
   assert.throws(() => assertPlanShape({ days: "bad" }), (error) => error?.failureClass === "invalid_response");
+  assert.throws(() => assertPlanShape({ days: [{ exercises: [null] }] }), (error) => error?.failureClass === "invalid_response");
+  assert.throws(() => assertPlanShape({ days: [{ exercises: ["not an exercise"] }] }), (error) => error?.failureClass === "invalid_response");
   assert.doesNotThrow(() => assertPlanShape({ days: [{ exercises: [] }] }));
 });
 
