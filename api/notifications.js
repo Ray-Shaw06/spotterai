@@ -1,6 +1,10 @@
 import { randomBytes as secureRandomBytes } from "node:crypto";
-import { createDeviceToken, verifyDeviceToken } from "../lib/notification-auth.js";
-import { createNotificationStore } from "../lib/notification-store.js";
+import {
+  createDeviceToken,
+  createEndpointFingerprint,
+  verifyDeviceToken,
+} from "../lib/notification-auth.js";
+import { createNotificationStore, RegistrationCapError } from "../lib/notification-store.js";
 import {
   hasOwn,
   isCompletionDate,
@@ -13,6 +17,7 @@ import {
 const ROUTE = "/api/notifications";
 const ALLOWED_METHODS = Object.freeze(["GET", "POST", "PATCH", "DELETE"]);
 const MAX_BODY_BYTES = 32 * 1024;
+const AUTHORIZATION_LIFETIME_MS = 180 * 24 * 60 * 60 * 1000;
 
 function getHeader(req, name) {
   const headers = req?.headers;
@@ -126,11 +131,26 @@ export function createNotificationHandler({
     if (!config.valid) return fail(503, { error: "Service unavailable." }, "configuration");
 
     if (method === "GET") {
+      if (!config.enabled) return succeed(200, { enabled: false });
       return succeed(200, { enabled: true, publicKey: config.publicKey });
     }
 
+    if (!config.enabled) return fail(503, { error: "Service unavailable." }, "configuration");
+
+    const contentType = getHeader(req, "content-type");
+    if (typeof contentType !== "string" || contentType.split(";", 1)[0].trim().toLowerCase() !== "application/json") {
+      return fail(415, { error: "Unsupported media type." }, "content_type");
+    }
+    const fetchSite = getHeader(req, "sec-fetch-site");
+    if (getHeader(req, "origin") !== config.allowedOrigin
+      || (typeof fetchSite === "string" && fetchSite.toLowerCase() === "cross-site")) {
+      return fail(403, { error: "Forbidden." }, "origin");
+    }
+
     const contentLength = Number(getHeader(req, "content-length"));
-    if ((Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) || bodyByteLength(req?.body) > MAX_BODY_BYTES) {
+    if (req?.rawBodyTooLarge === true
+      || (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES)
+      || bodyByteLength(req?.body) > MAX_BODY_BYTES) {
       return fail(413, { error: "Request too large." }, "size");
     }
 
@@ -148,6 +168,8 @@ export function createNotificationHandler({
       const deviceId = randomBytes(32).toString("base64url");
       const currentMs = timestamp(now);
       const currentDate = new Date(currentMs);
+      const endpointFingerprint = createEndpointFingerprint(subscription.value.endpoint, config.dedupSecret);
+      const authorizationExpiresAt = new Date(currentMs + AUTHORIZATION_LIFETIME_MS);
       const record = {
         ...subscription.value,
         ...preferences.value,
@@ -159,16 +181,32 @@ export function createNotificationHandler({
         lastSentByCategory: {},
         leaseUntil: null,
         leaseId: null,
+        endpointFingerprint,
+        authorizationExpiresAt,
         createdAt: currentDate,
         updatedAt: currentDate,
       };
 
+      let effectiveDeviceId;
       try {
-        await store.create(deviceId, record);
+        effectiveDeviceId = await store.create(deviceId, record, {
+          endpointFingerprint,
+          registrationDate: currentDate.toISOString().slice(0, 10),
+          dailyCap: config.dailyCap,
+          now: currentDate,
+        });
+      } catch (error) {
+        if (error instanceof RegistrationCapError) {
+          return fail(429, { error: "Registration unavailable." }, "capacity");
+        }
+        return fail(500, { error: "Request failed." }, "storage");
+      }
+      let deviceToken;
+      try {
+        deviceToken = createDeviceToken(effectiveDeviceId, config.secret, currentMs);
       } catch {
         return fail(500, { error: "Request failed." }, "storage");
       }
-      const deviceToken = createDeviceToken(deviceId, config.secret, currentMs);
       return succeed(201, { ok: true, deviceToken, preferences: preferences.value });
     }
 
@@ -226,5 +264,67 @@ export function createNotificationHandler({
   };
 }
 
-const handler = createNotificationHandler({ store: createNotificationStore() });
-export default handler;
+async function readRawBody(request) {
+  const contentLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    return { tooLarge: true, body: "" };
+  }
+  if (!request.body) return { tooLarge: false, body: "" };
+
+  const reader = request.body.getReader();
+  const chunks = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_BODY_BYTES) {
+      await reader.cancel().catch(() => {});
+      return { tooLarge: true, body: "" };
+    }
+    chunks.push(Buffer.from(value));
+  }
+  return { tooLarge: false, body: Buffer.concat(chunks, size) };
+}
+
+export function createNotificationFetchHandler({ coreHandler } = {}) {
+  if (typeof coreHandler !== "function") throw new Error("Notification handler configuration is invalid.");
+  return Object.freeze({
+    async fetch(request) {
+      const { tooLarge, body } = await readRawBody(request);
+      const responseState = {
+        statusCode: 200,
+        body: undefined,
+        headers: new Map(),
+        setHeader(name, value) {
+          this.headers.set(String(name), String(value));
+          return this;
+        },
+        status(code) {
+          this.statusCode = code;
+          return this;
+        },
+        json(value) {
+          this.body = value;
+          return this;
+        },
+      };
+      await coreHandler({
+        method: request.method,
+        url: new URL(request.url).pathname,
+        headers: Object.fromEntries(request.headers.entries()),
+        body,
+        rawBodyTooLarge: tooLarge,
+      }, responseState);
+      const headers = new Headers(responseState.headers);
+      headers.set("Content-Type", "application/json; charset=utf-8");
+      return new Response(JSON.stringify(responseState.body), {
+        status: responseState.statusCode,
+        headers,
+      });
+    },
+  });
+}
+
+const coreHandler = createNotificationHandler({ store: createNotificationStore() });
+export default createNotificationFetchHandler({ coreHandler });

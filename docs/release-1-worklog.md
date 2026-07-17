@@ -12,7 +12,7 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | Release branch | `codex/release-1`, created from the approved Release 1 baseline |
 | Design | `docs/superpowers/specs/2026-07-17-release-1-design.md` |
 | Implementation plan | `docs/superpowers/plans/2026-07-17-release-1.md` |
-| Current phase | Tasks 1–5 implemented; Task 5 independent review and remaining Release 1 tasks/final integration verification pending |
+| Current phase | Tasks 1–5 implemented; Task 5 review fixes complete and independent re-review pending; remaining Release 1 tasks/final integration verification pending |
 
 ## Gate status
 
@@ -27,8 +27,8 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | Funnel analytics | Complete | Task 2 committed: privacy-safe allow-listed Vercel virtual pageviews |
 | AI retry and recovery states | Complete | Task 3 committed: bounded client timeouts, safe recovery copy, saved-plan retry, and in-memory photo retry |
 | Web Push client and preferences | In progress | Task 4 defines and tests the pure, privacy-safe schedule and preference domain; client controls remain pending |
-| Notification API and dispatcher | In progress | Task 5 anonymous API/server-only adapter implemented and self-reviewed; dispatcher and Firestore rules remain Task 6 |
-| Independent reviews resolved | In progress | Per-task reviews for Tasks 1–4 are resolved; final integration review remains pending |
+| Notification API and dispatcher | In progress | Task 5 review fixes add default-off readiness, same-origin/raw-body controls, durable registration cap, and endpoint dedup; dispatcher and Firestore rules remain Task 6 |
+| Independent reviews resolved | In progress | Per-task reviews for Tasks 1–4 are resolved; Task 5 re-review and final integration review remain pending |
 | Full automated verification | Pending | Run from final combined state |
 | iPhone and Android installed-PWA checks | Pending | Requires owner-controlled physical devices |
 | Vercel preview verification | Pending | Deploy after implementation gates pass |
@@ -154,6 +154,18 @@ This document is the version-controlled source of truth for Release 1 progress, 
 - Security/privacy self-review: No authentication bypass was found; PATCH/DELETE derive the record only from a verified bearer token, so body overposting cannot select another device. Validators rebuild exact stored shapes. GET exposes only the public VAPID key. Client responses and logs exclude secrets, endpoint/key/token/document-ID/date/body values. Token timing, tampering, expiry, and future skew are covered by tests. The adapter imports Admin SDK modules only and hard-codes `notificationDevices`.
 - Remaining gates/concerns: Task 6 must add and deploy Firestore rules that deny direct browser access before this collection can be called server-only in production, and must assess arbitrary-HTTPS endpoint abuse/SSRF and anonymous registration rate limiting before dispatch is enabled. No live Firestore call, real push, production secret, billing change, preview deployment, or production deployment occurred. Independent Task 5 review remains pending.
 - Commit: `feat: add anonymous notification subscription API`.
+
+### 2026-07-17 — Task 5 formal review fixes
+
+- Role: Implementation agent responding to an independent security review. Scope remained the anonymous notification API and Admin storage adapter; no Task 6 dispatcher, client UI, deployment, billing, production secrets, or live push work was performed.
+- Review result: The initial `1330fcb` implementation was rejected. Blocking findings covered default-on/incomplete readiness, no durable global cap or endpoint idempotency, incomplete same-origin enforcement, framework-parsed body reliance, a legacy default export instead of Vercel's Web Handler, weak Firebase/VAPID/token validation, and an unpinned runtime.
+- Resolution: Registration now defaults off and can become ready only with canonical 32-byte token/dedup secrets, an on-curve VAPID public key, an exact HTTPS allowed origin, a bounded daily cap, a non-placeholder WAF rule identifier, and a parseable matching Firebase service account with a real RSA private key. All writes require JSON and the exact origin, reject cross-site Fetch Metadata, emit no CORS headers, and enforce 32 KB while streaming the raw Fetch body before JSON parsing. The production export follows Vercel's documented Node.js Web Handler `{ fetch(request) }` contract; the dependency-injected core remains available for tests.
+- Durable abuse/idempotency boundary: `notificationDevices`, `notificationEndpointIndex`, and `notificationRegistrationCounters` are updated in Firestore transactions. A keyed HMAC-SHA256 endpoint fingerprint enables active-device reuse without consuming quota; new/expired registrations atomically consume the UTC-day global cap and return 429 once full. Stored device/index records carry `authorizationExpiresAt`; DELETE removes a matching helper index transactionally.
+- Runtime/Admin hardening: Node is pinned to `22.x`. Firebase Admin uses only the dedicated `spotterai-notifications` app and fails if its project identity differs from the configured service account. P-256 subscription and VAPID values must be real points on `prime256v1`. Device IDs, signatures, and both HMAC secrets must be exact canonical unpadded base64url encodings of 32 bytes, including rejection of unused-bit malleability.
+- TDD evidence: The review-fix focused RED failed 0/3 on missing fingerprint/cap/fetch-handler interfaces. The implemented focused suite passed 35/35. Full `npm test` passed 262/262 on Node 22.17.0. Module syntax checks and `git diff --check` passed.
+- Dependency audit: `npm audit --omit=dev` still reports eight moderate transitive `uuid@9.0.1` findings through Firebase Admin's Google Cloud clients. npm offers only a forced breaking Firebase Admin major change; no forced remediation was applied.
+- Remaining gates: `NOTIFICATION_REGISTRATION_ENABLED` must remain `false` until Task 8/production ownership publishes a fixed-window per-IP WAF rule for `POST /api/notifications`, records its real rule ID, and preview verification demonstrates 429 behavior. Task 6 must deny direct client access to all three notification collections, handle expiry cleanup for devices and matching endpoint indexes, and complete dispatcher endpoint/SSRF controls. Expired dedup entries intentionally hand off old-record cleanup to Task 6. Production secrets, Firebase billing, preview/live Firestore checks, physical-device checks, and promotion remain owner-gated.
+- Re-review: Pending. No production deployment or external state change occurred.
 
 ## Required worklog entry format
 
