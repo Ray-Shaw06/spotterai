@@ -26,7 +26,7 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | First-workout activation | Pending | Implementation and tests not started |
 | Funnel analytics | Pending | Implementation and tests not started |
 | AI retry and recovery states | Complete | Task 3 committed: bounded client timeouts, safe recovery copy, saved-plan retry, and in-memory photo retry |
-| Web Push client and preferences | Pending | Implementation and tests not started |
+| Web Push client and preferences | In progress | Task 4 defines and tests the pure, privacy-safe schedule and preference domain; client controls remain pending |
 | Notification API and dispatcher | Pending | Implementation and tests not started |
 | Independent reviews resolved | Pending | Run after each implementation slice and final integration |
 | Full automated verification | Pending | Run from final combined state |
@@ -124,6 +124,18 @@ This document is the version-controlled source of truth for Release 1 progress, 
 - Verification: `node --test test/ai-errors.test.js test/ui-copy.test.js test/estimate.test.js test/gemini-groq.test.js` — 32/32 passed. `npm test` — 215/215 passed. `git diff --check` passed.
 - Self-review: Verified external aborts remain `AbortError`, only the helper’s own timer becomes `TimeoutError`, all displayed recovery text is provider-neutral, fallback is still audited, and a superseded photo request cannot clear or replace the latest retry file.
 - Commit: `feat: add recoverable AI failure states`.
+
+### 2026-07-17 — Task 4: notification schedule and preference domain
+
+- Role: Implementation agent.
+- Bounded task and acceptance criteria: Add only the pure notification schedule preset, normalization, and validation interfaces. Use exact safe preference fields; validate IANA zones and `HH:mm` times; cap schedules at seven unique ISO weekdays; and retain no profile, plan, nutrition, measurement, injury, or free-text data.
+- Result: Added a capability-independent `notifications.js` domain module. It prefills the specified two-to-six-day schedules with local 18:00 reminders, defaults quiet hours to 22:00–08:00, enables all four categories, and leaves notifications unpaused. Normalization returns a fresh allow-listed payload and removes all unknown nested and top-level data. Validation returns a normalized value plus field errors for malformed zones, schedules, quiet hours, categories, or pause state.
+- Files: `notifications.js`, `test/notifications.test.js`, `docs/release-1-worklog.md`.
+- TDD evidence: `node --test test/notifications.test.js` first failed with the expected `ERR_MODULE_NOT_FOUND` for `notifications.js`. After the minimal implementation, the same focused suite passed 7/7.
+- Verification: `npm test` passed 224/224. `git diff --check` passed with no whitespace errors.
+- Self-review: The module is pure and imports no platform/client code. Its output contains only timezone, schedule, quiet hours, the four boolean category controls, and paused state; it neither reads nor forwards health, profile, free-text, subscription, or endpoint data. No service worker, Firebase, API, deployment, or UI files changed.
+- Commit: `feat: define notification schedules and preferences` (SHA recorded in the task report).
+- Remaining scope: Notification client controls, anonymous API/storage, dispatcher, real-device verification, Firebase configuration, and deployment remain separate tasks and owner-gated where applicable.
 
 ## Required worklog entry format
 
