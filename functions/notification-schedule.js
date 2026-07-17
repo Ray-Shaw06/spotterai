@@ -84,6 +84,16 @@ function validDate(value, zone) {
   return parsed.isValid && parsed.toISODate() === value ? parsed.startOf("day") : null;
 }
 
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function exactKeys(value, expected) {
+  return isRecord(value)
+    && Object.keys(value).length === expected.length
+    && expected.every((key) => Object.prototype.hasOwnProperty.call(value, key));
+}
+
 function payload(category) {
   return {
     ...PAYLOADS[category],
@@ -93,25 +103,47 @@ function payload(category) {
   };
 }
 
-function validRecord(record) {
-  if (!record || typeof record !== "object" || Array.isArray(record)) return false;
-  if (record.enabled !== true || record.paused !== false) return false;
+export function isValidNotificationRecord(record) {
+  if (!isRecord(record)) return false;
+  if (typeof record.enabled !== "boolean" || typeof record.paused !== "boolean") return false;
   if (typeof record.timezone !== "string" || !IANAZone.isValidZone(record.timezone)) return false;
   if (!Array.isArray(record.schedule) || record.schedule.length < 1 || record.schedule.length > 7) return false;
   if (!record.schedule.every((row) => row
+    && exactKeys(row, ["weekday", "time"])
     && Number.isInteger(row.weekday)
     && row.weekday >= 1
     && row.weekday <= 7
     && timeParts(row.time))) return false;
-  if (!record.quietHours || !timeParts(record.quietHours.start) || !timeParts(record.quietHours.end)) return false;
-  if (!record.categories || typeof record.categories !== "object") return false;
-  return ["workout", "followUp", "streak", "recovery"]
-    .every((category) => typeof record.categories[category] === "boolean");
+  if (new Set(record.schedule.map((row) => row.weekday)).size !== record.schedule.length) return false;
+  if (!exactKeys(record.quietHours, ["start", "end"])
+    || !timeParts(record.quietHours.start)
+    || !timeParts(record.quietHours.end)) return false;
+  const categoryKeys = ["workout", "followUp", "streak", "recovery"];
+  if (!exactKeys(record.categories, categoryKeys)
+    || !categoryKeys.every((category) => typeof record.categories[category] === "boolean")) return false;
+  if (record.lastWorkoutCompletionDate !== null
+    && !validDate(record.lastWorkoutCompletionDate, record.timezone)) return false;
+  if (!Number.isSafeInteger(record.dailyDeliveryCount)
+    || record.dailyDeliveryCount < 0
+    || record.dailyDeliveryCount > 2) return false;
+  if (record.dailyDeliveryDate === null) {
+    if (record.dailyDeliveryCount !== 0) return false;
+  } else if (!validDate(record.dailyDeliveryDate, record.timezone) || record.dailyDeliveryCount < 1) {
+    return false;
+  }
+  if (!isRecord(record.lastSentByCategory)) return false;
+  const sentEntries = Object.entries(record.lastSentByCategory);
+  return sentEntries.every(([category, localDate]) => categoryKeys
+    .map((key) => key === "followUp" ? "follow_up" : key)
+    .includes(category) && Boolean(validDate(localDate, record.timezone)));
 }
 
 export function nextNotification(record, now) {
   const nowMillis = asMillis(now);
-  if (nowMillis === null || !validRecord(record)) return null;
+  if (nowMillis === null
+    || !isValidNotificationRecord(record)
+    || record.enabled !== true
+    || record.paused !== false) return null;
 
   const localNow = DateTime.fromMillis(nowMillis, { zone: record.timezone });
   if (!localNow.isValid) return null;
@@ -124,24 +156,26 @@ export function nextNotification(record, now) {
   const completionDate = validDate(record.lastWorkoutCompletionDate, record.timezone);
   for (const row of record.schedule) {
     const daysUntil = (row.weekday - localNow.weekday + 7) % 7;
-    for (const offset of [daysUntil, daysUntil + 7]) {
+    for (const offset of [daysUntil - 7, daysUntil, daysUntil + 7]) {
       const eventDate = localNow.startOf("day").plus({ days: offset });
       const localDate = eventDate.toISODate();
       if (completionDate?.toISODate() === localDate) continue;
 
       const workout = localTime(eventDate, row.time, record.timezone);
       if (!workout.isValid) continue;
-      if (record.categories.workout) {
-        candidates.push({ category: "workout", at: afterQuietHours(workout, record.quietHours, record.timezone), localDate });
+      const shiftedWorkout = afterQuietHours(workout, record.quietHours, record.timezone);
+      if (record.categories.workout && (offset >= 0 || shiftedWorkout.toISODate() === today)) {
+        candidates.push({ category: "workout", at: shiftedWorkout, localDate });
       }
 
       const previousDate = eventDate.minus({ days: 1 }).toISODate();
       const followCategory = completionDate?.toISODate() === previousDate ? "streak" : "follow_up";
       const followEnabled = followCategory === "streak" ? record.categories.streak : record.categories.followUp;
-      if (followEnabled) {
+      const shiftedFollow = afterQuietHours(workout.plus({ hours: 2 }), record.quietHours, record.timezone);
+      if (followEnabled && (offset >= 0 || shiftedFollow.toISODate() === today)) {
         candidates.push({
           category: followCategory,
-          at: afterQuietHours(workout.plus({ hours: 2 }), record.quietHours, record.timezone),
+          at: shiftedFollow,
           localDate,
         });
       }

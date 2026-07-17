@@ -185,6 +185,7 @@ export function createNotificationHandler({
         lastSentByCategory: {},
         leaseUntil: null,
         leaseId: null,
+        subscriptionRevision: 1,
         endpointFingerprint,
         authorizationExpiresAt,
         createdAt: currentDate,

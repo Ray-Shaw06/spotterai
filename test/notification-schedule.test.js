@@ -87,6 +87,38 @@ test("quiet hours that cross midnight roll a late reminder into the next morning
   assert.equal(new Date(result.dueAt).toISOString(), "2026-07-21T02:30:00.000Z");
 });
 
+test("the previous local day's quiet-shifted workout remains due a few minutes after delivery time", () => {
+  const result = nextNotification(record({
+    schedule: [{ weekday: 1, time: "23:00" }],
+    categories: { workout: true, followUp: false, streak: false, recovery: false },
+  }), Date.parse("2026-07-21T02:35:00.000Z"));
+
+  assert.equal(result.category, "workout");
+  assert.equal(result.localDate, "2026-07-20");
+  assert.equal(new Date(result.dueAt).toISOString(), "2026-07-21T02:30:00.000Z");
+});
+
+test("the previous local day's quiet-shifted follow-up preserves the workout event date", () => {
+  const result = nextNotification(record({
+    schedule: [{ weekday: 1, time: "23:00" }],
+    categories: { workout: true, followUp: true, streak: false, recovery: false },
+    lastSentByCategory: { workout: "2026-07-20" },
+  }), Date.parse("2026-07-21T02:35:00.000Z"));
+
+  assert.equal(result.category, "follow_up");
+  assert.equal(result.localDate, "2026-07-20");
+  assert.equal(new Date(result.dueAt).toISOString(), "2026-07-21T02:30:00.000Z");
+});
+
+test("previous-day recovery never resurrects an event whose shifted delivery date is already past", () => {
+  const result = nextNotification(record({
+    schedule: [{ weekday: 7, time: "23:00" }],
+    categories: { workout: true, followUp: false, streak: false, recovery: false },
+  }), Date.parse("2026-07-21T02:35:00.000Z"));
+
+  assert.equal(result.localDate, "2026-07-26");
+});
+
 test("DST spring-forward resolves a nonexistent local reminder deterministically", () => {
   const result = nextNotification(record({
     timezone: "America/New_York",
@@ -132,6 +164,31 @@ test("paused, disabled, category-disabled, and malformed records fail closed", (
   } }), now), null);
   assert.equal(nextNotification(record({ timezone: "Not/AZone" }), now), null);
   assert.equal(nextNotification(record({ schedule: [{ weekday: 9, time: "25:00" }] }), now), null);
+});
+
+test("duplicate schedule days and every malformed persisted state shape fail closed", () => {
+  const now = Date.parse("2026-07-20T12:30:00.000Z");
+  const malformed = [
+    { schedule: [{ weekday: 1, time: "18:00" }, { weekday: 1, time: "19:00" }] },
+    { schedule: [[1, "18:00"]] },
+    { lastWorkoutCompletionDate: "2026-02-30" },
+    { dailyDeliveryDate: "2026-02-30", dailyDeliveryCount: 1 },
+    { dailyDeliveryDate: null, dailyDeliveryCount: 1 },
+    { dailyDeliveryDate: "2026-07-20", dailyDeliveryCount: -1 },
+    { dailyDeliveryDate: "2026-07-20", dailyDeliveryCount: 3 },
+    { dailyDeliveryDate: "2026-07-20", dailyDeliveryCount: 1.5 },
+    { lastSentByCategory: [] },
+    { lastSentByCategory: { workout: "not-a-date" } },
+    { lastSentByCategory: { unknown: "2026-07-20" } },
+    { categories: [] },
+    { categories: { workout: true, followUp: true, streak: true } },
+    { quietHours: [] },
+    { quietHours: { start: "22:00", end: "24:00" } },
+  ];
+
+  for (const overrides of malformed) {
+    assert.equal(nextNotification(record(overrides), now), null, JSON.stringify(overrides));
+  }
 });
 
 test("a category already sent for its local date advances to the next eligible candidate", () => {

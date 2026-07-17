@@ -30,7 +30,7 @@ export const dispatchNotifications = onSchedule({
   return dispatchDue({
     db: getFirestore(notificationApp()),
     webpush,
-    now: new Date(),
+    now: () => new Date(),
     leaseId: randomUUID(),
     logger,
   });

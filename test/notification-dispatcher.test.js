@@ -1,12 +1,27 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { createECDH } from "node:crypto";
+import { parse as legacyParse } from "node:url";
 import { dispatchDue } from "../functions/dispatcher.js";
 
 const NOW = new Date("2026-07-20T12:30:00.000Z");
 const AUTH_EXPIRES = new Date("2027-01-01T00:00:00.000Z");
-const DEVICE_ID = "device-sensitive-id";
-const FINGERPRINT = "endpoint-sensitive-fingerprint";
+const canonical32 = (byte) => Buffer.alloc(32, byte).toString("base64url");
+const DEVICE_ID = canonical32(21);
+const FINGERPRINT = canonical32(22);
+const AUTH = Buffer.alloc(16, 23).toString("base64url");
+function publicKey(scalar) {
+  const ecdh = createECDH("prime256v1");
+  const privateKey = Buffer.alloc(32);
+  privateKey[31] = scalar;
+  ecdh.setPrivateKey(privateKey);
+  return ecdh.getPublicKey(undefined, "uncompressed").toString("base64url");
+}
+
+const P256DH = publicKey(1);
+const P256DH_REFRESHED = publicKey(2);
+const AUTH_REFRESHED = Buffer.alloc(16, 24).toString("base64url");
 
 function clone(value) {
   return value === undefined ? undefined : structuredClone(value);
@@ -19,7 +34,7 @@ function millis(value) {
   return value;
 }
 
-function createFakeFirestore(seed = {}) {
+function createFakeFirestore(seed = {}, behavior = {}) {
   const documents = new Map(Object.entries(seed).map(([path, value]) => [path, clone(value)]));
   const operations = [];
   const queryLimits = [];
@@ -50,6 +65,9 @@ function createFakeFirestore(seed = {}) {
         return query(collectionName, filters, ordering, value);
       },
       async get() {
+        if (behavior.failQuery?.({ collectionName, filters, ordering, maximum })) {
+          throw new Error("injected query failure");
+        }
         let rows = [...documents.entries()]
           .filter(([path]) => path.startsWith(`${collectionName}/`))
           .map(([path, value]) => {
@@ -89,6 +107,7 @@ function createFakeFirestore(seed = {}) {
             return snapshot(ref, documents.get(ref.path));
           },
           update(ref, patch) {
+            if (behavior.failUpdate?.(ref, patch)) throw new Error("injected update failure");
             operations.push(["update", ref.path, clone(patch)]);
             pending.push(() => {
               if (!documents.has(ref.path)) throw new Error("missing document");
@@ -104,6 +123,7 @@ function createFakeFirestore(seed = {}) {
             });
           },
           delete(ref) {
+            if (behavior.failDelete?.(ref)) throw new Error("injected delete failure");
             operations.push(["delete", ref.path]);
             pending.push(() => documents.delete(ref.path));
           },
@@ -123,7 +143,7 @@ function createFakeFirestore(seed = {}) {
 function device(overrides = {}) {
   return {
     endpoint: "https://fcm.googleapis.com/fcm/send/provider-token",
-    keys: { p256dh: "private-p256dh", auth: "private-auth" },
+    keys: { p256dh: P256DH, auth: AUTH },
     expirationTime: null,
     endpointFingerprint: FINGERPRINT,
     authorizationExpiresAt: AUTH_EXPIRES,
@@ -140,6 +160,7 @@ function device(overrides = {}) {
     lastSentByCategory: {},
     leaseUntil: null,
     leaseId: null,
+    subscriptionRevision: 1,
     createdAt: new Date("2026-07-01T00:00:00.000Z"),
     updatedAt: NOW,
     ...overrides,
@@ -165,6 +186,7 @@ function sender(result = { statusCode: 201 }) {
     async sendNotification(...args) {
       calls.push(clone(args));
       if (result instanceof Error) throw result;
+      if (typeof result === "function") return result(...args);
       return clone(result);
     },
   };
@@ -198,6 +220,25 @@ test("a device at its local daily cap is deferred so it cannot starve the due qu
   assert.equal(fake.documents.get(`notificationDevices/${DEVICE_ID}`).nextNotificationAt.toISOString(), "2026-07-20T18:30:00.000Z");
 });
 
+test("paused and all-category-disabled records are parked without being quarantined or starving due work", async () => {
+  const records = [
+    device({ paused: true }),
+    device({ categories: { workout: false, followUp: false, streak: false, recovery: false } }),
+  ];
+  for (const [index, record] of records.entries()) {
+    const fake = createFakeFirestore(seedFor(record));
+    const webpush = sender();
+
+    const result = await dispatchDue({ db: fake.firestore, webpush, now: NOW, leaseId: `parked-${index}` });
+
+    assert.equal(result.skipped, 1);
+    assert.equal(webpush.calls.length, 0);
+    const stored = fake.documents.get(`notificationDevices/${DEVICE_ID}`);
+    assert.equal(stored.enabled, true);
+    assert.equal(stored.nextNotificationAt, null);
+  }
+});
+
 test("201 and 204 atomically finalize delivery state and advance the next event", async () => {
   for (const statusCode of [201, 204]) {
     const fake = createFakeFirestore(seedFor());
@@ -222,6 +263,46 @@ test("201 and 204 atomically finalize delivery state and advance the next event"
     assert.equal(stored.leaseUntil, null);
     assert.ok(stored.nextNotificationAt > NOW);
   }
+});
+
+test("a previous-local-day quiet-shifted workout is sent exactly once with its original activity date", async () => {
+  const tuesdayMorning = new Date("2026-07-21T02:35:00.000Z");
+  const record = device({
+    schedule: [{ weekday: 1, time: "23:00" }],
+    categories: { workout: true, followUp: false, streak: false, recovery: false },
+    nextNotificationAt: tuesdayMorning,
+    updatedAt: tuesdayMorning,
+  });
+  const fake = createFakeFirestore(seedFor(record));
+  const webpush = sender();
+
+  const first = await dispatchDue({ db: fake.firestore, webpush, now: tuesdayMorning, leaseId: "cross-midnight-workout" });
+  const second = await dispatchDue({ db: fake.firestore, webpush, now: tuesdayMorning, leaseId: "cross-midnight-workout-second" });
+
+  assert.equal(first.sent, 1);
+  assert.equal(second.sent, 0);
+  assert.equal(webpush.calls.length, 1);
+  assert.equal(fake.documents.get(`notificationDevices/${DEVICE_ID}`).lastSentByCategory.workout, "2026-07-20");
+});
+
+test("a previous-local-day quiet-shifted follow-up is sent exactly once with its original activity date", async () => {
+  const tuesdayMorning = new Date("2026-07-21T02:35:00.000Z");
+  const record = device({
+    schedule: [{ weekday: 1, time: "21:00" }],
+    categories: { workout: false, followUp: true, streak: false, recovery: false },
+    nextNotificationAt: tuesdayMorning,
+    updatedAt: tuesdayMorning,
+  });
+  const fake = createFakeFirestore(seedFor(record));
+  const webpush = sender();
+
+  const first = await dispatchDue({ db: fake.firestore, webpush, now: tuesdayMorning, leaseId: "cross-midnight-follow-up" });
+  const second = await dispatchDue({ db: fake.firestore, webpush, now: tuesdayMorning, leaseId: "cross-midnight-follow-up-second" });
+
+  assert.equal(first.sent, 1);
+  assert.equal(second.sent, 0);
+  assert.equal(webpush.calls.length, 1);
+  assert.equal(fake.documents.get(`notificationDevices/${DEVICE_ID}`).lastSentByCategory.follow_up, "2026-07-20");
 });
 
 test("concurrent dispatchers cannot both claim or send one event", async () => {
@@ -269,8 +350,11 @@ test("404 and 410 delete the device plus only its matching endpoint index", asyn
   }
 });
 
-test("429, 5xx, and network failures release only the owned lease without advancing", async () => {
-  const failures = [{ statusCode: 429 }, { statusCode: 503 }, Object.assign(new Error("private endpoint text"), { code: "ECONNRESET" })];
+test("non-terminal push responses and network failures release only the owned lease without advancing", async () => {
+  const failures = [
+    ...[400, 401, 403, 413, 429, 500, 503].map((statusCode) => ({ statusCode })),
+    Object.assign(new Error("private endpoint text"), { code: "ECONNRESET" }),
+  ];
   for (const failure of failures) {
     const fake = createFakeFirestore(seedFor());
     const before = fake.documents.get(`notificationDevices/${DEVICE_ID}`).nextNotificationAt;
@@ -283,6 +367,49 @@ test("429, 5xx, and network failures release only the owned lease without advanc
     assert.equal(stored.leaseId, null);
     assert.equal(stored.leaseUntil, null);
   }
+});
+
+test("a refreshed subscription cannot be deleted by the old subscription's terminal response", async () => {
+  const fake = createFakeFirestore(seedFor());
+  const webpush = sender(() => {
+    const path = `notificationDevices/${DEVICE_ID}`;
+    const current = fake.documents.get(path);
+    fake.documents.set(path, {
+      ...current,
+      keys: { p256dh: P256DH_REFRESHED, auth: AUTH_REFRESHED },
+      subscriptionRevision: 2,
+    });
+    return { statusCode: 410 };
+  });
+
+  const result = await dispatchDue({ db: fake.firestore, webpush, now: NOW, leaseId: "refresh-terminal-race" });
+
+  assert.deepEqual(result, { claimed: 1, sent: 0, expired: 0, failed: 1, skipped: 0 });
+  const stored = fake.documents.get(`notificationDevices/${DEVICE_ID}`);
+  assert.equal(stored.subscriptionRevision, 2);
+  assert.deepEqual(stored.keys, { p256dh: P256DH_REFRESHED, auth: AUTH_REFRESHED });
+});
+
+test("a refreshed subscription cannot be finalized by the old subscription's accepted response", async () => {
+  const fake = createFakeFirestore(seedFor());
+  const webpush = sender(() => {
+    const path = `notificationDevices/${DEVICE_ID}`;
+    const current = fake.documents.get(path);
+    fake.documents.set(path, {
+      ...current,
+      keys: { p256dh: P256DH_REFRESHED, auth: AUTH_REFRESHED },
+      subscriptionRevision: 2,
+    });
+    return { statusCode: 201 };
+  });
+
+  const result = await dispatchDue({ db: fake.firestore, webpush, now: NOW, leaseId: "refresh-success-race" });
+
+  assert.deepEqual(result, { claimed: 1, sent: 0, expired: 0, failed: 1, skipped: 0 });
+  const stored = fake.documents.get(`notificationDevices/${DEVICE_ID}`);
+  assert.equal(stored.subscriptionRevision, 2);
+  assert.equal(stored.dailyDeliveryCount, 0);
+  assert.deepEqual(stored.lastSentByCategory, {});
 });
 
 test("expired authorization is removed before push with only a still-matching index", async () => {
@@ -300,11 +427,12 @@ test("expired authorization is removed before push with only a still-matching in
 
 test("stale device cleanup preserves an endpoint index that maps to a newer device", async () => {
   const stale = device({ authorizationExpiresAt: new Date("2026-07-20T12:29:59.000Z") });
-  const newerId = "newer-device";
+  const newerId = canonical32(24);
+  const newerFingerprint = canonical32(25);
   const fake = createFakeFirestore({
     [`notificationDevices/${DEVICE_ID}`]: stale,
     [`notificationDevices/${newerId}`]: device({
-      endpointFingerprint: "newer-fingerprint",
+      endpointFingerprint: newerFingerprint,
       nextNotificationAt: new Date("2026-07-21T12:30:00.000Z"),
     }),
     [`notificationEndpointIndex/${FINGERPRINT}`]: {
@@ -327,8 +455,8 @@ test("only exact installed-device push-provider hosts may reach web-push", async
     "https://updates.push.services.mozilla.com/wpush/v2/subscription",
   ];
   for (const [index, endpoint] of allowed.entries()) {
-    const id = `allowed-${index}`;
-    const fingerprint = `allowed-fingerprint-${index}`;
+    const id = canonical32(30 + index);
+    const fingerprint = canonical32(40 + index);
     const fake = createFakeFirestore(seedFor(device({ endpoint, endpointFingerprint: fingerprint }), id));
     const webpush = sender();
     const result = await dispatchDue({ db: fake.firestore, webpush, now: NOW, leaseId: `allowed-lease-${index}` });
@@ -337,7 +465,45 @@ test("only exact installed-device push-provider hosts may reach web-push", async
   }
 });
 
-test("IP, private, link-local, internal, unsupported, fragment, credential, and nondefault-port endpoints make zero outbound calls", async () => {
+test("the endpoint is canonicalized once and the legacy parser agrees with the outbound hostname", async () => {
+  const rawEndpoint = "https://FCM.GOOGLEAPIS.COM:443/fcm/send/%7Eprovider-token";
+  const canonicalEndpoint = new URL(rawEndpoint).href;
+  const fake = createFakeFirestore(seedFor(device({ endpoint: rawEndpoint })));
+  const webpush = sender((subscription) => {
+    assert.equal(subscription.endpoint, canonicalEndpoint);
+    assert.equal(legacyParse(subscription.endpoint).hostname, "fcm.googleapis.com");
+    return { statusCode: 201 };
+  });
+
+  const result = await dispatchDue({ db: fake.firestore, webpush, now: NOW, leaseId: "canonical-endpoint" });
+
+  assert.equal(result.sent, 1);
+  assert.equal(webpush.calls.length, 1);
+});
+
+test("percent-encoded push authorities are rejected before parser normalization", async () => {
+  const rejected = [
+    "https://fcm%2Egoogleapis.com/fcm/send/x",
+    "https://fcm.googleapis%2Ecom/fcm/send/x",
+    "https://%66cm.googleapis.com/fcm/send/x",
+  ];
+  for (const [index, endpoint] of rejected.entries()) {
+    const id = canonical32(184 + index);
+    const fingerprint = canonical32(188 + index);
+    const fake = createFakeFirestore(seedFor(device({ endpoint, endpointFingerprint: fingerprint }), id));
+    const webpush = sender();
+
+    const result = await dispatchDue({ db: fake.firestore, webpush, now: NOW, leaseId: `encoded-authority-${index}` });
+
+    assert.equal(webpush.calls.length, 0, endpoint);
+    assert.equal(result.expired, 0, endpoint);
+    const stored = fake.documents.get(`notificationDevices/${id}`);
+    assert.equal(stored.enabled, false, endpoint);
+    assert.equal(stored.nextNotificationAt, null, endpoint);
+  }
+});
+
+test("IP, private, link-local, internal, unsupported, fragment, credential, and nondefault-port endpoints are quarantined", async () => {
   const rejected = [
     "https://127.0.0.1/push",
     "https://[::1]/push",
@@ -354,41 +520,48 @@ test("IP, private, link-local, internal, unsupported, fragment, credential, and 
     "https://fcm.googleapis.com:444/fcm/send/x",
     "https://fcm.googleapis.com.evil.example/fcm/send/x",
     "https://web.push.apple.com./subscription",
+    "https:///fcm.googleapis.com/fcm/send/x",
   ];
   for (const [index, endpoint] of rejected.entries()) {
-    const id = `rejected-${index}`;
-    const fingerprint = `rejected-fingerprint-${index}`;
+    const id = canonical32(50 + index);
+    const fingerprint = canonical32(70 + index);
     const fake = createFakeFirestore(seedFor(device({ endpoint, endpointFingerprint: fingerprint }), id));
     const webpush = sender();
     const result = await dispatchDue({ db: fake.firestore, webpush, now: NOW, leaseId: `rejected-lease-${index}` });
     assert.equal(webpush.calls.length, 0, endpoint);
-    assert.equal(result.expired, 1, endpoint);
-    assert.equal(fake.documents.has(`notificationDevices/${id}`), false, endpoint);
+    assert.equal(result.expired, 0, endpoint);
+    const stored = fake.documents.get(`notificationDevices/${id}`);
+    assert.equal(stored.enabled, false, endpoint);
+    assert.equal(stored.nextNotificationAt, null, endpoint);
   }
 });
 
-test("a provider redirect response is invalidated and never followed", async () => {
-  const fake = createFakeFirestore(seedFor());
-  const webpush = sender({ statusCode: 302, headers: { location: "http://127.0.0.1/private" } });
+test("reviewed 3xx provider responses are invalidated and never followed", async () => {
+  for (const statusCode of [300, 301, 302, 303, 307, 308, 399]) {
+    const fake = createFakeFirestore(seedFor());
+    const webpush = sender({ statusCode, headers: { location: "http://127.0.0.1/private" } });
 
-  const result = await dispatchDue({ db: fake.firestore, webpush, now: NOW, leaseId: "redirect-lease" });
+    const result = await dispatchDue({ db: fake.firestore, webpush, now: NOW, leaseId: `redirect-lease-${statusCode}` });
 
-  assert.equal(webpush.calls.length, 1);
-  assert.equal(result.expired, 1);
-  assert.equal(fake.documents.has(`notificationDevices/${DEVICE_ID}`), false);
+    assert.equal(webpush.calls.length, 1);
+    assert.equal(result.expired, 1);
+    assert.equal(fake.documents.has(`notificationDevices/${DEVICE_ID}`), false);
+  }
 });
 
 test("expired-device, orphan-index, and old-counter maintenance is bounded", async () => {
   const seed = {};
   const old = new Date("2026-07-01T00:00:00.000Z");
   for (let index = 0; index < 60; index += 1) {
-    seed[`notificationDevices/expired-${String(index).padStart(2, "0")}`] = device({
-      endpointFingerprint: `expired-fingerprint-${String(index).padStart(2, "0")}`,
+    const expiredId = canonical32(90 + index);
+    const expiredFingerprint = canonical32(150 + index);
+    seed[`notificationDevices/${expiredId}`] = device({
+      endpointFingerprint: expiredFingerprint,
       authorizationExpiresAt: old,
       nextNotificationAt: new Date("2026-07-25T00:00:00.000Z"),
     });
-    seed[`notificationEndpointIndex/orphan-${String(index).padStart(2, "0")}`] = {
-      deviceId: `missing-${index}`,
+    seed[`notificationEndpointIndex/${canonical32((index + 1) % 60)}`] = {
+      deviceId: canonical32(210 + (index % 40)),
       authorizationExpiresAt: AUTH_EXPIRES,
       updatedAt: old,
     };
@@ -415,9 +588,8 @@ test("bounded index maintenance rotates past healthy rows instead of starving ol
   const seed = {};
   const old = new Date("2026-07-01T00:00:00.000Z");
   for (let index = 0; index < 50; index += 1) {
-    const suffix = String(index).padStart(2, "0");
-    const id = `active-device-${suffix}`;
-    const fingerprint = `a-active-index-${suffix}`;
+    const id = canonical32(30 + index);
+    const fingerprint = canonical32(130 + index);
     seed[`notificationDevices/${id}`] = device({
       endpointFingerprint: fingerprint,
       nextNotificationAt: new Date("2026-07-25T00:00:00.000Z"),
@@ -429,8 +601,9 @@ test("bounded index maintenance rotates past healthy rows instead of starving ol
       updatedAt: old,
     };
   }
-  seed["notificationEndpointIndex/z-old-orphan"] = {
-    deviceId: "missing-device",
+  const orphanFingerprint = canonical32(250);
+  seed[`notificationEndpointIndex/${orphanFingerprint}`] = {
+    deviceId: canonical32(249),
     authorizationExpiresAt: AUTH_EXPIRES,
     updatedAt: old,
   };
@@ -439,7 +612,222 @@ test("bounded index maintenance rotates past healthy rows instead of starving ol
   await dispatchDue({ db: fake.firestore, webpush: sender(), now: NOW, leaseId: "rotate-first" });
   await dispatchDue({ db: fake.firestore, webpush: sender(), now: NOW, leaseId: "rotate-second" });
 
-  assert.equal(fake.documents.has("notificationEndpointIndex/z-old-orphan"), false);
+  assert.equal(fake.documents.has(`notificationEndpointIndex/${orphanFingerprint}`), false);
+});
+
+test("an endpoint index is healthy only when its document id matches the device fingerprint", async () => {
+  const old = new Date("2026-07-01T00:00:00.000Z");
+  const mismatchedFingerprint = canonical32(248);
+  const fake = createFakeFirestore({
+    ...seedFor(device({ nextNotificationAt: new Date("2026-07-25T00:00:00.000Z"), updatedAt: old })),
+    [`notificationEndpointIndex/${mismatchedFingerprint}`]: {
+      deviceId: DEVICE_ID,
+      authorizationExpiresAt: AUTH_EXPIRES,
+      updatedAt: old,
+    },
+  });
+
+  await dispatchDue({ db: fake.firestore, webpush: sender(), now: NOW, leaseId: "mismatched-index" });
+
+  assert.equal(fake.documents.has(`notificationEndpointIndex/${mismatchedFingerprint}`), false);
+  assert.equal(fake.documents.has(`notificationDevices/${DEVICE_ID}`), true);
+});
+
+test("malformed stored device state is quarantined without any outbound request", async () => {
+  const old = new Date("2026-07-01T00:00:00.000Z");
+  const offCurveKey = Buffer.concat([Buffer.from([4]), Buffer.alloc(64)]).toString("base64url");
+  const cases = [
+    { name: "document id", id: "not-canonical", overrides: {} },
+    { name: "fingerprint", overrides: { endpointFingerprint: "not-canonical" } },
+    { name: "P-256 key", overrides: { keys: { p256dh: offCurveKey, auth: AUTH } } },
+    { name: "auth key", overrides: { keys: { p256dh: P256DH, auth: "short" } } },
+    { name: "expiration", overrides: { expirationTime: -1 } },
+    { name: "revision", overrides: { subscriptionRevision: 0 } },
+    { name: "authorization date", overrides: { authorizationExpiresAt: "tomorrow" } },
+    { name: "created date", overrides: { createdAt: "yesterday" } },
+    { name: "updated date", overrides: { updatedAt: "today" } },
+    { name: "next date", overrides: { nextNotificationAt: "soon" } },
+    { name: "lease pair", overrides: { leaseId: "orphaned-lease", leaseUntil: null } },
+    {
+      name: "scheduler state",
+      overrides: { schedule: [{ weekday: 1, time: "18:00" }, { weekday: 1, time: "19:00" }] },
+    },
+  ];
+
+  for (const [index, entry] of cases.entries()) {
+    const id = entry.id ?? canonical32(10 + index);
+    const fingerprint = entry.overrides.endpointFingerprint ?? canonical32(200 + index);
+    const record = device({ endpointFingerprint: fingerprint, updatedAt: old, ...entry.overrides });
+    const fake = createFakeFirestore(seedFor(record, id));
+    const webpush = sender();
+
+    await dispatchDue({ db: fake.firestore, webpush, now: NOW, leaseId: `quarantine-${index}` });
+
+    assert.equal(webpush.calls.length, 0, entry.name);
+    const stored = fake.documents.get(`notificationDevices/${id}`);
+    assert.ok(stored, entry.name);
+    assert.equal(stored.enabled, false, entry.name);
+    assert.equal(stored.nextNotificationAt, null, entry.name);
+    assert.equal(stored.leaseId, null, entry.name);
+    assert.equal(stored.leaseUntil, null, entry.name);
+  }
+});
+
+test("transient finalize failures are retried after an accepted push", async () => {
+  let failuresRemaining = 2;
+  const fake = createFakeFirestore(seedFor(), {
+    failUpdate(_ref, patch) {
+      if (Object.hasOwn(patch, "dailyDeliveryDate") && failuresRemaining > 0) {
+        failuresRemaining -= 1;
+        return true;
+      }
+      return false;
+    },
+  });
+
+  const result = await dispatchDue({ db: fake.firestore, webpush: sender(), now: NOW, leaseId: "finalize-retry" });
+
+  assert.deepEqual(result, { claimed: 1, sent: 1, expired: 0, failed: 0, skipped: 0 });
+  assert.equal(failuresRemaining, 0);
+  assert.equal(fake.documents.get(`notificationDevices/${DEVICE_ID}`).dailyDeliveryCount, 1);
+});
+
+test("an ambiguously accepted push keeps its lease when finalize retries are exhausted", async () => {
+  let finalizeAttempts = 0;
+  const fake = createFakeFirestore(seedFor(), {
+    failUpdate(_ref, patch) {
+      if (Object.hasOwn(patch, "dailyDeliveryDate")) {
+        finalizeAttempts += 1;
+        return true;
+      }
+      return false;
+    },
+  });
+
+  const result = await dispatchDue({ db: fake.firestore, webpush: sender(), now: NOW, leaseId: "ambiguous-accept" });
+
+  assert.deepEqual(result, { claimed: 1, sent: 0, expired: 0, failed: 1, skipped: 0 });
+  assert.equal(finalizeAttempts, 3);
+  const stored = fake.documents.get(`notificationDevices/${DEVICE_ID}`);
+  assert.equal(stored.leaseId, "ambiguous-accept");
+  assert.ok(stored.leaseUntil > NOW);
+});
+
+test("maintenance failures are contained and later due records still run", async () => {
+  const fake = createFakeFirestore(seedFor(), {
+    failQuery({ collectionName }) {
+      return collectionName === "notificationEndpointIndex";
+    },
+  });
+  const webpush = sender();
+
+  const result = await dispatchDue({ db: fake.firestore, webpush, now: NOW, leaseId: "maintenance-fail-stop" });
+
+  assert.equal(result.sent, 1);
+  assert.equal(result.failed, 1);
+  assert.equal(webpush.calls.length, 1);
+});
+
+test("one cleanup transaction failure does not stop a later due record", async () => {
+  const expiredId = canonical32(3);
+  const dueId = canonical32(4);
+  const expiredFingerprint = canonical32(9);
+  const dueFingerprint = canonical32(11);
+  let injectFailure = true;
+  const fake = createFakeFirestore({
+    ...seedFor(device({
+      endpointFingerprint: expiredFingerprint,
+      authorizationExpiresAt: new Date(NOW.getTime() - 1),
+      nextNotificationAt: new Date(NOW.getTime() + 86_400_000),
+    }), expiredId),
+    ...seedFor(device({ endpointFingerprint: dueFingerprint }), dueId),
+  }, {
+    failDelete(ref) {
+      if (injectFailure && ref.id === expiredId) {
+        injectFailure = false;
+        return true;
+      }
+      return false;
+    },
+  });
+  const webpush = sender();
+
+  const result = await dispatchDue({ db: fake.firestore, webpush, now: NOW, leaseId: "cleanup-item-fail-stop" });
+
+  assert.equal(result.sent, 1);
+  assert.equal(result.failed, 1);
+  assert.equal(webpush.calls.length, 1);
+  assert.equal(fake.documents.has(`notificationDevices/${expiredId}`), true);
+});
+
+test("one record's claim failure does not stop a later due record", async () => {
+  const firstId = canonical32(5);
+  const secondId = canonical32(6);
+  const firstFingerprint = canonical32(7);
+  const secondFingerprint = canonical32(8);
+  const fake = createFakeFirestore({
+    ...seedFor(device({ endpointFingerprint: firstFingerprint }), firstId),
+    ...seedFor(device({ endpointFingerprint: secondFingerprint }), secondId),
+  }, {
+    failUpdate(ref, patch) {
+      return ref.id === firstId && patch.leaseId === "continue-after-claim-failure";
+    },
+  });
+  const webpush = sender();
+
+  const result = await dispatchDue({
+    db: fake.firestore,
+    webpush,
+    now: NOW,
+    leaseId: "continue-after-claim-failure",
+  });
+
+  assert.equal(result.sent, 1);
+  assert.equal(result.failed, 1);
+  assert.equal(webpush.calls.length, 1);
+  assert.equal(fake.documents.get(`notificationDevices/${secondId}`).dailyDeliveryCount, 1);
+});
+
+test("a throwing logger cannot fail an otherwise completed dispatch", async () => {
+  const fake = createFakeFirestore(seedFor());
+  const logger = { info() { throw new Error("logger unavailable"); } };
+
+  const result = await dispatchDue({ db: fake.firestore, webpush: sender(), now: NOW, leaseId: "safe-logger", logger });
+
+  assert.deepEqual(result, { claimed: 1, sent: 1, expired: 0, failed: 0, skipped: 0 });
+});
+
+test("the dispatcher accepts an injected clock function and reads it beyond startup", async () => {
+  let reads = 0;
+  const clock = () => {
+    reads += 1;
+    return new Date(NOW.getTime() + reads);
+  };
+  const fake = createFakeFirestore(seedFor());
+
+  const result = await dispatchDue({ db: fake.firestore, webpush: sender(), now: clock, leaseId: "clock-function" });
+
+  assert.equal(result.sent, 1);
+  assert.ok(reads >= 3);
+});
+
+test("authorization is rechecked with the fresh clock after a claim and before outbound push", async () => {
+  let reads = 0;
+  const clock = () => {
+    reads += 1;
+    return new Date(NOW.getTime() + reads);
+  };
+  const fake = createFakeFirestore(seedFor(device({
+    authorizationExpiresAt: new Date(NOW.getTime() + 7),
+  })));
+  const webpush = sender();
+
+  const result = await dispatchDue({ db: fake.firestore, webpush, now: clock, leaseId: "fresh-auth-clock" });
+
+  assert.equal(result.claimed, 1);
+  assert.equal(result.expired, 1);
+  assert.equal(webpush.calls.length, 0);
+  assert.ok(reads >= 7);
 });
 
 test("aggregate operational logs contain no endpoint, key, document, payload, or activity-date data", async () => {
@@ -508,6 +896,7 @@ test("the scheduled export is Node 22, five-minute us-central1, and secret-backe
   assert.match(source, /schedule:\s*"every 5 minutes"/);
   assert.match(source, /timeZone:\s*"UTC"/);
   assert.match(source, /region:\s*"us-central1"/);
+  assert.match(source, /now:\s*\(\)\s*=>\s*new Date\(\)/);
   for (const secret of ["WEB_PUSH_PRIVATE_KEY", "WEB_PUSH_SUBJECT", "WEB_PUSH_PUBLIC_KEY"]) {
     assert.match(source, new RegExp(`secrets:[\\s\\S]*${secret}`));
   }

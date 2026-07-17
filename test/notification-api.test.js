@@ -245,6 +245,7 @@ test("POST registers the exact minimal record and passes only server-owned cap/d
     lastSentByCategory: {},
     leaseUntil: null,
     leaseId: null,
+    subscriptionRevision: 1,
     endpointFingerprint,
     authorizationExpiresAt: AUTHORIZATION_EXPIRES_AT,
     createdAt: NOW,
@@ -298,6 +299,7 @@ test("overposted health, identity, fingerprint, expiry, and scheduler fields nev
     endpointFingerprint: "attacker-fingerprint",
     authorizationExpiresAt: "attacker-expiry",
     nextNotificationAt: "attacker-controlled",
+    subscriptionRevision: 999,
     subscription: {
       ...SUBSCRIPTION,
       email: "private@example.com",
@@ -315,6 +317,7 @@ test("overposted health, identity, fingerprint, expiry, and scheduler fields nev
   const [requestedId, created] = store.calls.create[0];
   assert.equal(requestedId, DEVICE_ID);
   assert.notEqual(created.endpointFingerprint, "attacker-fingerprint");
+  assert.equal(created.subscriptionRevision, 1);
   assert.deepEqual(created.authorizationExpiresAt, AUTHORIZATION_EXPIRES_AT);
   assert.equal("weight" in created, false);
   assert.equal("plan" in created, false);
@@ -329,6 +332,9 @@ test("POST rejects invalid endpoints, off-curve encryption keys, expiration valu
   const invalidBodies = [
     { subscription: { ...SUBSCRIPTION, endpoint: "http://push.example/subscription" }, preferences: PREFERENCES },
     { subscription: { ...SUBSCRIPTION, endpoint: `https://push.example/${"x".repeat(2049)}` }, preferences: PREFERENCES },
+    { subscription: { ...SUBSCRIPTION, endpoint: "https://push%2Eexample/subscription" }, preferences: PREFERENCES },
+    { subscription: { ...SUBSCRIPTION, endpoint: "https://push.example%2E/subscription" }, preferences: PREFERENCES },
+    { subscription: { ...SUBSCRIPTION, endpoint: "https://%70ush.example/subscription" }, preferences: PREFERENCES },
     { subscription: { ...SUBSCRIPTION, keys: { ...SUBSCRIPTION.keys, p256dh: INVALID_POINT } }, preferences: PREFERENCES },
     { subscription: { ...SUBSCRIPTION, keys: { ...SUBSCRIPTION.keys, p256dh: "contains+padding=" } }, preferences: PREFERENCES },
     { subscription: { ...SUBSCRIPTION, keys: { ...SUBSCRIPTION.keys, auth: "tiny" } }, preferences: PREFERENCES },

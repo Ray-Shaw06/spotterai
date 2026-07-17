@@ -95,6 +95,7 @@ function registrationRecord(overrides = {}) {
     lastSentByCategory: {},
     leaseUntil: null,
     leaseId: null,
+    subscriptionRevision: 1,
     endpointFingerprint: FINGERPRINT,
     authorizationExpiresAt: EXPIRES,
     createdAt: NOW,
@@ -177,9 +178,12 @@ test("active endpoint refresh consumes quota and changes only registration-owned
   ]) {
     assert.deepEqual(refreshed[field], registrationRecord()[field], field);
   }
+  assert.equal(refreshed.subscriptionRevision, 2);
+  assert.equal(refreshed.leaseUntil, null);
+  assert.equal(refreshed.leaseId, null);
   for (const field of [
     "enabled", "lastWorkoutCompletionDate", "dailyDeliveryDate", "dailyDeliveryCount",
-    "lastSentByCategory", "leaseUntil", "leaseId", "createdAt", "endpointFingerprint",
+    "lastSentByCategory", "createdAt", "endpointFingerprint",
     "dispatcherOwnedFutureField",
   ]) {
     assert.deepEqual(refreshed[field], existingRecord[field], field);
@@ -192,6 +196,31 @@ test("active endpoint refresh consumes quota and changes only registration-owned
     updatedAt: NOW,
   });
   assert.equal(fake.operations.some(([operation, path]) => operation === "create" && path === `notificationDevices/${DEVICE_ID}`), false);
+});
+
+test("active refresh fails closed when its server-owned revision cannot be incremented safely", async () => {
+  const fake = createFakeFirestore({
+    [`notificationDevices/${OTHER_DEVICE_ID}`]: registrationRecord({
+      subscriptionRevision: Number.MAX_SAFE_INTEGER,
+      createdAt: OLD,
+      updatedAt: OLD,
+    }),
+    [`notificationEndpointIndex/${FINGERPRINT}`]: {
+      deviceId: OTHER_DEVICE_ID,
+      authorizationExpiresAt: EXPIRES,
+      createdAt: OLD,
+      updatedAt: OLD,
+    },
+  });
+  const before = clone(Object.fromEntries(fake.documents));
+  const store = createNotificationStore(fake.firestore);
+
+  await assert.rejects(
+    () => store.create(DEVICE_ID, registrationRecord(), registrationOptions()),
+    (error) => error?.name === "RegistrationUnavailableError",
+  );
+
+  assert.deepEqual(Object.fromEntries(fake.documents), before);
 });
 
 test("active endpoint refresh checks the durable cap before every mutation", async () => {
