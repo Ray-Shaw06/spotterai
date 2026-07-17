@@ -12,7 +12,7 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | Release branch | `codex/release-1`, created from the approved Release 1 baseline |
 | Design | `docs/superpowers/specs/2026-07-17-release-1-design.md` |
 | Implementation plan | `docs/superpowers/plans/2026-07-17-release-1.md` |
-| Current phase | Tasks 1–5 implemented; Task 5 review fixes complete and independent re-review pending; remaining Release 1 tasks/final integration verification pending |
+| Current phase | Tasks 1–6 implemented; Task 6 self-verification complete and independent review pending; Tasks 7–8/final integration verification pending |
 
 ## Gate status
 
@@ -27,8 +27,8 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | Funnel analytics | Complete | Task 2 committed: privacy-safe allow-listed Vercel virtual pageviews |
 | AI retry and recovery states | Complete | Task 3 committed: bounded client timeouts, safe recovery copy, saved-plan retry, and in-memory photo retry |
 | Web Push client and preferences | In progress | Task 4 defines and tests the pure, privacy-safe schedule and preference domain; client controls remain pending |
-| Notification API and dispatcher | In progress | Task 5 review fixes add default-off readiness, same-origin/raw-body controls, durable registration cap, and endpoint dedup; dispatcher and Firestore rules remain Task 6 |
-| Independent reviews resolved | In progress | Per-task reviews for Tasks 1–4 are resolved; Task 5 re-review and final integration review remain pending |
+| Notification API and dispatcher | Complete locally | Task 5 provides the default-off anonymous API/storage boundary; Task 6 adds the tested scheduler, lease dispatcher, bounded cleanup, strict push-provider allow-list, and server-only Firestore rules. Production remains owner-gated. |
+| Independent reviews resolved | In progress | Reviews through Task 5 are resolved; Task 6 independent review and final integration review remain pending |
 | Full automated verification | Pending | Run from final combined state |
 | iPhone and Android installed-PWA checks | Pending | Requires owner-controlled physical devices |
 | Vercel preview verification | Pending | Deploy after implementation gates pass |
@@ -183,6 +183,21 @@ This document is the version-controlled source of truth for Release 1 progress, 
 - Resolution: Every versioned owner/WAF gate statement now requires a published fixed-window per-IP rule for `POST`, `PATCH`, and `DELETE /api/notifications`, plus separate preview 429 evidence for excess POST registration, authenticated PATCH, and authenticated DELETE before `NOTIFICATION_REGISTRATION_ENABLED=true`. A focused regression assertion protects the versioned environment and worklog copy.
 - TDD evidence: The focused API copy assertion passed 22/23 and failed on the missing three-method evidence sentence before documentation changes, then passed 23/23 after the copy fix.
 - Verification/commit: Focused notification tests passed 40/40; full `npm test` passed 267/267; `git diff --check` passed. Commit message: `docs: complete notification abuse-control gate`. No production code or Task 6 file changed.
+
+### 2026-07-17 — Task 6: privacy-safe scheduled Web Push dispatcher
+
+- Role and bounded scope: Task 6 implementation agent. Added only the Node 22 Firebase scheduled Functions package, pure local-time scheduler, dependency-injected dispatcher, Firebase rules/index/configuration, deterministic tests, and this evidence. Client UI, service worker, billing, secrets, WAF, deployment, live Firestore, and real push remained out of scope.
+- Result: `nextNotification` calculates confirmed workout, two-hour follow-up or streak, and next-morning recovery candidates with Luxon; applies category controls, completion suppression, category/local-date deduplication, cross-midnight quiet hours, DST behavior, and the two-per-local-day cap; and emits only the fixed gentle six-field branded payload. `dispatchDue` queries at most 200 due devices, recalculates sentinels, claims a ten-minute transactional lease, finalizes 201/204, deletes 404/410 and invalid targets, and releases 429/5xx/network failures without advancing.
+- Authorization and cleanup: Expired authorization/device cleanup, old registration-counter cleanup, and orphan/expired endpoint-index review use bounded queries of 50. Device deletion removes the endpoint index only when its current `deviceId` still matches; tests preserve a newer mapping. Healthy index reviews rotate forward so an old orphan cannot remain hidden behind the same first 50 rows. Daily-cap records defer to the next local midnight rather than starving the due query.
+- SSRF/redirect boundary: Only exact HTTPS endpoints on `web.push.apple.com`, `fcm.googleapis.com`, or `updates.push.services.mozilla.com` can reach the pinned sender. IP literals, loopback/RFC1918/link-local/internal/unsupported hosts, credentials, fragments, non-default ports, suffix tricks, and non-HTTPS endpoints make zero outbound calls and are removed safely. The pinned `web-push` implementation uses direct `https.request` without redirect following; 3xx is treated as terminal invalidation.
+- Firestore and secrets: Existing `users/{uid}` access remains authenticated owner-only. Direct client reads/writes to `notificationDevices`, `notificationEndpointIndex`, and `notificationRegistrationCounters`, plus every unmatched path, are denied. The `enabled ASC, nextNotificationAt ASC` composite index is declared. `dispatchNotifications` runs every five minutes in `us-central1` with UTC scheduler time and Firebase secret parameters; no value is committed.
+- Files: `functions/package.json`, `functions/package-lock.json`, `functions/index.js`, `functions/notification-schedule.js`, `functions/dispatcher.js`, `firebase.json`, `firestore.rules`, `firestore.indexes.json`, `test/notification-schedule.test.js`, `test/notification-dispatcher.test.js`, and `docs/release-1-worklog.md`.
+- TDD evidence: Initial and post-install focused RED failed 0/2 on the two missing production modules. Scheduler GREEN passed 11/11 after isolating the streak fixture from the earlier recovery candidate. Dispatcher behavior GREEN passed 13/13 before configuration; configuration/export additions produced 26/26. Separate fairness RED/GREEN cycles fixed daily-cap due-query starvation and bounded orphan-index starvation. Final focused GREEN passed 28/28 without a real push, network request, or Firestore call.
+- Verification: Baseline `npm test` passed 267/267. Final focused tests passed 28/28. Final full `npm test` passed 295/295. All three production Function files passed `node --check`; the isolated direct dependency tree is valid; resolved versions are Firebase Admin 14.2.0, Firebase Functions 7.3.0, Luxon 3.7.2, and web-push 3.6.7.
+- Audit: Root production audit reports eight moderate and no high/critical findings; Functions production audit reports seven moderate and no high/critical findings. Both are the known transitive `uuid@9.0.1` path through Firebase/Google Cloud packages. npm's complete remediation forces a breaking Firebase Admin downgrade, so no forced dependency change was made.
+- Self-review: Deterministic tests probe double-send races, live/expired leases, retry state preservation, sentinel recalculation, DST duplicate/nonexistent times, quiet-hour rollover, authorization expiry, matching-index deletion, newer-index preservation, bounded/rotating cleanup, all three direct-client denies, exact provider hosts and private/unsupported URL rejection, non-followed redirects, fixed payload shape, aggregate log privacy, secret parameters, and dependency isolation. No endpoint, key, document ID, payload body, activity date, or secret value is logged.
+- Remaining gates: Independent Task 6 review is pending. Firebase emulator/controlled-project checks, Blaze billing, real secrets, WAF proof, preview/deployment, and installed-device verification remain owner/Task 8 gates. No deployment or external configuration occurred.
+- Commit target: `feat: schedule privacy-safe Web Push reminders`.
 
 ## Required worklog entry format
 
