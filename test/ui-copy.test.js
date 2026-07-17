@@ -14,6 +14,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const html = readFileSync(join(root, "index.html"), "utf8");
 const app = readFileSync(join(root, "app.js"), "utf8");
 const router = readFileSync(join(root, "router.js"), "utf8");
+const onboardingUi = readFileSync(join(root, "onboarding-ui.js"), "utf8");
 
 test("nav uses 'Safety Lab', not the old 'Evals' label", () => {
   assert.ok(html.includes("<span>Safety Lab</span>"), "Safety Lab nav label present");
@@ -84,4 +85,14 @@ test("the plan controller reveals results and returns Start over to onboarding",
   assert.match(app, /generatorSection\.hidden = false;/, "generation reveals the results section");
   assert.match(app, /generatorSection\.hidden = true;/, "reset hides the results section");
   assert.match(app, /new CustomEvent\("spotter:onboarding"\)/, "Start over reopens guided onboarding");
+});
+
+test("onboarding labels measurement systems and explains optional measurement use", () => {
+  assert.ok(onboardingUi.includes('label: "Metric"'));
+  assert.ok(onboardingUi.includes('label: "Imperial"'));
+  assert.ok(onboardingUi.includes("Optional. Weight can help set a starting nutrition range; height is saved only while you complete setup."));
+});
+
+test("invalid optional measurements also disable the About You skip control", () => {
+  assert.match(onboardingUi, /skipBtn\.disabled = !canAdvance\(\);/);
 });

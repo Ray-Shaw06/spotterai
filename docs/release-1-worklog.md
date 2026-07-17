@@ -22,7 +22,7 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | Written design approved | Complete | Owner approved the written specification on 2026-07-17 |
 | Implementation plan approved | Complete | Plan derives directly from the approved design and the owner selected autonomous agent execution |
 | Clean release worktree | Pending | Base on `1b94973`; exclude unrelated local work |
-| Measurements and conversions | Pending | Implementation and tests not started |
+| Measurements and conversions | Complete | Task 1 committed: metric/imperial onboarding conversions, validation, and accessibility checks |
 | First-workout activation | Pending | Implementation and tests not started |
 | Funnel analytics | Pending | Implementation and tests not started |
 | AI retry and recovery states | Pending | Implementation and tests not started |
@@ -86,6 +86,19 @@ This document is the version-controlled source of truth for Release 1 progress, 
 - Compatibility decision: Use manual Vercel funnel pageviews because Vercel Hobby supports pageviews but not custom events; no new analytics vendor or user identifier is introduced.
 - Safety: Implementation will start from production baseline `1b94973` in an isolated worktree and will cherry-pick only Release 1 documentation.
 - External gate unchanged: No Firebase Blaze billing, production secrets, Firebase deployment, preview deployment, or production promotion has been authorized by this entry.
+
+### 2026-07-17 — Task 1: metric and imperial onboarding measurements
+
+- Role: Implementation agent.
+- Bounded task: Add metric/imperial onboarding measurement conversion, validation, and accessible unit-specific inputs while preserving the `spotterai_onboarding` saved-data key, legacy `units: "kg" | "lb"`, and kilogram nutrition inputs.
+- Result: Added `measurements.js` with the specified conversion constants and pure interfaces. Metric uses cm/kg; imperial uses ft/in/lb. Height and weight remain optional, but any supplied value must be in the declared range. Nutrition receives kilograms in both systems.
+- Conversion boundaries: metric height is 100–250 cm and weight is 30–350 kg; imperial total height is 3 ft 3 in–8 ft 2 in, inches are 0–11, and weight is 66–772 lb. Switching converts 178 cm/75 kg to 5 ft 10 in/~165.3 lb and back within the tested rounding tolerance.
+- Accessibility: measurement inputs have explicit aria-labels, decimal/numeric input modes, live `aria-invalid` state, and error text via `aria-describedby`; visible unit labels are cm, kg, ft, in, and lb. Invalid optional values disable both Next and Skip so they cannot seed nutrition targets.
+- Files: `measurements.js`, `onboarding.js`, `onboarding-ui.js`, `style.css`, `test/measurements.test.js`, `test/onboarding.test.js`, `test/ui-copy.test.js`.
+- TDD evidence: initial `node --test test/measurements.test.js test/onboarding.test.js` failed with expected `ERR_MODULE_NOT_FOUND` for `measurements.js`; regression test for invalid-value Skip behavior then failed before its UI guard was added. Both GREEN runs passed.
+- Verification: `node --test test/measurements.test.js test/onboarding.test.js test/ui-copy.test.js` — 22/22 passed. `npm test` — 204/204 passed.
+- Independent review: found a P1 Skip bypass for invalid optional values and a missing worklog entry. Resolved P1 by disabling Skip whenever `canAdvance()` is false and added a regression test; this entry resolves the documentation finding. No outstanding review findings.
+- Commit: `feat: clarify onboarding measurements`.
 
 ## Required worklog entry format
 

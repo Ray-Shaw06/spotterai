@@ -69,8 +69,4 @@ export function mapOnboardingToInputs(d = {}) {
 }
 
 /** Bodyweight in kg (for nutrition targets), from the collected weight + units. */
-export function bodyweightKg(d = {}) {
-  const w = Number(d.weight);
-  if (!w) return null;
-  return d.units === "lb" ? w * 0.45359237 : w;
-}
+export { bodyweightKg } from "./measurements.js";

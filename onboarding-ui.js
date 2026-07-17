@@ -20,8 +20,8 @@ import {
   SAFETY_AREAS,
   ONBOARDING_STEPS,
   mapOnboardingToInputs,
-  bodyweightKg,
 } from "./onboarding.js";
+import { bodyweightKg, measurementSystem, switchMeasurementSystem, validateMeasurements } from "./measurements.js";
 import { saferTargets } from "./nutrition-safety.js";
 import { setTargets, setUnit } from "./tracker-store.js";
 
@@ -70,6 +70,11 @@ function field(label, inner, hint) {
   return `<div class="onb-field"><span class="onb-flabel">${esc(label)}</span>${hint ? `<span class="onb-fhint">${esc(hint)}</span>` : ""}${inner}</div>`;
 }
 const input = (f, ph, type = "text") => `<input class="input onb-input" data-input="${f}" type="${type}" autocomplete="off" placeholder="${esc(ph)}" value="${esc(data[f] ?? "")}" inputmode="${type === "number" ? "decimal" : "text"}" />`;
+function measurementInput(f, label, ph, unit, inputmode = "decimal") {
+  const error = validateMeasurements(data).errors[f] || "";
+  const errorId = `onb-error-${f}`;
+  return `<div class="onb-measurement-input"><input class="input onb-input" data-input="${f}" type="text" autocomplete="off" placeholder="${esc(ph)}" value="${esc(data[f] ?? "")}" aria-label="${esc(label)}" inputmode="${inputmode}" aria-invalid="${error ? "true" : "false"}" aria-describedby="${errorId}" /><span class="onb-unit" aria-hidden="true">${esc(unit)}</span></div><span class="onb-error" id="${errorId}" role="alert">${esc(error)}</span>`;
+}
 
 // --- steps -----------------------------------------------------------------
 function stepGoal() {
@@ -78,11 +83,15 @@ function stepGoal() {
     ${chips("goal", GOAL_OPTIONS)}`;
 }
 function stepBody() {
+  const imperial = measurementSystem(data) === "imperial";
   return `<h3 class="onb-title">A little about you</h3>
-    <p class="onb-sub">Optional: it helps tailor volume and nutrition targets. Skip anything you'd rather not share.</p>
+    <p class="onb-sub">Optional. Weight can help set a starting nutrition range; height is saved only while you complete setup.</p>
     ${field("Age range", chips("ageRange", AGE_RANGES))}
-    ${field("Units", chips("units", [{ value: "kg", label: "kg" }, { value: "lb", label: "lb" }]))}
-    <div class="onb-cols">${field("Height", input("height", "e.g. 178"))}${field("Bodyweight", input("weight", "e.g. 75", "number"))}</div>
+    ${field("Units", chips("units", [{ value: "kg", label: "Metric" }, { value: "lb", label: "Imperial" }]))}
+    <div class="onb-cols">${imperial
+      ? `${field("Height", `<div class="onb-height-pair">${measurementInput("heightFt", "Height in feet", "e.g. 5", "ft", "numeric")}${measurementInput("heightIn", "Height in inches", "e.g. 10", "in", "numeric")}</div>`)}`
+      : field("Height", measurementInput("height", "Height in centimetres", "e.g. 178", "cm"))
+    }${field("Bodyweight", measurementInput("weight", imperial ? "Bodyweight in pounds" : "Bodyweight in kilograms", imperial ? "e.g. 165" : "e.g. 75", imperial ? "lb" : "kg"))}</div>
     ${field("Sex (optional)", chips("sex", ["Male", "Female", "Prefer not to say"]))}
     ${field("Training experience", chips("trainingAge", TRAINING_AGE_OPTIONS))}`;
 }
@@ -115,8 +124,19 @@ const STEP_RENDER = [stepGoal, stepBody, stepSchedule, stepSafety, stepPrefs];
 // --- validation (only the essentials block progress) -----------------------
 function canAdvance() {
   if (step === 0) return !!data.goal; // need a goal
+  if (step === 1) return validateMeasurements(data).valid;
   if (step === 3) return !!data.ack; // must acknowledge the disclaimer
   return true;
+}
+
+function updateMeasurementErrors() {
+  const { errors } = validateMeasurements(data);
+  body.querySelectorAll("[data-input=height], [data-input=heightFt], [data-input=heightIn], [data-input=weight]").forEach((el) => {
+    const error = errors[el.dataset.input] || "";
+    el.setAttribute("aria-invalid", error ? "true" : "false");
+    const message = body.querySelector(`#onb-error-${el.dataset.input}`);
+    if (message) message.textContent = error;
+  });
 }
 function isOptionalStep() {
   return step !== 0 && step !== 3; // goal + safety-ack aren't skippable
@@ -128,6 +148,7 @@ function render() {
   body.innerHTML = STEP_RENDER[step]();
   backBtn.style.visibility = step === 0 ? "hidden" : "visible";
   skipBtn.hidden = !isOptionalStep();
+  skipBtn.disabled = !canAdvance();
   nextBtn.disabled = !canAdvance();
   nextBtn.textContent = step === STEP_RENDER.length - 1 ? "Build my plan" : "Next";
 }
@@ -173,16 +194,19 @@ if (overlay && body) {
       data[f] = arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
       wrap.querySelector(`[data-value="${CSS.escape(value)}"]`)?.classList.toggle("is-active");
     } else {
-      data[f] = value;
+      data = f === "units" ? switchMeasurementSystem(data, value === "lb" ? "imperial" : "metric") : { ...data, [f]: value };
       wrap.querySelectorAll(".onb-chip").forEach((c) => c.classList.toggle("is-active", c === chip));
     }
-    nextBtn.disabled = !canAdvance();
     save();
+    if (f === "units") render();
+    else nextBtn.disabled = !canAdvance();
   });
   body.addEventListener("input", (e) => {
     const el = e.target.closest("[data-input]");
     if (!el) return;
     data[el.dataset.input] = el.type === "checkbox" ? el.checked : el.value;
+    updateMeasurementErrors();
+    skipBtn.disabled = !canAdvance();
     nextBtn.disabled = !canAdvance();
     save();
   });

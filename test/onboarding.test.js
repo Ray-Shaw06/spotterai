@@ -7,6 +7,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mapOnboardingToInputs, bodyweightKg, ONBOARDING_STEPS } from "../onboarding.js";
+import { measurementSystem } from "../measurements.js";
 
 test("goal + training age map to the generator's goal + experience", () => {
   const i = mapOnboardingToInputs({ goal: "muscle", trainingAge: "new" });
@@ -41,6 +42,11 @@ test("bodyweight converts lb→kg for nutrition targets", () => {
   assert.ok(Math.abs(bodyweightKg({ weight: 220, units: "lb" }) - 99.79) < 0.1);
   assert.equal(bodyweightKg({ weight: 80, units: "kg" }), 80);
   assert.equal(bodyweightKg({}), null);
+});
+
+test("legacy kg and lb values keep their respective measurement systems", () => {
+  assert.equal(measurementSystem({ units: "kg" }), "metric");
+  assert.equal(measurementSystem({ units: "lb" }), "imperial");
 });
 
 test("there are a small number of intake steps (coach-style, not a giant form)", () => {

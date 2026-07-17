@@ -1118,6 +1118,11 @@ table {
 .onb-chip:hover { color: var(--text); border-color: var(--accent-ring); }
 .onb-chip.is-active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-ring); }
 .onb-input { max-width: 100%; }
+.onb-measurement-input { display: flex; align-items: center; gap: var(--space-2); }
+.onb-measurement-input .onb-input { min-width: 0; width: 100%; }
+.onb-unit { flex: none; min-width: 2ch; font-size: var(--fs-small); color: var(--text-faint); font-weight: 600; }
+.onb-height-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.onb-error { display: block; min-height: 1.2em; margin-top: 5px; font-size: 0.75rem; color: var(--danger); line-height: 1.35; }
 .onb-cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
 .onb-ack { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; }
 .onb-ack input { margin-top: 3px; flex: none; accent-color: var(--accent); }
