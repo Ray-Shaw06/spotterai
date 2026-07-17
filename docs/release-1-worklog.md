@@ -9,10 +9,10 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | Production baseline | `1b94973` (`origin/main`) |
 | Existing deployment | Vercel |
 | Existing sync | Firebase Auth and Firestore |
-| Release branch | To be created from `1b94973` before implementation |
+| Release branch | `codex/release-1`, created from the approved Release 1 baseline |
 | Design | `docs/superpowers/specs/2026-07-17-release-1-design.md` |
 | Implementation plan | `docs/superpowers/plans/2026-07-17-release-1.md` |
-| Current phase | Implementation plan and clean-worktree setup |
+| Current phase | Tasks 1–4 implemented and reviewed; remaining Release 1 tasks and final integration verification pending |
 
 ## Gate status
 
@@ -21,14 +21,14 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | Product scope approved in conversation | Complete | Scope and constraints captured in the Release 1 design |
 | Written design approved | Complete | Owner approved the written specification on 2026-07-17 |
 | Implementation plan approved | Complete | Plan derives directly from the approved design and the owner selected autonomous agent execution |
-| Clean release worktree | Pending | Base on `1b94973`; exclude unrelated local work |
+| Clean release worktree | Complete | Release work proceeds on isolated `codex/release-1`; unrelated local work is excluded |
 | Measurements and conversions | Complete | Task 1 committed: metric/imperial onboarding conversions, validation, and accessibility checks |
-| First-workout activation | Pending | Implementation and tests not started |
-| Funnel analytics | Pending | Implementation and tests not started |
+| First-workout activation | Complete | Task 2 committed: plan day-one action and bounded activation funnel behavior |
+| Funnel analytics | Complete | Task 2 committed: privacy-safe allow-listed Vercel virtual pageviews |
 | AI retry and recovery states | Complete | Task 3 committed: bounded client timeouts, safe recovery copy, saved-plan retry, and in-memory photo retry |
 | Web Push client and preferences | In progress | Task 4 defines and tests the pure, privacy-safe schedule and preference domain; client controls remain pending |
 | Notification API and dispatcher | Pending | Implementation and tests not started |
-| Independent reviews resolved | Pending | Run after each implementation slice and final integration |
+| Independent reviews resolved | In progress | Per-task reviews for Tasks 1–4 are resolved; final integration review remains pending |
 | Full automated verification | Pending | Run from final combined state |
 | iPhone and Android installed-PWA checks | Pending | Requires owner-controlled physical devices |
 | Vercel preview verification | Pending | Deploy after implementation gates pass |
@@ -134,7 +134,11 @@ This document is the version-controlled source of truth for Release 1 progress, 
 - TDD evidence: `node --test test/notifications.test.js` first failed with the expected `ERR_MODULE_NOT_FOUND` for `notifications.js`. After the minimal implementation, the same focused suite passed 7/7.
 - Verification: `npm test` passed 224/224. `git diff --check` passed with no whitespace errors.
 - Self-review: The module is pure and imports no platform/client code. Its output contains only timezone, schedule, quiet hours, the four boolean category controls, and paused state; it neither reads nor forwards health, profile, free-text, subscription, or endpoint data. No service worker, Firebase, API, deployment, or UI files changed.
-- Commit: `feat: define notification schedules and preferences` (SHA recorded in the task report).
+- Initial commit: `b57a1b9` — `feat: define notification schedules and preferences`.
+- Formal review findings: The reviewer blocked the initial implementation because `Intl.DateTimeFormat` accepts raw offset identifiers such as `+05:30` and `-04:00`, while this contract requires named IANA zones. The reviewer also required a stable invalid-zone fallback rather than the runtime local zone. Minor hardening identified prototype-supplied nested fields and explicit non-mutation/reference-isolation coverage.
+- Resolution: `6c7aabe` — `fix: harden notification timezone validation` rejects raw positive and negative offset identifiers before platform zone validation, uses `UTC` for missing or invalid zones, requires own schedule/category/quiet-hour properties, and preserves fresh nested normalized output.
+- Review-fix verification: `node --test test/notifications.test.js` passed 10/10; `npm test` passed 227/227; `git diff --check` passed.
+- Re-review: Approved. No blocking findings remain for Task 4.
 - Remaining scope: Notification client controls, anonymous API/storage, dispatcher, real-device verification, Firebase configuration, and deployment remain separate tasks and owner-gated where applicable.
 
 ## Required worklog entry format
