@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { aiFailureMessage, assertPlanShape, classifyAiFailure, fetchWithTimeout } from "../ai-errors.js";
-import { classifyExercise, estimateFood } from "../ai.js";
+import { classifyExercise, estimateFood, estimateMealPhoto } from "../ai.js";
 
 test("AI failures are classified without exposing provider messages", () => {
   assert.equal(classifyAiFailure({ status: 429 }, { online: true }), "rate_limited");
@@ -49,6 +49,33 @@ test("a malformed food response is marked invalid_response", async () => {
 
   try {
     await assert.rejects(estimateFood("banana"), (error) => error?.failureClass === "invalid_response");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a zero-valued non-food photo response is marked invalid_response", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      food: {
+        name: "No food detected",
+        serving: "0",
+        kcal: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        source: "ai",
+      },
+    }),
+  });
+
+  try {
+    await assert.rejects(
+      estimateMealPhoto("data:image/png;base64,dGVzdA=="),
+      (error) => error?.failureClass === "invalid_response"
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

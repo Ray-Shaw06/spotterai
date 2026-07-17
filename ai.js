@@ -47,6 +47,10 @@ function isFoodEstimate(food) {
     [food.kcal, food.protein, food.carbs, food.fat].every(isFiniteMacro);
 }
 
+function hasMealNutrition(food) {
+  return [food.kcal, food.protein, food.carbs, food.fat].some((value) => value > 0);
+}
+
 /** Estimate calories + macros for any food described in plain language. */
 export async function estimateFood(query, signal) {
   const { food } = await estimate("food", query, signal);
@@ -64,7 +68,9 @@ export async function estimateMealPhoto(dataUrl, signal) {
   const mimeType = dataUrl.slice(5, comma).split(";")[0]; // "image/jpeg"
   const data = dataUrl.slice(comma + 1);
   const { food } = await estimate("food", "", signal, { image: { data, mimeType } });
-  if (!isFoodEstimate(food)) throw invalidResponseError("No complete food estimate returned");
+  if (!isFoodEstimate(food) || !hasMealNutrition(food)) {
+    throw invalidResponseError("No food detected in photo");
+  }
   return food;
 }
 
