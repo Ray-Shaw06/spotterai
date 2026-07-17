@@ -13,6 +13,9 @@
     },
     "api/parse.js": {
       "maxDuration": 30
+    },
+    "api/notifications.js": {
+      "maxDuration": 10
     }
   }
 }

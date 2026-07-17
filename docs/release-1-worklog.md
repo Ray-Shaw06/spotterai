@@ -12,7 +12,7 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | Release branch | `codex/release-1`, created from the approved Release 1 baseline |
 | Design | `docs/superpowers/specs/2026-07-17-release-1-design.md` |
 | Implementation plan | `docs/superpowers/plans/2026-07-17-release-1.md` |
-| Current phase | Tasks 1–4 implemented and reviewed; remaining Release 1 tasks and final integration verification pending |
+| Current phase | Tasks 1–5 implemented; Task 5 independent review and remaining Release 1 tasks/final integration verification pending |
 
 ## Gate status
 
@@ -27,7 +27,7 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | Funnel analytics | Complete | Task 2 committed: privacy-safe allow-listed Vercel virtual pageviews |
 | AI retry and recovery states | Complete | Task 3 committed: bounded client timeouts, safe recovery copy, saved-plan retry, and in-memory photo retry |
 | Web Push client and preferences | In progress | Task 4 defines and tests the pure, privacy-safe schedule and preference domain; client controls remain pending |
-| Notification API and dispatcher | Pending | Implementation and tests not started |
+| Notification API and dispatcher | In progress | Task 5 anonymous API/server-only adapter implemented and self-reviewed; dispatcher and Firestore rules remain Task 6 |
 | Independent reviews resolved | In progress | Per-task reviews for Tasks 1–4 are resolved; final integration review remains pending |
 | Full automated verification | Pending | Run from final combined state |
 | iPhone and Android installed-PWA checks | Pending | Requires owner-controlled physical devices |
@@ -140,6 +140,20 @@ This document is the version-controlled source of truth for Release 1 progress, 
 - Review-fix verification: `node --test test/notifications.test.js` passed 10/10; `npm test` passed 227/227; `git diff --check` passed.
 - Re-review: Approved. No blocking findings remain for Task 4.
 - Remaining scope: Notification client controls, anonymous API/storage, dispatcher, real-device verification, Firebase configuration, and deployment remain separate tasks and owner-gated where applicable.
+
+### 2026-07-17 — Task 5: anonymous notification API and server-only Firestore adapter
+
+- Role: Implementation agent.
+- Bounded task and acceptance criteria: Add only the anonymous Vercel notification registration/update/delete API, HMAC per-device authorization, strict subscription/preference validation, lazy Firebase Admin initialization, and the fixed `notificationDevices` adapter. Client UI, service worker, dispatcher/functions, production deployment, billing, and real secrets remained out of scope.
+- Result: Added a 32 KB, no-store, same-origin API with safe GET configuration; server-generated 32-byte device IDs; versioned HMAC-SHA256 tokens with 180-day expiry, five-minute future skew, minimum 32-character secrets, and timing-safe signature comparison; HTTPS Web Push validation; exact normalized preference storage; PATCH recalculation sentinels; per-device DELETE; and generic responses. Structured logs contain only route, method, request ID, status, duration, and safe failure class.
+- Storage/privacy boundary: The API reconstructs records and patches from allow-listed values before the mock or Firestore adapter is called. Stored fields contain subscription encryption material, scheduling controls, the minimal completion date/scheduler state, and operational timestamps only—never profile, plan, measurements, nutrition, injuries, free text, or client-selected document IDs. Firebase Admin is initialized lazily from server-side JSON with escaped-newline normalization and existing-app reuse; no browser Firebase configuration is imported.
+- Dependency decision: Declared `firebase-admin@^13.4.0`, resolving to `13.10.0`, whose installed package declares Node `>=18`, matching this repository. The dependency is server-only. `npm audit --omit=dev` reports eight moderate transitive findings through `uuid@9.0.1`; npm's only offered complete remediation is a forced breaking downgrade to `firebase-admin@10.3.0`, so no unsafe automated fix was applied.
+- Files: `lib/firebase-admin.js`, `lib/notification-auth.js`, `lib/notification-validation.js`, `lib/notification-store.js`, `api/notifications.js`, `package.json`, `package-lock.json`, `.env.example`, `vercel.json`, `test/notification-auth.test.js`, `test/notification-api.test.js`, and `docs/release-1-worklog.md`.
+- TDD evidence: Initial focused RED failed 0/2 at module load with the expected `ERR_MODULE_NOT_FOUND` for `lib/notification-auth.js`, both before and after dependency installation. The first implementation GREEN passed 21/21. A configuration test then failed 21/22 because npm had saved `^13.10.0` instead of the approved compatibility floor; after normalizing the manifest/configuration, GREEN passed 22/22. A further hardening RED failed 21/22 because a noncanonical P-256 key reached storage; canonical 65-byte uncompressed P-256 and 16-byte auth validation restored 22/22 GREEN.
+- Verification: Focused `node --test test/notification-auth.test.js test/notification-api.test.js` passed 22/22. Full `npm test` passed 249/249. Module syntax checks and `git diff --check` passed. Dependency tree inspection confirmed `firebase-admin@13.10.0` with the audited `uuid@9.0.1` transitive path.
+- Security/privacy self-review: No authentication bypass was found; PATCH/DELETE derive the record only from a verified bearer token, so body overposting cannot select another device. Validators rebuild exact stored shapes. GET exposes only the public VAPID key. Client responses and logs exclude secrets, endpoint/key/token/document-ID/date/body values. Token timing, tampering, expiry, and future skew are covered by tests. The adapter imports Admin SDK modules only and hard-codes `notificationDevices`.
+- Remaining gates/concerns: Task 6 must add and deploy Firestore rules that deny direct browser access before this collection can be called server-only in production, and must assess arbitrary-HTTPS endpoint abuse/SSRF and anonymous registration rate limiting before dispatch is enabled. No live Firestore call, real push, production secret, billing change, preview deployment, or production deployment occurred. Independent Task 5 review remains pending.
+- Commit: `feat: add anonymous notification subscription API`.
 
 ## Required worklog entry format
 
