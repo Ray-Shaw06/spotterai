@@ -265,6 +265,37 @@ test("201 and 204 atomically finalize delivery state and advance the next event"
   }
 });
 
+test("dispatcher expiration accepts only null or a nonnegative safe integer", async () => {
+  for (const [index, expirationTime] of [null, 0, 1, Number.MAX_SAFE_INTEGER].entries()) {
+    const id = canonical32(220 + index);
+    const fingerprint = canonical32(224 + index);
+    const fake = createFakeFirestore(seedFor(device({ expirationTime, endpointFingerprint: fingerprint }), id));
+    const webpush = sender();
+
+    const result = await dispatchDue({ db: fake.firestore, webpush, now: NOW, leaseId: `valid-expiration-${index}` });
+
+    assert.equal(result.sent, 1, String(expirationTime));
+    assert.equal(webpush.calls[0][0].expirationTime, expirationTime);
+  }
+
+  const invalid = [-1, 0.5, Number.MAX_SAFE_INTEGER + 1, Infinity, -Infinity, NaN];
+  for (const [index, expirationTime] of invalid.entries()) {
+    const id = canonical32(228 + index);
+    const fingerprint = canonical32(234 + index);
+    const fake = createFakeFirestore(seedFor(device({ expirationTime, endpointFingerprint: fingerprint }), id));
+    const webpush = sender();
+
+    await dispatchDue({ db: fake.firestore, webpush, now: NOW, leaseId: `invalid-expiration-${index}` });
+
+    assert.equal(webpush.calls.length, 0, String(expirationTime));
+    const stored = fake.documents.get(`notificationDevices/${id}`);
+    assert.equal(stored.enabled, false, String(expirationTime));
+    assert.equal(stored.nextNotificationAt, null, String(expirationTime));
+    assert.equal(stored.leaseId, null, String(expirationTime));
+    assert.equal(stored.leaseUntil, null, String(expirationTime));
+  }
+});
+
 test("a previous-local-day quiet-shifted workout is sent exactly once with its original activity date", async () => {
   const tuesdayMorning = new Date("2026-07-21T02:35:00.000Z");
   const record = device({

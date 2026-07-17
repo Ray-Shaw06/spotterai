@@ -15,7 +15,10 @@ import {
   parseFirebaseServiceAccount,
 } from "../lib/firebase-admin.js";
 import { RegistrationCapError } from "../lib/notification-store.js";
-import { validateNotificationConfig } from "../lib/notification-validation.js";
+import {
+  validateNotificationConfig,
+  validatePushSubscription,
+} from "../lib/notification-validation.js";
 import notificationRoute, {
   createNotificationFetchHandler,
   createNotificationHandler,
@@ -80,6 +83,19 @@ const SUBSCRIPTION = Object.freeze({
   endpoint: "https://push.example/subscription",
   expirationTime: null,
   keys: Object.freeze({ p256dh: P256DH, auth: AUTH }),
+});
+
+test("push subscription expiration accepts only null or a nonnegative safe integer", () => {
+  for (const expirationTime of [null, 0, 1, Number.MAX_SAFE_INTEGER]) {
+    const result = validatePushSubscription({ ...SUBSCRIPTION, expirationTime });
+    assert.equal(result.valid, true, String(expirationTime));
+    assert.equal(result.value.expirationTime, expirationTime);
+  }
+
+  for (const expirationTime of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1, Infinity, -Infinity, NaN]) {
+    const result = validatePushSubscription({ ...SUBSCRIPTION, expirationTime });
+    assert.equal(result.valid, false, String(expirationTime));
+  }
 });
 
 function createMockStore(overrides = {}) {

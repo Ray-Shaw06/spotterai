@@ -12,7 +12,7 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | Release branch | `codex/release-1`, created from the approved Release 1 baseline |
 | Design | `docs/superpowers/specs/2026-07-17-release-1-design.md` |
 | Implementation plan | `docs/superpowers/plans/2026-07-17-release-1.md` |
-| Current phase | Tasks 1–6 implemented; Task 6 self-verification complete and independent review pending; Tasks 7–8/final integration verification pending |
+| Current phase | Tasks 1–6 implemented and independently approved; Tasks 7–8/final integration verification pending |
 
 ## Gate status
 
@@ -28,7 +28,7 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | AI retry and recovery states | Complete | Task 3 committed: bounded client timeouts, safe recovery copy, saved-plan retry, and in-memory photo retry |
 | Web Push client and preferences | In progress | Task 4 defines and tests the pure, privacy-safe schedule and preference domain; client controls remain pending |
 | Notification API and dispatcher | Complete locally | Task 5 provides the default-off anonymous API/storage boundary; Task 6 adds the tested scheduler, lease dispatcher, bounded cleanup, strict push-provider allow-list, and server-only Firestore rules. Production remains owner-gated. |
-| Independent reviews resolved | In progress | Reviews through Task 5 are resolved; Task 6 independent review and final integration review remain pending |
+| Independent reviews resolved | In progress | Reviews through Task 6 are resolved with no Critical or Important finding; final integration review remains pending |
 | Full automated verification | Pending | Run from final combined state |
 | iPhone and Android installed-PWA checks | Pending | Requires owner-controlled physical devices |
 | Vercel preview verification | Pending | Deploy after implementation gates pass |
@@ -212,6 +212,15 @@ This document is the version-controlled source of truth for Release 1 progress, 
 - TDD evidence: Task 5 revision RED failed 4/41 before the API/store changes and passed 41/41 after. Scheduler hardening RED failed 3/15 and passed 15/15 after the previous-day and complete-shape changes. Dispatcher hardening RED passed 19/31 with 12 expected failures before implementation; the expanded final dispatcher suite passed 34/34. Raw-authority API rejection was separately captured RED (`201` instead of `400`) and restored GREEN.
 - Final verification: Focused Task 5/6 notification tests passed 90/90. Full `npm test` passed 317/317. Production Function syntax checks, the direct Functions dependency tree, and `git diff --check` passed. Root and Functions production audits still report the known `uuid@9.0.1` path: eight and seven moderate findings respectively, with no high or critical finding. Root remediation proposes a breaking Firebase Admin major update while Functions remediation proposes a breaking Firebase Admin downgrade, so neither forced change was applied. Independent re-review remains required before Task 6 is accepted or any deployment proceeds.
 - Commit target: `fix: harden notification dispatch races`.
+
+### 2026-07-17 — Task 6 approval and expiration consistency minor
+
+- Review result: Independent re-review approved Task 6 with no Critical or Important finding. No Task 7 or deployment work was authorized by this closeout.
+- Resolved reviewer minor: W3C `EpochTimeStamp` subscription expiration is integral. Task 5 registration previously accepted any finite nonnegative number while Task 6 dispatch required null or a nonnegative safe integer. Both layers now accept exactly `null`, zero, and other nonnegative safe integers, and reject negative, fractional, unsafe, and non-finite values.
+- Deferred reviewer minor: An Admin-corrupted parked record with `nextNotificationAt: null` and no `updatedAt` is inert because it is not eligible for the due query, but the age-ordered maintenance query cannot discover it. Normal registration, preference, completion, lease, finalize, release, park, and quarantine writes always set `updatedAt`; broader recovery for externally corrupted/missing timestamps is deferred to final hardening rather than expanding this approved minor.
+- TDD evidence: The cross-layer regression first failed because `validatePushSubscription` returned valid for `0.5`, while the dispatcher half already rejected and quarantined it. Replacing the API predicate with the dispatcher's nonnegative-safe-integer rule restored the targeted API/dispatcher test to 2/2. The focused Task 5/6 suite passed 92/92 and full `npm test` passed 319/319.
+- Files and scope: `lib/notification-validation.js`, `test/notification-api.test.js`, `test/notification-dispatcher.test.js`, and this worklog only. No scheduled Function behavior, client, service worker, Task 7, dependency, secret, billing, Firebase, preview, or deployment change was made.
+- Commit target: `fix: align push expiration validation`.
 
 ## Required worklog entry format
 
