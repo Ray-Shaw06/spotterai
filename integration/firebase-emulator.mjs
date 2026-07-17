@@ -16,6 +16,19 @@ const TOKEN_SECRET = Buffer.alloc(32, 1).toString("base64url");
 const DEDUP_SECRET = Buffer.alloc(32, 2).toString("base64url");
 const AUTH = Buffer.alloc(16, 4).toString("base64url");
 const ORIGIN = "https://emulator.spotterai.invalid";
+const FORBIDDEN_CHILD_ENV_KEYS = Object.freeze([
+  "FIREBASE_TOKEN",
+  "GOOGLE_APPLICATION_CREDENTIALS",
+  "FIREBASE_SERVICE_ACCOUNT_JSON",
+  "NOTIFICATION_TOKEN_SECRET",
+  "NOTIFICATION_DEDUP_SECRET",
+  "WEB_PUSH_PRIVATE_KEY",
+  "WEB_PUSH_PUBLIC_KEY",
+  "WEB_PUSH_SUBJECT",
+  "ANTHROPIC_API_KEY",
+  "GEMINI_API_KEY",
+  "OPENAI_API_KEY",
+]);
 
 function publicKey(scalar) {
   const ecdh = createECDH("prime256v1");
@@ -90,6 +103,9 @@ test("the Firebase gate requires a local Firestore emulator and the fixed synthe
   assert.ok(emulatorAddress, "FIRESTORE_EMULATOR_HOST must point to a local emulator");
   assert.equal(process.env.GCLOUD_PROJECT, PROJECT_ID);
   assert.equal(process.env.GOOGLE_CLOUD_PROJECT, PROJECT_ID);
+  for (const key of FORBIDDEN_CHILD_ENV_KEYS) {
+    assert.equal(process.env[key], undefined, `${key} must not reach the emulator child process`);
+  }
 });
 
 if (controlledEnvironment) {
@@ -132,6 +148,8 @@ if (controlledEnvironment) {
       await assertSucceeds(getDoc(doc(alice, "users", "alice")));
       await assertFails(getDoc(doc(bob, "users", "alice")));
       await assertFails(getDoc(doc(unauthenticated, "users", "alice")));
+      await assertFails(setDoc(doc(bob, "users", "alice"), { unit: "lb" }));
+      await assertFails(setDoc(doc(unauthenticated, "users", "alice"), { unit: "lb" }));
 
       for (const collection of [
         "notificationDevices",
@@ -220,19 +238,39 @@ if (controlledEnvironment) {
       ]);
 
       const calls = [];
+      let releaseSender;
+      let recordSenderEntry;
+      const senderEntered = new Promise((resolve) => {
+        recordSenderEntry = resolve;
+      });
+      const senderReleased = new Promise((resolve) => {
+        releaseSender = resolve;
+      });
       const webpush = {
         async sendNotification(subscription, payload, options) {
           calls.push({ subscription, payload: JSON.parse(payload), options });
+          recordSenderEntry();
+          await senderReleased;
           return { statusCode: 201 };
         },
       };
-      const result = await dispatchDue({
+      const dispatchPromise = dispatchDue({
         db,
         webpush,
         now: NOW,
         leaseId: "controlled-emulator-lease",
         logger: { info() {} },
       });
+      await senderEntered;
+
+      try {
+        const leased = await db.collection("notificationDevices").doc(DEVICE_ID).get();
+        assert.equal(leased.data()?.leaseId, "controlled-emulator-lease");
+        assert.ok(leased.data()?.leaseUntil.toMillis() > NOW_MS);
+      } finally {
+        releaseSender();
+      }
+      const result = await dispatchPromise;
 
       assert.equal(result.sent, 1);
       assert.equal(result.expired, 1);
