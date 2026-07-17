@@ -80,7 +80,21 @@ function createFakeFirestore(seed = {}) {
 function registrationRecord(overrides = {}) {
   return {
     endpoint: "https://push.example/subscription",
+    keys: { p256dh: "new-p256dh", auth: "new-auth" },
+    expirationTime: null,
+    timezone: "Asia/Kolkata",
+    schedule: [{ weekday: 1, time: "18:00" }],
+    quietHours: { start: "22:00", end: "08:00" },
+    categories: { workout: true, followUp: false, streak: true, recovery: true },
+    paused: false,
     enabled: true,
+    lastWorkoutCompletionDate: null,
+    nextNotificationAt: NOW,
+    dailyDeliveryDate: null,
+    dailyDeliveryCount: 0,
+    lastSentByCategory: {},
+    leaseUntil: null,
+    leaseId: null,
     endpointFingerprint: FINGERPRINT,
     authorizationExpiresAt: EXPIRES,
     createdAt: NOW,
@@ -119,12 +133,70 @@ test("new registration atomically creates device/index and increments the global
   });
 });
 
-test("same active endpoint returns the existing device and consumes no additional quota", async () => {
+test("active endpoint refresh consumes quota and changes only registration-owned fields", async () => {
+  const existingRecord = registrationRecord({
+    endpoint: "https://push.example/old",
+    keys: { p256dh: "old-p256dh", auth: "old-auth" },
+    expirationTime: 123,
+    timezone: "UTC",
+    schedule: [{ weekday: 2, time: "07:30" }],
+    quietHours: { start: "21:00", end: "07:00" },
+    categories: { workout: false, followUp: true, streak: false, recovery: false },
+    paused: true,
+    lastWorkoutCompletionDate: "2026-07-10",
+    dailyDeliveryDate: "2026-07-17",
+    dailyDeliveryCount: 2,
+    lastSentByCategory: { workout: OLD },
+    leaseUntil: EXPIRES,
+    leaseId: "existing-lease",
+    createdAt: OLD,
+    updatedAt: OLD,
+    dispatcherOwnedFutureField: { preserve: true },
+  });
   const seed = {
-    [`notificationDevices/${OTHER_DEVICE_ID}`]: registrationRecord({
-      endpoint: "https://push.example/old",
+    [`notificationDevices/${OTHER_DEVICE_ID}`]: existingRecord,
+    [`notificationEndpointIndex/${FINGERPRINT}`]: {
+      deviceId: OTHER_DEVICE_ID,
+      authorizationExpiresAt: EXPIRES,
       createdAt: OLD,
-    }),
+      updatedAt: OLD,
+    },
+    "notificationRegistrationCounters/2026-07-17": { count: 1, updatedAt: OLD },
+  };
+  const fake = createFakeFirestore(seed);
+  const store = createNotificationStore(fake.firestore);
+
+  const effectiveId = await store.create(DEVICE_ID, registrationRecord(), registrationOptions());
+
+  assert.equal(effectiveId, OTHER_DEVICE_ID);
+  assert.equal(fake.documents.has(`notificationDevices/${DEVICE_ID}`), false);
+  const refreshed = fake.documents.get(`notificationDevices/${OTHER_DEVICE_ID}`);
+  for (const field of [
+    "endpoint", "keys", "expirationTime", "timezone", "schedule", "quietHours",
+    "categories", "paused", "authorizationExpiresAt", "nextNotificationAt", "updatedAt",
+  ]) {
+    assert.deepEqual(refreshed[field], registrationRecord()[field], field);
+  }
+  for (const field of [
+    "enabled", "lastWorkoutCompletionDate", "dailyDeliveryDate", "dailyDeliveryCount",
+    "lastSentByCategory", "leaseUntil", "leaseId", "createdAt", "endpointFingerprint",
+    "dispatcherOwnedFutureField",
+  ]) {
+    assert.deepEqual(refreshed[field], existingRecord[field], field);
+  }
+  assert.deepEqual(fake.documents.get("notificationRegistrationCounters/2026-07-17"), { count: 2, updatedAt: NOW });
+  assert.deepEqual(fake.documents.get(`notificationEndpointIndex/${FINGERPRINT}`), {
+    deviceId: OTHER_DEVICE_ID,
+    authorizationExpiresAt: EXPIRES,
+    createdAt: OLD,
+    updatedAt: NOW,
+  });
+  assert.equal(fake.operations.some(([operation, path]) => operation === "create" && path === `notificationDevices/${DEVICE_ID}`), false);
+});
+
+test("active endpoint refresh checks the durable cap before every mutation", async () => {
+  const seed = {
+    [`notificationDevices/${OTHER_DEVICE_ID}`]: registrationRecord({ createdAt: OLD, updatedAt: OLD }),
     [`notificationEndpointIndex/${FINGERPRINT}`]: {
       deviceId: OTHER_DEVICE_ID,
       authorizationExpiresAt: EXPIRES,
@@ -134,22 +206,72 @@ test("same active endpoint returns the existing device and consumes no additiona
     "notificationRegistrationCounters/2026-07-17": { count: 2, updatedAt: OLD },
   };
   const fake = createFakeFirestore(seed);
+  const before = clone(Object.fromEntries(fake.documents));
   const store = createNotificationStore(fake.firestore);
 
-  const effectiveId = await store.create(DEVICE_ID, registrationRecord(), registrationOptions());
+  await assert.rejects(
+    () => store.create(DEVICE_ID, registrationRecord(), registrationOptions()),
+    (error) => error instanceof RegistrationCapError,
+  );
 
-  assert.equal(effectiveId, OTHER_DEVICE_ID);
-  assert.equal(fake.documents.has(`notificationDevices/${DEVICE_ID}`), false);
-  assert.equal(fake.documents.get(`notificationDevices/${OTHER_DEVICE_ID}`).endpoint, "https://push.example/subscription");
-  assert.deepEqual(fake.documents.get(`notificationDevices/${OTHER_DEVICE_ID}`).createdAt, OLD);
-  assert.deepEqual(fake.documents.get("notificationRegistrationCounters/2026-07-17"), { count: 2, updatedAt: OLD });
-  assert.deepEqual(fake.documents.get(`notificationEndpointIndex/${FINGERPRINT}`), {
-    deviceId: OTHER_DEVICE_ID,
-    authorizationExpiresAt: EXPIRES,
-    createdAt: OLD,
-    updatedAt: NOW,
+  assert.deepEqual(Object.fromEntries(fake.documents), before);
+  assert.equal(fake.operations.some(([operation]) => ["create", "set", "update", "delete"].includes(operation)), false);
+});
+
+test("repeated active registrations are bounded by the same daily write counter", async () => {
+  const fake = createFakeFirestore({
+    [`notificationDevices/${OTHER_DEVICE_ID}`]: registrationRecord({ createdAt: OLD, updatedAt: OLD }),
+    [`notificationEndpointIndex/${FINGERPRINT}`]: {
+      deviceId: OTHER_DEVICE_ID,
+      authorizationExpiresAt: EXPIRES,
+      createdAt: OLD,
+      updatedAt: OLD,
+    },
   });
-  assert.equal(fake.operations.some(([operation, path]) => operation === "create" && path === `notificationDevices/${DEVICE_ID}`), false);
+  const store = createNotificationStore(fake.firestore);
+
+  assert.equal(await store.create(DEVICE_ID, registrationRecord(), registrationOptions()), OTHER_DEVICE_ID);
+  assert.equal(await store.create(DEVICE_ID, registrationRecord(), registrationOptions()), OTHER_DEVICE_ID);
+  const beforeThird = clone(Object.fromEntries(fake.documents));
+  const operationBoundary = fake.operations.length;
+  await assert.rejects(
+    () => store.create(DEVICE_ID, registrationRecord(), registrationOptions()),
+    (error) => error instanceof RegistrationCapError,
+  );
+
+  assert.equal(fake.documents.get("notificationRegistrationCounters/2026-07-17").count, 2);
+  assert.deepEqual(Object.fromEntries(fake.documents), beforeThird);
+  assert.equal(fake.operations.slice(operationBoundary)
+    .some(([operation]) => ["create", "set", "update", "delete"].includes(operation)), false);
+});
+
+test("an indexed disabled device fails closed without replacement or re-enablement", async () => {
+  const revoked = registrationRecord({
+    enabled: false,
+    authorizationExpiresAt: EXPIRED,
+    createdAt: OLD,
+    updatedAt: OLD,
+  });
+  const fake = createFakeFirestore({
+    [`notificationDevices/${OTHER_DEVICE_ID}`]: revoked,
+    [`notificationEndpointIndex/${FINGERPRINT}`]: {
+      deviceId: OTHER_DEVICE_ID,
+      authorizationExpiresAt: EXPIRED,
+      createdAt: OLD,
+      updatedAt: OLD,
+    },
+  });
+  const before = clone(Object.fromEntries(fake.documents));
+  const store = createNotificationStore(fake.firestore);
+
+  await assert.rejects(
+    () => store.create(DEVICE_ID, registrationRecord(), registrationOptions()),
+    (error) => error?.name === "RegistrationUnavailableError",
+  );
+
+  assert.deepEqual(Object.fromEntries(fake.documents), before);
+  assert.equal(fake.documents.has(`notificationDevices/${DEVICE_ID}`), false);
+  assert.equal(fake.operations.some(([operation]) => ["create", "set", "update", "delete"].includes(operation)), false);
 });
 
 test("the global cap rejects atomically before creating a device or endpoint index", async () => {

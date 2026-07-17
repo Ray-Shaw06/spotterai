@@ -4,7 +4,11 @@ import {
   createEndpointFingerprint,
   verifyDeviceToken,
 } from "../lib/notification-auth.js";
-import { createNotificationStore, RegistrationCapError } from "../lib/notification-store.js";
+import {
+  createNotificationStore,
+  RegistrationCapError,
+  RegistrationUnavailableError,
+} from "../lib/notification-store.js";
 import {
   hasOwn,
   isCompletionDate,
@@ -198,6 +202,9 @@ export function createNotificationHandler({
       } catch (error) {
         if (error instanceof RegistrationCapError) {
           return fail(429, { error: "Registration unavailable." }, "capacity");
+        }
+        if (error instanceof RegistrationUnavailableError || error?.name === "RegistrationUnavailableError") {
+          return fail(409, { error: "Registration unavailable." }, "conflict");
         }
         return fail(500, { error: "Request failed." }, "storage");
       }

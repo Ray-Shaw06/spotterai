@@ -32,7 +32,7 @@ const DEDUP_SECRET = Buffer.alloc(32, 2).toString("base64url");
 const AUTH = Buffer.alloc(16, 9).toString("base64url");
 const PRIVATE_AUTH = Buffer.alloc(16, 11).toString("base64url");
 const ALLOWED_ORIGIN = "https://app.spotterai.example";
-const WAF_RULE_ID = "waf_rule_notification_post_01";
+const WAF_RULE_ID = "waf_rule_notification_mutations_01";
 
 function p256PublicKey() {
   const ecdh = createECDH("prime256v1");
@@ -192,6 +192,7 @@ test("enabled registration fails closed on every readiness requirement", async (
   const invalidConfigs = [
     { NOTIFICATION_TOKEN_SECRET: `${"A".repeat(42)}B` },
     { NOTIFICATION_DEDUP_SECRET: `${"A".repeat(42)}B` },
+    { NOTIFICATION_DEDUP_SECRET: TOKEN_SECRET },
     { WEB_PUSH_PUBLIC_KEY: INVALID_POINT },
     { NOTIFICATION_ALLOWED_ORIGIN: "http://app.spotterai.example" },
     { NOTIFICATION_ALLOWED_ORIGIN: `${ALLOWED_ORIGIN}/path` },
@@ -278,6 +279,17 @@ test("a durable global-cap rejection returns 429 without issuing a token", async
   assert.equal(store.calls.update.length + store.calls.remove.length, 0);
 });
 
+test("an indexed revoked registration fails with a generic conflict and no token", async () => {
+  const store = createMockStore({
+    create: async () => { throw Object.assign(new Error("internal revocation"), { name: "RegistrationUnavailableError" }); },
+  });
+  const { res } = await register(setup({ store }));
+
+  assert.equal(res.statusCode, 409);
+  assert.deepEqual(res.body, { error: "Registration unavailable." });
+  assert.equal("deviceToken" in res.body, false);
+});
+
 test("overposted health, identity, fingerprint, expiry, and scheduler fields never reach storage", async () => {
   const { res, store } = await register(setup(), {
     weight: 90,
@@ -331,6 +343,18 @@ test("POST rejects invalid endpoints, off-curve encryption keys, expiration valu
     assert.deepEqual(res.body, { error: "Invalid request." });
     assert.equal(store.calls.create.length, 0);
   }
+});
+
+test("fragment aliases of the same push endpoint are both rejected before fingerprinting", async () => {
+  const context = setup();
+  for (const fragment of ["#one", "#two"]) {
+    const res = await coreRequest(context.handler, "POST", registrationBody({
+      subscription: { ...SUBSCRIPTION, endpoint: `${SUBSCRIPTION.endpoint}${fragment}` },
+    }));
+    assert.equal(res.statusCode, 400);
+    assert.deepEqual(res.body, { error: "Invalid request." });
+  }
+  assert.equal(context.store.calls.create.length, 0);
 });
 
 test("enabled body methods enforce exact HTTPS origin, JSON content type, and Sec-Fetch-Site", async () => {
