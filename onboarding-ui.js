@@ -24,6 +24,7 @@ import {
 import { bodyweightKg, measurementSystem, switchMeasurementSystem, validateMeasurements } from "./measurements.js";
 import { saferTargets } from "./nutrition-safety.js";
 import { setTargets, setUnit } from "./tracker-store.js";
+import { trackFunnel } from "./analytics.js";
 
 const $ = (id) => document.getElementById(id);
 const overlay = $("onboarding");
@@ -153,10 +154,11 @@ function render() {
   nextBtn.textContent = step === STEP_RENDER.length - 1 ? "Build my plan" : "Next";
 }
 
-function open() {
+function open(source = "plan") {
   load();
   overlay.classList.add("is-open");
   overlay.setAttribute("aria-hidden", "false");
+  trackFunnel("onboarding_started", { source });
   render();
   setTimeout(() => overlay.querySelector(".onb-chip, .onb-input")?.focus(), 50);
 }
@@ -179,6 +181,7 @@ function finish() {
   close();
   location.hash = "#/"; // the Plan page, where results render
   window.dispatchEvent(new CustomEvent("spotter:generate", { detail: inputs }));
+  trackFunnel("onboarding_completed");
 }
 
 // --- wiring ----------------------------------------------------------------
@@ -233,7 +236,14 @@ if (overlay && body) {
   // Entry points: any [data-onboard] control opens the guided flow.
   document.addEventListener("click", (e) => {
     const trigger = e.target.closest("[data-onboard]");
-    if (trigger) { e.preventDefault(); open(); }
+    if (trigger) {
+      e.preventDefault();
+      const source = trigger.closest("#today") ? "today" : "landing";
+      trackFunnel("landing_cta_clicked", {
+        source: source === "today" ? "today" : trigger.closest(".final-cta") ? "final" : "hero",
+      });
+      open(source);
+    }
   });
-  window.addEventListener("spotter:onboarding", open);
+  window.addEventListener("spotter:onboarding", (e) => open(e.detail?.source || "plan"));
 }

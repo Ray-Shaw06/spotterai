@@ -23,6 +23,7 @@ import { getContext as getTrackerContext } from "./tracker-store.js";
 import { swapExercise, removeExercise, addExercise } from "./plan-edit.js";
 import { suggestAlternatives } from "./exercise-data.js";
 import { searchExercises } from "./exercises.js";
+import { trackFunnel } from "./analytics.js";
 
 // ----------------------------------------------------------------------------
 // Element references
@@ -53,6 +54,7 @@ const auditPassedList = document.getElementById("audit-passed-list");
 const trustReportEl = document.getElementById("trust-report");
 const repairMount = document.getElementById("repair-mount");
 const planOutput = document.getElementById("plan-output");
+const startFirstWorkoutBtn = document.getElementById("start-first-workout");
 
 // Adaptive coach loop (re-tune the plan from logged training, then re-audit).
 const adaptCard = document.getElementById("adapt-card");
@@ -156,6 +158,21 @@ async function getFallbackPlan(inputs) {
 
 let lastInputs = null;
 
+function failureClassForResponse(status) {
+  if (status === 429) return "rate_limited";
+  return "unavailable";
+}
+
+function failureClassForError(error) {
+  if (error?.failureClass) return error.failureClass;
+  if (error?.status === 429) return "rate_limited";
+  if (error?.status) return "unavailable";
+  if (error?.name === "AbortError" || /timeout/i.test(error?.message || "")) return "timeout";
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return "offline";
+  if (error instanceof TypeError) return "offline";
+  return "unknown";
+}
+
 async function generate(inputsOverride) {
   const inputs = inputsOverride || lastInputs;
   if (!inputs) {
@@ -171,6 +188,7 @@ async function generate(inputsOverride) {
 
   let plan = null;
   let usedFallback = false;
+  let fallbackFailureClass = "unknown";
 
   try {
     const res = await fetch("api/generate", {
@@ -180,10 +198,23 @@ async function generate(inputsOverride) {
     });
 
     if (res.ok) {
-      const data = await res.json();
-      plan = data.plan;
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        const error = new Error("The generator returned invalid JSON.");
+        error.failureClass = "invalid_response";
+        throw error;
+      }
+      plan = data?.plan;
+      if (!plan) {
+        const error = new Error("The generator returned no plan.");
+        error.failureClass = "invalid_response";
+        throw error;
+      }
     } else {
       // 429 (rate limit) or any server error → graceful saved-example fallback.
+      fallbackFailureClass = failureClassForResponse(res.status);
       plan = await getFallbackPlan(inputs);
       usedFallback = true;
       if (!plan) {
@@ -192,6 +223,7 @@ async function generate(inputsOverride) {
       }
     }
   } catch (err) {
+    fallbackFailureClass = fallbackFailureClass === "unknown" ? failureClassForError(err) : fallbackFailureClass;
     // Network error / offline / running as static file → try the fallback.
     if (!plan) {
       plan = await getFallbackPlan(inputs);
@@ -202,6 +234,7 @@ async function generate(inputsOverride) {
       errorText.textContent =
         "We couldn't reach the generator and no saved example was available. Check your connection and try again.";
       showState("error");
+      trackFunnel("plan_generation_failed", { failure_class: fallbackFailureClass });
       return;
     }
   }
@@ -209,6 +242,8 @@ async function generate(inputsOverride) {
   stopLoadingSteps();
   publishPlan(plan, inputs);
   renderResults(plan, inputs, usedFallback);
+  trackFunnel("plan_generation_succeeded", { fallback_used: String(usedFallback) });
+  if (usedFallback) trackFunnel("plan_fallback_shown", { failure_class: fallbackFailureClass });
 }
 
 // ----------------------------------------------------------------------------
@@ -662,6 +697,10 @@ regenerateBtn.addEventListener("click", () => {
 });
 
 adaptBtn?.addEventListener("click", adapt);
+
+startFirstWorkoutBtn?.addEventListener("click", () => {
+  window.dispatchEvent(new CustomEvent("spotter:start-plan-day", { detail: { index: 0, source: "plan" } }));
+});
 
 // External plan changes (e.g. switching profile) — render that plan, or the
 // empty state if the new profile has none. Self-updates are suppressed above.

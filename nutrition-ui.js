@@ -15,6 +15,7 @@ import { estimateFood, estimateMealPhoto } from "./ai.js";
 import { ring } from "./charts.js";
 import { evaluateNutrition, NUTRITION_DISCLAIMER, NUTRITION_WONT_DO } from "./nutrition-safety.js";
 import { store } from "./store.js";
+import { trackFunnel } from "./analytics.js";
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -60,6 +61,16 @@ let selected = ymd(new Date());
 let pickerMeal = "breakfast";
 let offController = null;
 let aiController = null;
+
+function photoFailureClass(error) {
+  if (error?.status === 429) return "rate_limited";
+  if (error?.status) return "unavailable";
+  if (error?.name === "AbortError" || /timeout/i.test(error?.message || "")) return "timeout";
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return "offline";
+  if (error instanceof TypeError) return "offline";
+  if (/invalid image|no estimate returned/i.test(error?.message || "")) return "invalid_response";
+  return "unknown";
+}
 
 // ----------------------------------------------------------------------------
 // Day data
@@ -476,9 +487,11 @@ async function handlePhoto(file) {
     const dataUrl = await fileToScaledDataUrl(file);
     const food = await estimateMealPhoto(dataUrl, aiController.signal);
     showDetail(food);
+    trackFunnel("meal_photo_succeeded");
   } catch (e) {
     if (e.name === "AbortError") return;
     showDetail(null, true, { name: "", note: "Couldn't read that photo. Add the food manually, or try again." });
+    trackFunnel("meal_photo_failed", { failure_class: photoFailureClass(e) });
   }
 }
 

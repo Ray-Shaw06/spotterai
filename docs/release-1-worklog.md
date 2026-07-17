@@ -100,6 +100,19 @@ This document is the version-controlled source of truth for Release 1 progress, 
 - Independent review: found a P1 Skip bypass for invalid optional values and a missing worklog entry. Resolved P1 by disabling Skip whenever `canAdvance()` is false and added a regression test; this entry resolves the documentation finding. No outstanding review findings.
 - Commit: `feat: clarify onboarding measurements`.
 
+### 2026-07-17 — Task 2: Hobby-compatible funnel analytics and first-workout activation
+
+- Role: Implementation agent.
+- Bounded task and acceptance criteria: Add privacy-safe activation-funnel analytics compatible with Vercel Hobby, make the plan's first workout immediately actionable, and preserve existing Today and Dashboard quick-start behavior.
+- Result: Added `analytics.js` with an immutable allow-list schema and `trackFunnel(name, properties?)`. It uses only sanitized manual virtual pageviews (`window.va("pageview", { route, path })`): no user IDs, intake values, prompts, measurements, photos, health notes, or arbitrary properties can become telemetry. The plan results now have one primary "Start my first workout" action for day one. Workout sessions retain an in-memory source, record their start once, and record completion only after `addWorkout` returns a workout.
+- Outcome boundaries: Generation records success only after a plan is published and rendered, records a fallback only after its saved plan is displayed, and records failure only after both live generation and fallback are unavailable. Onboarding, landing CTAs, and meal-photo result paths are instrumented without intake or image data.
+- Compatibility decision: Sanitized virtual pageviews were selected because current official Vercel documentation limits custom events to Pro/Enterprise while pageviews remain available on Hobby. The existing first-party Vercel Analytics loader remains unchanged.
+- Files: `analytics.js`, `index.html`, `app.js`, `onboarding-ui.js`, `workout-ui.js`, `nutrition-ui.js`, `style.css`, `test/analytics.test.js`, `docs/release-1-worklog.md`.
+- TDD evidence: `node --test test/analytics.test.js test/ui-copy.test.js test/ui-layout.test.js` initially failed as expected with `ERR_MODULE_NOT_FOUND` for `analytics.js`. Follow-up RED/GREEN tests independently proved nested schema mutation was blocked, editing a historical workout does not emit an activation start, and a null generation response is classified as `invalid_response`.
+- Verification: `node --test test/analytics.test.js test/ui-copy.test.js test/ui-layout.test.js test/today.test.js` passed 34/34. `npm test` passed 210/210. `git diff --check` passed with no whitespace errors.
+- Independent review: Found and resolved two important issues before commit: shallow freezing allowed runtime mutation of enum values, and historical workout edits emitted unpaired start events. Also hardened null JSON response classification. The final re-review approved the diff with no blockers; the remaining caveat is that lifecycle coverage is source-shape rather than browser interaction coverage.
+- Commit: `feat: instrument the Release 1 activation funnel`.
+
 ## Required worklog entry format
 
 Each implementation, review, verification, or deployment entry must record:
