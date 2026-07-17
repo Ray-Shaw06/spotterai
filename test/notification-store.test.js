@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   createNotificationStore,
   RegistrationCapError,
+  RegistrationUnavailableError,
 } from "../lib/notification-store.js";
 
 const NOW = new Date("2026-07-17T12:00:00.000Z");
@@ -25,7 +26,16 @@ function createFakeFirestore(seed = {}) {
     collection(name) {
       return {
         doc(id) {
-          return { id, path: `${name}/${id}` };
+          const path = `${name}/${id}`;
+          return {
+            id,
+            path,
+            async update(value) {
+              operations.push(["direct-update", path, clone(value)]);
+              if (!documents.has(path)) throw new Error("missing document");
+              documents.set(path, { ...documents.get(path), ...clone(value) });
+            },
+          };
         },
       };
     },
@@ -134,10 +144,8 @@ test("new registration atomically creates device/index and increments the global
   });
 });
 
-test("active endpoint refresh consumes quota and changes only registration-owned fields", async () => {
+test("exact-proof endpoint refresh with a stale lease consumes quota and preserves dispatcher-owned fields", async () => {
   const existingRecord = registrationRecord({
-    endpoint: "https://push.example/old",
-    keys: { p256dh: "old-p256dh", auth: "old-auth" },
     expirationTime: 123,
     timezone: "UTC",
     schedule: [{ weekday: 2, time: "07:30" }],
@@ -148,7 +156,7 @@ test("active endpoint refresh consumes quota and changes only registration-owned
     dailyDeliveryDate: "2026-07-17",
     dailyDeliveryCount: 2,
     lastSentByCategory: { workout: OLD },
-    leaseUntil: EXPIRES,
+    leaseUntil: EXPIRED,
     leaseId: "existing-lease",
     createdAt: OLD,
     updatedAt: OLD,
@@ -196,6 +204,71 @@ test("active endpoint refresh consumes quota and changes only registration-owned
     updatedAt: NOW,
   });
   assert.equal(fake.operations.some(([operation, path]) => operation === "create" && path === `notificationDevices/${DEVICE_ID}`), false);
+});
+
+test("same-endpoint refresh rejects mismatched endpoint or subscription proof without mutation", async () => {
+  const mismatches = [
+    { endpoint: "https://push.example/different" },
+    { keys: { p256dh: "different-p256dh", auth: registrationRecord().keys.auth } },
+    { keys: { p256dh: registrationRecord().keys.p256dh, auth: "different-auth" } },
+  ];
+
+  for (const mismatch of mismatches) {
+    const seed = {
+      [`notificationDevices/${OTHER_DEVICE_ID}`]: registrationRecord({
+        ...mismatch,
+        createdAt: OLD,
+        updatedAt: OLD,
+      }),
+      [`notificationEndpointIndex/${FINGERPRINT}`]: {
+        deviceId: OTHER_DEVICE_ID,
+        authorizationExpiresAt: EXPIRES,
+        createdAt: OLD,
+        updatedAt: OLD,
+      },
+      "notificationRegistrationCounters/2026-07-17": { count: 1, updatedAt: OLD },
+    };
+    const fake = createFakeFirestore(seed);
+    const before = clone(Object.fromEntries(fake.documents));
+    const store = createNotificationStore(fake.firestore);
+
+    await assert.rejects(
+      () => store.create(DEVICE_ID, registrationRecord(), registrationOptions()),
+      (error) => error instanceof RegistrationUnavailableError,
+    );
+
+    assert.deepEqual(Object.fromEntries(fake.documents), before, JSON.stringify(mismatch));
+    assert.equal(fake.operations.some(([operation]) => ["create", "set", "update", "delete"].includes(operation)), false);
+  }
+});
+
+test("same-endpoint refresh rejects a live dispatcher lease without mutation", async () => {
+  const seed = {
+    [`notificationDevices/${OTHER_DEVICE_ID}`]: registrationRecord({
+      leaseId: "live-dispatch-lease",
+      leaseUntil: EXPIRES,
+      createdAt: OLD,
+      updatedAt: OLD,
+    }),
+    [`notificationEndpointIndex/${FINGERPRINT}`]: {
+      deviceId: OTHER_DEVICE_ID,
+      authorizationExpiresAt: EXPIRES,
+      createdAt: OLD,
+      updatedAt: OLD,
+    },
+    "notificationRegistrationCounters/2026-07-17": { count: 1, updatedAt: OLD },
+  };
+  const fake = createFakeFirestore(seed);
+  const before = clone(Object.fromEntries(fake.documents));
+  const store = createNotificationStore(fake.firestore);
+
+  await assert.rejects(
+    () => store.create(DEVICE_ID, registrationRecord(), registrationOptions()),
+    (error) => error instanceof RegistrationUnavailableError,
+  );
+
+  assert.deepEqual(Object.fromEntries(fake.documents), before);
+  assert.equal(fake.operations.some(([operation]) => ["create", "set", "update", "delete"].includes(operation)), false);
 });
 
 test("active refresh fails closed when its server-owned revision cannot be incremented safely", async () => {
@@ -357,7 +430,7 @@ test("remove atomically deletes the device and only its matching endpoint index"
   });
   const store = createNotificationStore(fake.firestore);
 
-  await store.remove(DEVICE_ID);
+  await store.remove(DEVICE_ID, { now: NOW });
 
   assert.equal(fake.documents.has(`notificationDevices/${DEVICE_ID}`), false);
   assert.equal(fake.documents.has(`notificationEndpointIndex/${FINGERPRINT}`), false);
@@ -365,20 +438,100 @@ test("remove atomically deletes the device and only its matching endpoint index"
   assert.ok(fake.operations.some(([operation, path]) => operation === "delete" && path === `notificationEndpointIndex/${FINGERPRINT}`));
 });
 
-test("update preserves the public per-device store interface", async () => {
-  const updates = [];
-  const firestore = {
-    collection(name) {
-      assert.equal(name, "notificationDevices");
-      return {
-        doc(id) {
-          assert.equal(id, DEVICE_ID);
-          return { async update(patch) { updates.push(patch); } };
-        },
-      };
+test("remove rejects live and malformed dispatcher leases without mutation", async () => {
+  const unsafeLeases = [
+    { leaseId: "live-delete-lease", leaseUntil: EXPIRES },
+    { leaseId: "malformed-without-time", leaseUntil: null },
+    { leaseId: null, leaseUntil: EXPIRES },
+    { leaseId: "", leaseUntil: EXPIRES },
+  ];
+
+  for (const lease of unsafeLeases) {
+    const seed = {
+      [`notificationDevices/${DEVICE_ID}`]: registrationRecord(lease),
+      [`notificationEndpointIndex/${FINGERPRINT}`]: {
+        deviceId: DEVICE_ID,
+        authorizationExpiresAt: EXPIRES,
+        createdAt: NOW,
+        updatedAt: NOW,
+      },
+    };
+    const fake = createFakeFirestore(seed);
+    const before = clone(Object.fromEntries(fake.documents));
+    const store = createNotificationStore(fake.firestore);
+
+    await assert.rejects(
+      () => store.remove(DEVICE_ID, { now: NOW }),
+      (error) => error?.name === "NotificationLeaseConflictError",
+    );
+    assert.deepEqual(Object.fromEntries(fake.documents), before, JSON.stringify(lease));
+    assert.equal(fake.operations.some(([operation]) => operation === "delete"), false);
+  }
+});
+
+test("remove accepts a stale dispatcher lease", async () => {
+  const fake = createFakeFirestore({
+    [`notificationDevices/${DEVICE_ID}`]: registrationRecord({
+      leaseId: "stale-delete-lease",
+      leaseUntil: EXPIRED,
+    }),
+    [`notificationEndpointIndex/${FINGERPRINT}`]: {
+      deviceId: DEVICE_ID,
+      authorizationExpiresAt: EXPIRES,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
-  };
-  const store = createNotificationStore(firestore);
-  await store.update(DEVICE_ID, { paused: true });
-  assert.deepEqual(updates, [{ paused: true }]);
+  });
+  const store = createNotificationStore(fake.firestore);
+
+  await store.remove(DEVICE_ID, { now: NOW });
+
+  assert.equal(fake.documents.has(`notificationDevices/${DEVICE_ID}`), false);
+  assert.equal(fake.documents.has(`notificationEndpointIndex/${FINGERPRINT}`), false);
+});
+
+test("update rejects live and malformed dispatcher leases without mutation", async () => {
+  const unsafeLeases = [
+    { leaseId: "live-update-lease", leaseUntil: EXPIRES },
+    { leaseId: "malformed-without-time", leaseUntil: null },
+    { leaseId: null, leaseUntil: EXPIRES },
+  ];
+
+  for (const lease of unsafeLeases) {
+    const fake = createFakeFirestore({
+      [`notificationDevices/${DEVICE_ID}`]: registrationRecord(lease),
+    });
+    const before = clone(Object.fromEntries(fake.documents));
+    const store = createNotificationStore(fake.firestore);
+
+    await assert.rejects(
+      () => store.update(DEVICE_ID, { paused: true }, { now: NOW }),
+      (error) => error?.name === "NotificationLeaseConflictError",
+    );
+    assert.deepEqual(Object.fromEntries(fake.documents), before, JSON.stringify(lease));
+    assert.equal(fake.operations.some(([operation]) => ["update", "direct-update"].includes(operation)), false);
+  }
+});
+
+test("update transactionally accepts no lease and a stale lease", async () => {
+  for (const lease of [
+    { leaseId: null, leaseUntil: null },
+    { leaseId: "stale-update-lease", leaseUntil: EXPIRED },
+  ]) {
+    const existing = registrationRecord(lease);
+    const fake = createFakeFirestore({
+      [`notificationDevices/${DEVICE_ID}`]: existing,
+    });
+    const store = createNotificationStore(fake.firestore);
+
+    await store.update(DEVICE_ID, { paused: true, updatedAt: NOW }, { now: NOW });
+
+    assert.deepEqual(fake.documents.get(`notificationDevices/${DEVICE_ID}`), {
+      ...existing,
+      paused: true,
+      updatedAt: NOW,
+    });
+    assert.ok(fake.operations.some(([operation]) => operation === "update"));
+    assert.equal(fake.operations.some(([operation]) => operation === "direct-update"), false);
+  }
 });

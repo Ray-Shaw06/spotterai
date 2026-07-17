@@ -6,6 +6,7 @@ import {
 } from "../lib/notification-auth.js";
 import {
   createNotificationStore,
+  NotificationLeaseConflictError,
   RegistrationCapError,
   RegistrationUnavailableError,
 } from "../lib/notification-store.js";
@@ -229,8 +230,11 @@ export function createNotificationHandler({
 
     if (method === "DELETE") {
       try {
-        await store.remove(deviceId);
-      } catch {
+        await store.remove(deviceId, { now: new Date(timestamp(now)) });
+      } catch (error) {
+        if (error instanceof NotificationLeaseConflictError || error?.name === "NotificationLeaseConflictError") {
+          return fail(409, { error: "Request conflict." }, "conflict");
+        }
         return fail(500, { error: "Request failed." }, "storage");
       }
       return succeed(200, { ok: true });
@@ -264,8 +268,11 @@ export function createNotificationHandler({
     }
 
     try {
-      await store.update(deviceId, patch);
-    } catch {
+      await store.update(deviceId, patch, { now: currentDate });
+    } catch (error) {
+      if (error instanceof NotificationLeaseConflictError || error?.name === "NotificationLeaseConflictError") {
+        return fail(409, { error: "Request conflict." }, "conflict");
+      }
       return fail(500, { error: "Request failed." }, "storage");
     }
     return succeed(200, response);

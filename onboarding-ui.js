@@ -21,7 +21,7 @@ import {
   ONBOARDING_STEPS,
   mapOnboardingToInputs,
 } from "./onboarding.js";
-import { bodyweightKg, measurementSystem, switchMeasurementSystem, validateMeasurements } from "./measurements.js";
+import { bodyweightKg, clearMeasurementCorrection, measurementSystem, switchMeasurementSystem, validateMeasurements } from "./measurements.js";
 import { saferTargets } from "./nutrition-safety.js";
 import { setTargets, setUnit } from "./tracker-store.js";
 import { trackFunnel } from "./analytics.js";
@@ -63,7 +63,7 @@ function chips(field, options, multi = false) {
       const value = typeof o === "object" ? o.value ?? o.label : o;
       const label = typeof o === "object" ? o.label : o;
       const active = multi ? Array.isArray(sel) && sel.includes(value) : sel === value;
-      return `<button type="button" class="onb-chip${active ? " is-active" : ""}" data-value="${esc(value)}">${esc(label)}</button>`;
+      return `<button type="button" class="onb-chip${active ? " is-active" : ""}" data-value="${esc(value)}" aria-pressed="${active ? "true" : "false"}">${esc(label)}</button>`;
     })
     .join("")}</div>`;
 }
@@ -144,7 +144,11 @@ function isOptionalStep() {
 }
 
 // --- render ----------------------------------------------------------------
-function render() {
+function focusChip(field, value) {
+  body.querySelector(`.onb-chips[data-field="${CSS.escape(field)}"] [data-value="${CSS.escape(value)}"]`)?.focus();
+}
+
+function render({ focusField, focusValue } = {}) {
   progress.innerHTML = ONBOARDING_STEPS.map((s, i) => `<span class="onb-step${i === step ? " is-active" : ""}${i < step ? " is-done" : ""}">${esc(s)}</span>`).join("");
   body.innerHTML = STEP_RENDER[step]();
   backBtn.style.visibility = step === 0 ? "hidden" : "visible";
@@ -152,6 +156,7 @@ function render() {
   skipBtn.disabled = !canAdvance();
   nextBtn.disabled = !canAdvance();
   nextBtn.textContent = step === STEP_RENDER.length - 1 ? "Build my plan" : "Next";
+  if (focusField && focusValue != null) focusChip(focusField, focusValue);
 }
 
 function open(source = "plan") {
@@ -195,18 +200,25 @@ if (overlay && body) {
     if (wrap.dataset.multi === "1") {
       const arr = Array.isArray(data[f]) ? [...data[f]] : [];
       data[f] = arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
-      wrap.querySelector(`[data-value="${CSS.escape(value)}"]`)?.classList.toggle("is-active");
+      const active = data[f].includes(value);
+      chip.classList.toggle("is-active", active);
+      chip.setAttribute("aria-pressed", active ? "true" : "false");
     } else {
       data = f === "units" ? switchMeasurementSystem(data, value === "lb" ? "imperial" : "metric") : { ...data, [f]: value };
-      wrap.querySelectorAll(".onb-chip").forEach((c) => c.classList.toggle("is-active", c === chip));
+      wrap.querySelectorAll(".onb-chip").forEach((c) => {
+        const active = c === chip;
+        c.classList.toggle("is-active", active);
+        c.setAttribute("aria-pressed", active ? "true" : "false");
+      });
     }
     save();
-    if (f === "units") render();
+    if (f === "units") render({ focusField: f, focusValue: value });
     else nextBtn.disabled = !canAdvance();
   });
   body.addEventListener("input", (e) => {
     const el = e.target.closest("[data-input]");
     if (!el) return;
+    data = clearMeasurementCorrection(data, el.dataset.input);
     data[el.dataset.input] = el.type === "checkbox" ? el.checked : el.value;
     updateMeasurementErrors();
     skipBtn.disabled = !canAdvance();

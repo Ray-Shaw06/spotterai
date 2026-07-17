@@ -15,6 +15,7 @@ import {
   parseFirebaseServiceAccount,
 } from "../lib/firebase-admin.js";
 import { RegistrationCapError } from "../lib/notification-store.js";
+import { DISPATCH_LIMITS } from "../functions/dispatcher.js";
 import {
   validateNotificationConfig,
   validatePushSubscription,
@@ -23,6 +24,11 @@ import notificationRoute, {
   createNotificationFetchHandler,
   createNotificationHandler,
 } from "../api/notifications.js";
+import {
+  deleteNotificationSubscription,
+  syncWorkoutCompletion,
+  updateNotificationPreferences,
+} from "../notification-client.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOW_MS = Date.UTC(2026, 6, 17, 12, 0, 0);
@@ -231,6 +237,22 @@ test("enabled registration fails closed on every readiness requirement", async (
   }
 });
 
+test("the maximum registration cap stays below one day of five-minute cleanup capacity", () => {
+  const runsPerDay = (24 * 60) / 5;
+  const cleanupCapacity = DISPATCH_LIMITS.cleanup * runsPerDay;
+  const maximumRegistrationCap = 10_000;
+
+  assert.ok(maximumRegistrationCap < cleanupCapacity);
+  assert.equal(validateNotificationConfig({
+    ...ENV,
+    NOTIFICATION_REGISTRATION_DAILY_CAP: String(maximumRegistrationCap),
+  }).valid, true);
+  assert.equal(validateNotificationConfig({
+    ...ENV,
+    NOTIFICATION_REGISTRATION_DAILY_CAP: String(maximumRegistrationCap + 1),
+  }).valid, false);
+});
+
 test("POST registers the exact minimal record and passes only server-owned cap/dedup options", async () => {
   const { res, store } = await register();
 
@@ -273,6 +295,15 @@ test("POST registers the exact minimal record and passes only server-owned cap/d
     dailyCap: 100,
     now: NOW,
   });
+});
+
+test("POST rejects an empty schedule before storage", async () => {
+  const { res, store } = await register(setup(), {
+    preferences: { ...PREFERENCES, schedule: [] },
+  });
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(store.calls.create.length, 0);
 });
 
 test("same-endpoint dedup returns a token for the store's effective existing device", async () => {
@@ -434,8 +465,235 @@ test("PATCH and DELETE remain strictly bound to the canonical token device", asy
   assert.equal(completion.statusCode, 200);
   assert.equal(deletion.statusCode, 200);
   assert.equal(store.calls.update.every(([deviceId]) => deviceId === DEVICE_ID), true);
-  assert.deepEqual(store.calls.remove, [[DEVICE_ID]]);
+  assert.equal(store.calls.update.every(([, , options]) => options?.now?.getTime() === NOW_MS), true);
+  assert.deepEqual(store.calls.remove, [[DEVICE_ID, { now: NOW }]]);
   assert.doesNotMatch(JSON.stringify(store.calls.update), /weight|enabled|private/);
+});
+
+test("PATCH preferences and completion map a live dispatcher lease to a generic retryable conflict", async () => {
+  const conflict = new Error("private lease detail");
+  conflict.name = "NotificationLeaseConflictError";
+  const { handler, store } = setup({
+    store: createMockStore({ update: async () => { throw conflict; } }),
+  });
+  const token = createDeviceToken(DEVICE_ID, TOKEN_SECRET, NOW_MS);
+  const authorization = { authorization: `Bearer ${token}` };
+
+  const preferences = await coreRequest(handler, "PATCH", { preferences: PREFERENCES }, authorization);
+  const completion = await coreRequest(handler, "PATCH", { lastWorkoutCompletionDate: "2026-07-17" }, authorization);
+
+  for (const response of [preferences, completion]) {
+    assert.equal(response.statusCode, 409);
+    assert.deepEqual(response.body, { error: "Request conflict." });
+    assert.doesNotMatch(JSON.stringify(response.body), /lease|private|device|token/i);
+  }
+  assert.equal(store.calls.update.length, 2);
+  assert.equal(store.calls.update.every(([deviceId, , options]) => (
+    deviceId === DEVICE_ID && options?.now?.getTime() === NOW_MS
+  )), true);
+});
+
+test("DELETE maps a live dispatcher lease to a generic retryable conflict", async () => {
+  const conflict = new Error("private lease detail");
+  conflict.name = "NotificationLeaseConflictError";
+  const { handler, store } = setup({
+    store: createMockStore({ remove: async () => { throw conflict; } }),
+  });
+  const token = createDeviceToken(DEVICE_ID, TOKEN_SECRET, NOW_MS);
+
+  const response = await coreRequest(handler, "DELETE", {}, { authorization: `Bearer ${token}` });
+
+  assert.equal(response.statusCode, 409);
+  assert.deepEqual(response.body, { error: "Request conflict." });
+  assert.deepEqual(store.calls.remove, [[DEVICE_ID, { now: NOW }]]);
+  assert.doesNotMatch(JSON.stringify(response.body), /lease|private|device|token/i);
+});
+
+test("the real notification client sends a DELETE accepted by the real core handler", async () => {
+  const { handler, store } = setup();
+  const token = createDeviceToken(DEVICE_ID, TOKEN_SECRET, NOW_MS);
+  const values = new Map([
+    ["spotterai.notifications.token", token],
+    ["spotterai.notifications.preferences", JSON.stringify(PREFERENCES)],
+  ]);
+  const subscription = { unsubscribe: async () => true };
+  const originals = new Map();
+  let clientHeaders;
+
+  for (const [key, value] of Object.entries({
+    localStorage: {
+      getItem: (name) => values.get(name) ?? null,
+      setItem: (name, next) => values.set(name, String(next)),
+      removeItem: (name) => values.delete(name),
+    },
+    navigator: {
+      serviceWorker: {
+        ready: Promise.resolve({
+          pushManager: { getSubscription: async () => subscription },
+        }),
+      },
+    },
+    fetch: async (_url, options) => {
+      clientHeaders = Object.fromEntries(Object.entries(options.headers)
+        .map(([name, value]) => [name.toLowerCase(), value]));
+      const response = await coreRequest(handler, options.method, options.body ?? "", {
+        ...clientHeaders,
+        origin: ALLOWED_ORIGIN,
+        "sec-fetch-site": "same-origin",
+      }, { defaults: false });
+      return {
+        ok: response.statusCode >= 200 && response.statusCode < 300,
+        status: response.statusCode,
+        json: async () => response.body,
+      };
+    },
+  })) {
+    originals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
+    Object.defineProperty(globalThis, key, { configurable: true, writable: true, value });
+  }
+
+  try {
+    await deleteNotificationSubscription();
+    assert.equal(clientHeaders["content-type"], "application/json");
+    assert.deepEqual(store.calls.remove, [[DEVICE_ID, { now: NOW }]]);
+    assert.equal(values.has("spotterai.notifications.token"), false);
+  } finally {
+    for (const [key, descriptor] of originals) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
+  }
+});
+
+test("the real client retains its retry credential when the core handler rejects deletion during a live lease", async () => {
+  const conflict = new Error("private lease detail");
+  conflict.name = "NotificationLeaseConflictError";
+  const { handler, store } = setup({
+    store: createMockStore({ remove: async () => { throw conflict; } }),
+  });
+  const token = createDeviceToken(DEVICE_ID, TOKEN_SECRET, NOW_MS);
+  const values = new Map([
+    ["spotterai.notifications.token", token],
+    ["spotterai.notifications.preferences", JSON.stringify(PREFERENCES)],
+  ]);
+  let unsubscribeCalls = 0;
+  const originals = new Map();
+
+  for (const [key, value] of Object.entries({
+    localStorage: {
+      getItem: (name) => values.get(name) ?? null,
+      setItem: (name, next) => values.set(name, String(next)),
+      removeItem: (name) => values.delete(name),
+    },
+    navigator: {
+      serviceWorker: {
+        ready: Promise.resolve({
+          pushManager: {
+            getSubscription: async () => ({
+              unsubscribe: async () => { unsubscribeCalls += 1; return true; },
+            }),
+          },
+        }),
+      },
+    },
+    fetch: async (_url, options) => {
+      const headers = Object.fromEntries(Object.entries(options.headers)
+        .map(([name, headerValue]) => [name.toLowerCase(), headerValue]));
+      const response = await coreRequest(handler, options.method, options.body ?? "", {
+        ...headers,
+        origin: ALLOWED_ORIGIN,
+        "sec-fetch-site": "same-origin",
+      }, { defaults: false });
+      return {
+        ok: response.statusCode >= 200 && response.statusCode < 300,
+        status: response.statusCode,
+        json: async () => response.body,
+      };
+    },
+  })) {
+    originals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
+    Object.defineProperty(globalThis, key, { configurable: true, writable: true, value });
+  }
+
+  try {
+    await assert.rejects(
+      deleteNotificationSubscription(),
+      (error) => error?.code === "delete_failed"
+        && error?.status === 409
+        && !/lease|private|device|token/i.test(error.message),
+    );
+    assert.deepEqual(store.calls.remove, [[DEVICE_ID, { now: NOW }]]);
+    assert.equal(unsubscribeCalls, 1);
+    assert.equal(values.get("spotterai.notifications.token"), token);
+    assert.deepEqual(JSON.parse(values.get("spotterai.notifications.preferences")), PREFERENCES);
+  } finally {
+    for (const [key, descriptor] of originals) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
+  }
+});
+
+test("the real client keeps its credential and safe typed errors when PATCH conflicts with a live lease", async () => {
+  const conflict = new Error("private lease detail");
+  conflict.name = "NotificationLeaseConflictError";
+  const { handler, store } = setup({
+    store: createMockStore({ update: async () => { throw conflict; } }),
+  });
+  const token = createDeviceToken(DEVICE_ID, TOKEN_SECRET, NOW_MS);
+  const values = new Map([
+    ["spotterai.notifications.token", token],
+    ["spotterai.notifications.preferences", JSON.stringify(PREFERENCES)],
+  ]);
+  const originals = new Map();
+
+  for (const [key, value] of Object.entries({
+    localStorage: {
+      getItem: (name) => values.get(name) ?? null,
+      setItem: (name, next) => values.set(name, String(next)),
+      removeItem: (name) => values.delete(name),
+    },
+    fetch: async (_url, options) => {
+      const headers = Object.fromEntries(Object.entries(options.headers)
+        .map(([name, headerValue]) => [name.toLowerCase(), headerValue]));
+      const response = await coreRequest(handler, options.method, options.body ?? "", {
+        ...headers,
+        origin: ALLOWED_ORIGIN,
+        "sec-fetch-site": "same-origin",
+      }, { defaults: false });
+      return {
+        ok: response.statusCode >= 200 && response.statusCode < 300,
+        status: response.statusCode,
+        json: async () => response.body,
+      };
+    },
+  })) {
+    originals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
+    Object.defineProperty(globalThis, key, { configurable: true, writable: true, value });
+  }
+
+  try {
+    await assert.rejects(
+      updateNotificationPreferences(PREFERENCES),
+      (error) => error?.code === "update_failed"
+        && error?.status === 409
+        && !/lease|private|device|token/i.test(error.message),
+    );
+    await assert.rejects(
+      syncWorkoutCompletion("2026-07-17"),
+      (error) => error?.code === "sync_failed"
+        && error?.status === 409
+        && !/lease|private|device|token/i.test(error.message),
+    );
+    assert.equal(store.calls.update.length, 2);
+    assert.equal(values.get("spotterai.notifications.token"), token);
+    assert.deepEqual(JSON.parse(values.get("spotterai.notifications.preferences")), PREFERENCES);
+  } finally {
+    for (const [key, descriptor] of originals) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
+  }
 });
 
 test("missing, expired, and tampered bearer tokens cannot access any device", async () => {

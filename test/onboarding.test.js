@@ -7,7 +7,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mapOnboardingToInputs, bodyweightKg, ONBOARDING_STEPS } from "../onboarding.js";
-import { measurementSystem } from "../measurements.js";
+import { measurementSystem, switchMeasurementSystem, validateMeasurements } from "../measurements.js";
 
 test("goal + training age map to the generator's goal + experience", () => {
   const i = mapOnboardingToInputs({ goal: "muscle", trainingAge: "new" });
@@ -36,6 +36,17 @@ test("sensible defaults when fields are skipped (never blocks generation)", () =
   assert.ok(i.daysPerWeek >= 2);
   assert.deepEqual(i.equipment, ["Bodyweight"]);
   assert.equal(i.injuryNotes, "");
+});
+
+test("internal measurement correction state never enters mapped plan inputs", () => {
+  const marked = switchMeasurementSystem({ units: "kg", weight: "29.99" }, "imperial");
+  assert.equal(validateMeasurements(marked).valid, false);
+  const internalKeys = Object.keys(marked).filter((key) => key.startsWith("__"));
+  assert.ok(internalKeys.length > 0);
+
+  const inputs = mapOnboardingToInputs({ ...marked, goal: "muscle" });
+  assert.deepEqual(Object.keys(inputs).sort(), ["daysPerWeek", "equipment", "experience", "goal", "injuries", "injuryNotes", "sessionLength"]);
+  for (const key of internalKeys) assert.equal(Object.hasOwn(inputs, key), false);
 });
 
 test("bodyweight converts lb→kg for nutrition targets", () => {

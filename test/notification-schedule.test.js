@@ -164,6 +164,7 @@ test("paused, disabled, category-disabled, and malformed records fail closed", (
   } }), now), null);
   assert.equal(nextNotification(record({ timezone: "Not/AZone" }), now), null);
   assert.equal(nextNotification(record({ schedule: [{ weekday: 9, time: "25:00" }] }), now), null);
+  assert.equal(nextNotification(record({ schedule: [] }), now), null);
 });
 
 test("duplicate schedule days and every malformed persisted state shape fail closed", () => {

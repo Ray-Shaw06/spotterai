@@ -149,6 +149,32 @@ test("normalization preserves privacy-safe controls and rejects bad zones/times"
   assert.ok(result.errors.schedule);
 });
 
+test("an empty schedule is invalid across the shared client and API domain", () => {
+  const result = validateNotificationPreferences({
+    timezone: "UTC",
+    schedule: [],
+    quietHours: { start: "22:00", end: "08:00" },
+    categories: { workout: true, followUp: true, streak: true, recovery: true },
+    paused: false,
+  });
+
+  assert.equal(result.valid, false);
+  assert.match(result.errors.schedule, /one|1/i);
+});
+
+test("time-zone migration changes only the IANA zone and is a same-zone no-op", async () => {
+  const { notificationTimezoneMigration } = await import("../notifications.js");
+  assert.equal(typeof notificationTimezoneMigration, "function");
+  const preferences = prefillNotificationPreferences(3, "Asia/Kolkata");
+
+  assert.equal(notificationTimezoneMigration(preferences, "Asia/Kolkata"), null);
+  assert.deepEqual(notificationTimezoneMigration(preferences, "America/New_York"), {
+    ...preferences,
+    timezone: "America/New_York",
+  });
+  assert.equal(notificationTimezoneMigration(preferences, "+05:30"), null);
+});
+
 test("validation requires every preference control to have a strict type", () => {
   const result = validateNotificationPreferences({
     timezone: "UTC",

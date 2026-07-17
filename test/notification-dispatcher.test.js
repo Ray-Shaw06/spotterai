@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { createECDH } from "node:crypto";
 import { parse as legacyParse } from "node:url";
 import { dispatchDue } from "../functions/dispatcher.js";
+import { createNotificationStore } from "../lib/notification-store.js";
 
 const NOW = new Date("2026-07-20T12:30:00.000Z");
 const AUTH_EXPIRES = new Date("2027-01-01T00:00:00.000Z");
@@ -349,6 +350,92 @@ test("concurrent dispatchers cannot both claim or send one event", async () => {
   assert.equal(first.sent + second.sent, 1);
   assert.equal(first.claimed + second.claimed, 1);
   assert.equal(first.skipped + second.skipped, 1);
+});
+
+test("a claimed send blocks confirmed deletion until delivery finalization clears its lease", async () => {
+  const fake = createFakeFirestore(seedFor());
+  const store = createNotificationStore(fake.firestore);
+  let signalStarted;
+  let releaseSend;
+  const started = new Promise((resolve) => { signalStarted = resolve; });
+  const sendGate = new Promise((resolve) => { releaseSend = resolve; });
+  const webpush = sender(async () => {
+    signalStarted();
+    await sendGate;
+    return { statusCode: 201 };
+  });
+
+  const dispatch = dispatchDue({
+    db: fake.firestore,
+    webpush,
+    now: NOW,
+    leaseId: "claim-before-delete",
+  });
+  await started;
+
+  let deletionError = null;
+  try {
+    await store.remove(DEVICE_ID, { now: NOW });
+  } catch (error) {
+    deletionError = error;
+  } finally {
+    releaseSend();
+  }
+  const result = await dispatch;
+
+  assert.equal(deletionError?.name, "NotificationLeaseConflictError");
+  assert.equal(result.sent, 1);
+  assert.equal(webpush.calls.length, 1);
+  assert.equal(fake.documents.has(`notificationDevices/${DEVICE_ID}`), true);
+
+  await store.remove(DEVICE_ID, { now: new Date(NOW.getTime() + 1) });
+  assert.equal(fake.documents.has(`notificationDevices/${DEVICE_ID}`), false);
+  const afterDelete = await dispatchDue({
+    db: fake.firestore,
+    webpush: sender(),
+    now: new Date(NOW.getTime() + 1),
+    leaseId: "after-confirmed-delete",
+  });
+  assert.equal(afterDelete.sent, 0);
+});
+
+test("a claimed send blocks PATCH until delivery finalization clears its lease", async () => {
+  const fake = createFakeFirestore(seedFor());
+  const store = createNotificationStore(fake.firestore);
+  let signalStarted;
+  let releaseSend;
+  const started = new Promise((resolve) => { signalStarted = resolve; });
+  const sendGate = new Promise((resolve) => { releaseSend = resolve; });
+  const webpush = sender(async () => {
+    signalStarted();
+    await sendGate;
+    return { statusCode: 201 };
+  });
+
+  const dispatch = dispatchDue({
+    db: fake.firestore,
+    webpush,
+    now: NOW,
+    leaseId: "claim-before-patch",
+  });
+  await started;
+
+  let updateError = null;
+  try {
+    await store.update(DEVICE_ID, { paused: true }, { now: NOW });
+  } catch (error) {
+    updateError = error;
+  } finally {
+    releaseSend();
+  }
+  const result = await dispatch;
+
+  assert.equal(updateError?.name, "NotificationLeaseConflictError");
+  assert.equal(result.sent, 1);
+  assert.equal(fake.documents.get(`notificationDevices/${DEVICE_ID}`).paused, false);
+
+  await store.update(DEVICE_ID, { paused: true }, { now: new Date(NOW.getTime() + 1) });
+  assert.equal(fake.documents.get(`notificationDevices/${DEVICE_ID}`).paused, true);
 });
 
 test("an expired lease is reclaimable while a live lease is skipped", async () => {

@@ -221,6 +221,7 @@ async function generate(inputsOverride) {
   renderResults(plan, inputs, usedFallback, { failureClass: fallbackFailureClass });
   trackFunnel("plan_generation_succeeded", { fallback_used: String(usedFallback) });
   if (usedFallback) trackFunnel("plan_fallback_shown", { failure_class: fallbackFailureClass });
+  if (!usedFallback) window.dispatchEvent(new CustomEvent("spotter:plan-generated"));
 }
 
 // ----------------------------------------------------------------------------

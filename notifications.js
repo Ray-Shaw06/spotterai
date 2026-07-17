@@ -67,7 +67,7 @@ function normalizeCategories(value) {
 }
 
 function isValidSchedule(value) {
-  if (!Array.isArray(value) || value.length > 7) return false;
+  if (!Array.isArray(value) || value.length < 1 || value.length > 7) return false;
   const weekdays = new Set();
   return value.every((row) => {
     const valid = isRecord(row)
@@ -124,7 +124,7 @@ export function validateNotificationPreferences(value) {
   const errors = {};
 
   if (!hasOwn(input, "timezone") || !isTimeZone(input.timezone)) errors.timezone = "Use a valid IANA time zone.";
-  if (!hasOwn(input, "schedule") || !isValidSchedule(input.schedule)) errors.schedule = "Use up to seven unique weekdays with HH:mm times.";
+  if (!hasOwn(input, "schedule") || !isValidSchedule(input.schedule)) errors.schedule = "Use one to seven unique weekdays with HH:mm times.";
 
   const quietHours = hasOwn(input, "quietHours") ? input.quietHours : undefined;
   if (!isRecord(quietHours) || !hasOwn(quietHours, "start") || !hasOwn(quietHours, "end") || !isTime(quietHours.start) || !isTime(quietHours.end)) {
@@ -143,4 +143,12 @@ export function validateNotificationPreferences(value) {
     errors,
     value: normalizeNotificationPreferences(input),
   };
+}
+
+/** Returns a privacy-safe zone-only update, or null when no migration is needed. */
+export function notificationTimezoneMigration(preferences, currentTimezone) {
+  const current = validateNotificationPreferences(preferences);
+  if (!current.valid || !isTimeZone(currentTimezone) || current.value.timezone === currentTimezone) return null;
+  const next = { ...current.value, timezone: currentTimezone };
+  return validateNotificationPreferences(next).valid ? next : null;
 }
