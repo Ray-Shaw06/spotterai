@@ -25,7 +25,7 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | Measurements and conversions | Complete | Task 1 committed: metric/imperial onboarding conversions, validation, and accessibility checks |
 | First-workout activation | Pending | Implementation and tests not started |
 | Funnel analytics | Pending | Implementation and tests not started |
-| AI retry and recovery states | Pending | Implementation and tests not started |
+| AI retry and recovery states | Complete | Task 3 committed: bounded client timeouts, safe recovery copy, saved-plan retry, and in-memory photo retry |
 | Web Push client and preferences | Pending | Implementation and tests not started |
 | Notification API and dispatcher | Pending | Implementation and tests not started |
 | Independent reviews resolved | Pending | Run after each implementation slice and final integration |
@@ -112,6 +112,18 @@ This document is the version-controlled source of truth for Release 1 progress, 
 - Verification: `node --test test/analytics.test.js test/ui-copy.test.js test/ui-layout.test.js test/today.test.js` passed 34/34. `npm test` passed 210/210. `git diff --check` passed with no whitespace errors.
 - Independent review: Found and resolved two important issues before commit: shallow freezing allowed runtime mutation of enum values, and historical workout edits emitted unpaired start events. Also hardened null JSON response classification. The final re-review approved the diff with no blockers; the remaining caveat is that lifecycle coverage is source-shape rather than browser interaction coverage.
 - Commit: `feat: instrument the Release 1 activation funnel`.
+
+### 2026-07-17 — Task 3: actionable AI timeout, fallback, and retry states
+
+- Role: Implementation agent.
+- Bounded task and acceptance criteria: Add client-side 65-second plan and 35-second nutrition/photo request deadlines; map failures only to the approved safe enum; preserve saved-plan audit and editable manual nutrition fallback; make plan and photo recovery actionable without exposing provider errors.
+- Result: Added `ai-errors.js` with abort-signal composition, timeout translation, safe classification, and provider-neutral copy. Plan generation keeps `lastInputs`, renders/audits its saved-plan fallback, shows the classified safe reason, and offers “Try live generation again.” Food/manual entry remains editable. A failed meal photo retains only the current `File` object in page memory for “Try this photo again,” and clears it after success, replacement, or closing the detail. Stale photo requests cannot overwrite a newer selection.
+- Boundaries preserved: No provider-routing, Gemini/Groq server, Firebase, notification, deployment, or user-data persistence changes. Funnel events retain only the existing classified `failure_class` enum.
+- Files: `ai-errors.js`, `ai.js`, `app.js`, `index.html`, `nutrition-ui.js`, `style.css`, `test/ai-errors.test.js`, `test/ui-copy.test.js`, `docs/release-1-worklog.md`.
+- TDD evidence: RED 1: `node --test test/ai-errors.test.js test/ui-copy.test.js` failed as expected with `ERR_MODULE_NOT_FOUND` for `ai-errors.js` (and the missing recovery UI assertion). GREEN 1: the required focused suite passed 31/31 after timeout/classification/retry wiring. RED 2: `node --test test/ai-errors.test.js` failed with “Missing expected rejection” for a string-shaped food response. GREEN 2: the same focused suite passed 32/32 after treating non-object estimate shapes as `invalid_response`.
+- Verification: `node --test test/ai-errors.test.js test/ui-copy.test.js test/estimate.test.js test/gemini-groq.test.js` — 32/32 passed. `npm test` — 215/215 passed. `git diff --check` passed.
+- Self-review: Verified external aborts remain `AbortError`, only the helper’s own timer becomes `TimeoutError`, all displayed recovery text is provider-neutral, fallback is still audited, and a superseded photo request cannot clear or replace the latest retry file.
+- Commit: `feat: add recoverable AI failure states`.
 
 ## Required worklog entry format
 

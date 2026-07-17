@@ -5350,6 +5350,8 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   border-radius: var(--r-sm);
   padding: var(--space-2) var(--space-3);
 }
+.fallback-notice__body { display: flex; align-items: center; justify-content: space-between; flex: 1; gap: var(--space-3); flex-wrap: wrap; }
+.detail-recovery { display: flex; flex-direction: column; gap: var(--space-2); }
 .detail-loading {
   display: flex;
   flex-direction: column;

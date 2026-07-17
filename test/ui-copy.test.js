@@ -13,6 +13,7 @@ import { dirname, join } from "node:path";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const html = readFileSync(join(root, "index.html"), "utf8");
 const app = readFileSync(join(root, "app.js"), "utf8");
+const nutritionUi = readFileSync(join(root, "nutrition-ui.js"), "utf8");
 const router = readFileSync(join(root, "router.js"), "utf8");
 const onboardingUi = readFileSync(join(root, "onboarding-ui.js"), "utf8");
 
@@ -85,6 +86,14 @@ test("the plan controller reveals results and returns Start over to onboarding",
   assert.match(app, /generatorSection\.hidden = false;/, "generation reveals the results section");
   assert.match(app, /generatorSection\.hidden = true;/, "reset hides the results section");
   assert.match(app, /new CustomEvent\("spotter:onboarding"\)/, "Start over reopens guided onboarding");
+});
+
+test("AI recovery keeps retries user-actionable without provider error copy", () => {
+  assert.match(html, /id="fallback-retry-btn"[^>]*>Try live generation again</);
+  assert.match(app, /fetchWithTimeout\("api\/generate"/);
+  assert.match(app, /aiFailureMessage\("plan", failureClass, \{ fallback: true \}\)/);
+  assert.match(nutritionUi, /Try this photo again/);
+  assert.match(nutritionUi, /lastPhotoFile/);
 });
 
 test("onboarding labels measurement systems and explains optional measurement use", () => {

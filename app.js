@@ -24,6 +24,7 @@ import { swapExercise, removeExercise, addExercise } from "./plan-edit.js";
 import { suggestAlternatives } from "./exercise-data.js";
 import { searchExercises } from "./exercises.js";
 import { trackFunnel } from "./analytics.js";
+import { aiFailureMessage, classifyAiFailure, fetchWithTimeout } from "./ai-errors.js";
 
 // ----------------------------------------------------------------------------
 // Element references
@@ -42,6 +43,8 @@ const states = {
 const loadingStepEl = document.getElementById("loading-step");
 const errorText = document.getElementById("error-text");
 const fallbackNotice = document.getElementById("fallback-notice");
+const fallbackMessage = document.getElementById("fallback-message");
+const fallbackRetryBtn = document.getElementById("fallback-retry-btn");
 
 const scoreValueEl = document.getElementById("score-value");
 const auditVerdict = document.getElementById("audit-verdict");
@@ -158,21 +161,6 @@ async function getFallbackPlan(inputs) {
 
 let lastInputs = null;
 
-function failureClassForResponse(status) {
-  if (status === 429) return "rate_limited";
-  return "unavailable";
-}
-
-function failureClassForError(error) {
-  if (error?.failureClass) return error.failureClass;
-  if (error?.status === 429) return "rate_limited";
-  if (error?.status) return "unavailable";
-  if (error?.name === "AbortError" || /timeout/i.test(error?.message || "")) return "timeout";
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return "offline";
-  if (error instanceof TypeError) return "offline";
-  return "unknown";
-}
-
 async function generate(inputsOverride) {
   const inputs = inputsOverride || lastInputs;
   if (!inputs) {
@@ -191,11 +179,11 @@ async function generate(inputsOverride) {
   let fallbackFailureClass = "unknown";
 
   try {
-    const res = await fetch("api/generate", {
+    const res = await fetchWithTimeout("api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(inputs),
-    });
+    }, 65_000);
 
     if (res.ok) {
       let data;
@@ -213,17 +201,12 @@ async function generate(inputsOverride) {
         throw error;
       }
     } else {
-      // 429 (rate limit) or any server error → graceful saved-example fallback.
-      fallbackFailureClass = failureClassForResponse(res.status);
-      plan = await getFallbackPlan(inputs);
-      usedFallback = true;
-      if (!plan) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Request failed (${res.status}).`);
-      }
+      const error = new Error("Plan request failed");
+      error.status = res.status;
+      throw error;
     }
   } catch (err) {
-    fallbackFailureClass = fallbackFailureClass === "unknown" ? failureClassForError(err) : fallbackFailureClass;
+    fallbackFailureClass = classifyAiFailure(err, { online: navigator.onLine });
     // Network error / offline / running as static file → try the fallback.
     if (!plan) {
       plan = await getFallbackPlan(inputs);
@@ -231,8 +214,7 @@ async function generate(inputsOverride) {
     }
     if (!plan) {
       stopLoadingSteps();
-      errorText.textContent =
-        "We couldn't reach the generator and no saved example was available. Check your connection and try again.";
+      errorText.textContent = aiFailureMessage("plan", fallbackFailureClass, { fallback: false });
       showState("error");
       trackFunnel("plan_generation_failed", { failure_class: fallbackFailureClass });
       return;
@@ -241,7 +223,7 @@ async function generate(inputsOverride) {
 
   stopLoadingSteps();
   publishPlan(plan, inputs);
-  renderResults(plan, inputs, usedFallback);
+  renderResults(plan, inputs, usedFallback, { failureClass: fallbackFailureClass });
   trackFunnel("plan_generation_succeeded", { fallback_used: String(usedFallback) });
   if (usedFallback) trackFunnel("plan_fallback_shown", { failure_class: fallbackFailureClass });
 }
@@ -253,9 +235,13 @@ async function generate(inputsOverride) {
 const safetyBoundary = document.getElementById("safety-boundary");
 const safetyBoundaryText = document.getElementById("safety-boundary-text");
 
-function renderResults(plan, inputs, usedFallback, { focus = true } = {}) {
+function renderResults(plan, inputs, usedFallback, { focus = true, failureClass = "unknown" } = {}) {
   revealGenerator();
   fallbackNotice.hidden = !usedFallback;
+  if (usedFallback) {
+    fallbackNotice.dataset.failureClass = failureClass;
+    fallbackMessage.textContent = `${aiFailureMessage("plan", failureClass, { fallback: true })} Showing a saved example; its safety audit still runs in full.`;
+  }
 
   // Surface a hard safety boundary prominently (never bury it under a plan).
   if (safetyBoundary) {
@@ -688,6 +674,7 @@ window.addEventListener("spotter:adapt-request", () => {
 });
 
 retryBtn.addEventListener("click", () => generate());
+fallbackRetryBtn?.addEventListener("click", () => generate());
 
 regenerateBtn.addEventListener("click", () => {
   if (adaptCard) adaptCard.hidden = true;

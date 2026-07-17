@@ -333,7 +333,10 @@
             <!-- Fallback notice (only when showing a saved example) -->
             <div class="notice" id="fallback-notice" hidden role="status">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 8v4m0 4h.01M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
-              <span>Live generation was unavailable, so we're <strong>showing a saved example</strong>. The safety audit below still runs on it in full.</span>
+              <div class="fallback-notice__body">
+                <span id="fallback-message">Live generation was unavailable, so we're showing a saved example. The safety audit below still runs on it in full.</span>
+                <button type="button" class="btn btn--ghost btn--sm" id="fallback-retry-btn">Try live generation again</button>
+              </div>
             </div>
 
             <!-- Safety boundary: shown prominently when inputs trip a hard limit -->
