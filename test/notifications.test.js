@@ -61,11 +61,64 @@ test("normalization supplies only safe defaults for malformed values", () => {
     paused: "no",
   });
 
-  assert.equal(normalized.timezone, Intl.DateTimeFormat().resolvedOptions().timeZone);
+  assert.equal(normalized.timezone, "UTC");
   assert.deepEqual(normalized.schedule, []);
   assert.deepEqual(normalized.quietHours, { start: "22:00", end: "08:00" });
   assert.deepEqual(normalized.categories, { workout: true, followUp: false, streak: true, recovery: true });
   assert.equal(normalized.paused, false);
+});
+
+test("raw positive and negative offset zones are rejected instead of named IANA zones", () => {
+  for (const timezone of ["+05:30", "-04:00"]) {
+    const result = validateNotificationPreferences({
+      timezone,
+      schedule: [],
+      quietHours: { start: "22:00", end: "08:00" },
+      categories: { workout: true, followUp: true, streak: true, recovery: true },
+      paused: false,
+    });
+
+    assert.equal(result.valid, false, timezone);
+    assert.ok(result.errors.timezone, timezone);
+    assert.equal(result.value.timezone, "UTC", timezone);
+  }
+});
+
+test("normalization accepts only own nested preference fields", () => {
+  const inheritedScheduleRow = Object.create({ weekday: 1, time: "18:00" });
+  const inheritedQuietHours = Object.create({ start: "21:00", end: "09:00" });
+  const inheritedCategories = Object.create({ workout: false, followUp: false, streak: false, recovery: false });
+
+  assert.deepEqual(normalizeNotificationPreferences({
+    timezone: "UTC",
+    schedule: [inheritedScheduleRow],
+    quietHours: inheritedQuietHours,
+    categories: inheritedCategories,
+  }), {
+    timezone: "UTC",
+    schedule: [],
+    quietHours: { start: "22:00", end: "08:00" },
+    categories: { workout: true, followUp: true, streak: true, recovery: true },
+    paused: false,
+  });
+});
+
+test("normalization leaves input unchanged and never shares nested output references", () => {
+  const input = {
+    timezone: "UTC",
+    schedule: [{ weekday: 1, time: "18:00" }],
+    quietHours: { start: "21:00", end: "09:00" },
+    categories: { workout: false, followUp: true, streak: false, recovery: true },
+    paused: true,
+  };
+  const before = structuredClone(input);
+  const normalized = normalizeNotificationPreferences(input);
+
+  assert.deepEqual(input, before);
+  assert.notStrictEqual(normalized.schedule, input.schedule);
+  assert.notStrictEqual(normalized.schedule[0], input.schedule[0]);
+  assert.notStrictEqual(normalized.quietHours, input.quietHours);
+  assert.notStrictEqual(normalized.categories, input.categories);
 });
 
 test("normalization caps schedules at seven unique valid weekdays", () => {

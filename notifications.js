@@ -31,7 +31,7 @@ function isTime(value) {
 }
 
 function isTimeZone(value) {
-  if (typeof value !== "string" || !value) return false;
+  if (typeof value !== "string" || !value || /^[+-]/.test(value)) return false;
   try {
     new Intl.DateTimeFormat(undefined, { timeZone: value });
     return true;
@@ -41,8 +41,7 @@ function isTimeZone(value) {
 }
 
 function defaultTimeZone() {
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  return isTimeZone(zone) ? zone : "UTC";
+  return "UTC";
 }
 
 function normalizeSchedule(value) {
@@ -50,7 +49,7 @@ function normalizeSchedule(value) {
 
   const selected = new Map();
   for (const row of value) {
-    if (!isRecord(row) || !Number.isInteger(row.weekday) || row.weekday < 1 || row.weekday > 7 || !isTime(row.time)) {
+    if (!isRecord(row) || !hasOwn(row, "weekday") || !hasOwn(row, "time") || !Number.isInteger(row.weekday) || row.weekday < 1 || row.weekday > 7 || !isTime(row.time)) {
       continue;
     }
     if (!selected.has(row.weekday)) selected.set(row.weekday, { weekday: row.weekday, time: row.time });
@@ -62,7 +61,7 @@ function normalizeSchedule(value) {
 function normalizeCategories(value) {
   const categories = {};
   for (const key of CATEGORY_KEYS) {
-    categories[key] = isRecord(value) && typeof value[key] === "boolean" ? value[key] : DEFAULT_CATEGORIES[key];
+    categories[key] = isRecord(value) && hasOwn(value, key) && typeof value[key] === "boolean" ? value[key] : DEFAULT_CATEGORIES[key];
   }
   return categories;
 }
@@ -72,6 +71,8 @@ function isValidSchedule(value) {
   const weekdays = new Set();
   return value.every((row) => {
     const valid = isRecord(row)
+      && hasOwn(row, "weekday")
+      && hasOwn(row, "time")
       && Number.isInteger(row.weekday)
       && row.weekday >= 1
       && row.weekday <= 7
@@ -101,17 +102,17 @@ export function prefillNotificationPreferences(daysPerWeek, timezone) {
  */
 export function normalizeNotificationPreferences(value) {
   const input = isRecord(value) ? value : {};
-  const quietHours = isRecord(input.quietHours) ? input.quietHours : {};
+  const quietHours = hasOwn(input, "quietHours") && isRecord(input.quietHours) ? input.quietHours : {};
 
   return {
-    timezone: isTimeZone(input.timezone) ? input.timezone : defaultTimeZone(),
-    schedule: normalizeSchedule(input.schedule),
+    timezone: hasOwn(input, "timezone") && isTimeZone(input.timezone) ? input.timezone : defaultTimeZone(),
+    schedule: normalizeSchedule(hasOwn(input, "schedule") ? input.schedule : undefined),
     quietHours: {
-      start: isTime(quietHours.start) ? quietHours.start : DEFAULT_QUIET_HOURS.start,
-      end: isTime(quietHours.end) ? quietHours.end : DEFAULT_QUIET_HOURS.end,
+      start: hasOwn(quietHours, "start") && isTime(quietHours.start) ? quietHours.start : DEFAULT_QUIET_HOURS.start,
+      end: hasOwn(quietHours, "end") && isTime(quietHours.end) ? quietHours.end : DEFAULT_QUIET_HOURS.end,
     },
-    categories: normalizeCategories(input.categories),
-    paused: typeof input.paused === "boolean" ? input.paused : false,
+    categories: normalizeCategories(hasOwn(input, "categories") ? input.categories : undefined),
+    paused: hasOwn(input, "paused") && typeof input.paused === "boolean" ? input.paused : false,
   };
 }
 
@@ -122,20 +123,20 @@ export function validateNotificationPreferences(value) {
   const input = isRecord(value) ? value : {};
   const errors = {};
 
-  if (!isTimeZone(input.timezone)) errors.timezone = "Use a valid IANA time zone.";
-  if (!isValidSchedule(input.schedule)) errors.schedule = "Use up to seven unique weekdays with HH:mm times.";
+  if (!hasOwn(input, "timezone") || !isTimeZone(input.timezone)) errors.timezone = "Use a valid IANA time zone.";
+  if (!hasOwn(input, "schedule") || !isValidSchedule(input.schedule)) errors.schedule = "Use up to seven unique weekdays with HH:mm times.";
 
-  const quietHours = input.quietHours;
-  if (!isRecord(quietHours) || !isTime(quietHours.start) || !isTime(quietHours.end)) {
+  const quietHours = hasOwn(input, "quietHours") ? input.quietHours : undefined;
+  if (!isRecord(quietHours) || !hasOwn(quietHours, "start") || !hasOwn(quietHours, "end") || !isTime(quietHours.start) || !isTime(quietHours.end)) {
     errors.quietHours = "Use HH:mm start and end quiet-hour times.";
   }
 
-  const categories = input.categories;
+  const categories = hasOwn(input, "categories") ? input.categories : undefined;
   if (!isRecord(categories) || CATEGORY_KEYS.some((key) => !hasOwn(categories, key) || typeof categories[key] !== "boolean")) {
     errors.categories = "Set each notification category to true or false.";
   }
 
-  if (typeof input.paused !== "boolean") errors.paused = "Set paused to true or false.";
+  if (!hasOwn(input, "paused") || typeof input.paused !== "boolean") errors.paused = "Set paused to true or false.";
 
   return {
     valid: Object.keys(errors).length === 0,
