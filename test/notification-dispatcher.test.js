@@ -993,6 +993,11 @@ test("Firebase configuration preserves user sync and denies all three Task 5 col
   assert.deepEqual(JSON.parse(firebase), {
     functions: { source: "functions" },
     firestore: { rules: "firestore.rules", indexes: "firestore.indexes.json" },
+    emulators: {
+      firestore: { host: "127.0.0.1", port: 8080 },
+      ui: { enabled: false },
+      singleProjectMode: true,
+    },
   });
 });
 

@@ -8,6 +8,7 @@
     "dev": "vercel dev",
     "start": "vercel dev",
     "test": "node --test",
+    "test:firebase-emulator": "node scripts/run-firebase-emulator-gate.mjs",
     "check": "node --test",
     "eval": "node eval.mjs",
     "eval:nutrition": "node eval-nutrition.mjs"
@@ -19,5 +20,10 @@
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
     "firebase-admin": "^13.4.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "firebase": "^12.16.0",
+    "firebase-tools": "^15.23.0"
   }
 }
