@@ -91,6 +91,7 @@ test("the plan controller reveals results and returns Start over to onboarding",
 test("AI recovery keeps retries user-actionable without provider error copy", () => {
   assert.match(html, /id="fallback-retry-btn"[^>]*>Try live generation again</);
   assert.match(app, /fetchWithTimeout\("api\/generate"/);
+  assert.match(app, /assertPlanShape\(data\?\.plan\)/);
   assert.match(app, /aiFailureMessage\("plan", failureClass, \{ fallback: true \}\)/);
   assert.match(nutritionUi, /Try this photo again/);
   assert.match(nutritionUi, /lastPhotoFile/);

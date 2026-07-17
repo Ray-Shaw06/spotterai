@@ -24,7 +24,7 @@ import { swapExercise, removeExercise, addExercise } from "./plan-edit.js";
 import { suggestAlternatives } from "./exercise-data.js";
 import { searchExercises } from "./exercises.js";
 import { trackFunnel } from "./analytics.js";
-import { aiFailureMessage, classifyAiFailure, fetchWithTimeout } from "./ai-errors.js";
+import { aiFailureMessage, assertPlanShape, classifyAiFailure, fetchWithTimeout } from "./ai-errors.js";
 
 // ----------------------------------------------------------------------------
 // Element references
@@ -194,12 +194,7 @@ async function generate(inputsOverride) {
         error.failureClass = "invalid_response";
         throw error;
       }
-      plan = data?.plan;
-      if (!plan) {
-        const error = new Error("The generator returned no plan.");
-        error.failureClass = "invalid_response";
-        throw error;
-      }
+      plan = assertPlanShape(data?.plan);
     } else {
       const error = new Error("Plan request failed");
       error.status = res.status;

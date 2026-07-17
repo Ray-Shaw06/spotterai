@@ -7,6 +7,24 @@ const COPY = {
   unknown: "Something interrupted the request. Your inputs are still here—try again.",
 };
 
+function invalidResponseError(message) {
+  const error = new Error(message);
+  error.failureClass = "invalid_response";
+  return error;
+}
+
+/** Ensure a generated plan can reach the evaluator and renderer safely. */
+export function assertPlanShape(plan) {
+  const hasRenderableDays =
+    plan &&
+    typeof plan === "object" &&
+    !Array.isArray(plan) &&
+    Array.isArray(plan.days) &&
+    plan.days.every((day) => day && typeof day === "object" && !Array.isArray(day) && Array.isArray(day.exercises));
+  if (!hasRenderableDays) throw invalidResponseError("The generator returned an incomplete plan.");
+  return plan;
+}
+
 /** Fetch with a local deadline while preserving a caller's AbortSignal. */
 export async function fetchWithTimeout(url, options = {}, timeoutMs) {
   const controller = new AbortController();

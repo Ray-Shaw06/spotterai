@@ -56,5 +56,5 @@ test("editing a logged workout does not restart the first-workout funnel", () =>
 
 test("a null generation response is classified as an invalid response", () => {
   const app = readFileSync(join(root, "app.js"), "utf8");
-  assert.match(app, /plan = data\?\.plan;/);
+  assert.match(app, /plan = assertPlanShape\(data\?\.plan\);/);
 });

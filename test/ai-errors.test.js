@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aiFailureMessage, classifyAiFailure, fetchWithTimeout } from "../ai-errors.js";
-import { estimateFood } from "../ai.js";
+import { aiFailureMessage, assertPlanShape, classifyAiFailure, fetchWithTimeout } from "../ai-errors.js";
+import { classifyExercise, estimateFood } from "../ai.js";
 
 test("AI failures are classified without exposing provider messages", () => {
   assert.equal(classifyAiFailure({ status: 429 }, { online: true }), "rate_limited");
@@ -45,10 +45,26 @@ test("fetchWithTimeout preserves a caller-requested abort", async () => {
 
 test("a malformed food response is marked invalid_response", async () => {
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => ({ ok: true, json: async () => ({ food: "not a food object" }) });
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ food: {} }) });
 
   try {
     await assert.rejects(estimateFood("banana"), (error) => error?.failureClass === "invalid_response");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("an incomplete plan shape is rejected for fallback recovery", () => {
+  assert.throws(() => assertPlanShape({ days: "bad" }), (error) => error?.failureClass === "invalid_response");
+  assert.doesNotThrow(() => assertPlanShape({ days: [{ exercises: [] }] }));
+});
+
+test("an incomplete exercise response is marked invalid_response", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ exercise: { muscle: "", cardio: false } }) });
+
+  try {
+    await assert.rejects(classifyExercise("row"), (error) => error?.failureClass === "invalid_response");
   } finally {
     globalThis.fetch = originalFetch;
   }
