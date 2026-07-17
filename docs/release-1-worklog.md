@@ -9,17 +9,18 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | Production baseline | `1b94973` (`origin/main`) |
 | Existing deployment | Vercel |
 | Existing sync | Firebase Auth and Firestore |
-| Release branch | To be created from `1b94973` after design approval |
+| Release branch | To be created from `1b94973` before implementation |
 | Design | `docs/superpowers/specs/2026-07-17-release-1-design.md` |
-| Current phase | Owner review of written design |
+| Implementation plan | `docs/superpowers/plans/2026-07-17-release-1.md` |
+| Current phase | Implementation plan and clean-worktree setup |
 
 ## Gate status
 
 | Gate | Status | Evidence or next action |
 | --- | --- | --- |
 | Product scope approved in conversation | Complete | Scope and constraints captured in the Release 1 design |
-| Written design approved | Pending | Owner must review the written design |
-| Implementation plan approved | Pending | Create after written-design approval |
+| Written design approved | Complete | Owner approved the written specification on 2026-07-17 |
+| Implementation plan approved | Complete | Plan derives directly from the approved design and the owner selected autonomous agent execution |
 | Clean release worktree | Pending | Base on `1b94973`; exclude unrelated local work |
 | Measurements and conversions | Pending | Implementation and tests not started |
 | First-workout activation | Pending | Implementation and tests not started |
@@ -48,6 +49,7 @@ This document is the version-controlled source of truth for Release 1 progress, 
 | 2026-07-17 | Label onboarding systems Metric and Imperial; use cm/kg and ft/in/lb inputs. | Users should never have to infer a measurement unit. |
 | 2026-07-17 | Keep height optional and do not claim it affects calculations that do not use it. | The current plan and nutrition paths do not use height. |
 | 2026-07-17 | Keep consumer features free in Release 1. | Monetization experiments are not allowed to weaken the core user experience. |
+| 2026-07-17 | Represent critical funnel actions as sanitized manual Vercel pageviews under `/funnel/<event>`. | Official Vercel documentation currently limits custom events to Pro/Enterprise, while manual pageviews remain compatible with Hobby and require no new analytics provider. |
 
 ## Rejected or deferred alternatives
 
@@ -73,6 +75,17 @@ This document is the version-controlled source of truth for Release 1 progress, 
 - Safety: Unrelated local Paddington commits and the untracked `output/` directory are outside Release 1 and must not be included in its branch or deployment.
 - Owner gate: Written design review is required before the implementation plan and agent execution begin.
 - External dependency: Production scheduled notifications require owner-approved Firebase Blaze billing and server-side secrets. Neither is authorized or configured by this entry.
+
+### 2026-07-17 — Written design approval and implementation plan
+
+- Role: Product orchestrator.
+- Owner decision: Approved the written Release 1 design.
+- Work: Mapped the approved design into eight testable implementation tasks with a fresh implementation agent and independent reviewer gates for each task.
+- Result: `docs/superpowers/plans/2026-07-17-release-1.md` defines exact files, interfaces, tests, commits, privacy boundaries, preview checks, billing/secret gates, real-device checks, and production sign-off.
+- Evidence: Current codebase inspection, existing tests and interfaces, and official Vercel analytics documentation current on 2026-07-17.
+- Compatibility decision: Use manual Vercel funnel pageviews because Vercel Hobby supports pageviews but not custom events; no new analytics vendor or user identifier is introduced.
+- Safety: Implementation will start from production baseline `1b94973` in an isolated worktree and will cherry-pick only Release 1 documentation.
+- External gate unchanged: No Firebase Blaze billing, production secrets, Firebase deployment, preview deployment, or production promotion has been authorized by this entry.
 
 ## Required worklog entry format
 
