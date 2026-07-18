@@ -143,3 +143,10 @@ test("onboarding choices enforce a 44px square touch target", () => {
   assert.match(rule(".onb-chip"), /min-height:\s*44px/);
   assert.match(rule(".onb-chip"), /min-width:\s*44px/);
 });
+
+test("form-report video markers hit the 44px touch floor and the report wraps at phone width", () => {
+  assert.match(rule(".marker-btn"), /min-height:\s*44px/);
+  assert.match(rule(".form-report__reps"), /flex-wrap:\s*wrap/);
+  assert.match(rule(".form-video__markers"), /flex-wrap:\s*wrap/);
+  assert.match(rule(".form-video__player"), /width:\s*100%/);
+});

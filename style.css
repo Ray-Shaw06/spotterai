@@ -3624,6 +3624,45 @@ table {
   padding: var(--space-4);
   pointer-events: none;
 }
+.cam-overlay__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.cam-overlay__rec {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: var(--text);
+  background: rgba(10, 11, 13, 0.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+}
+.cam-overlay__rec[hidden] {
+  display: none;
+}
+.cam-overlay__rec-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: rec-blink 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cam-overlay__rec-dot {
+    animation: none;
+  }
+}
+@keyframes rec-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
 .cam-overlay__reps {
   align-self: flex-start;
   display: inline-flex;
@@ -3946,6 +3985,48 @@ table {
   color: var(--text-faint);
   border-top: 1px solid var(--border-soft);
   padding-top: var(--space-3);
+}
+.form-video__player {
+  width: 100%;
+  max-height: 60vh;
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.form-video__markers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.marker-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  border-radius: var(--r-full);
+  cursor: pointer;
+}
+.marker-btn--best {
+  border-color: rgba(52, 211, 153, 0.45);
+  color: var(--success);
+}
+.marker-btn:hover {
+  background: var(--surface-3, var(--surface-2));
+  border-color: var(--border-strong, var(--border));
+}
+.marker-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.form-video__note {
+  border-top: 0;
+  padding-top: 0;
 }
 
 /* ----------------------------------------------------------------------------

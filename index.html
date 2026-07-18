@@ -844,9 +844,12 @@
 
               <!-- Live overlay (rep count + cues) -->
               <div id="form-overlay" class="cam-overlay" hidden>
-                <div class="cam-overlay__reps">
-                  <span id="form-rep-count" class="cam-overlay__count">0</span>
-                  <span class="cam-overlay__reps-label">reps</span>
+                <div class="cam-overlay__top">
+                  <div class="cam-overlay__reps">
+                    <span id="form-rep-count" class="cam-overlay__count">0</span>
+                    <span class="cam-overlay__reps-label">reps</span>
+                  </div>
+                  <span id="form-rec" class="cam-overlay__rec" hidden><span class="cam-overlay__rec-dot" aria-hidden="true"></span> REC · on-device</span>
                 </div>
                 <div id="form-live-cues" class="cam-overlay__cues"></div>
               </div>
@@ -860,7 +863,7 @@
                 <p class="cam-placeholder__text">Pick an exercise, stand side-on with your full body in frame, and start. Best in a well-lit space.</p>
                 <p class="cam-placeholder__privacy">
                   <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6l7-3z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" /></svg>
-                  100% on-device: no recording, no upload.
+                  100% on-device: nothing is uploaded. Your set is recorded in this tab for the report, then discarded.
                 </p>
               </div>
             </div>

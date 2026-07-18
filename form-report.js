@@ -25,6 +25,65 @@ function mmss(ms) {
 }
 
 const MAX_FINDINGS = 5;
+const MAX_MARKERS = 7;
+const SEEK_LEAD_S = 1.5; // land just before the rep so the viewer sees it happen
+
+/**
+ * MediaRecorder container preference: mp4 first (iOS Safari), then webm.
+ * Takes the isTypeSupported predicate so it stays pure and testable.
+ */
+export function pickRecorderMime(isTypeSupported) {
+  for (const t of ["video/mp4", "video/webm;codecs=vp9", "video/webm"]) {
+    try {
+      if (isTypeSupported(t)) return t;
+    } catch {
+      /* a throwing predicate is the same as "not supported" */
+    }
+  }
+  return null;
+}
+
+/**
+ * Highlight markers for the session recording: the best rep plus flagged reps,
+ * capped so a rough set doesn't produce a wall of buttons. Seek times land
+ * slightly before the rep and never below zero.
+ */
+export function markersFor(summary) {
+  const byRep = new Map(summary.repRecords.map((r) => [r.rep, r]));
+  const markers = [];
+  if (summary.bestRep != null && byRep.has(summary.bestRep)) {
+    markers.push({ rep: summary.bestRep, kind: "best" });
+  }
+  for (const rep of summary.flaggedReps) {
+    if (rep !== summary.bestRep) markers.push({ rep, kind: "flagged" });
+    if (markers.length >= MAX_MARKERS) break;
+  }
+  return markers.map((m) => {
+    const r = byRep.get(m.rep);
+    return {
+      ...m,
+      atMs: r.atMs,
+      seekS: Math.max(0, r.atMs / 1000 - SEEK_LEAD_S),
+      label: `${m.kind === "best" ? "Best — rep" : "Rep"} ${m.rep} · ${mmss(r.atMs)}`,
+    };
+  });
+}
+
+/** Markup for the session-recording block (video src is attached by the caller). */
+export function videoHTML(markers) {
+  const buttons = markers
+    .map(
+      (m) =>
+        `<button type="button" class="marker-btn${m.kind === "best" ? " marker-btn--best" : ""}" data-seek="${m.seekS}">${esc(m.label)}</button>`
+    )
+    .join("");
+  return `<div class="form-report__block form-video">
+      <h4 class="form-report__heading">Session recording</h4>
+      <video class="form-video__player" playsinline controls preload="metadata"></video>
+      ${markers.length ? `<div class="form-video__markers">${buttons}</div>` : ""}
+      <p class="form-report__note form-video__note">Recorded on this device only — never uploaded, gone when you leave or start a new set.</p>
+    </div>`;
+}
 
 /**
  * @param {object} summary  SessionRecorder#summary()

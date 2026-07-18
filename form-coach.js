@@ -21,7 +21,7 @@
 import { EXERCISES, RepCounter, AdaptiveRepCounter, OneEuroFilter, resetSideSelector, chooseModelTier } from "./form-evaluator.js";
 import { frameConfidence, confidenceLevel, canJudge } from "./form-confidence.js";
 import { SessionRecorder, tipsFor } from "./form-session.js";
-import { reportHTML } from "./form-report.js";
+import { reportHTML, pickRecorderMime, markersFor, videoHTML } from "./form-report.js";
 
 // Pinned MediaPipe Tasks Vision build + a free, hosted pose model.
 const TASKS_VISION_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
@@ -77,6 +77,7 @@ const el = {
   pain: document.getElementById("form-pain"),
   painMsg: document.getElementById("form-pain-msg"),
   report: document.getElementById("form-report"),
+  rec: document.getElementById("form-rec"),
 };
 
 // Confidence landmarks + thresholds live in form-confidence.js (pure, tested).
@@ -94,6 +95,14 @@ let counter = null;
 let currentExercise = EXERCISES.squat;
 let smoothers = new Map(); // metric key -> OneEuroFilter
 let session = null; // SessionRecorder while the camera runs
+
+// On-device session recording (playback in the report; never uploaded).
+let recorder = null;
+let recordedChunks = [];
+let recorderMime = null;
+let recorderTimer = null;
+let videoUrl = null;
+const RECORD_MAX_MS = 10 * 60 * 1000; // bound memory — video stops, the set continues
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // ----------------------------------------------------------------------------
@@ -237,8 +246,9 @@ async function start() {
   if (el.placeholder) el.placeholder.hidden = true;
   if (el.overlay) el.overlay.hidden = false;
   if (el.select) el.select.disabled = true;
-  hideReport(); // a new set replaces the previous report
+  hideReport(); // a new set replaces the previous report (and frees its video)
   session = new SessionRecorder(currentExercise.id);
+  startRecording(); // best-effort; the session works fine without it
   session.start(performance.now());
   setStatus("Camera active — start your set.", "good");
   loop();
@@ -263,12 +273,15 @@ function stop() {
   if (el.conf) el.conf.hidden = true;
 
   // Turn the recorded timeline into the post-set report (≥1 rep only).
-  if (session && counter && counter.reps > 0) {
-    renderReport(session.summary());
+  const summary = session && counter && counter.reps > 0 ? session.summary() : null;
+  if (summary) {
+    renderReport(summary);
     setStatus("Set finished — report below.", "good");
   } else {
     setStatus("Camera stopped.");
   }
+  // Close the recording AFTER the report exists so playback can attach to it.
+  finishRecording(summary);
   session = null;
 }
 
@@ -276,6 +289,102 @@ function resetReadout() {
   if (el.repCount) el.repCount.textContent = "0";
   if (el.liveCues) el.liveCues.innerHTML = "";
   if (el.lastRep) el.lastRep.innerHTML = "";
+}
+
+// ----------------------------------------------------------------------------
+// Session recording (on-device playback for the report; never uploaded)
+// ----------------------------------------------------------------------------
+
+function startRecording() {
+  recordedChunks = [];
+  if (typeof MediaRecorder === "undefined" || !stream) return;
+  recorderMime = pickRecorderMime((t) => MediaRecorder.isTypeSupported(t));
+  try {
+    recorder = new MediaRecorder(stream, recorderMime ? { mimeType: recorderMime } : undefined);
+  } catch {
+    recorder = null; // no recording — the live session and report still work
+    return;
+  }
+  recorder.ondataavailable = (e) => {
+    if (e.data && e.data.size) recordedChunks.push(e.data);
+  };
+  try {
+    recorder.start(1000);
+  } catch {
+    recorder = null;
+    return;
+  }
+  if (el.rec) el.rec.hidden = false;
+  recorderTimer = setTimeout(() => {
+    try {
+      if (recorder && recorder.state !== "inactive") recorder.stop();
+    } catch {}
+    if (el.rec) el.rec.hidden = true;
+  }, RECORD_MAX_MS);
+}
+
+/** Stop the recorder; when the set produced a report, attach playback to it. */
+function finishRecording(summary) {
+  const rec = recorder;
+  recorder = null;
+  if (recorderTimer) {
+    clearTimeout(recorderTimer);
+    recorderTimer = null;
+  }
+  if (el.rec) el.rec.hidden = true;
+  if (!rec) {
+    if (!summary) recordedChunks = [];
+    return;
+  }
+  const finalize = () => {
+    if (summary) attachVideo(summary);
+    else recordedChunks = [];
+  };
+  if (rec.state === "inactive") {
+    finalize();
+    return;
+  }
+  rec.onstop = finalize;
+  try {
+    rec.stop();
+  } catch {
+    recordedChunks = [];
+  }
+}
+
+function revokeVideo() {
+  if (videoUrl) {
+    URL.revokeObjectURL(videoUrl);
+    videoUrl = null;
+  }
+}
+
+/** Insert the recording block (player + highlight markers) into the open report. */
+function attachVideo(summary) {
+  if (!el.report || el.report.hidden || !recordedChunks.length) return;
+  const blob = new Blob(recordedChunks, recorderMime ? { type: recorderMime.split(";")[0] } : undefined);
+  recordedChunks = [];
+  if (!blob.size) return;
+  revokeVideo();
+  videoUrl = URL.createObjectURL(blob);
+
+  const wrap = document.createElement("div");
+  wrap.innerHTML = videoHTML(markersFor(summary));
+  const block = wrap.firstElementChild;
+  const player = block.querySelector("video");
+  player.src = videoUrl;
+
+  const head = el.report.querySelector(".form-report__head");
+  if (head) head.after(block);
+  else el.report.prepend(block);
+
+  // Tap a marker → scrub to just before that rep.
+  block.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-seek]");
+    if (!b) return;
+    player.currentTime = Number(b.dataset.seek) || 0;
+    player.play?.()?.catch?.(() => {});
+  });
 }
 
 // ----------------------------------------------------------------------------
@@ -287,6 +396,8 @@ function hideReport() {
     el.report.hidden = true;
     el.report.innerHTML = "";
   }
+  revokeVideo();
+  recordedChunks = [];
 }
 
 function renderReport(summary) {

@@ -101,3 +101,55 @@ test("exercise labels and cue text are HTML-escaped", () => {
   assert.doesNotMatch(html, /<script>|<img/);
   assert.match(html, /&lt;script&gt;/);
 });
+
+// ---- session recording helpers (pure) -------------------------------------
+
+import { pickRecorderMime, markersFor, videoHTML } from "../form-report.js";
+
+test("recorder mime prefers mp4 (iOS), falls back to webm, then null", () => {
+  assert.equal(pickRecorderMime((t) => t === "video/mp4"), "video/mp4");
+  assert.equal(pickRecorderMime((t) => t.startsWith("video/webm")), "video/webm;codecs=vp9");
+  assert.equal(pickRecorderMime((t) => t === "video/webm"), "video/webm");
+  assert.equal(pickRecorderMime(() => false), null);
+  assert.equal(pickRecorderMime(() => { throw new Error("boom"); }), null);
+});
+
+test("markers: best rep first, flagged reps follow, best never duplicated", () => {
+  const s = session([
+    {}, // rep 1 clean → best
+    { verdict: SHALLOW }, // flagged
+    { cueFrames: [[SAG]] }, // flagged
+  ]);
+  const m = markersFor(s);
+  assert.deepEqual(m.map((x) => [x.kind, x.rep]), [["best", 1], ["flagged", 2], ["flagged", 3]]);
+});
+
+test("marker seek lands just before the rep and never below zero", () => {
+  const s = session([{ verdict: SHALLOW }]); // rep 1 at 2000ms
+  const m = markersFor(s);
+  assert.equal(m[0].seekS, 0.5); // 2.0s - 1.5s lead
+  const r = new SessionRecorder("squat");
+  r.start(0);
+  r.recordRep({ tMs: 400, rep: 1, verdict: SHALLOW }); // 0.4s - 1.5s → clamp to 0
+  assert.equal(markersFor(r.summary())[0].seekS, 0);
+});
+
+test("markers cap so a rough set doesn't become a wall of buttons", () => {
+  const s = session(Array.from({ length: 15 }, () => ({ verdict: SHALLOW })));
+  assert.ok(markersFor(s).length <= 8);
+});
+
+test("video block renders seekable buttons and the on-device promise", () => {
+  const s = session([{}, { verdict: SHALLOW }]);
+  const html = videoHTML(markersFor(s));
+  assert.match(html, /<video class="form-video__player" playsinline controls/);
+  assert.match(html, /marker-btn marker-btn--best/);
+  assert.match(html, /data-seek="/);
+  assert.match(html, /Recorded on this device only/);
+});
+
+test("no markers → no empty marker strip", () => {
+  const html = videoHTML([]);
+  assert.doesNotMatch(html, /form-video__markers/);
+  assert.match(html, /<video/);
+});
