@@ -20,10 +20,11 @@ import {
   SAFETY_AREAS,
   ONBOARDING_STEPS,
   mapOnboardingToInputs,
-  bodyweightKg,
 } from "./onboarding.js";
+import { bodyweightKg, clearMeasurementCorrection, measurementSystem, switchMeasurementSystem, validateMeasurements } from "./measurements.js";
 import { saferTargets } from "./nutrition-safety.js";
 import { setTargets, setUnit } from "./tracker-store.js";
+import { trackFunnel } from "./analytics.js";
 
 const $ = (id) => document.getElementById(id);
 const overlay = $("onboarding");
@@ -62,7 +63,7 @@ function chips(field, options, multi = false) {
       const value = typeof o === "object" ? o.value ?? o.label : o;
       const label = typeof o === "object" ? o.label : o;
       const active = multi ? Array.isArray(sel) && sel.includes(value) : sel === value;
-      return `<button type="button" class="onb-chip${active ? " is-active" : ""}" data-value="${esc(value)}">${esc(label)}</button>`;
+      return `<button type="button" class="onb-chip${active ? " is-active" : ""}" data-value="${esc(value)}" aria-pressed="${active ? "true" : "false"}">${esc(label)}</button>`;
     })
     .join("")}</div>`;
 }
@@ -70,6 +71,11 @@ function field(label, inner, hint) {
   return `<div class="onb-field"><span class="onb-flabel">${esc(label)}</span>${hint ? `<span class="onb-fhint">${esc(hint)}</span>` : ""}${inner}</div>`;
 }
 const input = (f, ph, type = "text") => `<input class="input onb-input" data-input="${f}" type="${type}" autocomplete="off" placeholder="${esc(ph)}" value="${esc(data[f] ?? "")}" inputmode="${type === "number" ? "decimal" : "text"}" />`;
+function measurementInput(f, label, ph, unit, inputmode = "decimal") {
+  const error = validateMeasurements(data).errors[f] || "";
+  const errorId = `onb-error-${f}`;
+  return `<div class="onb-measurement-input"><input class="input onb-input" data-input="${f}" type="text" autocomplete="off" placeholder="${esc(ph)}" value="${esc(data[f] ?? "")}" aria-label="${esc(label)}" inputmode="${inputmode}" aria-invalid="${error ? "true" : "false"}" aria-describedby="${errorId}" /><span class="onb-unit" aria-hidden="true">${esc(unit)}</span></div><span class="onb-error" id="${errorId}" role="alert">${esc(error)}</span>`;
+}
 
 // --- steps -----------------------------------------------------------------
 function stepGoal() {
@@ -78,11 +84,15 @@ function stepGoal() {
     ${chips("goal", GOAL_OPTIONS)}`;
 }
 function stepBody() {
+  const imperial = measurementSystem(data) === "imperial";
   return `<h3 class="onb-title">A little about you</h3>
-    <p class="onb-sub">Optional: it helps tailor volume and nutrition targets. Skip anything you'd rather not share.</p>
+    <p class="onb-sub">Optional. Weight can help set a starting nutrition range; height is saved only while you complete setup.</p>
     ${field("Age range", chips("ageRange", AGE_RANGES))}
-    ${field("Units", chips("units", [{ value: "kg", label: "kg" }, { value: "lb", label: "lb" }]))}
-    <div class="onb-cols">${field("Height", input("height", "e.g. 178"))}${field("Bodyweight", input("weight", "e.g. 75", "number"))}</div>
+    ${field("Units", chips("units", [{ value: "kg", label: "Metric" }, { value: "lb", label: "Imperial" }]))}
+    <div class="onb-cols">${imperial
+      ? `${field("Height", `<div class="onb-height-pair">${measurementInput("heightFt", "Height in feet", "e.g. 5", "ft", "numeric")}${measurementInput("heightIn", "Height in inches", "e.g. 10", "in", "numeric")}</div>`)}`
+      : field("Height", measurementInput("height", "Height in centimetres", "e.g. 178", "cm"))
+    }${field("Bodyweight", measurementInput("weight", imperial ? "Bodyweight in pounds" : "Bodyweight in kilograms", imperial ? "e.g. 165" : "e.g. 75", imperial ? "lb" : "kg"))}</div>
     ${field("Sex (optional)", chips("sex", ["Male", "Female", "Prefer not to say"]))}
     ${field("Training experience", chips("trainingAge", TRAINING_AGE_OPTIONS))}`;
 }
@@ -115,27 +125,45 @@ const STEP_RENDER = [stepGoal, stepBody, stepSchedule, stepSafety, stepPrefs];
 // --- validation (only the essentials block progress) -----------------------
 function canAdvance() {
   if (step === 0) return !!data.goal; // need a goal
+  if (step === 1) return validateMeasurements(data).valid;
   if (step === 3) return !!data.ack; // must acknowledge the disclaimer
   return true;
+}
+
+function updateMeasurementErrors() {
+  const { errors } = validateMeasurements(data);
+  body.querySelectorAll("[data-input=height], [data-input=heightFt], [data-input=heightIn], [data-input=weight]").forEach((el) => {
+    const error = errors[el.dataset.input] || "";
+    el.setAttribute("aria-invalid", error ? "true" : "false");
+    const message = body.querySelector(`#onb-error-${el.dataset.input}`);
+    if (message) message.textContent = error;
+  });
 }
 function isOptionalStep() {
   return step !== 0 && step !== 3; // goal + safety-ack aren't skippable
 }
 
 // --- render ----------------------------------------------------------------
-function render() {
+function focusChip(field, value) {
+  body.querySelector(`.onb-chips[data-field="${CSS.escape(field)}"] [data-value="${CSS.escape(value)}"]`)?.focus();
+}
+
+function render({ focusField, focusValue } = {}) {
   progress.innerHTML = ONBOARDING_STEPS.map((s, i) => `<span class="onb-step${i === step ? " is-active" : ""}${i < step ? " is-done" : ""}">${esc(s)}</span>`).join("");
   body.innerHTML = STEP_RENDER[step]();
   backBtn.style.visibility = step === 0 ? "hidden" : "visible";
   skipBtn.hidden = !isOptionalStep();
+  skipBtn.disabled = !canAdvance();
   nextBtn.disabled = !canAdvance();
   nextBtn.textContent = step === STEP_RENDER.length - 1 ? "Build my plan" : "Next";
+  if (focusField && focusValue != null) focusChip(focusField, focusValue);
 }
 
-function open() {
+function open(source = "plan") {
   load();
   overlay.classList.add("is-open");
   overlay.setAttribute("aria-hidden", "false");
+  trackFunnel("onboarding_started", { source });
   render();
   setTimeout(() => overlay.querySelector(".onb-chip, .onb-input")?.focus(), 50);
 }
@@ -158,6 +186,7 @@ function finish() {
   close();
   location.hash = "#/"; // the Plan page, where results render
   window.dispatchEvent(new CustomEvent("spotter:generate", { detail: inputs }));
+  trackFunnel("onboarding_completed");
 }
 
 // --- wiring ----------------------------------------------------------------
@@ -171,18 +200,28 @@ if (overlay && body) {
     if (wrap.dataset.multi === "1") {
       const arr = Array.isArray(data[f]) ? [...data[f]] : [];
       data[f] = arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
-      wrap.querySelector(`[data-value="${CSS.escape(value)}"]`)?.classList.toggle("is-active");
+      const active = data[f].includes(value);
+      chip.classList.toggle("is-active", active);
+      chip.setAttribute("aria-pressed", active ? "true" : "false");
     } else {
-      data[f] = value;
-      wrap.querySelectorAll(".onb-chip").forEach((c) => c.classList.toggle("is-active", c === chip));
+      data = f === "units" ? switchMeasurementSystem(data, value === "lb" ? "imperial" : "metric") : { ...data, [f]: value };
+      wrap.querySelectorAll(".onb-chip").forEach((c) => {
+        const active = c === chip;
+        c.classList.toggle("is-active", active);
+        c.setAttribute("aria-pressed", active ? "true" : "false");
+      });
     }
-    nextBtn.disabled = !canAdvance();
     save();
+    if (f === "units") render({ focusField: f, focusValue: value });
+    else nextBtn.disabled = !canAdvance();
   });
   body.addEventListener("input", (e) => {
     const el = e.target.closest("[data-input]");
     if (!el) return;
+    data = clearMeasurementCorrection(data, el.dataset.input);
     data[el.dataset.input] = el.type === "checkbox" ? el.checked : el.value;
+    updateMeasurementErrors();
+    skipBtn.disabled = !canAdvance();
     nextBtn.disabled = !canAdvance();
     save();
   });
@@ -209,7 +248,14 @@ if (overlay && body) {
   // Entry points: any [data-onboard] control opens the guided flow.
   document.addEventListener("click", (e) => {
     const trigger = e.target.closest("[data-onboard]");
-    if (trigger) { e.preventDefault(); open(); }
+    if (trigger) {
+      e.preventDefault();
+      const source = trigger.closest("#today") ? "today" : "landing";
+      trackFunnel("landing_cta_clicked", {
+        source: source === "today" ? "today" : trigger.closest(".final-cta") ? "final" : "hero",
+      });
+      open(source);
+    }
   });
-  window.addEventListener("spotter:onboarding", open);
+  window.addEventListener("spotter:onboarding", (e) => open(e.detail?.source || "plan"));
 }

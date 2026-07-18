@@ -23,6 +23,8 @@ import { getContext as getTrackerContext } from "./tracker-store.js";
 import { swapExercise, removeExercise, addExercise } from "./plan-edit.js";
 import { suggestAlternatives } from "./exercise-data.js";
 import { searchExercises } from "./exercises.js";
+import { trackFunnel } from "./analytics.js";
+import { aiFailureMessage, assertPlanShape, classifyAiFailure, fetchWithTimeout } from "./ai-errors.js";
 
 // ----------------------------------------------------------------------------
 // Element references
@@ -41,6 +43,8 @@ const states = {
 const loadingStepEl = document.getElementById("loading-step");
 const errorText = document.getElementById("error-text");
 const fallbackNotice = document.getElementById("fallback-notice");
+const fallbackMessage = document.getElementById("fallback-message");
+const fallbackRetryBtn = document.getElementById("fallback-retry-btn");
 
 const scoreValueEl = document.getElementById("score-value");
 const auditVerdict = document.getElementById("audit-verdict");
@@ -53,6 +57,7 @@ const auditPassedList = document.getElementById("audit-passed-list");
 const trustReportEl = document.getElementById("trust-report");
 const repairMount = document.getElementById("repair-mount");
 const planOutput = document.getElementById("plan-output");
+const startFirstWorkoutBtn = document.getElementById("start-first-workout");
 
 // Adaptive coach loop (re-tune the plan from logged training, then re-audit).
 const adaptCard = document.getElementById("adapt-card");
@@ -171,27 +176,32 @@ async function generate(inputsOverride) {
 
   let plan = null;
   let usedFallback = false;
+  let fallbackFailureClass = "unknown";
 
   try {
-    const res = await fetch("api/generate", {
+    const res = await fetchWithTimeout("api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(inputs),
-    });
+    }, 65_000);
 
     if (res.ok) {
-      const data = await res.json();
-      plan = data.plan;
-    } else {
-      // 429 (rate limit) or any server error → graceful saved-example fallback.
-      plan = await getFallbackPlan(inputs);
-      usedFallback = true;
-      if (!plan) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Request failed (${res.status}).`);
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        const error = new Error("The generator returned invalid JSON.");
+        error.failureClass = "invalid_response";
+        throw error;
       }
+      plan = assertPlanShape(data?.plan);
+    } else {
+      const error = new Error("Plan request failed");
+      error.status = res.status;
+      throw error;
     }
   } catch (err) {
+    fallbackFailureClass = classifyAiFailure(err, { online: navigator.onLine });
     // Network error / offline / running as static file → try the fallback.
     if (!plan) {
       plan = await getFallbackPlan(inputs);
@@ -199,16 +209,19 @@ async function generate(inputsOverride) {
     }
     if (!plan) {
       stopLoadingSteps();
-      errorText.textContent =
-        "We couldn't reach the generator and no saved example was available. Check your connection and try again.";
+      errorText.textContent = aiFailureMessage("plan", fallbackFailureClass, { fallback: false });
       showState("error");
+      trackFunnel("plan_generation_failed", { failure_class: fallbackFailureClass });
       return;
     }
   }
 
   stopLoadingSteps();
   publishPlan(plan, inputs);
-  renderResults(plan, inputs, usedFallback);
+  renderResults(plan, inputs, usedFallback, { failureClass: fallbackFailureClass });
+  trackFunnel("plan_generation_succeeded", { fallback_used: String(usedFallback) });
+  if (usedFallback) trackFunnel("plan_fallback_shown", { failure_class: fallbackFailureClass });
+  if (!usedFallback) window.dispatchEvent(new CustomEvent("spotter:plan-generated"));
 }
 
 // ----------------------------------------------------------------------------
@@ -218,9 +231,13 @@ async function generate(inputsOverride) {
 const safetyBoundary = document.getElementById("safety-boundary");
 const safetyBoundaryText = document.getElementById("safety-boundary-text");
 
-function renderResults(plan, inputs, usedFallback, { focus = true } = {}) {
+function renderResults(plan, inputs, usedFallback, { focus = true, failureClass = "unknown" } = {}) {
   revealGenerator();
   fallbackNotice.hidden = !usedFallback;
+  if (usedFallback) {
+    fallbackNotice.dataset.failureClass = failureClass;
+    fallbackMessage.textContent = `${aiFailureMessage("plan", failureClass, { fallback: true })} Showing a saved example; its safety audit still runs in full.`;
+  }
 
   // Surface a hard safety boundary prominently (never bury it under a plan).
   if (safetyBoundary) {
@@ -653,6 +670,7 @@ window.addEventListener("spotter:adapt-request", () => {
 });
 
 retryBtn.addEventListener("click", () => generate());
+fallbackRetryBtn?.addEventListener("click", () => generate());
 
 regenerateBtn.addEventListener("click", () => {
   if (adaptCard) adaptCard.hidden = true;
@@ -662,6 +680,10 @@ regenerateBtn.addEventListener("click", () => {
 });
 
 adaptBtn?.addEventListener("click", adapt);
+
+startFirstWorkoutBtn?.addEventListener("click", () => {
+  window.dispatchEvent(new CustomEvent("spotter:start-plan-day", { detail: { index: 0, source: "plan" } }));
+});
 
 // External plan changes (e.g. switching profile) — render that plan, or the
 // empty state if the new profile has none. Self-updates are suppressed above.

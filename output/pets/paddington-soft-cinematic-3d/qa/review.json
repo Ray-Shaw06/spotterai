@@ -1,0 +1,973 @@
+{
+  "ok": true,
+  "frames_root": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames",
+  "states": [
+    "idle",
+    "running-right",
+    "running-left",
+    "waving",
+    "jumping",
+    "failed",
+    "waiting",
+    "running",
+    "review"
+  ],
+  "errors": [],
+  "warnings": [],
+  "rows": [
+    {
+      "state": "idle",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/idle/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17069,
+          "bbox": [
+            36,
+            5,
+            156,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 171
+        },
+        {
+          "index": 1,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/idle/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16962,
+          "bbox": [
+            36,
+            5,
+            155,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 174
+        },
+        {
+          "index": 2,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/idle/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17093,
+          "bbox": [
+            36,
+            5,
+            156,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 174
+        },
+        {
+          "index": 3,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/idle/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16942,
+          "bbox": [
+            36,
+            5,
+            155,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 170
+        },
+        {
+          "index": 4,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/idle/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16909,
+          "bbox": [
+            36,
+            5,
+            155,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 170
+        },
+        {
+          "index": 5,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/idle/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16946,
+          "bbox": [
+            36,
+            5,
+            155,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 170
+        }
+      ]
+    },
+    {
+      "state": "running-right",
+      "expected_frames": 8,
+      "actual_frames": 8,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-right/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18012,
+          "bbox": [
+            25,
+            5,
+            167,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 263
+        },
+        {
+          "index": 1,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-right/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16535,
+          "bbox": [
+            38,
+            5,
+            153,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 234
+        },
+        {
+          "index": 2,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-right/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18441,
+          "bbox": [
+            20,
+            5,
+            171,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 275
+        },
+        {
+          "index": 3,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-right/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18182,
+          "bbox": [
+            23,
+            5,
+            169,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 259
+        },
+        {
+          "index": 4,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-right/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16937,
+          "bbox": [
+            33,
+            5,
+            158,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 249
+        },
+        {
+          "index": 5,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-right/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15873,
+          "bbox": [
+            36,
+            5,
+            156,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 241
+        },
+        {
+          "index": 6,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-right/06.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18298,
+          "bbox": [
+            20,
+            5,
+            171,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 278
+        },
+        {
+          "index": 7,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-right/07.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15867,
+          "bbox": [
+            33,
+            5,
+            158,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 241
+        }
+      ]
+    },
+    {
+      "state": "running-left",
+      "expected_frames": 8,
+      "actual_frames": 8,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-left/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16690,
+          "bbox": [
+            31,
+            5,
+            160,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 283
+        },
+        {
+          "index": 1,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-left/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16881,
+          "bbox": [
+            28,
+            5,
+            163,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 286
+        },
+        {
+          "index": 2,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-left/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16025,
+          "bbox": [
+            34,
+            5,
+            157,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 228
+        },
+        {
+          "index": 3,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-left/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16612,
+          "bbox": [
+            31,
+            5,
+            161,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 275
+        },
+        {
+          "index": 4,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-left/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15696,
+          "bbox": [
+            36,
+            5,
+            156,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 293
+        },
+        {
+          "index": 5,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-left/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15523,
+          "bbox": [
+            37,
+            5,
+            155,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 230
+        },
+        {
+          "index": 6,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-left/06.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 14944,
+          "bbox": [
+            42,
+            5,
+            150,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 259
+        },
+        {
+          "index": 7,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running-left/07.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16552,
+          "bbox": [
+            31,
+            5,
+            160,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 287
+        }
+      ]
+    },
+    {
+      "state": "waving",
+      "expected_frames": 4,
+      "actual_frames": 4,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/waving/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17255,
+          "bbox": [
+            34,
+            5,
+            157,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 159
+        },
+        {
+          "index": 1,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/waving/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17816,
+          "bbox": [
+            28,
+            5,
+            163,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 149
+        },
+        {
+          "index": 2,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/waving/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18079,
+          "bbox": [
+            21,
+            5,
+            171,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 179
+        },
+        {
+          "index": 3,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/waving/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17106,
+          "bbox": [
+            35,
+            5,
+            157,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 134
+        }
+      ]
+    },
+    {
+      "state": "jumping",
+      "expected_frames": 5,
+      "actual_frames": 5,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/jumping/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 22702,
+          "bbox": [
+            7,
+            5,
+            184,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 273
+        },
+        {
+          "index": 1,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/jumping/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 20321,
+          "bbox": [
+            15,
+            5,
+            176,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 299
+        },
+        {
+          "index": 2,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/jumping/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 20203,
+          "bbox": [
+            15,
+            5,
+            177,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 256
+        },
+        {
+          "index": 3,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/jumping/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 19301,
+          "bbox": [
+            19,
+            5,
+            173,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 264
+        },
+        {
+          "index": 4,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/jumping/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 20387,
+          "bbox": [
+            19,
+            5,
+            173,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 232
+        }
+      ]
+    },
+    {
+      "state": "failed",
+      "expected_frames": 8,
+      "actual_frames": 8,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/failed/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16040,
+          "bbox": [
+            41,
+            5,
+            151,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 203
+        },
+        {
+          "index": 1,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/failed/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17349,
+          "bbox": [
+            37,
+            5,
+            154,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 200
+        },
+        {
+          "index": 2,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/failed/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18261,
+          "bbox": [
+            35,
+            5,
+            156,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 191
+        },
+        {
+          "index": 3,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/failed/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18868,
+          "bbox": [
+            31,
+            5,
+            160,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 227
+        },
+        {
+          "index": 4,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/failed/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18602,
+          "bbox": [
+            31,
+            5,
+            160,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 224
+        },
+        {
+          "index": 5,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/failed/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17164,
+          "bbox": [
+            38,
+            5,
+            154,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 215
+        },
+        {
+          "index": 6,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/failed/06.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16114,
+          "bbox": [
+            40,
+            5,
+            151,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 189
+        },
+        {
+          "index": 7,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/failed/07.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16129,
+          "bbox": [
+            41,
+            5,
+            151,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 188
+        }
+      ]
+    },
+    {
+      "state": "waiting",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/waiting/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16381,
+          "bbox": [
+            40,
+            5,
+            152,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 153
+        },
+        {
+          "index": 1,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/waiting/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16759,
+          "bbox": [
+            35,
+            5,
+            156,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 170
+        },
+        {
+          "index": 2,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/waiting/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16174,
+          "bbox": [
+            40,
+            5,
+            151,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 159
+        },
+        {
+          "index": 3,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/waiting/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16323,
+          "bbox": [
+            36,
+            5,
+            156,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 157
+        },
+        {
+          "index": 4,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/waiting/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15955,
+          "bbox": [
+            41,
+            5,
+            150,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 152
+        },
+        {
+          "index": 5,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/waiting/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15984,
+          "bbox": [
+            43,
+            5,
+            149,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 137
+        }
+      ]
+    },
+    {
+      "state": "running",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16498,
+          "bbox": [
+            38,
+            5,
+            153,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 173
+        },
+        {
+          "index": 1,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17088,
+          "bbox": [
+            37,
+            5,
+            154,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 177
+        },
+        {
+          "index": 2,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17392,
+          "bbox": [
+            34,
+            5,
+            157,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 174
+        },
+        {
+          "index": 3,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16988,
+          "bbox": [
+            38,
+            5,
+            153,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 161
+        },
+        {
+          "index": 4,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16731,
+          "bbox": [
+            37,
+            5,
+            154,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 170
+        },
+        {
+          "index": 5,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/running/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16950,
+          "bbox": [
+            35,
+            5,
+            156,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 183
+        }
+      ]
+    },
+    {
+      "state": "review",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/review/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17189,
+          "bbox": [
+            35,
+            5,
+            156,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 176
+        },
+        {
+          "index": 1,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/review/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17622,
+          "bbox": [
+            34,
+            5,
+            157,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 172
+        },
+        {
+          "index": 2,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/review/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17177,
+          "bbox": [
+            35,
+            5,
+            156,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 170
+        },
+        {
+          "index": 3,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/review/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17375,
+          "bbox": [
+            35,
+            5,
+            156,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 181
+        },
+        {
+          "index": 4,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/review/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16320,
+          "bbox": [
+            41,
+            5,
+            150,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 169
+        },
+        {
+          "index": 5,
+          "file": "/Users/rehaanshaw/spotterai/output/pets/paddington-soft-cinematic-3d/frames/review/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16947,
+          "bbox": [
+            36,
+            5,
+            156,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 179
+        }
+      ]
+    }
+  ]
+}

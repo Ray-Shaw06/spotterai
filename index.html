@@ -6,7 +6,7 @@
   <title>SpotterAI — your AI fitness copilot (plan, track, adapt, audit)</title>
   <meta
     name="description"
-    content="Your AI fitness copilot: generate a workout plan, log training and nutrition, track progress, adapt over time, and audit every plan with transparent, code-based guardrails. $0, no signup, runs on-device."
+    content="Your AI fitness copilot: generate a workout plan, log training and nutrition, track progress, adapt over time, and audit every plan with transparent, code-based guardrails. Free to use, no signup, local-first."
   />
   <meta name="theme-color" content="#0a090f" />
 
@@ -24,14 +24,14 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://spotterai-flax.vercel.app/" />
   <meta property="og:title" content="SpotterAI — your AI fitness copilot" />
-  <meta property="og:description" content="It writes your training plan, then a code-based evaluator scores it for safety, flagging risky or low-quality programming before you trust it. $0, no signup, runs on-device." />
+  <meta property="og:description" content="It writes your training plan, then a code-based evaluator checks it for common safety and quality issues before you trust it. Free to use, no signup, local-first." />
   <meta property="og:image" content="https://spotterai-flax.vercel.app/og-home.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="628" />
   <meta property="og:image:alt" content="SpotterAI — your AI fitness copilot, showing a transparent, flags-first plan safety audit." />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="SpotterAI — your AI fitness copilot" />
-  <meta name="twitter:description" content="Plan, track, adapt, and audit your training. Every plan gets a transparent, code-based safety audit before you trust it. $0, no signup, on-device." />
+  <meta name="twitter:description" content="Plan, track, adapt, and audit your training. Every plan gets a transparent, code-based safety audit. Free to use, no signup, local-first." />
   <meta name="twitter:image" content="https://spotterai-flax.vercel.app/og-home.png" />
 
   <!-- Favicon: the same purple shield/barbell mark used by the install icons. -->
@@ -333,7 +333,10 @@
             <!-- Fallback notice (only when showing a saved example) -->
             <div class="notice" id="fallback-notice" hidden role="status">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 8v4m0 4h.01M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
-              <span>Live generation was unavailable, so we're <strong>showing a saved example</strong>. The safety audit below still runs on it in full.</span>
+              <div class="fallback-notice__body">
+                <span id="fallback-message">Live generation was unavailable, so we're showing a saved example. The safety audit below still runs on it in full.</span>
+                <button type="button" class="btn btn--ghost btn--sm" id="fallback-retry-btn">Try live generation again</button>
+              </div>
             </div>
 
             <!-- Safety boundary: shown prominently when inputs trip a hard limit -->
@@ -374,6 +377,22 @@
 
             <!-- The plan itself -->
             <div class="plan" id="plan-output"></div>
+
+            <div class="first-workout-cta">
+              <p>Your plan is ready. Start with day one and adjust the weights as you go.</p>
+              <button type="button" class="btn btn--primary btn--block" id="start-first-workout">Start my first workout</button>
+            </div>
+
+            <section class="notification-offer" id="notification-offer" aria-labelledby="notification-offer-title" hidden>
+              <div class="notification-offer__head">
+                <h3 id="notification-offer-title">Keep your plan on your radar</h3>
+                <p>SpotterAI can send gentle workout and recovery reminders from the installed app. Review the local schedule first; nothing is enabled yet.</p>
+              </div>
+              <div id="notification-offer-editor"></div>
+              <p class="notification-status" id="notification-offer-status" role="status">Checking notification availability…</p>
+              <p class="notification-error" id="notification-offer-error" role="alert" hidden></p>
+              <button type="button" class="btn btn--primary btn--block" id="notification-enable" disabled>Enable notifications</button>
+            </section>
 
             <!-- Adaptive coach loop: re-tune from logged training, then re-audit -->
             <div class="card adapt-card" id="adapt-card" hidden>
@@ -1091,10 +1110,18 @@
         <p class="account-note">Switches weights, water and distance across the whole app. Your existing data is converted, not just relabelled.</p>
       </div>
 
-      <div class="account-section account-reminders">
-        <h3 class="account-h">Streak reminders</h3>
-        <label class="reminder-row"><input type="checkbox" id="reminders-toggle" /> <span>Remind me to keep my streak</span></label>
-        <p class="account-note" id="reminders-note">A local notification when you open the app and haven't logged today. No server, no tracking. It can't notify while the app is fully closed (that would need a backend).</p>
+      <div class="account-section account-notifications" id="account-notifications" aria-busy="true">
+        <h3 class="account-h">Workout notifications</h3>
+        <p class="account-note">Manage this installed device only. Your schedule and last completion date are used for reminders; workout details are never sent.</p>
+        <div id="account-notification-editor"></div>
+        <p class="notification-status" id="account-notification-status" role="status">Checking notification availability…</p>
+        <p class="notification-error" id="account-notification-error" role="alert" hidden></p>
+        <div class="notification-actions">
+          <button type="button" class="btn btn--primary btn--sm" id="notification-account-enable" disabled>Enable notifications</button>
+          <button type="button" class="btn btn--primary btn--sm" id="notification-save" disabled>Save changes</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="notification-pause" disabled>Pause notifications</button>
+          <button type="button" class="btn btn--danger btn--sm" id="notification-delete" disabled>Delete notifications</button>
+        </div>
       </div>
 
       <div class="account-section account-actions">

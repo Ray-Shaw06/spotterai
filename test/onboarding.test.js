@@ -7,6 +7,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mapOnboardingToInputs, bodyweightKg, ONBOARDING_STEPS } from "../onboarding.js";
+import { measurementSystem, switchMeasurementSystem, validateMeasurements } from "../measurements.js";
 
 test("goal + training age map to the generator's goal + experience", () => {
   const i = mapOnboardingToInputs({ goal: "muscle", trainingAge: "new" });
@@ -37,10 +38,26 @@ test("sensible defaults when fields are skipped (never blocks generation)", () =
   assert.equal(i.injuryNotes, "");
 });
 
+test("internal measurement correction state never enters mapped plan inputs", () => {
+  const marked = switchMeasurementSystem({ units: "kg", weight: "29.99" }, "imperial");
+  assert.equal(validateMeasurements(marked).valid, false);
+  const internalKeys = Object.keys(marked).filter((key) => key.startsWith("__"));
+  assert.ok(internalKeys.length > 0);
+
+  const inputs = mapOnboardingToInputs({ ...marked, goal: "muscle" });
+  assert.deepEqual(Object.keys(inputs).sort(), ["daysPerWeek", "equipment", "experience", "goal", "injuries", "injuryNotes", "sessionLength"]);
+  for (const key of internalKeys) assert.equal(Object.hasOwn(inputs, key), false);
+});
+
 test("bodyweight converts lb→kg for nutrition targets", () => {
   assert.ok(Math.abs(bodyweightKg({ weight: 220, units: "lb" }) - 99.79) < 0.1);
   assert.equal(bodyweightKg({ weight: 80, units: "kg" }), 80);
   assert.equal(bodyweightKg({}), null);
+});
+
+test("legacy kg and lb values keep their respective measurement systems", () => {
+  assert.equal(measurementSystem({ units: "kg" }), "metric");
+  assert.equal(measurementSystem({ units: "lb" }), "imperial");
 });
 
 test("there are a small number of intake steps (coach-style, not a giant form)", () => {

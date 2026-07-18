@@ -10,13 +10,15 @@
  * callers can fall back to manual entry. The API key stays server-side.
  */
 
+import { fetchWithTimeout } from "./ai-errors.js";
+
 async function estimate(kind, query, signal, extra = {}) {
-  const res = await fetch("api/estimate", {
+  const res = await fetchWithTimeout("api/estimate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ kind, query, ...extra }),
     signal,
-  });
+  }, 35_000);
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     const err = new Error(data.error || `Estimate failed (${res.status})`);
@@ -26,10 +28,33 @@ async function estimate(kind, query, signal, extra = {}) {
   return res.json();
 }
 
+function invalidResponseError(message) {
+  const error = new Error(message);
+  error.failureClass = "invalid_response";
+  return error;
+}
+
+function isFiniteMacro(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function isFoodEstimate(food) {
+  return food &&
+    typeof food === "object" &&
+    !Array.isArray(food) &&
+    typeof food.name === "string" &&
+    food.name.trim() &&
+    [food.kcal, food.protein, food.carbs, food.fat].every(isFiniteMacro);
+}
+
+function hasMealNutrition(food) {
+  return [food.kcal, food.protein, food.carbs, food.fat].some((value) => value > 0);
+}
+
 /** Estimate calories + macros for any food described in plain language. */
 export async function estimateFood(query, signal) {
   const { food } = await estimate("food", query, signal);
-  if (!food) throw new Error("No estimate returned");
+  if (!isFoodEstimate(food)) throw invalidResponseError("No complete food estimate returned");
   return food;
 }
 
@@ -43,13 +68,17 @@ export async function estimateMealPhoto(dataUrl, signal) {
   const mimeType = dataUrl.slice(5, comma).split(";")[0]; // "image/jpeg"
   const data = dataUrl.slice(comma + 1);
   const { food } = await estimate("food", "", signal, { image: { data, mimeType } });
-  if (!food) throw new Error("No estimate returned");
+  if (!isFoodEstimate(food) || !hasMealNutrition(food)) {
+    throw invalidResponseError("No food detected in photo");
+  }
   return food;
 }
 
 /** Classify any exercise name into { muscle, equipment, cardio }. */
 export async function classifyExercise(query, signal) {
   const { exercise } = await estimate("exercise", query, signal);
-  if (!exercise) throw new Error("No classification returned");
+  if (!exercise || typeof exercise !== "object" || Array.isArray(exercise) || typeof exercise.muscle !== "string" || !exercise.muscle.trim() || typeof exercise.cardio !== "boolean") {
+    throw invalidResponseError("No complete exercise classification returned");
+  }
   return exercise;
 }

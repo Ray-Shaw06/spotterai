@@ -1,9 +1,9 @@
 # SpotterAI Release 1 Design
 
-Date: 2026-07-17  
-Status: Ready for owner review  
-Production baseline: `1b94973` (`origin/main`)  
-Deployment: Existing Vercel project  
+Date: 2026-07-17
+Status: Approved by owner on 2026-07-17
+Production baseline: `1b94973` (`origin/main`)
+Deployment: Existing Vercel project
 
 ## Purpose
 
@@ -246,4 +246,3 @@ Release 1 is ready only when:
 - Independent reviewers report no unresolved release-blocking finding.
 - The Vercel preview and production deployment are verified and recorded.
 - The release worklog contains evidence for every gate and lists no unresolved blocker.
-

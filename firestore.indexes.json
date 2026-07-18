@@ -1,0 +1,19 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "notificationDevices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "enabled",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nextNotificationAt",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

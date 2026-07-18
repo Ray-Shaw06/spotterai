@@ -1114,10 +1114,15 @@ table {
 .onb-flabel { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); font-weight: 600; margin-bottom: var(--space-2); }
 .onb-fhint { display: block; font-size: 0.75rem; color: var(--text-faint); margin-bottom: var(--space-2); margin-top: -4px; }
 .onb-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.onb-chip { padding: 0.55rem 0.95rem; font-size: var(--fs-small); font-weight: 500; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition); }
+.onb-chip { min-width: 44px; min-height: 44px; padding: 0.55rem 0.95rem; font-size: var(--fs-small); font-weight: 500; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition); }
 .onb-chip:hover { color: var(--text); border-color: var(--accent-ring); }
 .onb-chip.is-active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-ring); }
 .onb-input { max-width: 100%; }
+.onb-measurement-input { display: flex; align-items: center; gap: var(--space-2); }
+.onb-measurement-input .onb-input { min-width: 0; width: 100%; }
+.onb-unit { flex: none; min-width: 2ch; font-size: var(--fs-small); color: var(--text-faint); font-weight: 600; }
+.onb-height-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.onb-error { display: block; min-height: 1.2em; margin-top: 5px; font-size: 0.75rem; color: var(--danger); line-height: 1.35; }
 .onb-cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
 .onb-ack { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; }
 .onb-ack input { margin-top: 3px; flex: none; accent-color: var(--accent); }
@@ -1836,6 +1841,8 @@ table {
 .final-cta__title { font-size: clamp(1.6rem, 4vw, 2.6rem); font-weight: 700; letter-spacing: -0.03em; }
 .final-cta__sub { margin: var(--space-3) auto 0; max-width: 56ch; color: var(--text-muted); }
 .final-cta__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: center; margin-top: var(--space-5); }
+.first-workout-cta { margin-top: var(--space-5); padding: var(--space-4); border: 1px solid var(--accent-ring); border-radius: var(--r-md); background: var(--accent-soft); }
+.first-workout-cta p { margin-bottom: var(--space-3); color: var(--text-muted); }
 .limits__redirect strong { color: var(--accent); }
 
 /* Rule explanation cards + training principles */
@@ -3055,18 +3062,65 @@ table {
   margin-top: var(--space-3);
   width: 100%;
 }
-.reminder-row {
+.notification-offer {
+  margin-top: var(--space-4);
+  padding: var(--space-5);
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+}
+.notification-offer__head { margin-bottom: var(--space-4); }
+.notification-offer__head h3 { font-size: 1.05rem; }
+.notification-offer__head p { margin-top: var(--space-2); max-width: 68ch; color: var(--text-muted); font-size: var(--fs-small); }
+.notification-editor { min-width: 0; }
+.notification-timezone { margin-bottom: var(--space-3); color: var(--text-muted); font-size: 0.78rem; overflow-wrap: anywhere; }
+.notification-timezone strong { color: var(--text); font-family: var(--font-mono); font-size: 0.72rem; }
+.notification-fieldset { min-width: 0; padding: 0; border: 0; }
+.notification-fieldset + .notification-fieldset { margin-top: var(--space-4); }
+.notification-fieldset legend { margin-bottom: var(--space-2); color: var(--text); font-size: 0.8rem; font-weight: 600; }
+.notification-schedule { display: flex; flex-direction: column; gap: var(--space-1); }
+.notification-schedule__row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) minmax(8rem, 0.65fr);
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.notification-control {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-small);
+  min-height: 44px;
   color: var(--text);
+  font-size: var(--fs-small);
   cursor: pointer;
 }
-.reminder-row input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--accent);
+.notification-control input { width: 20px; height: 20px; flex: none; accent-color: var(--accent); }
+.notification-control:has(input:disabled) { color: var(--text-faint); cursor: not-allowed; }
+.notification-time { min-width: 0; }
+.notification-time .input { width: 100%; min-height: 44px; }
+.notification-quiet { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.notification-quiet label { display: flex; flex-direction: column; gap: var(--space-1); color: var(--text-muted); font-size: 0.76rem; }
+.notification-quiet .input { min-height: 44px; }
+.notification-categories { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--space-4); }
+.notification-status,
+.notification-error { margin: var(--space-3) 0; font-size: 0.8rem; line-height: 1.5; }
+.notification-status { color: var(--text-muted); }
+.notification-error { padding: var(--space-2) var(--space-3); color: var(--danger); background: var(--danger-soft); border: 1px solid color-mix(in srgb, var(--danger) 38%, transparent); border-radius: var(--r-sm); }
+.notification-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+.notification-actions .btn { min-height: 44px; }
+.notification-details > summary { min-height: 44px; display: flex; align-items: center; color: var(--accent); font-size: var(--fs-small); font-weight: 600; cursor: pointer; }
+.notification-details[open] > summary { margin-bottom: var(--space-3); }
+.notification-offer .btn--block { min-height: 48px; }
+
+@media (max-width: 600px) {
+  .notification-offer { padding: var(--space-4); }
+  .notification-schedule__row { grid-template-columns: 1fr; gap: 0; padding-bottom: var(--space-2); border-bottom: 1px solid var(--border-soft); }
+  .notification-categories,
+  .notification-quiet { grid-template-columns: 1fr; }
+  .notification-actions .btn { width: 100%; }
 }
 
 /* ----------------------------------------------------------------------------
@@ -5343,6 +5397,8 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   border-radius: var(--r-sm);
   padding: var(--space-2) var(--space-3);
 }
+.fallback-notice__body { display: flex; align-items: center; justify-content: space-between; flex: 1; gap: var(--space-3); flex-wrap: wrap; }
+.detail-recovery { display: flex; flex-direction: column; gap: var(--space-2); }
 .detail-loading {
   display: flex;
   flex-direction: column;

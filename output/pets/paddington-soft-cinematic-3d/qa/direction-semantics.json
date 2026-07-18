@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "reviewed_by": "independent_final_visual_qa_worker",
+  "blind_validation": "pass_with_intermediate_warnings",
+  "continuity": "pass_with_metric_warnings_reviewed",
+  "directions": [
+    {"direction": "000", "verdict": "pass", "expected": "up", "observed": "up", "reason": "Horizontal center; raised pupils, muzzle, and brim underside read up."},
+    {"direction": "022.5", "verdict": "pass", "expected": "up-right", "observed": "up-right", "reason": "Eyes and nose turn right; lifted muzzle and gaze read up."},
+    {"direction": "045", "verdict": "warning", "expected": "up-right", "observed": "up-right", "reason": "Clear right three-quarter yaw; raised pitch confirms up despite blind vertical ambiguity."},
+    {"direction": "067.5", "verdict": "pass", "expected": "up-right", "observed": "up-right", "reason": "Strong right profile; raised eye and muzzle axis preserve up."},
+    {"direction": "090", "verdict": "pass", "expected": "right", "observed": "right", "reason": "Unmistakable screen-right profile with neutral vertical pitch."},
+    {"direction": "112.5", "verdict": "pass", "expected": "down-right", "observed": "down-right", "reason": "Right profile remains clear; lowered eyes, muzzle, and brim read down."},
+    {"direction": "135", "verdict": "pass", "expected": "down-right", "observed": "down-right", "reason": "Right three-quarter yaw combines with a lowered eye and muzzle line."},
+    {"direction": "157.5", "verdict": "warning", "expected": "down-right", "observed": "down-right", "reason": "Slight right nose offset confirms right despite blind ambiguity; tucked muzzle and lowered gaze read down."},
+    {"direction": "180", "verdict": "pass", "expected": "down", "observed": "down", "reason": "Horizontal center; lowered pupils, tucked muzzle, and visible hat crown read down."},
+    {"direction": "202.5", "verdict": "warning", "expected": "down-left", "observed": "down-left", "reason": "Slight left nose and pupil offset confirm left despite blind ambiguity; lowered head clearly reads down."},
+    {"direction": "225", "verdict": "warning", "expected": "down-left", "observed": "down-left", "reason": "Clear left yaw; lowered eye and muzzle line confirm down despite blind ambiguity."},
+    {"direction": "247.5", "verdict": "warning", "expected": "down-left", "observed": "down-left", "reason": "Strong left yaw; subtle labeled downward pitch remains loop-consistent despite blind ambiguity."},
+    {"direction": "270", "verdict": "pass", "expected": "left", "observed": "left", "reason": "Unmistakable screen-left profile with neutral vertical pitch."},
+    {"direction": "292.5", "verdict": "warning", "expected": "up-left", "observed": "up-left", "reason": "Clear left profile; lifted eyes, muzzle, and brim confirm up despite blind ambiguity."},
+    {"direction": "315", "verdict": "warning", "expected": "up-left", "observed": "up-left", "reason": "Nose remains left of center; raised face and gaze confirm up despite blind ambiguity."},
+    {"direction": "337.5", "verdict": "warning", "expected": "up-left", "observed": "up-left", "reason": "Subtle left nose offset and clear raised gaze confirm up-left despite blind ambiguity on both axes."}
+  ],
+  "review_warnings": [
+    "Intermediate blind ambiguity is accepted because labeled poses remain in the correct quadrants without reversal.",
+    "Continuity metric warnings at 247.5-to-270 and 337.5-to-000 are accepted because both transitions are visually smooth."
+  ]
+}

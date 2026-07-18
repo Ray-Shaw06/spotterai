@@ -15,6 +15,8 @@ import { estimateFood, estimateMealPhoto } from "./ai.js";
 import { ring } from "./charts.js";
 import { evaluateNutrition, NUTRITION_DISCLAIMER, NUTRITION_WONT_DO } from "./nutrition-safety.js";
 import { store } from "./store.js";
+import { trackFunnel } from "./analytics.js";
+import { aiFailureMessage, classifyAiFailure } from "./ai-errors.js";
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -60,6 +62,11 @@ let selected = ymd(new Date());
 let pickerMeal = "breakfast";
 let offController = null;
 let aiController = null;
+let lastPhotoFile = null;
+
+function photoFailureClass(error) {
+  return classifyAiFailure(error, { online: navigator.onLine });
+}
 
 // ----------------------------------------------------------------------------
 // Day data
@@ -315,6 +322,8 @@ function closePicker() {
   el.picker.setAttribute("aria-hidden", "true");
   if (offController) offController.abort();
   if (aiController) aiController.abort();
+  aiController = null;
+  lastPhotoFile = null;
   stopBarcodeScan();
 }
 
@@ -439,14 +448,19 @@ async function aiEstimate(query) {
   if (!query) return;
   if (aiController) aiController.abort();
   if (offController) offController.abort();
-  aiController = new AbortController();
+  const controller = new AbortController();
+  aiController = controller;
   showDetailLoading(query);
   try {
-    const food = await estimateFood(query, aiController.signal);
+    const food = await estimateFood(query, controller.signal);
+    if (aiController !== controller) return;
     showDetail(food);
   } catch (e) {
-    if (e.name === "AbortError") return;
-    showDetail(null, true, { name: query, note: "Couldn't reach the AI. Enter the macros yourself, or try again." });
+    if (aiController !== controller || e.name === "AbortError") return;
+    const failureClass = photoFailureClass(e);
+    showDetail(null, true, { name: query, note: `${aiFailureMessage("food", failureClass, { fallback: true })} Enter the macros yourself.` });
+  } finally {
+    if (aiController === controller) aiController = null;
   }
 }
 
@@ -468,17 +482,31 @@ function showDetailLoading(query) {
 // manual quick add if the AI is unavailable).
 async function handlePhoto(file) {
   if (!file || !file.type.startsWith("image/")) return;
+  lastPhotoFile = file;
   if (aiController) aiController.abort();
   if (offController) offController.abort();
-  aiController = new AbortController();
+  const controller = new AbortController();
+  aiController = controller;
   showDetailLoading("your meal photo");
   try {
     const dataUrl = await fileToScaledDataUrl(file);
-    const food = await estimateMealPhoto(dataUrl, aiController.signal);
+    if (aiController !== controller) return;
+    const food = await estimateMealPhoto(dataUrl, controller.signal);
+    if (aiController !== controller) return;
     showDetail(food);
+    lastPhotoFile = null;
+    trackFunnel("meal_photo_succeeded");
   } catch (e) {
-    if (e.name === "AbortError") return;
-    showDetail(null, true, { name: "", note: "Couldn't read that photo. Add the food manually, or try again." });
+    if (aiController !== controller || e.name === "AbortError") return;
+    const failureClass = photoFailureClass(e);
+    showDetail(null, true, {
+      name: "",
+      note: `${aiFailureMessage("photo", failureClass, { fallback: true })} Add the food manually, or try this photo again.`,
+      retryPhoto: true,
+    });
+    trackFunnel("meal_photo_failed", { failure_class: failureClass });
+  } finally {
+    if (aiController === controller) aiController = null;
   }
 }
 
@@ -552,6 +580,7 @@ function showDetail(food, quick = false, opts = {}) {
         <label class="field-label-sm">Fat (g)<input id="qa-fat" class="input" type="number" inputmode="decimal" /></label>
       </div>
       <label class="field-label-sm">Meal<select id="detail-meal" class="form-select">${mealOpts}</select></label>
+      ${opts.retryPhoto ? `<div class="detail-recovery"><button type="button" class="btn btn--ghost btn--block" data-act="retry-photo">Try this photo again</button></div>` : ""}
       <button type="button" class="btn btn--primary btn--block" data-act="quick-save">Add</button>`;
     setTimeout(() => (opts.name ? $("qa-kcal") : $("qa-name"))?.focus(), 0);
     return;
@@ -710,10 +739,14 @@ function init() {
   el.detail?.addEventListener("click", (e) => {
     if (e.target.closest('[data-act="detail-back"]')) {
       if (aiController) aiController.abort();
+      aiController = null;
+      lastPhotoFile = null;
       stopBarcodeScan();
       el.detail.hidden = true;
       el.results.hidden = false;
       el.search.parentElement.hidden = false;
+    } else if (e.target.closest('[data-act="retry-photo"]')) {
+      if (lastPhotoFile) handlePhoto(lastPhotoFile);
     } else if (e.target.closest('[data-act="detail-save"]')) {
       const qty = Number($("detail-qty").value) || 1;
       const f = detailFood;

@@ -17,6 +17,8 @@ import { classifyExercise } from "./ai.js";
 import { epley1RM } from "./progression.js";
 import { store } from "./store.js";
 import { buildWorkoutSummary } from "./workout-summary.js";
+import { trackFunnel } from "./analytics.js";
+import { syncWorkoutCompletion } from "./notification-client.js";
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -315,8 +317,13 @@ function defaultName() {
 }
 
 function startSession(preset) {
-  session = preset || { name: defaultName(), startedAt: Date.now(), exercises: [] };
+  session = preset || { name: defaultName(), startedAt: Date.now(), exercises: [], source: "dashboard" };
   if (!session.startedAt) session.startedAt = Date.now();
+  session.source = session.source || "dashboard";
+  if (!session.editingId && !session.funnelStarted) {
+    trackFunnel("first_workout_started", { source: session.source });
+    session.funnelStarted = true;
+  }
   // Re-attach "previous" references (not stored in routines/plans).
   session.exercises.forEach((ex) => (ex.prev = ex.prev || lastSetFor(ex.name)));
   el.idle.hidden = true;
@@ -369,8 +376,13 @@ function finishSession() {
     return;
   }
   const durationSec = Math.floor((Date.now() - session.startedAt) / 1000);
+  const source = session.source || "unknown";
   const priorPRs = deriveStats().prs || {}; // capture BEFORE the workout is added
   const { workout, newAchievements } = addWorkout({ name: el.name.value.trim() || session.name, exercises, durationSec, difficulty: session.difficulty });
+  if (workout) {
+    trackFunnel("first_workout_completed", { source });
+    syncWorkoutCompletion(workout.date).catch(() => {});
+  }
   for (const a of newAchievements) toast(`Achievement · <strong>${esc(a.name)}</strong> · +${a.xp} XP`);
   session = null;
   saveDraft();
@@ -601,10 +613,11 @@ function sessionFromWorkout(w) {
   };
 }
 
-function sessionFromPlanDay(day) {
+function sessionFromPlanDay(day, source = "dashboard") {
   return {
     name: day.focus || "Session",
     startedAt: Date.now(),
+    source,
     exercises: (day.exercises || []).map((e) => {
       const repsNum = parseInt(String(e.reps).match(/\d+/)?.[0] || "", 10);
       const count = Math.max(1, Number(e.sets) || 1);
@@ -909,7 +922,8 @@ function init() {
   });
   window.addEventListener("spotter:start-plan-day", (e) => {
     const day = store.plan?.days?.[e.detail?.index];
-    if (day) quickStart(() => sessionFromPlanDay(day));
+    const source = e.detail?.source || (location.hash.replace(/^#\/?/, "") === "today" ? "today" : "dashboard");
+    if (day) quickStart(() => sessionFromPlanDay(day, source));
   });
 
   // Restore an in-progress draft, else show idle.

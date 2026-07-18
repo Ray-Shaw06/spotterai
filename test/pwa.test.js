@@ -64,10 +64,26 @@ test("icon source is the purple SpotterAI shield and barbell, not the red-ring p
 });
 
 test("offline shell precaches every current install asset under a fresh cache", () => {
-  assert.match(serviceWorker, /const CACHE = "spotterai-v34"/);
-  for (const path of ["manifest.json", ...Object.values(ICONS)]) {
+  assert.match(serviceWorker, /const CACHE = "spotterai-v36"/);
+  for (const path of ["manifest.json", "notifications.js", "notification-client.js", "notification-ui.js", "reminders.js", ...Object.values(ICONS)]) {
     assert.ok(serviceWorker.includes(`"${path}"`), `${path} must be precached`);
   }
+});
+
+test("service worker receives safe branded push and routes notification clicks to Today", () => {
+  assert.match(serviceWorker, /addEventListener\("push"/);
+  assert.match(serviceWorker, /addEventListener\("notificationclick"/);
+  assert.match(serviceWorker, /event\.data\.json\(\)/);
+  assert.match(serviceWorker, /showNotification/);
+  assert.match(serviceWorker, /icons\/spotterai-192\.png/);
+  assert.match(serviceWorker, /renotify:\s*false/);
+  assert.match(serviceWorker, /notification=\$\{encodeURIComponent\(category\)\}/);
+  assert.match(serviceWorker, /#\/today/);
+  assert.match(serviceWorker, /clients\.matchAll/);
+  assert.match(serviceWorker, /clients\.openWindow/);
+  assert.match(serviceWorker, /client\.navigate/);
+  assert.match(serviceWorker, /url\.origin\s*===\s*self\.location\.origin/);
+  assert.doesNotMatch(serviceWorker, /openWindow\(event\.notification\.data\.url\)/);
 });
 
 test("production UI never points users back to the legacy red icons", () => {
@@ -78,6 +94,6 @@ test("production UI never points users back to the legacy red icons", () => {
     assert.doesNotMatch(contents, legacyIcon, `${name} must use the branded icon set`);
   }
 
-  assert.match(reminders, /icon:\s*"icons\/spotterai-192\.png"/);
+  assert.match(serviceWorker, /icon:\s*"\/?icons\/spotterai-192\.png"/);
   assert.doesNotMatch(reminders, /badge:\s*"icons\/spotterai-[^"]+"/);
 });
