@@ -49,6 +49,8 @@ export const FORM_THRESHOLDS = {
   curl: { DOWN: 70, UP: 150, MIN_RANGE: 45, GOOD_PEAK: 60, SHALLOW_PEAK: 85, ELBOW_DRIFT: 28 },
   rdl: { DOWN: 125, UP: 160, MIN_RANGE: 28, GOOD_DEPTH: 110, SHALLOW_DEPTH: 130, KNEE_SQUAT: 125 },
   hipthrust: { DOWN: 135, UP: 162, MIN_RANGE: 22, GOOD_LOCK: 165, LOW_LOCK: 150 },
+  pullup: { DOWN: 115, UP: 150, MIN_RANGE: 40, GOOD_PEAK: 80, SHALLOW_PEAK: 110, MAX_SWING: 20 },
+  dip: { DOWN: 120, UP: 155, MIN_RANGE: 35, GOOD_DEPTH: 95, SHALLOW_DEPTH: 115 },
 
   general: { MIN_RANGE: 25, DOWN_FRAC: 0.35, UP_FRAC: 0.35, REP_DEBOUNCE_MS: 350 },
 };
@@ -158,6 +160,12 @@ function side(image, world) {
     knee: pick("knee"),
     ankle: pick("ankle"),
   };
+}
+
+/** Midpoint of two landmarks (2D image coords). */
+function mid(a, b) {
+  if (!a || !b) return a || b || null;
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
 /** Straightness of hip relative to the shoulder→ankle line (2D). + = sag, - = pike. */
@@ -382,6 +390,76 @@ export const EXERCISES = {
       if (max >= T.hipthrust.LOW_LOCK) return { level: "warn", text: "Almost — lock out harder" };
       return { level: "warn", text: "Short lockout" };
     },
+  },
+
+  // Pull-ups are filmed front-on (unlike the side-on lifts), so metrics use
+  // BILATERAL averages and skip the side selector's torso-lean rules — a
+  // front view would make those fire nonsense. The report (form-session.js)
+  // is the real feedback surface here: you can't watch a screen mid-rep.
+  pullup: {
+    id: "pullup", label: "Pull-up / chin-up",
+    setup: "Face the camera, ~2–3 m back, whole body and hands in frame.",
+    rep: { key: "elbow", down: T.pullup.DOWN, up: T.pullup.UP, minRange: T.pullup.MIN_RANGE, metric: "min" },
+    metrics(image, world) {
+      const eL = angleAt(world[LM.shoulderL], world[LM.elbowL], world[LM.wristL]);
+      const eR = angleAt(world[LM.shoulderR], world[LM.elbowR], world[LM.wristR]);
+      const elbow = eL != null && eR != null ? (eL + eR) / 2 : eL ?? eR;
+      const wristY = mid(image[LM.wristL], image[LM.wristR])?.y ?? null;
+      const relL = visMin(image, [LM.shoulderL, LM.elbowL, LM.wristL]);
+      const relR = visMin(image, [LM.shoulderR, LM.elbowR, LM.wristR]);
+      return {
+        elbow,
+        // Chin-over-bar proxy: the nose rising above the hands (image y grows down).
+        chinOverBar: wristY != null && image[LM.nose] ? image[LM.nose].y < wristY : false,
+        torsoSwing: angleFromVertical(mid(image[LM.hipL], image[LM.hipR]), mid(image[LM.shoulderL], image[LM.shoulderR])),
+        confidence: Math.max(relL, relR),
+        // One clearly visible arm is enough — front-on usually gives both.
+        reliable: Math.max(relL, relR) >= T.global.MIN_VIS,
+        focusJoints: [LM.shoulderL, LM.elbowL, LM.wristL, LM.shoulderR, LM.elbowR, LM.wristR],
+      };
+    },
+    cues(m) {
+      const c = [];
+      if (!m.reliable) return c;
+      if (m.torsoSwing != null && m.torsoSwing > T.pullup.MAX_SWING)
+        c.push({ level: "warn", text: "Minimize the swing — quiet body", joints: [LM.hipL, LM.hipR] });
+      if (m.elbow != null && m.elbow < 100) {
+        if (m.chinOverBar) c.push({ level: "good", text: "Chin over the bar" });
+        else c.push({ level: "warn", text: "Pull higher — chin to the bar", joints: [LM.nose] });
+      }
+      return c;
+    },
+    depthFeedback: (min) => {
+      if (min == null) return { level: "warn", text: "Couldn't read range" };
+      if (min <= T.pullup.GOOD_PEAK) return { level: "good", text: "Full pull" };
+      if (min <= T.pullup.SHALLOW_PEAK) return { level: "warn", text: "Almost — chin over the bar" };
+      return { level: "warn", text: "Partial rep — aim for full range" };
+    },
+  },
+
+  dip: {
+    id: "dip", label: "Dip",
+    setup: "Side-on or 45°, upper body clearly in frame.",
+    rep: { key: "elbow", down: T.dip.DOWN, up: T.dip.UP, minRange: T.dip.MIN_RANGE, metric: "min" },
+    metrics(image, world) {
+      const d = side(image, world);
+      return {
+        elbow: angleAt(d.shoulder.w, d.elbow.w, d.wrist.w),
+        confidence: d.confidence,
+        reliable: visMin(image, [LM["shoulder" + d.s], LM["elbow" + d.s], LM["wrist" + d.s]]) >= T.global.MIN_VIS,
+        focusJoints: [LM["shoulder" + d.s], LM["elbow" + d.s], LM["wrist" + d.s]],
+      };
+    },
+    cues(m) {
+      const c = [];
+      if (!m.reliable) return c;
+      if (m.elbow != null && m.elbow < 135) {
+        if (m.elbow <= T.dip.GOOD_DEPTH) c.push({ level: "good", text: "Good dip depth" });
+        else if (m.elbow > T.dip.SHALLOW_DEPTH) c.push({ level: "warn", text: "A little deeper — upper arms to parallel" });
+      }
+      return c;
+    },
+    depthFeedback: (min) => depthFlex(min, T.dip.GOOD_DEPTH, T.dip.SHALLOW_DEPTH, "Good dip depth"),
   },
 
   // Universal counter for any movement — auto-detects the working joint, no

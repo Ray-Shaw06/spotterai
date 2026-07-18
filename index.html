@@ -844,9 +844,12 @@
 
               <!-- Live overlay (rep count + cues) -->
               <div id="form-overlay" class="cam-overlay" hidden>
-                <div class="cam-overlay__reps">
-                  <span id="form-rep-count" class="cam-overlay__count">0</span>
-                  <span class="cam-overlay__reps-label">reps</span>
+                <div class="cam-overlay__top">
+                  <div class="cam-overlay__reps">
+                    <span id="form-rep-count" class="cam-overlay__count">0</span>
+                    <span class="cam-overlay__reps-label">reps</span>
+                  </div>
+                  <span id="form-rec" class="cam-overlay__rec" hidden><span class="cam-overlay__rec-dot" aria-hidden="true"></span> REC · on-device</span>
                 </div>
                 <div id="form-live-cues" class="cam-overlay__cues"></div>
               </div>
@@ -860,7 +863,7 @@
                 <p class="cam-placeholder__text">Pick an exercise, stand side-on with your full body in frame, and start. Best in a well-lit space.</p>
                 <p class="cam-placeholder__privacy">
                   <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6l7-3z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" /></svg>
-                  100% on-device: no recording, no upload.
+                  100% on-device: nothing is uploaded. Your set is recorded in this tab for the report, then discarded.
                 </p>
               </div>
             </div>
@@ -875,6 +878,8 @@
                     <option value="lunge">Lunge</option>
                     <option value="ohp">Overhead press</option>
                     <option value="curl">Biceps curl</option>
+                    <option value="pullup">Pull-up / chin-up</option>
+                    <option value="dip">Dip</option>
                     <option value="rdl">Romanian deadlift / hinge</option>
                     <option value="hipthrust">Glute bridge / hip thrust</option>
                   </optgroup>
@@ -923,7 +928,8 @@
               <h3 class="form-side__heading">What it checks</h3>
               <ul class="form-side__list">
                 <li>Auto rep counting from 3D joint angles, smoothed to cut jitter.</li>
-                <li>Form cues for squat, push-up, lunge, overhead press, biceps curl, RDL/hinge, and hip thrust.</li>
+                <li>Form cues for squat, push-up, lunge, overhead press, biceps curl, pull-up, dip, RDL/hinge, and hip thrust.</li>
+                <li>A set report after you stop — per-rep results, recurring flags, and tips. Built for moves you can’t watch mid-set, like pull-ups.</li>
                 <li>“Other” counts reps for any movement (no form cues).</li>
               </ul>
             </div>
@@ -946,6 +952,9 @@
             </div>
           </aside>
         </div>
+
+        <!-- Post-set report — rendered by form-coach.js after Stop when ≥1 rep was counted -->
+        <section id="form-report" class="card form-report" hidden aria-label="Set report" tabindex="-1"></section>
       </div>
     </section>
 
