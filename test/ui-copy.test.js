@@ -159,7 +159,7 @@ test("a successful offer becomes an enabled state and cannot re-register", () =>
 });
 
 test("denial and save errors restore a usable, capability-aware control state", () => {
-  assert.match(notificationUi, /catch \(error\) \{\s*renderSurface\(surface, result\.value\);/);
+  assert.match(notificationUi, /catch \(error\) \{[\s\S]{0,500}renderSurface\(surface, result\.value\);/);
   assert.match(notificationUi, /catch \(error\) \{\s*renderSurface\("account", current\);/);
   assert.match(notificationUi, /function surfaceControlState\([\s\S]{0,500}notificationCapability\(globalThis\)/);
   assert.match(notificationUi, /setSurfaceBusy\("offer", false\)/);

@@ -16,6 +16,9 @@ import { prefillNotificationPreferences } from "../notifications.js";
 const TOKEN_KEY = "spotterai.notifications.token";
 const PREFERENCES_KEY = "spotterai.notifications.preferences";
 const OFFERED_PLAN_KEY = "spotterai.notifications.offeredPlanAt";
+const PENDING_KEY = "spotterai.notifications.pending";
+const CONFIGURATION_KEY = "spotterai.notifications.configurationId";
+const CONFIGURATION_ID = "C".repeat(43);
 const VALID_VAPID_PUBLIC_KEY = "BGsX0fLhLEJH-Lzm5WOkQPJ3A32BLeszoPShOUXYmMKWT-NC4v4af5uO5-tKfA-eFivOM1drMV7Oy7ZAaDe_UfU";
 const OFF_CURVE_VAPID_PUBLIC_KEY = `B${"A".repeat(86)}`;
 
@@ -57,7 +60,9 @@ function capabilityEnv({
 }
 
 function memoryStorage(initial = {}) {
-  const values = new Map(Object.entries(initial));
+  const seeded = { ...initial };
+  if (seeded[TOKEN_KEY] && !seeded[CONFIGURATION_KEY]) seeded[CONFIGURATION_KEY] = CONFIGURATION_ID;
+  const values = new Map(Object.entries(seeded));
   return {
     getItem: (key) => values.has(key) ? values.get(key) : null,
     setItem: (key, value) => values.set(key, String(value)),
@@ -80,7 +85,7 @@ function installRuntime({ permission = "default", subscription = null, fetchImpl
       subscribeCalls += 1;
       assert.equal(options.userVisibleOnly, true);
       assert.ok(options.applicationServerKey instanceof Uint8Array);
-      currentSubscription = {
+      currentSubscription ||= {
         toJSON: () => ({ endpoint: "https://push.example/device", expirationTime: null, keys: { p256dh: "key", auth: "auth" } }),
         unsubscribe: async () => true,
       };
@@ -117,9 +122,19 @@ function installRuntime({ permission = "default", subscription = null, fetchImpl
   return {
     storage,
     pushManager,
+    registration,
     notificationValue,
     permissionRequests: () => permissionRequests,
     subscribeCalls: () => subscribeCalls,
+    prepared(existing = currentSubscription) {
+      return {
+        applicationServerKey: vapidKeyToUint8Array(VALID_VAPID_PUBLIC_KEY),
+        configurationId: CONFIGURATION_ID,
+        existingSubscription: existing,
+        preparedAt: Date.now(),
+        registration,
+      };
+    },
     restore() {
       for (const [key, descriptor] of originals) {
         if (descriptor) Object.defineProperty(globalThis, key, descriptor);
@@ -165,6 +180,31 @@ test("exported non-prompting VAPID preflight rejects off-curve keys and missing 
   }
 });
 
+test("subscription preflight prepares the ready service worker and existing subscription without prompting", async () => {
+  assert.equal(typeof notificationClient.prepareNotificationSubscription, "function");
+  const existing = existingSubscription();
+  const runtime = installRuntime({
+    permission: "granted",
+    subscription: existing,
+    fetchImpl: async () => {
+      throw new Error("preflight must not call the API");
+    },
+  });
+  try {
+    const prepared = await notificationClient.prepareNotificationSubscription(VALID_VAPID_PUBLIC_KEY, CONFIGURATION_ID);
+    assert.ok(prepared.applicationServerKey instanceof Uint8Array);
+    assert.equal(prepared.applicationServerKey.length, 65);
+    assert.equal(prepared.configurationId, CONFIGURATION_ID);
+    assert.ok(Number.isSafeInteger(prepared.preparedAt));
+    assert.strictEqual(prepared.existingSubscription, existing);
+    assert.strictEqual(prepared.registration.pushManager, runtime.pushManager);
+    assert.equal(runtime.permissionRequests(), 0);
+    assert.equal(runtime.subscribeCalls(), 0);
+  } finally {
+    runtime.restore();
+  }
+});
+
 test("configuration is fetched from the same-origin relative API and reports default-off honestly", async () => {
   const calls = [];
   const runtime = installRuntime({
@@ -174,7 +214,11 @@ test("configuration is fetched from the same-origin relative API and reports def
     },
   });
   try {
-    assert.deepEqual(await getNotificationConfiguration(), { enabled: false, publicKey: null });
+    assert.deepEqual(await getNotificationConfiguration(), {
+      enabled: false,
+      publicKey: null,
+      configurationId: null,
+    });
     assert.equal(calls[0][0], "/api/notifications");
     assert.equal(calls[0][1].method, "GET");
     assert.equal(calls[0][1].credentials, "same-origin");
@@ -183,25 +227,46 @@ test("configuration is fetched from the same-origin relative API and reports def
   }
 });
 
-test("subscribe checks server configuration before requesting permission", async () => {
-  const calls = [];
+test("subscribe refuses to start without completed non-prompting preflight state", async () => {
+  let fetchCalls = 0;
   const runtime = installRuntime({
-    fetchImpl: async (...args) => {
-      calls.push(args);
-      return jsonResponse({ enabled: false, publicKey: null });
+    fetchImpl: async () => {
+      fetchCalls += 1;
+      return jsonResponse({ enabled: true, publicKey: VALID_VAPID_PUBLIC_KEY });
     },
   });
   try {
-    await assert.rejects(subscribeToNotifications(prefillNotificationPreferences(3, "UTC")), (error) => error?.code === "registration_unavailable");
+    await assert.rejects(
+      subscribeToNotifications(prefillNotificationPreferences(3, "UTC")),
+      (error) => error?.code === "registration_unavailable",
+    );
+    assert.equal(fetchCalls, 0);
     assert.equal(runtime.permissionRequests(), 0);
     assert.equal(runtime.subscribeCalls(), 0);
-    assert.equal(calls.length, 1);
   } finally {
     runtime.restore();
   }
 });
 
-test("subscribe rejects an empty schedule before config, permission, or push work", async () => {
+test("subscribe rejects expired prepared state before permission or PushManager work", async () => {
+  const runtime = installRuntime({
+    fetchImpl: async () => { throw new Error("stale preparation must not reach the API"); },
+  });
+  try {
+    await assert.rejects(subscribeToNotifications(prefillNotificationPreferences(3, "UTC"), {
+      prepared: {
+        ...runtime.prepared(null),
+        preparedAt: Date.now() - (6 * 60 * 1000),
+      },
+    }), (error) => error?.code === "configuration_stale");
+    assert.equal(runtime.permissionRequests(), 0);
+    assert.equal(runtime.subscribeCalls(), 0);
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("subscribe rejects an empty schedule before prepared state, permission, or push work", async () => {
   let fetchCalls = 0;
   const runtime = installRuntime({
     fetchImpl: async () => {
@@ -220,12 +285,12 @@ test("subscribe rejects an empty schedule before config, permission, or push wor
   }
 });
 
-test("subscribe rejects a malformed public key before requesting permission", async () => {
+test("subscription preflight rejects a malformed public key without requesting permission", async () => {
   const runtime = installRuntime({
-    fetchImpl: async () => jsonResponse({ enabled: true, publicKey: "not base64!" }),
+    fetchImpl: async () => { throw new Error("preflight must not call the API"); },
   });
   try {
-    await assert.rejects(subscribeToNotifications(prefillNotificationPreferences(3, "UTC")), (error) => error?.code === "invalid_public_key");
+    await assert.rejects(notificationClient.prepareNotificationSubscription("not base64!", CONFIGURATION_ID), (error) => error?.code === "invalid_public_key");
     assert.equal(runtime.permissionRequests(), 0);
     assert.equal(runtime.subscribeCalls(), 0);
   } finally {
@@ -233,7 +298,7 @@ test("subscribe rejects a malformed public key before requesting permission", as
   }
 });
 
-test("short, off-curve, noncanonical, and unverifiable public keys never reach the permission boundary", async (t) => {
+test("short, off-curve, noncanonical, and unverifiable public keys fail during non-prompting preflight", async (t) => {
   const cases = [
     ["short", "AQIDBA"],
     ["off-curve", OFF_CURVE_VAPID_PUBLIC_KEY],
@@ -242,16 +307,14 @@ test("short, off-curve, noncanonical, and unverifiable public keys never reach t
 
   for (const [name, publicKey] of cases) {
     await t.test(name, async () => {
-      let callbacks = 0;
       const runtime = installRuntime({
-        fetchImpl: async () => jsonResponse({ enabled: true, publicKey }),
+        fetchImpl: async () => { throw new Error("preflight must not call the API"); },
       });
       try {
         await assert.rejects(
-          subscribeToNotifications(prefillNotificationPreferences(3, "UTC"), { onPermissionPrompt: () => { callbacks += 1; } }),
+          notificationClient.prepareNotificationSubscription(publicKey, CONFIGURATION_ID),
           (error) => error?.code === "invalid_public_key"
         );
-        assert.equal(callbacks, 0);
         assert.equal(runtime.permissionRequests(), 0);
         assert.equal(runtime.subscribeCalls(), 0);
       } finally { runtime.restore(); }
@@ -259,18 +322,16 @@ test("short, off-curve, noncanonical, and unverifiable public keys never reach t
   }
 
   await t.test("Web Crypto unavailable", async () => {
-    let callbacks = 0;
     const runtime = installRuntime({
-      fetchImpl: async () => jsonResponse({ enabled: true, publicKey: VALID_VAPID_PUBLIC_KEY }),
+      fetchImpl: async () => { throw new Error("preflight must not call the API"); },
     });
     const cryptoDescriptor = Object.getOwnPropertyDescriptor(globalThis, "crypto");
     Object.defineProperty(globalThis, "crypto", { configurable: true, value: undefined });
     try {
       await assert.rejects(
-        subscribeToNotifications(prefillNotificationPreferences(3, "UTC"), { onPermissionPrompt: () => { callbacks += 1; } }),
+        notificationClient.prepareNotificationSubscription(VALID_VAPID_PUBLIC_KEY, CONFIGURATION_ID),
         (error) => error?.code === "invalid_public_key"
       );
-      assert.equal(callbacks, 0);
       assert.equal(runtime.permissionRequests(), 0);
     } finally {
       if (cryptoDescriptor) Object.defineProperty(globalThis, "crypto", cryptoDescriptor);
@@ -280,93 +341,125 @@ test("short, off-curve, noncanonical, and unverifiable public keys never reach t
   });
 });
 
-test("explicit subscribe prompts once, creates a browser subscription, registers it, then stores only token and preferences", async () => {
+test("explicit subscribe invokes PushManager once, registers it, then stores only token and preferences", async () => {
   const requests = [];
+  let promptCallbacks = 0;
   const preferences = prefillNotificationPreferences(4, "Asia/Kolkata");
   const runtime = installRuntime({
     fetchImpl: async (url, options) => {
       requests.push({ url, options });
-      if (options.method === "GET") return jsonResponse({ enabled: true, publicKey: VALID_VAPID_PUBLIC_KEY });
       return jsonResponse({ ok: true, deviceToken: "opaque.signed", preferences });
     },
   });
   try {
     assert.equal(runtime.permissionRequests(), 0, "module import and setup never prompt");
-    assert.deepEqual(await subscribeToNotifications(preferences), { preferences });
-    assert.equal(runtime.permissionRequests(), 1);
+    assert.deepEqual(await subscribeToNotifications(preferences, {
+      prepared: runtime.prepared(null),
+      onPermissionPrompt: () => { promptCallbacks += 1; },
+    }), { preferences });
+    assert.equal(runtime.permissionRequests(), 0, "PushManager owns the browser permission prompt");
+    assert.equal(promptCallbacks, 1);
     assert.equal(runtime.subscribeCalls(), 1);
-    assert.equal(requests[1].url, "/api/notifications");
-    assert.equal(requests[1].options.method, "POST");
-    assert.equal(requests[1].options.credentials, "same-origin");
-    assert.deepEqual(JSON.parse(requests[1].options.body), {
+    assert.equal(requests[0].url, "/api/notifications");
+    assert.equal(requests[0].options.method, "POST");
+    assert.equal(requests[0].options.credentials, "same-origin");
+    assert.deepEqual(JSON.parse(requests[0].options.body), {
+      configurationId: CONFIGURATION_ID,
       subscription: { endpoint: "https://push.example/device", expirationTime: null, keys: { p256dh: "key", auth: "auth" } },
       preferences,
     });
     assert.equal(runtime.storage.getItem(TOKEN_KEY), "opaque.signed");
     assert.deepEqual(JSON.parse(runtime.storage.getItem(PREFERENCES_KEY)), preferences);
+    assert.equal(runtime.storage.getItem(CONFIGURATION_KEY), CONFIGURATION_ID);
     assert.doesNotMatch(JSON.stringify(requests.map(({ url }) => url)), /opaque\.signed/);
   } finally {
     runtime.restore();
   }
 });
 
-test("prompt callback runs exactly once immediately before requestPermission after every preflight", async () => {
+test("prompt callback runs exactly once immediately before PushManager.subscribe", async () => {
   const order = [];
   const preferences = prefillNotificationPreferences(3, "UTC");
   const runtime = installRuntime({
     fetchImpl: async (_url, options) => {
       order.push(options.method);
-      return options.method === "GET"
-        ? jsonResponse({ enabled: true, publicKey: VALID_VAPID_PUBLIC_KEY })
-        : jsonResponse({ ok: true, deviceToken: "opaque.signed", preferences });
+      return jsonResponse({ ok: true, deviceToken: "opaque.signed", preferences });
     },
   });
-  runtime.notificationValue.requestPermission = async () => {
-    order.push("requestPermission");
+  const subscribe = runtime.pushManager.subscribe;
+  runtime.pushManager.subscribe = (options) => {
+    order.push("subscribe");
     runtime.notificationValue.permission = "granted";
-    return "granted";
+    return subscribe(options);
   };
   try {
     await subscribeToNotifications(preferences, {
+      prepared: runtime.prepared(null),
       onPermissionPrompt: () => order.push("promptCallback"),
     });
-    assert.deepEqual(order.slice(0, 3), ["GET", "promptCallback", "requestPermission"]);
+    assert.deepEqual(order, ["promptCallback", "subscribe", "POST", "PATCH"]);
     assert.equal(order.filter((value) => value === "promptCallback").length, 1);
+    assert.equal(runtime.permissionRequests(), 0);
   } finally {
     runtime.restore();
   }
 });
 
-test("disabled config, malformed key, granted permission, and existing denial never call the prompt callback", async (t) => {
-  const scenarios = [
-    ["disabled config", "default", { enabled: false, publicKey: null }],
-    ["malformed key", "default", { enabled: true, publicKey: "AQIDBA" }],
-    ["already granted", "granted", { enabled: true, publicKey: VALID_VAPID_PUBLIC_KEY }],
-    ["existing denial", "denied", { enabled: true, publicKey: VALID_VAPID_PUBLIC_KEY }],
-  ];
-  for (const [name, permission, config] of scenarios) {
-    await t.test(name, async () => {
-      let callbacks = 0;
-      const preferences = prefillNotificationPreferences(3, "UTC");
-      const existing = permission === "granted" ? {
-        toJSON: () => ({ endpoint: "https://push.example/existing", expirationTime: null, keys: { p256dh: "key", auth: "auth" } }),
-      } : null;
-      const runtime = installRuntime({
-        permission,
-        subscription: existing,
-        fetchImpl: async (_url, options) => options.method === "GET"
-          ? jsonResponse(config)
-          : jsonResponse({ ok: true, deviceToken: "opaque.signed", preferences }),
-      });
-      try {
-        await subscribeToNotifications(preferences, { onPermissionPrompt: () => { callbacks += 1; } }).catch(() => {});
-        assert.equal(callbacks, 0);
-      } finally { runtime.restore(); }
-    });
+test("iPhone subscribe uses preflighted state before transient user activation can expire", async () => {
+  const order = [];
+  let activationActive = true;
+  const preferences = prefillNotificationPreferences(3, "UTC");
+  const runtime = installRuntime({
+    fetchImpl: async (_url, options) => {
+      order.push(options.method);
+      if (options.method === "GET") {
+        activationActive = false;
+        return jsonResponse({ enabled: true, publicKey: VALID_VAPID_PUBLIC_KEY });
+      }
+      return jsonResponse({ ok: true, deviceToken: "opaque.signed", preferences });
+    },
+  });
+  runtime.notificationValue.requestPermission = async () => {
+    order.push("requestPermission");
+    throw new Error("transient activation expired");
+  };
+  const prepared = {
+    applicationServerKey: vapidKeyToUint8Array(VALID_VAPID_PUBLIC_KEY),
+    configurationId: CONFIGURATION_ID,
+    existingSubscription: null,
+    preparedAt: Date.now(),
+    registration: {
+      pushManager: {
+        subscribe: async (options) => {
+          order.push("subscribe");
+          assert.equal(activationActive, true, "PushManager.subscribe must run in the original tap activation");
+          assert.equal(options.userVisibleOnly, true);
+          runtime.notificationValue.permission = "granted";
+          return {
+            toJSON: () => ({
+              endpoint: "https://push.example/iphone",
+              expirationTime: null,
+              keys: { p256dh: "key", auth: "auth" },
+            }),
+            unsubscribe: async () => true,
+          };
+        },
+      },
+    },
+  };
+
+  try {
+    assert.deepEqual(await subscribeToNotifications(preferences, {
+      prepared,
+      onPermissionPrompt: () => order.push("promptCallback"),
+    }), { preferences });
+    assert.deepEqual(order, ["promptCallback", "subscribe", "POST", "PATCH"]);
+  } finally {
+    runtime.restore();
   }
 });
 
-test("granted permission reuses an existing browser subscription without prompting", async () => {
+test("granted permission immediately revalidates the existing browser subscription without prompting", async () => {
   let unsubscribeCalls = 0;
   const existing = {
     toJSON: () => ({ endpoint: "https://push.example/existing", expirationTime: null, keys: { p256dh: "key", auth: "auth" } }),
@@ -376,14 +469,17 @@ test("granted permission reuses an existing browser subscription without prompti
   const runtime = installRuntime({
     permission: "granted",
     subscription: existing,
-    fetchImpl: async (_url, options) => options.method === "GET"
-      ? jsonResponse({ enabled: true, publicKey: VALID_VAPID_PUBLIC_KEY })
-      : jsonResponse({ ok: true, deviceToken: "opaque.signed", preferences }),
+    fetchImpl: async () => jsonResponse({ ok: true, deviceToken: "opaque.signed", preferences }),
   });
   try {
-    await subscribeToNotifications(preferences);
+    let callbacks = 0;
+    await subscribeToNotifications(preferences, {
+      prepared: runtime.prepared(existing),
+      onPermissionPrompt: () => { callbacks += 1; },
+    });
     assert.equal(runtime.permissionRequests(), 0);
-    assert.equal(runtime.subscribeCalls(), 0);
+    assert.equal(runtime.subscribeCalls(), 1);
+    assert.equal(callbacks, 0);
     assert.equal(unsubscribeCalls, 0);
   } finally {
     runtime.restore();
@@ -403,32 +499,200 @@ test("denial returns a safe enum and never creates or registers a subscription",
     await assert.rejects(subscribeToNotifications(prefillNotificationPreferences(3, "UTC")), (error) => error?.code === "permission_denied" && !/response|endpoint|token/i.test(error.message));
     assert.equal(runtime.permissionRequests(), 0);
     assert.equal(runtime.subscribeCalls(), 0);
-    assert.deepEqual(methods, ["GET"]);
+    assert.deepEqual(methods, []);
   } finally {
     runtime.restore();
   }
 });
 
-test("a newly-created browser subscription is rolled back when server registration fails", async () => {
-  let created;
+test("a failed server registration retains the browser subscription for a safe retry", async () => {
+  let browserSubscription;
+  let posts = 0;
+  let unsubscribeCalls = 0;
+  const preferences = prefillNotificationPreferences(3, "UTC");
   const runtime = installRuntime({
     fetchImpl: async (_url, options) => {
-      if (options.method === "GET") return jsonResponse({ enabled: true, publicKey: VALID_VAPID_PUBLIC_KEY });
-      created = await runtime.pushManager.getSubscription();
-      created.unsubscribe = async () => { created.unsubscribed = true; return true; };
-      return jsonResponse({ error: "sensitive server detail" }, { ok: false, status: 500 });
+      posts += 1;
+      browserSubscription = await runtime.pushManager.getSubscription();
+      browserSubscription.unsubscribe = async () => { unsubscribeCalls += 1; return true; };
+      return posts === 1
+        ? jsonResponse({ error: "sensitive server detail" }, { ok: false, status: 500 })
+        : jsonResponse({ ok: true, deviceToken: "opaque.signed", preferences });
     },
   });
   try {
-    await assert.rejects(subscribeToNotifications(prefillNotificationPreferences(3, "UTC")), (error) => error?.code === "registration_failed" && !error.message.includes("sensitive"));
-    assert.equal(created.unsubscribed, true);
+    await assert.rejects(subscribeToNotifications(preferences, {
+      prepared: runtime.prepared(null),
+    }), (error) => error?.code === "registration_failed" && !error.message.includes("sensitive"));
+    assert.equal(unsubscribeCalls, 0);
     assert.equal(runtime.storage.getItem(TOKEN_KEY), null);
+
+    assert.deepEqual(await subscribeToNotifications(preferences, {
+      prepared: runtime.prepared(browserSubscription),
+    }), { preferences });
+    assert.equal(unsubscribeCalls, 0);
+    assert.equal(runtime.storage.getItem(TOKEN_KEY), "opaque.signed");
   } finally {
     runtime.restore();
   }
 });
 
-test("local persistence failure deletes the new server record before browser rollback", async () => {
+test("failed activation retains a controllable pending credential and retries without resubscribing", async () => {
+  const requests = [];
+  let activationAttempts = 0;
+  const preferences = prefillNotificationPreferences(3, "UTC");
+  const runtime = installRuntime({
+    fetchImpl: async (_url, options) => {
+      requests.push(options.method);
+      if (options.method === "POST") {
+        return jsonResponse({ ok: true, deviceToken: "opaque.signed", preferences }, { status: 201 });
+      }
+      activationAttempts += 1;
+      return activationAttempts === 1
+        ? jsonResponse({ error: "temporary activation failure" }, { ok: false, status: 503 })
+        : jsonResponse({ ok: true, preferences });
+    },
+  });
+
+  try {
+    await assert.rejects(subscribeToNotifications(preferences, {
+      prepared: runtime.prepared(null),
+    }), (error) => error?.code === "activation_failed" && !error.message.includes("temporary"));
+    assert.equal(runtime.storage.getItem(TOKEN_KEY), "opaque.signed");
+    assert.equal(runtime.storage.getItem(PENDING_KEY), "true");
+    assert.equal(notificationClient.hasNotificationSubscription(), false);
+    assert.equal(notificationClient.hasNotificationCredential(), true);
+    assert.equal(notificationClient.hasPendingNotificationRegistration(), true);
+    assert.equal(runtime.subscribeCalls(), 1);
+
+    assert.deepEqual(await subscribeToNotifications(preferences), { preferences });
+    assert.deepEqual(requests, ["POST", "PATCH", "PATCH"]);
+    assert.equal(runtime.subscribeCalls(), 1, "pending activation retries must not touch PushManager");
+    assert.equal(runtime.storage.getItem(PENDING_KEY), null);
+    assert.equal(notificationClient.hasNotificationSubscription(), true);
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("an expired pending credential can reauthorize only inside the deliberate Enable retry", async () => {
+  const requests = [];
+  const preferences = prefillNotificationPreferences(3, "UTC");
+  const storage = memoryStorage({
+    [TOKEN_KEY]: "expired-token.signature",
+    [PREFERENCES_KEY]: JSON.stringify(preferences),
+    [PENDING_KEY]: "true",
+  });
+  const runtime = installRuntime({
+    permission: "granted",
+    subscription: existingSubscription(),
+    storage,
+    fetchImpl: async (_url, options) => {
+      requests.push(options);
+      if (requests.length === 1) {
+        return jsonResponse({ error: "expired" }, { ok: false, status: 401 });
+      }
+      if (options.method === "POST") {
+        return jsonResponse({ ok: true, deviceToken: "new-token.signature", preferences }, { status: 201 });
+      }
+      return jsonResponse({ ok: true, preferences });
+    },
+  });
+
+  try {
+    assert.deepEqual(await subscribeToNotifications(preferences), { preferences });
+    assert.deepEqual(requests.map(({ method }) => method), ["PATCH", "POST", "PATCH"]);
+    assert.deepEqual(JSON.parse(requests[1].body), {
+      configurationId: CONFIGURATION_ID,
+      subscription: existingSubscription().toJSON(),
+      preferences,
+    });
+    assert.deepEqual(JSON.parse(requests[2].body), { activate: true, preferences });
+    assert.equal(runtime.subscribeCalls(), 0);
+    assert.equal(storage.getItem(TOKEN_KEY), "new-token.signature");
+    assert.equal(storage.getItem(PENDING_KEY), null);
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("pending registration never activates from workout completion or proactive renewal", async () => {
+  const preferences = prefillNotificationPreferences(3, "UTC");
+  const requests = [];
+  const storage = memoryStorage({
+    [TOKEN_KEY]: "expired-token.signature",
+    [PREFERENCES_KEY]: JSON.stringify(preferences),
+    [PENDING_KEY]: "true",
+  });
+  const runtime = installRuntime({
+    permission: "granted",
+    subscription: existingSubscription(),
+    storage,
+    fetchImpl: async (_url, options) => {
+      requests.push(options);
+      return jsonResponse({ error: "expired" }, { ok: false, status: 401 });
+    },
+  });
+
+  try {
+    assert.equal(await syncWorkoutCompletion("2026-07-17"), false);
+    assert.deepEqual(
+      await notificationClient.renewNotificationAuthorizationIfNeeded({ now: Date.now() }),
+      { state: "pending" },
+    );
+    assert.equal(requests.length, 0);
+    assert.equal(storage.getItem(PENDING_KEY), "true");
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("rollback never claims an ambiguous subscription created after a stale empty preflight", async () => {
+  let unsubscribeCalls = 0;
+  const concurrentSubscription = {
+    toJSON: () => ({ endpoint: "https://push.example/concurrent", expirationTime: null, keys: { p256dh: "key", auth: "auth" } }),
+    unsubscribe: async () => { unsubscribeCalls += 1; return true; },
+  };
+  const runtime = installRuntime({
+    permission: "granted",
+    fetchImpl: async () => jsonResponse({ error: "temporary failure" }, { ok: false, status: 500 }),
+  });
+  runtime.pushManager.subscribe = async () => concurrentSubscription;
+
+  try {
+    await assert.rejects(subscribeToNotifications(prefillNotificationPreferences(3, "UTC"), {
+      prepared: runtime.prepared(null),
+    }), (error) => error?.code === "registration_failed");
+    assert.equal(unsubscribeCalls, 0, "a granted-permission subscription may belong to another same-origin context");
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("rollback retains a replacement returned after a stale existing preflight", async () => {
+  let unsubscribeCalls = 0;
+  const staleSubscription = existingSubscription();
+  const replacement = {
+    toJSON: () => ({ endpoint: "https://push.example/replacement", expirationTime: null, keys: { p256dh: "key", auth: "auth" } }),
+    unsubscribe: async () => { unsubscribeCalls += 1; return true; },
+  };
+  const runtime = installRuntime({
+    permission: "granted",
+    fetchImpl: async () => jsonResponse({ error: "temporary failure" }, { ok: false, status: 500 }),
+  });
+  runtime.pushManager.subscribe = async () => replacement;
+
+  try {
+    await assert.rejects(subscribeToNotifications(prefillNotificationPreferences(3, "UTC"), {
+      prepared: runtime.prepared(staleSubscription),
+    }), (error) => error?.code === "registration_failed");
+    assert.equal(unsubscribeCalls, 0, "a replacement cannot be attributed safely to this tap");
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("local persistence failure deletes the new server record and retains the browser subscription", async () => {
   const order = [];
   let created;
   const storage = {
@@ -441,7 +705,6 @@ test("local persistence failure deletes the new server record before browser rol
     storage,
     fetchImpl: async (url, options) => {
       assert.equal(url, "/api/notifications");
-      if (options.method === "GET") return jsonResponse({ enabled: true, publicKey: VALID_VAPID_PUBLIC_KEY });
       if (options.method === "POST") {
         order.push("POST");
         created = await runtime.pushManager.getSubscription();
@@ -454,9 +717,11 @@ test("local persistence failure deletes the new server record before browser rol
     },
   });
   try {
-    await assert.rejects(subscribeToNotifications(preferences), (error) => error?.code === "registration_failed" && !error.message.includes("quota"));
+    await assert.rejects(subscribeToNotifications(preferences, {
+      prepared: runtime.prepared(null),
+    }), (error) => error?.code === "registration_failed" && !error.message.includes("quota"));
     assert.ok(order.indexOf("DELETE") > order.indexOf("POST"));
-    assert.ok(order.indexOf("unsubscribe") > order.indexOf("DELETE"));
+    assert.equal(order.includes("unsubscribe"), false);
     assert.equal(storage.getItem(TOKEN_KEY), null);
     assert.equal(storage.getItem(PREFERENCES_KEY), null);
   } finally {
@@ -464,40 +729,60 @@ test("local persistence failure deletes the new server record before browser rol
   }
 });
 
-test("browser permission and service-worker promise failures are always remapped to safe client errors", async (t) => {
+test("subscription preflight and PushManager failures are always remapped to safe client errors", async (t) => {
   const rawMessage = "raw DOM exception with private detail";
   const preferences = prefillNotificationPreferences(3, "UTC");
-  const configFetch = async () => jsonResponse({ enabled: true, publicKey: VALID_VAPID_PUBLIC_KEY });
-
-  await t.test("requestPermission rejection", async () => {
-    const runtime = installRuntime({ fetchImpl: configFetch });
-    runtime.notificationValue.requestPermission = async () => { throw new Error(rawMessage); };
-    try {
-      await assert.rejects(subscribeToNotifications(preferences), (error) => error?.name === "NotificationClientError" && error?.code === "permission_failed" && !error.message.includes(rawMessage));
-    } finally { runtime.restore(); }
-  });
+  const noFetch = async () => { throw new Error("unexpected API request"); };
 
   await t.test("service worker ready rejection", async () => {
-    const runtime = installRuntime({ permission: "granted", fetchImpl: configFetch });
+    const runtime = installRuntime({ permission: "granted", fetchImpl: noFetch });
     globalThis.navigator.serviceWorker.ready = { then: (_resolve, reject) => reject(new Error(rawMessage)) };
     try {
-      await assert.rejects(subscribeToNotifications(preferences), (error) => error?.name === "NotificationClientError" && error?.code === "service_worker_unavailable" && !error.message.includes(rawMessage));
+      await assert.rejects(
+        notificationClient.prepareNotificationSubscription(VALID_VAPID_PUBLIC_KEY, CONFIGURATION_ID),
+        (error) => error?.name === "NotificationClientError" && error?.code === "service_worker_unavailable" && !error.message.includes(rawMessage),
+      );
     } finally { runtime.restore(); }
   });
 
   await t.test("getSubscription rejection", async () => {
-    const runtime = installRuntime({ permission: "granted", fetchImpl: configFetch });
+    const runtime = installRuntime({ permission: "granted", fetchImpl: noFetch });
     runtime.pushManager.getSubscription = async () => { throw new Error(rawMessage); };
     try {
-      await assert.rejects(subscribeToNotifications(preferences), (error) => error?.name === "NotificationClientError" && error?.code === "subscription_failed" && !error.message.includes(rawMessage));
+      await assert.rejects(
+        notificationClient.prepareNotificationSubscription(VALID_VAPID_PUBLIC_KEY, CONFIGURATION_ID),
+        (error) => error?.name === "NotificationClientError" && error?.code === "subscription_failed" && !error.message.includes(rawMessage),
+      );
     } finally { runtime.restore(); }
   });
 
   await t.test("subscribe rejection", async () => {
-    const runtime = installRuntime({ permission: "granted", fetchImpl: configFetch });
+    const runtime = installRuntime({ permission: "granted", fetchImpl: noFetch });
     runtime.pushManager.subscribe = async () => { throw new Error(rawMessage); };
     try {
-      await assert.rejects(subscribeToNotifications(preferences), (error) => error?.name === "NotificationClientError" && error?.code === "registration_failed" && !error.message.includes(rawMessage));
+      await assert.rejects(
+        subscribeToNotifications(preferences, { prepared: runtime.prepared(null) }),
+        (error) => error?.name === "NotificationClientError" && error?.code === "registration_failed" && !error.message.includes(rawMessage),
+      );
+    } finally { runtime.restore(); }
+  });
+
+  await t.test("permission denial from PushManager", async () => {
+    let callbacks = 0;
+    const runtime = installRuntime({ fetchImpl: noFetch });
+    runtime.pushManager.subscribe = async () => {
+      runtime.notificationValue.permission = "denied";
+      throw new Error(rawMessage);
+    };
+    try {
+      await assert.rejects(
+        subscribeToNotifications(preferences, {
+          prepared: runtime.prepared(null),
+          onPermissionPrompt: () => { callbacks += 1; },
+        }),
+        (error) => error?.name === "NotificationClientError" && error?.code === "permission_denied" && !error.message.includes(rawMessage),
+      );
+      assert.equal(callbacks, 1);
     } finally { runtime.restore(); }
   });
 });
@@ -558,14 +843,17 @@ test("a 401 silently reauthorizes the exact existing subscription with stored pr
 
   try {
     assert.deepEqual(await updateNotificationPreferences(requested), { preferences: requested });
-    assert.deepEqual(requests.map(({ method }) => method), ["PATCH", "POST", "PATCH"]);
+    assert.deepEqual(requests.map(({ method }) => method), ["PATCH", "POST", "PATCH", "PATCH"]);
     assert.equal(requests[0].headers.Authorization, "Bearer old-token.signature");
     assert.deepEqual(JSON.parse(requests[1].body), {
+      configurationId: CONFIGURATION_ID,
       subscription: existingSubscription().toJSON(),
       preferences: stored,
     });
     assert.equal(requests[2].headers.Authorization, "Bearer new-token.signature");
-    assert.deepEqual(JSON.parse(requests[2].body), { preferences: requested });
+    assert.deepEqual(JSON.parse(requests[2].body), { activate: true, preferences: stored });
+    assert.equal(requests[3].headers.Authorization, "Bearer new-token.signature");
+    assert.deepEqual(JSON.parse(requests[3].body), { preferences: requested });
     assert.equal(runtime.permissionRequests(), 0);
     assert.equal(runtime.subscribeCalls(), 0);
     assert.equal(storage.getItem(TOKEN_KEY), "new-token.signature");
@@ -605,7 +893,12 @@ test("completion sync and deletion each reauthorize then retry at most once with
 
       try {
         assert.equal(await scenario.run(), true);
-        assert.deepEqual(requests.map(({ method }) => method), [scenario.method, "POST", scenario.method]);
+        assert.deepEqual(
+          requests.map(({ method }) => method),
+          scenario.method === "DELETE"
+            ? ["DELETE", "POST", "PATCH", "DELETE"]
+            : ["PATCH", "POST", "PATCH", "PATCH"],
+        );
         assert.equal(requests.filter(({ method }) => method === "POST").length, 1);
         assert.equal(runtime.permissionRequests(), 0);
         assert.equal(runtime.subscribeCalls(), 0);
@@ -685,11 +978,75 @@ test("failed silent reauthorization preserves the original typed 401 and retry c
   }
 });
 
+test("a legacy local credential without a configuration ID fails closed without re-registering", async () => {
+  const preferences = prefillNotificationPreferences(3, "UTC");
+  const requests = [];
+  const storage = memoryStorage({
+    [TOKEN_KEY]: "legacy-token.signature",
+    [PREFERENCES_KEY]: JSON.stringify(preferences),
+  });
+  storage.removeItem(CONFIGURATION_KEY);
+  const runtime = installRuntime({
+    permission: "granted",
+    subscription: existingSubscription(),
+    storage,
+    fetchImpl: async (_url, options) => {
+      requests.push(options);
+      return jsonResponse({ error: "expired" }, { ok: false, status: 401 });
+    },
+  });
+
+  try {
+    await assert.rejects(
+      updateNotificationPreferences(preferences),
+      (error) => error?.code === "update_failed" && error?.status === 401,
+    );
+    assert.deepEqual(requests.map(({ method }) => method), ["PATCH"]);
+    assert.equal(storage.getItem(TOKEN_KEY), "legacy-token.signature");
+    assert.equal(storage.getItem(CONFIGURATION_KEY), null);
+    assert.equal(runtime.permissionRequests(), 0);
+    assert.equal(runtime.subscribeCalls(), 0);
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("a pending credential 401 cannot auto-activate through a non-enable mutation", async () => {
+  const preferences = prefillNotificationPreferences(3, "UTC");
+  const requests = [];
+  const storage = memoryStorage({
+    [TOKEN_KEY]: "pending-token.signature",
+    [PREFERENCES_KEY]: JSON.stringify(preferences),
+    [PENDING_KEY]: "true",
+  });
+  const runtime = installRuntime({
+    permission: "granted",
+    subscription: existingSubscription(),
+    storage,
+    fetchImpl: async (_url, options) => {
+      requests.push(options);
+      return jsonResponse({ error: "expired" }, { ok: false, status: 401 });
+    },
+  });
+
+  try {
+    await assert.rejects(
+      updateNotificationPreferences(preferences),
+      (error) => error?.code === "update_failed" && error?.status === 401,
+    );
+    assert.deepEqual(requests.map(({ method }) => method), ["PATCH"]);
+    assert.equal(storage.getItem(PENDING_KEY), "true");
+  } finally {
+    runtime.restore();
+  }
+});
+
 test("local persistence failure during reauthorization restores the previous retry credential", async () => {
   const preferences = prefillNotificationPreferences(3, "UTC");
   const values = new Map([
     [TOKEN_KEY, "old-token.signature"],
     [PREFERENCES_KEY, JSON.stringify(preferences)],
+    [CONFIGURATION_KEY, CONFIGURATION_ID],
   ]);
   const storage = {
     getItem: (key) => values.get(key) ?? null,
@@ -751,7 +1108,7 @@ test("proactive authorization renewal refreshes only near-expiry credentials wit
       await notificationClient.renewNotificationAuthorizationIfNeeded({ now }),
       { state: "renewed", preferences },
     );
-    assert.deepEqual(requests.map(({ method }) => method), ["POST"]);
+    assert.deepEqual(requests.map(({ method }) => method), ["POST", "PATCH"]);
     assert.equal(runtime.permissionRequests(), 0);
     assert.equal(runtime.subscribeCalls(), 0);
     assert.equal(storage.getItem(TOKEN_KEY), "renewed-token.signature");
@@ -848,9 +1205,13 @@ test("delete preserves exact subscription proof when reauthorization fails and s
     assert.deepEqual(JSON.parse(storage.getItem(PREFERENCES_KEY)), preferences);
 
     assert.equal(await deleteNotificationSubscription(), true);
-    assert.deepEqual(requests.map(({ method }) => method), ["DELETE", "POST", "DELETE", "POST", "DELETE"]);
+    assert.deepEqual(requests.map(({ method }) => method), ["DELETE", "POST", "DELETE", "POST", "PATCH", "DELETE"]);
     for (const request of requests.filter(({ method }) => method === "POST")) {
-      assert.deepEqual(JSON.parse(request.body), { subscription: proof, preferences });
+      assert.deepEqual(JSON.parse(request.body), {
+        configurationId: CONFIGURATION_ID,
+        subscription: proof,
+        preferences,
+      });
     }
     assert.equal(refreshAttempts, 2);
     assert.equal(unsubscribeAttempts, 1);
@@ -858,6 +1219,49 @@ test("delete preserves exact subscription proof when reauthorization fails and s
     assert.equal(runtime.subscribeCalls(), 0);
     assert.equal(storage.getItem(TOKEN_KEY), null);
     assert.equal(storage.getItem(PREFERENCES_KEY), null);
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("expired pending registration reauthorizes directly into deletion without temporary activation", async () => {
+  const preferences = prefillNotificationPreferences(3, "UTC");
+  const requests = [];
+  let unsubscribeCalls = 0;
+  const storage = memoryStorage({
+    [TOKEN_KEY]: "old-token.signature",
+    [PREFERENCES_KEY]: JSON.stringify(preferences),
+    [PENDING_KEY]: "true",
+  });
+  const runtime = installRuntime({
+    permission: "granted",
+    subscription: {
+      ...existingSubscription(),
+      unsubscribe: async () => { unsubscribeCalls += 1; return true; },
+    },
+    storage,
+    fetchImpl: async (_url, options) => {
+      requests.push(options);
+      if (options.method === "POST") {
+        return jsonResponse({ ok: true, deviceToken: "new-token.signature", preferences }, { status: 201 });
+      }
+      return options.headers.Authorization === "Bearer old-token.signature"
+        ? jsonResponse({ error: "expired" }, { ok: false, status: 401 })
+        : jsonResponse({ ok: true });
+    },
+  });
+
+  try {
+    assert.equal(await deleteNotificationSubscription(), true);
+    assert.deepEqual(requests.map(({ method }) => method), ["DELETE", "POST", "DELETE"]);
+    assert.deepEqual(JSON.parse(requests[1].body), {
+      configurationId: CONFIGURATION_ID,
+      subscription: existingSubscription().toJSON(),
+      preferences,
+    });
+    assert.equal(unsubscribeCalls, 1);
+    assert.equal(storage.getItem(TOKEN_KEY), null);
+    assert.equal(storage.getItem(PENDING_KEY), null);
   } finally {
     runtime.restore();
   }

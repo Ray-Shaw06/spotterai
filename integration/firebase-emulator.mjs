@@ -1,11 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createECDH, generateKeyPairSync } from "node:crypto";
+import { createECDH, createHash, generateKeyPairSync } from "node:crypto";
 
 import { createNotificationHandler } from "../api/notifications.js";
 import { createEndpointFingerprint } from "../lib/notification-auth.js";
 import { createNotificationStore } from "../lib/notification-store.js";
 import { dispatchDue } from "../functions/dispatcher.js";
+import { FIREBASE_EMULATOR_INTEGRATION_MARKER } from "../scripts/firebase-emulator-environment.mjs";
+
+console.log(FIREBASE_EMULATOR_INTEGRATION_MARKER);
 
 const PROJECT_ID = "demo-spotterai-release-1";
 const NOW = new Date("2026-07-20T12:30:00.000Z");
@@ -39,6 +42,7 @@ function publicKey(scalar) {
 }
 
 const PUBLIC_KEY = publicKey(1);
+const CONFIGURATION_ID = createHash("sha256").update(PUBLIC_KEY).digest("base64url");
 const P256DH = publicKey(2);
 const SUBSCRIPTION = Object.freeze({
   endpoint: "https://fcm.googleapis.com/fcm/send/emulator-fixture",
@@ -91,7 +95,23 @@ async function register(handler) {
       origin: ORIGIN,
       "sec-fetch-site": "same-origin",
     },
-    body: { subscription: SUBSCRIPTION, preferences: PREFERENCES },
+    body: { configurationId: CONFIGURATION_ID, subscription: SUBSCRIPTION, preferences: PREFERENCES },
+  }, response);
+  return response;
+}
+
+async function activate(handler, token) {
+  const response = responseRecorder();
+  await handler({
+    method: "PATCH",
+    url: "/api/notifications",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+      origin: ORIGIN,
+      "sec-fetch-site": "same-origin",
+    },
+    body: { activate: true, preferences: PREFERENCES },
   }, response);
   return response;
 }
@@ -193,6 +213,9 @@ if (controlledEnvironment) {
       assert.equal(response.statusCode, 201);
       assert.equal(response.body?.ok, true);
       assert.equal(typeof response.body?.deviceToken, "string");
+      const activation = await activate(handler, response.body.deviceToken);
+      assert.equal(activation.statusCode, 200);
+      assert.deepEqual(activation.body, { ok: true, preferences: PREFERENCES });
 
       const fingerprint = createEndpointFingerprint(SUBSCRIPTION.endpoint, DEDUP_SECRET);
       const [device, endpointIndex, counter] = await Promise.all([
@@ -202,6 +225,8 @@ if (controlledEnvironment) {
       ]);
       assert.equal(device.exists, true);
       assert.equal(device.data().endpoint, SUBSCRIPTION.endpoint);
+      assert.equal(device.data().enabled, true);
+      assert.equal(device.data().registrationPending, false);
       assert.equal(device.data().nextNotificationAt.toMillis(), NOW_MS);
       assert.equal(endpointIndex.data()?.deviceId, DEVICE_ID);
       assert.equal(counter.data()?.count, 1);

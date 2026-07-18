@@ -3,11 +3,15 @@ import { normalizeNotificationPreferences, validateNotificationPreferences } fro
 export const NOTIFICATION_TOKEN_KEY = "spotterai.notifications.token";
 export const NOTIFICATION_PREFERENCES_KEY = "spotterai.notifications.preferences";
 export const NOTIFICATION_OFFERED_PLAN_KEY = "spotterai.notifications.offeredPlanAt";
+export const NOTIFICATION_PENDING_KEY = "spotterai.notifications.pending";
+export const NOTIFICATION_CONFIGURATION_ID_KEY = "spotterai.notifications.configurationId";
 
 const API_PATH = "/api/notifications";
 const DATE_PATTERN = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/;
 const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/;
+const CONFIGURATION_ID_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const AUTHORIZATION_RENEWAL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const PREPARED_SUBSCRIPTION_LIFETIME_MS = 5 * 60 * 1000;
 
 const ERROR_COPY = Object.freeze({
   insecure_context: "Notifications require a secure installed app.",
@@ -18,12 +22,13 @@ const ERROR_COPY = Object.freeze({
   notifications_unavailable: "Notifications are unavailable in this browser.",
   push_unavailable: "Push notifications are unavailable in this installed app.",
   permission_denied: "Notification permission is blocked in browser settings.",
-  permission_failed: "Notification permission could not be checked.",
   invalid_public_key: "Notification setup is unavailable.",
   config_unavailable: "Notification setup could not be checked.",
+  configuration_stale: "Notification setup changed. Wait for it to refresh, then try enabling again.",
   registration_unavailable: "Notifications are not available yet.",
   invalid_preferences: "Check the notification schedule and try again.",
   registration_failed: "Notifications could not be enabled.",
+  activation_failed: "Notification setup is pending. Try enabling again or delete this device's notification setup.",
   subscription_failed: "The browser notification subscription is unavailable.",
   authorization_missing: "This device is not subscribed to notifications.",
   authorization_refresh_failed: "Notification authorization could not be renewed.",
@@ -62,28 +67,59 @@ function readToken() {
   }
 }
 
-function storeRegistration(token, preferences) {
+function readConfigurationId() {
+  try {
+    const value = runtimeStorage()?.getItem(NOTIFICATION_CONFIGURATION_ID_KEY) || "";
+    return CONFIGURATION_ID_PATTERN.test(value) ? value : "";
+  } catch {
+    return "";
+  }
+}
+
+function storePendingRegistration(token, preferences, configurationId) {
+  if (!CONFIGURATION_ID_PATTERN.test(configurationId)) throw safeError("registration_failed");
   const storage = runtimeStorage();
   if (!storage) throw safeError("registration_failed");
   let previousToken;
   let previousPreferences;
+  let previousPending;
+  let previousConfigurationId;
   try {
     previousToken = storage.getItem(NOTIFICATION_TOKEN_KEY);
     previousPreferences = storage.getItem(NOTIFICATION_PREFERENCES_KEY);
+    previousPending = storage.getItem(NOTIFICATION_PENDING_KEY);
+    previousConfigurationId = storage.getItem(NOTIFICATION_CONFIGURATION_ID_KEY);
   } catch {
     throw safeError("registration_failed");
   }
   try {
     storage.setItem(NOTIFICATION_TOKEN_KEY, token);
     storage.setItem(NOTIFICATION_PREFERENCES_KEY, JSON.stringify(preferences));
+    storage.setItem(NOTIFICATION_PENDING_KEY, "true");
+    storage.setItem(NOTIFICATION_CONFIGURATION_ID_KEY, configurationId);
   } catch {
     try {
       if (previousToken === null) storage.removeItem(NOTIFICATION_TOKEN_KEY);
       else storage.setItem(NOTIFICATION_TOKEN_KEY, previousToken);
       if (previousPreferences === null) storage.removeItem(NOTIFICATION_PREFERENCES_KEY);
       else storage.setItem(NOTIFICATION_PREFERENCES_KEY, previousPreferences);
+      if (previousPending === null) storage.removeItem(NOTIFICATION_PENDING_KEY);
+      else storage.setItem(NOTIFICATION_PENDING_KEY, previousPending);
+      if (previousConfigurationId === null) storage.removeItem(NOTIFICATION_CONFIGURATION_ID_KEY);
+      else storage.setItem(NOTIFICATION_CONFIGURATION_ID_KEY, previousConfigurationId);
     } catch {}
     throw safeError("registration_failed");
+  }
+}
+
+function completeStoredRegistration(preferences) {
+  const storage = runtimeStorage();
+  if (!storage) throw safeError("activation_failed");
+  try {
+    storage.setItem(NOTIFICATION_PREFERENCES_KEY, JSON.stringify(preferences));
+    storage.removeItem(NOTIFICATION_PENDING_KEY);
+  } catch {
+    throw safeError("activation_failed");
   }
 }
 
@@ -93,6 +129,8 @@ function clearRegistration() {
     storage?.removeItem(NOTIFICATION_TOKEN_KEY);
     storage?.removeItem(NOTIFICATION_PREFERENCES_KEY);
     storage?.removeItem(NOTIFICATION_OFFERED_PLAN_KEY);
+    storage?.removeItem(NOTIFICATION_PENDING_KEY);
+    storage?.removeItem(NOTIFICATION_CONFIGURATION_ID_KEY);
   } catch {}
 }
 
@@ -151,6 +189,42 @@ export async function validateApplicationServerKey(value) {
   }
 }
 
+export async function prepareNotificationSubscription(publicKey, configurationId) {
+  const capability = notificationCapability(globalThis);
+  if (!capability.supported) throw safeError(capability.reason);
+  if (!CONFIGURATION_ID_PATTERN.test(configurationId)) throw safeError("registration_unavailable");
+
+  let applicationServerKey;
+  let registration;
+  try {
+    [applicationServerKey, registration] = await Promise.all([
+      validateApplicationServerKey(publicKey),
+      globalThis.navigator.serviceWorker.ready,
+    ]);
+  } catch (error) {
+    if (error instanceof NotificationClientError) throw error;
+    throw safeError("service_worker_unavailable");
+  }
+  if (typeof registration?.pushManager?.getSubscription !== "function"
+    || typeof registration?.pushManager?.subscribe !== "function") {
+    throw safeError("push_unavailable");
+  }
+
+  let existingSubscription;
+  try {
+    existingSubscription = await registration.pushManager.getSubscription();
+  } catch {
+    throw safeError("subscription_failed");
+  }
+  return Object.freeze({
+    applicationServerKey,
+    configurationId,
+    existingSubscription: existingSubscription || null,
+    preparedAt: Date.now(),
+    registration,
+  });
+}
+
 async function readJson(response, errorCode) {
   if (!response?.ok) throw safeError(errorCode, response?.status);
   try {
@@ -188,6 +262,9 @@ export async function getNotificationConfiguration() {
   return {
     enabled: value.enabled === true,
     publicKey: typeof value.publicKey === "string" && value.publicKey ? value.publicKey : null,
+    configurationId: typeof value.configurationId === "string" && CONFIGURATION_ID_PATTERN.test(value.configurationId)
+      ? value.configurationId
+      : null,
   };
 }
 
@@ -224,7 +301,7 @@ function tokenExpiration(token) {
   }
 }
 
-async function silentlyReauthorize() {
+async function silentlyReauthorize({ activate = true } = {}) {
   const preferences = loadNotificationPreferences();
   if (!preferences || globalThis.Notification?.permission !== "granted") {
     throw safeError("authorization_refresh_failed");
@@ -233,10 +310,13 @@ async function silentlyReauthorize() {
   if (!capability.supported) throw safeError("authorization_refresh_failed");
 
   try {
+    const configurationId = readConfigurationId();
+    if (!configurationId) throw new Error("missing configuration");
     const registration = await globalThis.navigator?.serviceWorker?.ready;
     const subscription = await registration?.pushManager?.getSubscription?.();
     if (!subscription) throw new Error("missing subscription");
     const value = await apiRequest("POST", {
+      configurationId,
       subscription: subscriptionJson(subscription),
       preferences,
     }, { errorCode: "authorization_refresh_failed" });
@@ -244,8 +324,15 @@ async function silentlyReauthorize() {
       throw new Error("invalid token");
     }
     const saved = checkedPreferences(value.preferences);
-    storeRegistration(value.deviceToken, saved);
-    return { preferences: saved };
+    storePendingRegistration(value.deviceToken, saved, configurationId);
+    if (!activate) return { preferences: saved, pending: true };
+    const activated = await apiRequest("PATCH", {
+      activate: true,
+      preferences: saved,
+    }, { token: value.deviceToken, errorCode: "authorization_refresh_failed" });
+    const activePreferences = checkedPreferences(activated.preferences || saved);
+    completeStoredRegistration(activePreferences);
+    return { preferences: activePreferences };
   } catch {
     throw safeError("authorization_refresh_failed");
   }
@@ -258,8 +345,12 @@ async function authenticatedRequest(method, body, { errorCode }) {
     return await apiRequest(method, body, { token, errorCode });
   } catch (error) {
     if (!(error instanceof NotificationClientError) || error.status !== 401) throw error;
+    const pending = hasPendingNotificationRegistration();
+    if (pending && method !== "DELETE") throw error;
     try {
-      await silentlyReauthorize();
+      await silentlyReauthorize({
+        activate: !pending,
+      });
     } catch {
       throw error;
     }
@@ -272,6 +363,7 @@ async function authenticatedRequest(method, body, { errorCode }) {
 export async function renewNotificationAuthorizationIfNeeded({ now = Date.now() } = {}) {
   const token = readToken();
   if (!token) return { state: "not_subscribed" };
+  if (hasPendingNotificationRegistration()) return { state: "pending" };
   if (!Number.isSafeInteger(now) || now < 0) throw safeError("authorization_refresh_failed");
   const expiresAt = tokenExpiration(token);
   if (expiresAt !== null && expiresAt > now + AUTHORIZATION_RENEWAL_WINDOW_MS) {
@@ -281,72 +373,98 @@ export async function renewNotificationAuthorizationIfNeeded({ now = Date.now() 
   return { state: "renewed", preferences: result.preferences };
 }
 
-export async function subscribeToNotifications(preferences, { onPermissionPrompt } = {}) {
+export async function subscribeToNotifications(preferences, { onPermissionPrompt, prepared = null } = {}) {
   const normalized = checkedPreferences(preferences);
-  const config = await getNotificationConfiguration();
-  if (!config.enabled || !config.publicKey) throw safeError("registration_unavailable");
-  const applicationServerKey = await validateApplicationServerKey(config.publicKey);
-
   const capability = notificationCapability(globalThis);
   if (!capability.supported) throw safeError(capability.reason);
-
-  let permission = globalThis.Notification.permission;
-  if (permission === "default") {
+  const pendingToken = readToken();
+  if (pendingToken && hasPendingNotificationRegistration()) {
+    let value;
     try {
-      try { onPermissionPrompt?.(); } catch {}
-      permission = await globalThis.Notification.requestPermission();
-    } catch {
-      throw safeError("permission_failed");
+      value = await apiRequest("PATCH", {
+        activate: true,
+        preferences: normalized,
+      }, { token: pendingToken, errorCode: "activation_failed" });
+    } catch (error) {
+      if (!(error instanceof NotificationClientError) || error.status !== 401) throw error;
+      try {
+        await silentlyReauthorize({ activate: false });
+      } catch {
+        throw error;
+      }
+      const renewedToken = readToken();
+      if (!renewedToken) throw error;
+      value = await apiRequest("PATCH", {
+        activate: true,
+        preferences: normalized,
+      }, { token: renewedToken, errorCode: "activation_failed" });
     }
+    const saved = checkedPreferences(value.preferences || normalized);
+    completeStoredRegistration(saved);
+    return { preferences: saved };
   }
-  if (permission !== "granted") throw safeError("permission_denied");
+  const applicationServerKey = prepared?.applicationServerKey;
+  const configurationId = prepared?.configurationId;
+  const preparedAt = prepared?.preparedAt;
+  const registration = prepared?.registration;
+  if (!(applicationServerKey instanceof Uint8Array)
+    || applicationServerKey.length !== 65
+    || applicationServerKey[0] !== 4
+    || !CONFIGURATION_ID_PATTERN.test(configurationId)
+    || typeof registration?.pushManager?.subscribe !== "function") {
+    throw safeError("registration_unavailable");
+  }
+  const preparedAge = Date.now() - preparedAt;
+  if (!Number.isSafeInteger(preparedAt)
+    || preparedAge < 0
+    || preparedAge > PREPARED_SUBSCRIPTION_LIFETIME_MS) {
+    throw safeError("configuration_stale");
+  }
 
-  let registration;
-  try {
-    registration = await globalThis.navigator.serviceWorker.ready;
-  } catch {
-    throw safeError("service_worker_unavailable");
+  if (globalThis.Notification.permission === "default") {
+    try { onPermissionPrompt?.(); } catch {}
   }
-  if (!registration?.pushManager) throw safeError("push_unavailable");
+  let subscriptionPromise;
+  try {
+    subscriptionPromise = registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey,
+    });
+  } catch {
+    throw safeError(globalThis.Notification.permission === "denied" ? "permission_denied" : "registration_failed");
+  }
   let subscription;
   try {
-    subscription = await registration.pushManager.getSubscription();
+    subscription = await subscriptionPromise;
   } catch {
-    throw safeError("subscription_failed");
-  }
-  let created = false;
-  if (!subscription) {
-    try {
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey,
-      });
-      created = true;
-    } catch (error) {
-      if (error instanceof NotificationClientError) throw error;
-      throw safeError("registration_failed");
-    }
+    throw safeError(globalThis.Notification.permission === "denied" ? "permission_denied" : "registration_failed");
   }
 
   let issuedToken = "";
+  let storedPending = false;
   try {
     const value = await apiRequest("POST", {
+      configurationId,
       subscription: subscriptionJson(subscription),
       preferences: normalized,
     }, { errorCode: "registration_failed" });
     if (typeof value.deviceToken !== "string" || !value.deviceToken || value.deviceToken.length > 4096) throw safeError("registration_failed");
     issuedToken = value.deviceToken;
     const saved = checkedPreferences(value.preferences);
-    storeRegistration(issuedToken, saved);
-    return { preferences: saved };
+    storePendingRegistration(issuedToken, saved, configurationId);
+    storedPending = true;
+    const activated = await apiRequest("PATCH", {
+      activate: true,
+      preferences: saved,
+    }, { token: issuedToken, errorCode: "activation_failed" });
+    const activePreferences = checkedPreferences(activated.preferences || saved);
+    completeStoredRegistration(activePreferences);
+    return { preferences: activePreferences };
   } catch (error) {
-    if (issuedToken) {
+    if (issuedToken && !storedPending) {
       try {
         await apiRequest("DELETE", undefined, { token: issuedToken, errorCode: "delete_failed" });
       } catch {}
-    }
-    if (created) {
-      try { await subscription?.unsubscribe?.(); } catch {}
     }
     if (error instanceof NotificationClientError) throw error;
     throw safeError("registration_failed");
@@ -366,7 +484,19 @@ export function loadNotificationPreferences() {
 }
 
 export function hasNotificationSubscription() {
+  return Boolean(readToken()) && !hasPendingNotificationRegistration();
+}
+
+export function hasNotificationCredential() {
   return Boolean(readToken());
+}
+
+export function hasPendingNotificationRegistration() {
+  try {
+    return runtimeStorage()?.getItem(NOTIFICATION_PENDING_KEY) === "true";
+  } catch {
+    return false;
+  }
 }
 
 export async function updateNotificationPreferences(preferences) {
@@ -382,7 +512,7 @@ export async function syncWorkoutCompletion(localDate) {
   const [year, month, day] = localDate.split("-").map(Number);
   const value = new Date(year, month - 1, day);
   if (value.getFullYear() !== year || value.getMonth() !== month - 1 || value.getDate() !== day) throw safeError("invalid_completion_date");
-  if (!readToken()) return false;
+  if (!hasNotificationSubscription()) return false;
   await authenticatedRequest("PATCH", { lastWorkoutCompletionDate: localDate }, { errorCode: "sync_failed" });
   return true;
 }

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
+  createHash,
   createECDH,
   generateKeyPairSync,
 } from "node:crypto";
@@ -50,6 +51,7 @@ function p256PublicKey() {
 }
 
 const PUBLIC_KEY = p256PublicKey();
+const CONFIGURATION_ID = createHash("sha256").update(PUBLIC_KEY).digest("base64url");
 const P256DH = p256PublicKey();
 const PRIVATE_P256DH = p256PublicKey();
 const INVALID_POINT = Buffer.concat([Buffer.from([4]), Buffer.alloc(64)]).toString("base64url");
@@ -174,6 +176,7 @@ async function coreRequest(handler, method, body, headers = {}, { defaults = tru
 
 function registrationBody(overrides = {}) {
   return {
+    configurationId: CONFIGURATION_ID,
     subscription: SUBSCRIPTION,
     preferences: PREFERENCES,
     ...overrides,
@@ -203,11 +206,22 @@ test("enabled GET exposes only the on-curve public key after full readiness vali
   const res = await coreRequest(handler, "GET");
 
   assert.equal(res.statusCode, 200);
-  assert.deepEqual(res.body, { enabled: true, publicKey: PUBLIC_KEY });
+  assert.deepEqual(res.body, { enabled: true, publicKey: PUBLIC_KEY, configurationId: CONFIGURATION_ID });
   assert.equal(res.headers.get("cache-control"), "no-store");
   assert.equal(res.headers.has("access-control-allow-origin"), false);
   assert.equal(store.calls.create.length + store.calls.update.length + store.calls.remove.length, 0);
   assert.doesNotMatch(JSON.stringify(res.body), /private|service|secret|firebase|origin|waf/i);
+});
+
+test("POST rejects a stale notification configuration before storage", async () => {
+  const { handler, store } = setup();
+  const response = await coreRequest(handler, "POST", registrationBody({
+    configurationId: "A".repeat(43),
+  }));
+
+  assert.equal(response.statusCode, 409);
+  assert.deepEqual(response.body, { error: "Registration unavailable." });
+  assert.equal(store.calls.create.length, 0);
 });
 
 test("enabled registration fails closed on every readiness requirement", async () => {
@@ -275,9 +289,11 @@ test("POST registers the exact minimal record and passes only server-owned cap/d
     quietHours: { start: "22:00", end: "08:00" },
     categories: { workout: true, followUp: false, streak: true, recovery: true },
     paused: false,
-    enabled: true,
+    enabled: false,
+    registrationPending: true,
+    configurationId: CONFIGURATION_ID,
     lastWorkoutCompletionDate: null,
-    nextNotificationAt: NOW,
+    nextNotificationAt: null,
     dailyDeliveryDate: null,
     dailyDeliveryCount: 0,
     lastSentByCategory: {},
@@ -295,6 +311,30 @@ test("POST registers the exact minimal record and passes only server-owned cap/d
     dailyCap: 100,
     now: NOW,
   });
+});
+
+test("registration remains non-deliverable until authenticated activation", async () => {
+  const { handler, store, res: registration } = await register();
+  const token = registration.body.deviceToken;
+
+  assert.equal(store.calls.create[0][1].enabled, false);
+  assert.equal(store.calls.create[0][1].registrationPending, true);
+  assert.equal(store.calls.create[0][1].nextNotificationAt, null);
+
+  const activation = await coreRequest(handler, "PATCH", {
+    activate: true,
+    preferences: PREFERENCES,
+  }, { authorization: `Bearer ${token}` });
+
+  assert.equal(activation.statusCode, 200);
+  assert.deepEqual(activation.body, { ok: true, preferences: PREFERENCES });
+  assert.deepEqual(store.calls.update[0], [DEVICE_ID, {
+    ...PREFERENCES,
+    enabled: true,
+    registrationPending: false,
+    nextNotificationAt: NOW,
+    updatedAt: NOW,
+  }, { now: NOW, registrationActivation: true, configurationId: CONFIGURATION_ID }]);
 });
 
 test("POST rejects an empty schedule before storage", async () => {

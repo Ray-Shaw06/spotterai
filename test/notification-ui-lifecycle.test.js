@@ -156,6 +156,13 @@ test("a retained deletion credential produces an explicit Account retry state", 
   });
 });
 
+test("Account Delete remains available for a browser-only notification subscription", async () => {
+  const { notificationDeleteAvailable } = await uiModule();
+  assert.equal(notificationDeleteAvailable({ credentialed: false, browserSubscribed: false }), false);
+  assert.equal(notificationDeleteAvailable({ credentialed: true, browserSubscribed: false }), true);
+  assert.equal(notificationDeleteAvailable({ credentialed: false, browserSubscribed: true }), true);
+});
+
 test("permission recovery shown by the notification UI is platform-specific", async () => {
   const { guidanceFor } = await uiModule();
 
@@ -169,23 +176,67 @@ test("permission recovery shown by the notification UI is platform-specific", as
   assert.match(android, /Settings/);
 });
 
-test("actionable availability requires enabled configuration and key preflight", async () => {
+test("stale prepared configuration is refreshed before asking the user to tap again", async () => {
+  const { notificationEnableFailure } = await uiModule();
+  assert.deepEqual(notificationEnableFailure("configuration_stale", "fallback"), {
+    refreshAvailability: true,
+    message: "Notification setup changed. Refreshing it now; choose Enable notifications again when it is ready.",
+  });
+  assert.deepEqual(notificationEnableFailure("registration_failed", "fallback"), {
+    refreshAvailability: true,
+    message: "Notification setup was not completed. Refreshing it now; choose Enable notifications again when it is ready.",
+  });
+  assert.deepEqual(notificationEnableFailure("permission_denied", "fallback"), {
+    refreshAvailability: false,
+    message: "fallback",
+  });
+});
+
+test("actionable availability requires enabled configuration and browser subscription preflight", async () => {
   const { resolveActionableNotificationConfiguration } = await uiModule();
   assert.equal(typeof resolveActionableNotificationConfiguration, "function");
   const accepted = [];
-  const validateKey = async (key) => {
-    accepted.push(key);
+  const validateKey = async (key, configurationId) => {
+    accepted.push([key, configurationId]);
     if (key !== "valid") throw new Error("invalid");
+    return { preparedFor: key };
   };
 
-  assert.equal(await resolveActionableNotificationConfiguration({ enabled: false, publicKey: "valid" }, validateKey), null);
-  assert.equal(await resolveActionableNotificationConfiguration({ enabled: true, publicKey: null }, validateKey), null);
-  assert.equal(await resolveActionableNotificationConfiguration({ enabled: true, publicKey: "invalid" }, validateKey), null);
-  assert.deepEqual(await resolveActionableNotificationConfiguration({ enabled: true, publicKey: "valid" }, validateKey), {
+  assert.equal(await resolveActionableNotificationConfiguration({ enabled: false, publicKey: "valid", configurationId: "config" }, validateKey), null);
+  assert.equal(await resolveActionableNotificationConfiguration({ enabled: true, publicKey: null, configurationId: "config" }, validateKey), null);
+  assert.equal(await resolveActionableNotificationConfiguration({ enabled: true, publicKey: "invalid", configurationId: "config" }, validateKey), null);
+  assert.deepEqual(await resolveActionableNotificationConfiguration({ enabled: true, publicKey: "valid", configurationId: "config" }, validateKey), {
     enabled: true,
     publicKey: "valid",
+    configurationId: "config",
+    prepared: { preparedFor: "valid" },
   });
-  assert.deepEqual(accepted, ["invalid", "valid"]);
+  assert.deepEqual(accepted, [["invalid", "config"], ["valid", "config"]]);
+});
+
+test("actionable availability retains the prepared browser subscription context", async () => {
+  const { resolveActionableNotificationConfiguration } = await uiModule();
+  const prepared = {
+    applicationServerKey: new Uint8Array([4, 1]),
+    existingSubscription: null,
+    registration: { pushManager: {} },
+  };
+  const prepare = async (publicKey, configurationId) => {
+    assert.equal(publicKey, "valid");
+    assert.equal(configurationId, "config");
+    return prepared;
+  };
+
+  assert.deepEqual(await resolveActionableNotificationConfiguration({
+    enabled: true,
+    publicKey: "valid",
+    configurationId: "config",
+  }, prepare), {
+    enabled: true,
+    publicKey: "valid",
+    configurationId: "config",
+    prepared,
+  });
 });
 
 test("enable attempt consumes the offer only at prompt time or granted success", async () => {
@@ -234,6 +285,54 @@ test("enable attempt consumes the offer only at prompt time or granted success",
   assert.deepEqual(enabled, { preferences });
   assert.deepEqual(grantedStatuses, ["Checking notification setup…"]);
   assert.equal(grantedConsumed, 1, "already-granted permission consumes only after successful subscription");
+});
+
+test("enable attempt forwards prepared subscription state into the tap-time subscriber", async () => {
+  const { executeNotificationEnableAttempt } = await uiModule();
+  const preferences = prefillNotificationPreferences(3, "UTC");
+  const prepared = { registration: { pushManager: {} } };
+  let received;
+
+  await executeNotificationEnableAttempt({
+    preferences,
+    prepared,
+    subscribe: async (_preferences, options) => {
+      received = options.prepared;
+      return { preferences };
+    },
+    setStatus: () => {},
+    consumeOffer: () => {},
+    onPermissionPrompt: () => {},
+  });
+
+  assert.strictEqual(received, prepared);
+});
+
+test("the mutation and enable helpers reach PushManager subscription work in the original tap task", async () => {
+  const {
+    createAccountMutationController,
+    executeNotificationEnableAttempt,
+  } = await uiModule();
+  const preferences = prefillNotificationPreferences(3, "UTC");
+  const prepared = { registration: { pushManager: {} } };
+  let tapTaskActive = true;
+  const controller = createAccountMutationController({ setBusy: () => {} });
+
+  queueMicrotask(() => { tapTaskActive = false; });
+  const attempt = controller.run("enable:account", () => executeNotificationEnableAttempt({
+    preferences,
+    prepared,
+    subscribe: (_preferences, options) => {
+      assert.equal(tapTaskActive, true, "subscription work must start before the first microtask boundary");
+      assert.strictEqual(options.prepared, prepared);
+      return Promise.resolve({ preferences });
+    },
+    setStatus: () => {},
+    consumeOffer: () => {},
+    onPermissionPrompt: () => {},
+  }));
+
+  assert.deepEqual(await attempt, { preferences });
 });
 
 test("unsubscribed Account proposal is expanded before permission", async () => {

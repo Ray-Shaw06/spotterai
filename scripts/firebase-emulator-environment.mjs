@@ -1,6 +1,12 @@
 import { join } from "node:path";
 
 export const FIREBASE_EMULATOR_PROJECT_ID = "demo-spotterai-release-1";
+export const FIREBASE_EMULATOR_INTEGRATION_MARKER = "SPOTTERAI_FIREBASE_EMULATOR_INTEGRATION_STARTED";
+
+export function firebaseEmulatorGateExitCode({ error, status, stdout }) {
+  if (error || status !== 0) return 1;
+  return typeof stdout === "string" && stdout.includes(FIREBASE_EMULATOR_INTEGRATION_MARKER) ? 0 : 1;
+}
 
 const SAFE_RUNTIME_KEYS = Object.freeze([
   "PATH",

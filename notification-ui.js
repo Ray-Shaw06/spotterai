@@ -2,14 +2,16 @@ import { trackFunnel } from "./analytics.js";
 import {
   deleteNotificationSubscription,
   getNotificationConfiguration,
+  hasNotificationCredential,
+  hasPendingNotificationRegistration,
   hasNotificationSubscription,
   loadNotificationPreferences,
   NOTIFICATION_OFFERED_PLAN_KEY,
   notificationCapability,
+  prepareNotificationSubscription,
   renewNotificationAuthorizationIfNeeded,
   subscribeToNotifications,
   updateNotificationPreferences,
-  validateApplicationServerKey,
 } from "./notification-client.js";
 import {
   notificationTimezoneMigration,
@@ -99,6 +101,26 @@ export function notificationDeletionFailureState(hasRetryCredential) {
       };
 }
 
+export function notificationDeleteAvailable({ credentialed, browserSubscribed }) {
+  return credentialed === true || browserSubscribed === true;
+}
+
+export function notificationEnableFailure(code, fallbackMessage) {
+  if (code === "configuration_stale") {
+    return {
+      refreshAvailability: true,
+      message: "Notification setup changed. Refreshing it now; choose Enable notifications again when it is ready.",
+    };
+  }
+  if (code === "registration_failed") {
+    return {
+      refreshAvailability: true,
+      message: "Notification setup was not completed. Refreshing it now; choose Enable notifications again when it is ready.",
+    };
+  }
+  return { refreshAvailability: false, message: fallbackMessage };
+}
+
 export function createAccountMutationController({ setBusy }) {
   let active = null;
   return {
@@ -170,12 +192,21 @@ export function createNotificationLifecycleController({
 
 export async function resolveActionableNotificationConfiguration(
   config,
-  validateKey = validateApplicationServerKey,
+  prepareSubscription = prepareNotificationSubscription,
 ) {
-  if (config?.enabled !== true || typeof config.publicKey !== "string" || !config.publicKey) return null;
+  if (config?.enabled !== true
+    || typeof config.publicKey !== "string"
+    || !config.publicKey
+    || typeof config.configurationId !== "string"
+    || !config.configurationId) return null;
   try {
-    await validateKey(config.publicKey);
-    return { enabled: true, publicKey: config.publicKey };
+    const prepared = await prepareSubscription(config.publicKey, config.configurationId);
+    return {
+      enabled: true,
+      publicKey: config.publicKey,
+      configurationId: config.configurationId,
+      prepared,
+    };
   } catch {
     return null;
   }
@@ -183,6 +214,7 @@ export async function resolveActionableNotificationConfiguration(
 
 export async function executeNotificationEnableAttempt({
   preferences,
+  prepared,
   subscribe,
   setStatus,
   consumeOffer,
@@ -191,6 +223,7 @@ export async function executeNotificationEnableAttempt({
   let prompted = false;
   setStatus("Checking notification setup…");
   const value = await subscribe(preferences, {
+    prepared,
     onPermissionPrompt: () => {
       if (prompted) return;
       prompted = true;
@@ -374,7 +407,10 @@ function actionButtons(elements) {
 function surfaceControlState(surface) {
   const capability = notificationCapability(globalThis);
   const subscribed = hasNotificationSubscription();
+  const credentialed = hasNotificationCredential();
+  const pending = hasPendingNotificationRegistration();
   const available = availability.state === "ready";
+  const browserSubscribed = Boolean(availability.config?.prepared?.existingSubscription);
   const accountState = evaluateAccountNotificationState({
     hasPlan: Boolean(store.plan),
     available,
@@ -384,12 +420,27 @@ function surfaceControlState(surface) {
   const editorDisabled = surface === "account"
     ? accountState.editorDisabled
     : (!available || !capability.supported || subscribed);
-  return { capability, subscribed, available, accountState, editorDisabled };
+  return {
+    capability,
+    subscribed,
+    credentialed,
+    browserSubscribed,
+    pending,
+    available,
+    accountState,
+    editorDisabled,
+  };
 }
 
 function applySurfaceControls(surface, elements = surfaceElements(surface)) {
   if (!elements.section || !elements.mount) return;
-  const { subscribed, accountState, editorDisabled } = surfaceControlState(surface);
+  const {
+    subscribed,
+    credentialed,
+    browserSubscribed,
+    accountState,
+    editorDisabled,
+  } = surfaceControlState(surface);
   elements.mount.querySelectorAll("[data-notification-day]").forEach((checkbox) => {
     checkbox.disabled = editorDisabled;
     const time = elements.mount.querySelector(`[data-notification-time="${checkbox.dataset.notificationDay}"]`);
@@ -401,7 +452,9 @@ function applySurfaceControls(surface, elements = surfaceElements(surface)) {
   actionButtons(elements).forEach((button) => { button.disabled = editorDisabled; });
   if (elements.enable) elements.enable.disabled = surface === "account" ? accountState.enableDisabled : subscribed || editorDisabled;
   if (elements.save) elements.save.disabled = !subscribed || editorDisabled;
-  if (elements.delete) elements.delete.disabled = !subscribed;
+  if (elements.delete) {
+    elements.delete.disabled = !notificationDeleteAvailable({ credentialed, browserSubscribed });
+  }
   if (elements.pause) elements.pause.disabled = !subscribed || editorDisabled;
 }
 
@@ -427,7 +480,15 @@ accountMutationController = createAccountMutationController({
 function renderSurface(surface, preferences = initialPreferences()) {
   const elements = surfaceElements(surface);
   if (!elements.section || !elements.mount) return;
-  const { capability, subscribed, available, accountState, editorDisabled } = surfaceControlState(surface);
+  const {
+    capability,
+    subscribed,
+    browserSubscribed,
+    pending,
+    available,
+    accountState,
+    editorDisabled,
+  } = surfaceControlState(surface);
   renderPreferenceEditor(elements.mount, {
     prefix: surface === "offer" ? "notification-offer" : "account-notification",
     preferences,
@@ -444,6 +505,8 @@ function renderSurface(surface, preferences = initialPreferences()) {
   else if (availability.state === "loading") setMessage(elements, "Checking notification availability…");
   else if (!available) setMessage(elements, "Notifications are not available yet. SpotterAI will not ask for browser permission.");
   else if (surface === "offer" && subscribed) setMessage(elements, "Notifications are enabled. Manage the schedule in Account.");
+  else if (surface === "account" && pending) setMessage(elements, "Notification setup is pending. Choose Enable notifications to retry, or Delete to remove this device.");
+  else if (surface === "account" && browserSubscribed && !subscribed) setMessage(elements, "This device has an unfinished browser notification setup. Choose Enable notifications to retry, or Delete to remove it.");
   else if (surface === "account" && accountState.needsPlan) setMessage(elements, "Create a plan first, then return here to review a reminder schedule.");
   else if (surface === "account" && !subscribed) setMessage(elements, "Review this schedule, then choose Enable notifications when you're ready.");
   else if (surface === "account") setMessage(elements, preferences.paused ? "Notifications are paused." : "Notifications are active on this device.");
@@ -561,6 +624,7 @@ function enableNotifications(surface) {
     try {
       const value = await executeNotificationEnableAttempt({
         preferences: result.value,
+        prepared: availability.config?.prepared,
         subscribe: subscribeToNotifications,
         setStatus: (message) => setMessage(elements, message),
         consumeOffer: consumePlanOffer,
@@ -571,13 +635,19 @@ function enableNotifications(surface) {
       renderSurface("account", value.preferences);
       return { state: "enabled", preferences: value.preferences };
     } catch (error) {
+      const failure = notificationEnableFailure(
+        error?.code,
+        error?.message || "Notifications could not be enabled.",
+      );
+      if (failure.refreshAvailability) availability = { state: "loading", config: null };
       renderSurface(surface, result.value);
       if (error?.code === "permission_denied") {
         trackFunnel("notification_denied", { platform_group: capability.platformGroup });
         setMessage(elements, notificationDeniedGuidance(capability.platformGroup), { error: true });
       } else {
-        setMessage(elements, error?.message || "Notifications could not be enabled.", { error: true });
+        setMessage(elements, failure.message, { error: true });
       }
+      if (failure.refreshAvailability) setTimeout(() => { void loadAvailability(); }, 0);
       return { state: "error", code: error?.code || "unknown" };
     } finally {
       if (surface === "offer") setSurfaceBusy("offer", false);
@@ -619,9 +689,10 @@ function deleteFromAccount() {
       await deleteNotificationSubscription();
       renderSurface("account", prefillNotificationPreferences(Number(store.inputs?.daysPerWeek), localTimezone()));
       setMessage(elements, "Notifications were deleted from this device.");
+      setTimeout(() => { void loadAvailability(); }, 0);
       return { state: "deleted" };
     } catch (error) {
-      const failure = notificationDeletionFailureState(hasNotificationSubscription());
+      const failure = notificationDeletionFailureState(hasNotificationCredential());
       renderSurface("account", loadNotificationPreferences()
         || prefillNotificationPreferences(Number(store.inputs?.daysPerWeek), localTimezone()));
       setMessage(elements, failure.message, { error: true });

@@ -13,6 +13,7 @@ const EXPIRED = new Date("2026-07-16T12:00:00.000Z");
 const DEVICE_ID = Buffer.alloc(32, 3).toString("base64url");
 const OTHER_DEVICE_ID = Buffer.alloc(32, 4).toString("base64url");
 const FINGERPRINT = Buffer.alloc(32, 5).toString("base64url");
+const CONFIGURATION_ID = Buffer.alloc(32, 6).toString("base64url");
 
 function clone(value) {
   return value === undefined ? undefined : structuredClone(value);
@@ -106,6 +107,7 @@ function registrationRecord(overrides = {}) {
     leaseUntil: null,
     leaseId: null,
     subscriptionRevision: 1,
+    configurationId: CONFIGURATION_ID,
     endpointFingerprint: FINGERPRINT,
     authorizationExpiresAt: EXPIRES,
     createdAt: NOW,
@@ -204,6 +206,37 @@ test("exact-proof endpoint refresh with a stale lease consumes quota and preserv
     updatedAt: NOW,
   });
   assert.equal(fake.operations.some(([operation, path]) => operation === "create" && path === `notificationDevices/${DEVICE_ID}`), false);
+});
+
+test("pending POST input cannot pause an already-active exact-proof registration", async () => {
+  const scheduled = new Date("2026-07-18T12:00:00.000Z");
+  const existing = registrationRecord({
+    nextNotificationAt: scheduled,
+    registrationPending: false,
+    createdAt: OLD,
+    updatedAt: OLD,
+  });
+  const fake = createFakeFirestore({
+    [`notificationDevices/${OTHER_DEVICE_ID}`]: existing,
+    [`notificationEndpointIndex/${FINGERPRINT}`]: {
+      deviceId: OTHER_DEVICE_ID,
+      authorizationExpiresAt: EXPIRES,
+      createdAt: OLD,
+      updatedAt: OLD,
+    },
+  });
+  const store = createNotificationStore(fake.firestore);
+  const pendingInput = registrationRecord({
+    enabled: false,
+    registrationPending: true,
+    nextNotificationAt: null,
+  });
+
+  assert.equal(await store.create(DEVICE_ID, pendingInput, registrationOptions()), OTHER_DEVICE_ID);
+  const refreshed = fake.documents.get(`notificationDevices/${OTHER_DEVICE_ID}`);
+  assert.equal(refreshed.enabled, true);
+  assert.equal(refreshed.registrationPending, false);
+  assert.deepEqual(refreshed.nextNotificationAt, scheduled);
 });
 
 test("same-endpoint refresh rejects mismatched endpoint or subscription proof without mutation", async () => {
@@ -376,6 +409,39 @@ test("an indexed disabled device fails closed without replacement or re-enableme
   assert.equal(fake.operations.some(([operation]) => ["create", "set", "update", "delete"].includes(operation)), false);
 });
 
+test("an exact pending registration can be recovered without creating a deliverable duplicate", async () => {
+  const pending = registrationRecord({
+    enabled: false,
+    registrationPending: true,
+    nextNotificationAt: null,
+    createdAt: OLD,
+    updatedAt: OLD,
+  });
+  const fake = createFakeFirestore({
+    [`notificationDevices/${OTHER_DEVICE_ID}`]: pending,
+    [`notificationEndpointIndex/${FINGERPRINT}`]: {
+      deviceId: OTHER_DEVICE_ID,
+      authorizationExpiresAt: EXPIRES,
+      createdAt: OLD,
+      updatedAt: OLD,
+    },
+  });
+  const store = createNotificationStore(fake.firestore);
+  const retry = registrationRecord({
+    enabled: false,
+    registrationPending: true,
+    nextNotificationAt: null,
+  });
+
+  assert.equal(await store.create(DEVICE_ID, retry, registrationOptions()), OTHER_DEVICE_ID);
+  const recovered = fake.documents.get(`notificationDevices/${OTHER_DEVICE_ID}`);
+  assert.equal(recovered.enabled, false);
+  assert.equal(recovered.registrationPending, true);
+  assert.equal(recovered.nextNotificationAt, null);
+  assert.equal(recovered.subscriptionRevision, 2);
+  assert.equal(fake.documents.has(`notificationDevices/${DEVICE_ID}`), false);
+});
+
 test("the global cap rejects atomically before creating a device or endpoint index", async () => {
   const fake = createFakeFirestore({
     "notificationRegistrationCounters/2026-07-17": { count: 2, updatedAt: OLD },
@@ -534,4 +600,54 @@ test("update transactionally accepts no lease and a stale lease", async () => {
     assert.ok(fake.operations.some(([operation]) => operation === "update"));
     assert.equal(fake.operations.some(([operation]) => operation === "direct-update"), false);
   }
+});
+
+test("registration activation accepts only pending or already-active records", async () => {
+  for (const existing of [
+    registrationRecord({ enabled: false, registrationPending: true, nextNotificationAt: null }),
+    registrationRecord({ enabled: true, registrationPending: false }),
+    registrationRecord({ enabled: true }),
+  ]) {
+    const fake = createFakeFirestore({ [`notificationDevices/${DEVICE_ID}`]: existing });
+    const store = createNotificationStore(fake.firestore);
+    await store.update(DEVICE_ID, {
+      enabled: true,
+      registrationPending: false,
+      nextNotificationAt: NOW,
+      updatedAt: NOW,
+    }, { now: NOW, registrationActivation: true, configurationId: CONFIGURATION_ID });
+    assert.equal(fake.documents.get(`notificationDevices/${DEVICE_ID}`).enabled, true);
+    assert.equal(fake.documents.get(`notificationDevices/${DEVICE_ID}`).registrationPending, false);
+  }
+
+  const revoked = registrationRecord({ enabled: false, registrationPending: false, nextNotificationAt: null });
+  const fake = createFakeFirestore({ [`notificationDevices/${DEVICE_ID}`]: revoked });
+  const store = createNotificationStore(fake.firestore);
+  await assert.rejects(
+    () => store.update(DEVICE_ID, { enabled: true }, {
+      now: NOW,
+      registrationActivation: true,
+      configurationId: CONFIGURATION_ID,
+    }),
+    (error) => error?.name === "RegistrationUnavailableError",
+  );
+  assert.deepEqual(fake.documents.get(`notificationDevices/${DEVICE_ID}`), revoked);
+
+  const stalePending = registrationRecord({
+    enabled: false,
+    registrationPending: true,
+    nextNotificationAt: null,
+    configurationId: "stale-configuration",
+  });
+  const staleFake = createFakeFirestore({ [`notificationDevices/${DEVICE_ID}`]: stalePending });
+  const staleStore = createNotificationStore(staleFake.firestore);
+  await assert.rejects(
+    () => staleStore.update(DEVICE_ID, { enabled: true }, {
+      now: NOW,
+      registrationActivation: true,
+      configurationId: CONFIGURATION_ID,
+    }),
+    (error) => error?.name === "RegistrationUnavailableError",
+  );
+  assert.deepEqual(staleFake.documents.get(`notificationDevices/${DEVICE_ID}`), stalePending);
 });

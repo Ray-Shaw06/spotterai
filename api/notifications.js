@@ -137,7 +137,11 @@ export function createNotificationHandler({
 
     if (method === "GET") {
       if (!config.enabled) return succeed(200, { enabled: false });
-      return succeed(200, { enabled: true, publicKey: config.publicKey });
+      return succeed(200, {
+        enabled: true,
+        publicKey: config.publicKey,
+        configurationId: config.configurationId,
+      });
     }
 
     if (!config.enabled) return fail(503, { error: "Service unavailable." }, "configuration");
@@ -161,8 +165,14 @@ export function createNotificationHandler({
 
     if (method === "POST") {
       const body = parseBody(req?.body);
-      if (!body || !hasOwn(body, "subscription") || !hasOwn(body, "preferences")) {
+      if (!body
+        || !hasOwn(body, "configurationId")
+        || !hasOwn(body, "subscription")
+        || !hasOwn(body, "preferences")) {
         return fail(400, { error: "Invalid request." }, "validation");
+      }
+      if (body.configurationId !== config.configurationId) {
+        return fail(409, { error: "Registration unavailable." }, "configuration");
       }
       const subscription = validatePushSubscription(body.subscription);
       const preferences = validatePreferences(body.preferences);
@@ -178,9 +188,11 @@ export function createNotificationHandler({
       const record = {
         ...subscription.value,
         ...preferences.value,
-        enabled: true,
+        enabled: false,
+        registrationPending: true,
+        configurationId: config.configurationId,
         lastWorkoutCompletionDate: null,
-        nextNotificationAt: currentDate,
+        nextNotificationAt: null,
         dailyDeliveryDate: null,
         dailyDeliveryCount: 0,
         lastSentByCategory: {},
@@ -244,14 +256,27 @@ export function createNotificationHandler({
     if (!body) return fail(400, { error: "Invalid request." }, "validation");
     const hasPreferences = hasOwn(body, "preferences");
     const hasCompletionDate = hasOwn(body, "lastWorkoutCompletionDate");
-    if (hasPreferences === hasCompletionDate) {
+    const hasActivation = body.activate === true && hasOwn(body, "activate");
+    if ((hasActivation && (!hasPreferences || hasCompletionDate))
+      || (!hasActivation && hasPreferences === hasCompletionDate)) {
       return fail(400, { error: "Invalid request." }, "validation");
     }
 
     const currentDate = new Date(timestamp(now));
     let patch;
     let response = { ok: true };
-    if (hasPreferences) {
+    if (hasActivation) {
+      const preferences = validatePreferences(body.preferences);
+      if (!preferences.valid) return fail(400, { error: "Invalid request." }, "validation");
+      patch = {
+        ...preferences.value,
+        enabled: true,
+        registrationPending: false,
+        nextNotificationAt: currentDate,
+        updatedAt: currentDate,
+      };
+      response = { ...response, preferences: preferences.value };
+    } else if (hasPreferences) {
       const preferences = validatePreferences(body.preferences);
       if (!preferences.valid) return fail(400, { error: "Invalid request." }, "validation");
       patch = { ...preferences.value, nextNotificationAt: currentDate, updatedAt: currentDate };
@@ -268,10 +293,19 @@ export function createNotificationHandler({
     }
 
     try {
-      await store.update(deviceId, patch, { now: currentDate });
+      await store.update(deviceId, patch, {
+        now: currentDate,
+        ...(hasActivation ? {
+          registrationActivation: true,
+          configurationId: config.configurationId,
+        } : {}),
+      });
     } catch (error) {
       if (error instanceof NotificationLeaseConflictError || error?.name === "NotificationLeaseConflictError") {
         return fail(409, { error: "Request conflict." }, "conflict");
+      }
+      if (error instanceof RegistrationUnavailableError || error?.name === "RegistrationUnavailableError") {
+        return fail(409, { error: "Registration unavailable." }, "conflict");
       }
       return fail(500, { error: "Request failed." }, "storage");
     }

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildFirebaseEmulatorEnvironment,
+  firebaseEmulatorGateExitCode,
   FIREBASE_EMULATOR_PROJECT_ID,
 } from "./firebase-emulator-environment.mjs";
 
@@ -46,14 +47,21 @@ try {
     ], {
       cwd: projectRoot,
       env: childEnv,
-      stdio: "inherit",
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
     });
+
+    if (result.stdout) process.stdout.write(result.stdout);
+    if (result.stderr) process.stderr.write(result.stderr);
 
     if (result.error) {
       console.error("FIREBASE_EMULATOR_GATE_FAILED: the local Firebase CLI could not start.");
       exitCode = 1;
     } else {
-      exitCode = result.status ?? 1;
+      exitCode = firebaseEmulatorGateExitCode(result);
+      if (exitCode !== 0 && result.status === 0) {
+        console.error("FIREBASE_EMULATOR_GATE_FAILED: Firebase exited without running the integration test.");
+      }
     }
   }
 } finally {

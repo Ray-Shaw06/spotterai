@@ -54,3 +54,15 @@ test("the emulator child environment forwards only safe runtime prerequisites", 
     assert.equal(Object.hasOwn(childEnv, key), false, `${key} must not be forwarded`);
   }
 });
+
+test("the emulator gate fails unless the integration process actually starts", async () => {
+  const {
+    FIREBASE_EMULATOR_INTEGRATION_MARKER,
+    firebaseEmulatorGateExitCode,
+  } = await import("../scripts/firebase-emulator-environment.mjs");
+
+  assert.equal(firebaseEmulatorGateExitCode({ error: new Error("spawn"), status: null, stdout: "" }), 1);
+  assert.equal(firebaseEmulatorGateExitCode({ error: null, status: 1, stdout: FIREBASE_EMULATOR_INTEGRATION_MARKER }), 1);
+  assert.equal(firebaseEmulatorGateExitCode({ error: null, status: 0, stdout: "Firebase CLI exited without running tests" }), 1);
+  assert.equal(firebaseEmulatorGateExitCode({ error: null, status: 0, stdout: FIREBASE_EMULATOR_INTEGRATION_MARKER }), 0);
+});

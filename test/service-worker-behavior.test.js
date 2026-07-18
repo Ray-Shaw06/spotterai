@@ -121,25 +121,25 @@ function dispatchFetch(handler, request) {
   return response;
 }
 
-test("a failed v35 boot precache leaves the active v34 cache available and cannot activate", async () => {
+test("a failed v36 boot precache leaves the active v35 cache available and cannot activate", async () => {
   const workingAssets = ["./", "index.html", "style.css", "app.js"];
   const { handlers, skipWaitingCalls, claimCalls, cacheAssets, cacheNames } = harness({
     precacheFailure: "app.js",
-    existingCaches: { "spotterai-v34": workingAssets },
+    existingCaches: { "spotterai-v35": workingAssets },
   });
 
   await assert.rejects(dispatch(handlers.get("install"), {}), /precache failed/);
   assert.equal(skipWaitingCalls(), 0);
   assert.equal(claimCalls(), 0);
-  assert.deepEqual([...cacheAssets("spotterai-v34")].sort(), [...workingAssets].sort());
+  assert.deepEqual([...cacheAssets("spotterai-v35")].sort(), [...workingAssets].sort());
   assert.deepEqual([...cacheAssets(currentCache)], []);
-  assert.deepEqual(cacheNames(), ["spotterai-v34", currentCache]);
+  assert.deepEqual(cacheNames(), ["spotterai-v35", currentCache]);
 });
 
 test("activation supports an offline relaunch for the complete local boot module graph", async () => {
   const modules = bootModuleGraph();
   const { handlers, cacheAssets, cacheNames, claimCalls } = harness({
-    existingCaches: { "spotterai-v34": ["stale.js"] },
+    existingCaches: { "spotterai-v35": ["stale.js"] },
     offline: true,
   });
 
