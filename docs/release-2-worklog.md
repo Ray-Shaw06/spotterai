@@ -12,7 +12,7 @@ AI content.
 | Release branch | `claude/release-2` |
 | Design | `docs/superpowers/specs/2026-07-18-release-2-design.md` |
 | Implementation plan | `docs/superpowers/plans/2026-07-18-release-2.md` |
-| Current phase | Planning complete; Task 1 (session timeline capture) in progress. |
+| Current phase | Tasks 1–4 complete and committed (`3f9cb68` report, `992da7b` pull-up/dip, `c17f09e` recording). Full suite 483/483. Production promotion pending. |
 
 ## Gate status
 
@@ -20,12 +20,12 @@ AI content.
 | --- | --- | --- |
 | Scope approved in conversation | Complete | Owner approved the recorded-session report + pull-up direction on 2026-07-18 |
 | Design + plan written | Complete | Both documents committed on the release branch |
-| Task 1 — session timeline capture | In progress | |
-| Task 2 — post-session report UI | Pending | |
-| Task 3 — pull-up + dip evaluators | Pending | |
-| Task 4 — local video recording + highlights | Pending | |
-| Full automated verification | Pending | |
-| Mobile-width check | Pending | |
+| Task 1 — session timeline capture | Complete | `form-session.js` + 13-test suite; per-rep cue windows keep "N of M reps" arithmetically true |
+| Task 2 — post-session report UI | Complete | `form-report.js` pure HTML builder + `#form-report` card; escaping, adaptive degradation, and arithmetic tested at the shipped markup |
+| Task 3 — pull-up + dip evaluators | Complete | Bilateral pull-up metrics, chin-over-bar proxy, swing cue, dip elbow grammar; 9 new evaluator tests |
+| Task 4 — local video recording + highlights | Complete | mp4-first MediaRecorder on the existing stream; markers verified seeking a real recorded blob in preview (click → currentTime 1.0s) |
+| Full automated verification | Complete | 483/483 (`npm test`) after all four tasks |
+| Mobile-width check | Complete | 390px: no horizontal overflow, report single-column, 44px marker buttons |
 | Production promotion | Pending | |
 | Physical-device video check (iPhone) | Owner-gated | No physical device in this workspace; degraded no-video path makes shipping safe regardless |
 

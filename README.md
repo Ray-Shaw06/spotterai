@@ -286,10 +286,20 @@ code, the same style as `evaluator.js` — turns those landmarks into **joint
 angles**, **counts reps automatically**, and shows **live form cues**.
 
 **Coverage:** form cues for **squat, push-up, lunge, overhead press, biceps curl,
-Romanian deadlift / hinge, and hip thrust**, plus an **"Other" mode** — an
-adaptive rep counter that auto-detects the working joint and counts reps for *any*
-movement (no form cues, because I won't pretend to coach a lift there are no rules
-for).
+pull-up / chin-up, dip, Romanian deadlift / hinge, and hip thrust**, plus an
+**"Other" mode** — an adaptive rep counter that auto-detects the working joint and
+counts reps for *any* movement (no form cues, because I won't pretend to coach a
+lift there are no rules for).
+
+**The set report** ([`form-session.js`](form-session.js) +
+[`form-report.js`](form-report.js), both pure code): every session records its
+pose timeline — per-rep verdicts, which cues fired on which reps, confidence —
+and turns it into a report when you stop: rep-by-rep results, honest
+"N of M reps" flag counts, deterministic tips, and an **on-device video replay
+with tap-to-seek highlight markers** at your best and flagged reps. Built for
+exercises you physically can't watch mid-set — pull-ups being the reason it
+exists. The recording stays in the tab (mp4-first for iOS), is never uploaded,
+and is discarded when you leave or start a new set.
 
 **What makes it more precise:**
 
@@ -306,7 +316,8 @@ for).
 
 It is **100% on-device**: the pose model is lazy-loaded from a free CDN only when
 you start the camera, and **the video never leaves your browser** — no upload, no
-recording, no server call. Honest framing, as everywhere else: a single 2D camera
+server call, and the set recording exists only in the tab that made it. Honest
+framing, as everywhere else: a single 2D camera
 gives *heuristic cues, not a coach or physiotherapist* — it can't see your spine,
 load, or true 3D depth, so it's a mirror, not a judge.
 
