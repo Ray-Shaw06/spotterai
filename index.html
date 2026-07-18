@@ -533,6 +533,16 @@
           </div>
         </div>
 
+        <!-- Dashboard tabs: arrival shows training only; stats and history are
+             one tap away instead of stacked into one overwhelming column. -->
+        <div class="dash-tabs" role="tablist" aria-label="Dashboard sections">
+          <button type="button" class="dash-tab is-active" id="dash-tab-train" role="tab" aria-selected="true" aria-controls="dash-panel-train" data-tab="train">Train</button>
+          <button type="button" class="dash-tab" id="dash-tab-stats" role="tab" aria-selected="false" aria-controls="dash-panel-stats" data-tab="stats">Stats</button>
+          <button type="button" class="dash-tab" id="dash-tab-history" role="tab" aria-selected="false" aria-controls="dash-panel-history" data-tab="history">History</button>
+        </div>
+
+        <div id="dash-panel-train" class="dash-panel" role="tabpanel" aria-labelledby="dash-tab-train">
+
         <!-- Deload / fatigue flag (pure-code heuristic) -->
         <div id="dash-deload" class="deload-flag" hidden></div>
 
@@ -550,14 +560,6 @@
           </form>
           <div id="quicklog-result" class="quicklog__result" hidden></div>
         </div>
-
-        <div class="dash-grid">
-          <!-- Rank card -->
-          <div class="card dash-rankcard">
-            <div id="dash-rank"></div>
-            <div id="dash-stats" class="dash-stats"></div>
-            <button type="button" id="share-progress" class="btn btn--ghost btn--sm dash-share">Share progress card</button>
-          </div>
 
           <!-- Workout session (Hevy-style) -->
           <div class="card dash-card dash-workout-card dash-span">
@@ -643,25 +645,41 @@
             </div>
           </div>
 
-          <!-- This week's volume -->
-          <div class="card dash-card">
-            <h3 class="card-title">This week's volume</h3>
-            <div id="dash-weekly"></div>
-            <p class="dash-hint" id="dash-weekly-meta"></p>
-          </div>
+        </div><!-- /dash-panel-train -->
 
-          <!-- History -->
-          <div class="card dash-card">
-            <h3 class="card-title">History</h3>
-            <ul id="workout-history" class="entry-list workout-list"></ul>
-          </div>
+        <div id="dash-panel-stats" class="dash-panel" role="tabpanel" aria-labelledby="dash-tab-stats" hidden>
+          <div class="dash-grid">
+            <!-- Rank card -->
+            <div class="card dash-rankcard">
+              <div id="dash-rank"></div>
+              <div id="dash-stats" class="dash-stats"></div>
+              <button type="button" id="share-progress" class="btn btn--ghost btn--sm dash-share">Share progress card</button>
+            </div>
 
-          <!-- Achievements -->
-          <div class="card dash-card dash-achievements-card">
-            <h3 class="card-title">Achievements</h3>
-            <div id="dash-achievements" class="badges"></div>
+            <!-- This week's volume -->
+            <div class="card dash-card">
+              <h3 class="card-title">This week's volume</h3>
+              <div id="dash-weekly"></div>
+              <p class="dash-hint" id="dash-weekly-meta"></p>
+            </div>
           </div>
-        </div>
+        </div><!-- /dash-panel-stats -->
+
+        <div id="dash-panel-history" class="dash-panel" role="tabpanel" aria-labelledby="dash-tab-history" hidden>
+          <div class="dash-grid">
+            <!-- History -->
+            <div class="card dash-card">
+              <h3 class="card-title">History</h3>
+              <ul id="workout-history" class="entry-list workout-list"></ul>
+            </div>
+
+            <!-- Achievements -->
+            <div class="card dash-card dash-achievements-card">
+              <h3 class="card-title">Achievements</h3>
+              <div id="dash-achievements" class="badges"></div>
+            </div>
+          </div>
+        </div><!-- /dash-panel-history -->
       </div>
     </section>
 

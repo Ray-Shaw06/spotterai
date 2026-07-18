@@ -219,6 +219,21 @@ function init() {
     }
   });
 
+  // Dashboard tabs (Train / Stats / History)
+  const tablist = document.querySelector(".dash-tabs");
+  tablist?.addEventListener("click", (e) => {
+    const tab = e.target.closest(".dash-tab");
+    if (!tab) return;
+    for (const t of tablist.querySelectorAll(".dash-tab")) {
+      const active = t === tab;
+      t.classList.toggle("is-active", active);
+      t.setAttribute("aria-selected", String(active));
+    }
+    for (const p of document.querySelectorAll(".dash-panel")) {
+      p.hidden = p.id !== `dash-panel-${tab.dataset.tab}`;
+    }
+  });
+
   subscribe(render);
   render();
 }
