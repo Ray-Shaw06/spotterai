@@ -39,6 +39,13 @@ export const TIPS = {
   "It's a hinge, not a squat — sit the hips back": "Push your hips back toward the wall behind you and keep shins near-vertical — the stretch belongs in the hamstrings.",
   // Hip thrust
   "Drive hips higher to lock out": "Finish each rep with a deliberate glute squeeze at the top rather than rushing the next rep.",
+  // Pull-up
+  "Minimize the swing — quiet body": "Squeeze glutes and cross your ankles into a hollow line before pulling — a quiet body puts every rep in the lats.",
+  "Pull higher — chin to the bar": "Drive your elbows down toward your ribs and finish with your chin clearing your hands — a band under one foot builds the top range.",
+  "Almost — chin over the bar": "Pause a beat at your highest point each rep — the last few centimeters come from finishing the pull, not starting it faster.",
+  "Partial rep — aim for full range": "Do fewer, fuller reps — an assisted variation keeps the full range while you build the strength.",
+  // Dip
+  "A little deeper — upper arms to parallel": "Lower with control until your upper arms reach parallel — shorten the set before you shorten the reps.",
   // Depth verdicts
   "Just shy of full depth": "You're close — a brief pause at the bottom usually buys the last few degrees.",
   "Too shallow — bigger range": "Cut the weight or slow the tempo until the full range is yours — partial reps build partial strength.",
