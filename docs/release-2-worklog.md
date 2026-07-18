@@ -12,7 +12,7 @@ AI content.
 | Release branch | `claude/release-2` |
 | Design | `docs/superpowers/specs/2026-07-18-release-2-design.md` |
 | Implementation plan | `docs/superpowers/plans/2026-07-18-release-2.md` |
-| Current phase | Tasks 1–4 complete and committed (`3f9cb68` report, `992da7b` pull-up/dip, `c17f09e` recording). Full suite 483/483. Production promotion pending. |
+| Current phase | Shipped. Merge `ee942fd` live in production; only the owner-gated physical-device video check remains open. |
 
 ## Gate status
 
@@ -26,7 +26,7 @@ AI content.
 | Task 4 — local video recording + highlights | Complete | mp4-first MediaRecorder on the existing stream; markers verified seeking a real recorded blob in preview (click → currentTime 1.0s) |
 | Full automated verification | Complete | 483/483 (`npm test`) after all four tasks |
 | Mobile-width check | Complete | 390px: no horizontal overflow, report single-column, 44px marker buttons |
-| Production promotion | Pending | |
+| Production promotion | Complete | Merge `ee942fd` deployed via GitHub deployment `5500156865` → `success`. Production serves SW `spotterai-v39`, the pull-up/dip options, the `#form-report` container, and `form-session.js` / `form-report.js` (HTTP 200) at `spotterai-flax.vercel.app`. |
 | Physical-device video check (iPhone) | Owner-gated | No physical device in this workspace; degraded no-video path makes shipping safe regardless |
 
 ## Decisions
