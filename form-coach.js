@@ -78,6 +78,9 @@ const el = {
   painMsg: document.getElementById("form-pain-msg"),
   report: document.getElementById("form-report"),
   rec: document.getElementById("form-rec"),
+  angle: document.getElementById("form-angle"),
+  cameraTips: document.getElementById("form-camera-tips"),
+  placeholderText: document.getElementById("form-placeholder-text"),
 };
 
 // Confidence landmarks + thresholds live in form-confidence.js (pure, tested).
@@ -154,6 +157,17 @@ function resetForExercise() {
   smoothers = new Map();
   resetSideSelector(); // fresh side memory so hysteresis doesn't carry over
   if (el.setup) el.setup.textContent = currentExercise.setup;
+  // Each exercise's rules need a specific camera angle — surface it everywhere.
+  const cam = currentExercise.camera;
+  if (cam) {
+    if (el.angle) el.angle.textContent = cam.angle;
+    if (el.cameraTips) {
+      el.cameraTips.innerHTML = cam.tips.map((t) => `<li>${esc(t)}</li>`).join("");
+    }
+    if (el.placeholderText) {
+      el.placeholderText.textContent = `${currentExercise.label}: ${cam.angle.toLowerCase()} view, full body in frame. Best in a well-lit space.`;
+    }
+  }
   resetReadout();
 }
 
@@ -404,6 +418,7 @@ function renderReport(summary) {
   if (!el.report) return;
   el.report.innerHTML = reportHTML(summary, currentExercise.label, tipsFor(summary), {
     adaptive: Boolean(currentExercise.adaptive),
+    angle: currentExercise.camera?.angle,
   });
   el.report.hidden = false;
   // Bring the report into view without yanking focus-visible styling around.
@@ -482,7 +497,10 @@ function loop() {
       }
 
       // Low confidence: refuse strong form advice rather than guess.
-      if (lowConf) cues = [{ level: "warn", text: "Camera angle or visibility is too limited for useful feedback — step fully into frame, side-on." }];
+      if (lowConf) {
+        const angle = currentExercise.camera ? currentExercise.camera.angle.toLowerCase() : "full";
+        cues = [{ level: "warn", text: `Camera angle or visibility is too limited for useful feedback — step fully into frame, ${angle}.` }];
+      }
 
       draw(image, metrics, cues);
       renderReadout(cues, justCompleted, lastRep, lowConf);

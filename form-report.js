@@ -145,9 +145,10 @@ export function reportHTML(summary, exerciseLabel, tips, opts = {}) {
     </div>`
     : "";
 
+  const angleHint = opts.angle ? `A ${String(opts.angle).toLowerCase()}, full-body view helps.` : "A full-body view helps.";
   const lowJudged =
     judgedReps < reps
-      ? `<p class="form-report__note">${reps - judgedReps} rep${reps - judgedReps === 1 ? " was" : "s were"} not judged — camera angle or visibility was too limited. A side-on, full-body view helps.</p>`
+      ? `<p class="form-report__note">${reps - judgedReps} rep${reps - judgedReps === 1 ? " was" : "s were"} not judged — camera angle or visibility was too limited. ${esc(angleHint)}</p>`
       : "";
 
   return `${head}

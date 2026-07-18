@@ -195,6 +195,13 @@ export const EXERCISES = {
   squat: {
     id: "squat", label: "Squat",
     setup: "Stand side-on, full body in frame.",
+    camera: {
+      angle: "Side-on",
+      tips: [
+        "Stand side-on, 2–3 m back — depth and torso lean are judged from the side.",
+        "Hips, knees, and ankles must all stay in frame for the whole rep.",
+      ],
+    },
     rep: { key: "knee", down: T.squat.DOWN, up: T.squat.UP, minRange: T.squat.MIN_RANGE, metric: "min" },
     metrics(image, world) {
       const d = side(image, world);
@@ -224,6 +231,13 @@ export const EXERCISES = {
   pushup: {
     id: "pushup", label: "Push-up",
     setup: "Lie side-on so your whole body is visible.",
+    camera: {
+      angle: "Side-on",
+      tips: [
+        "Camera at floor level, side-on — elbow depth and the hip line need the profile view.",
+        "Shoulders through ankles in frame; a sagging hip can't be seen from the front.",
+      ],
+    },
     rep: { key: "elbow", down: T.pushup.DOWN, up: T.pushup.UP, minRange: T.pushup.MIN_RANGE, metric: "min" },
     metrics(image, world) {
       const d = side(image, world);
@@ -253,6 +267,13 @@ export const EXERCISES = {
   lunge: {
     id: "lunge", label: "Lunge",
     setup: "Side-on. Step into each lunge with control.",
+    camera: {
+      angle: "Side-on",
+      tips: [
+        "Side-on, stepping across the frame (not toward the camera).",
+        "Both legs and your torso in frame — front-knee depth drives the count.",
+      ],
+    },
     rep: { key: "frontKnee", down: T.lunge.DOWN, up: T.lunge.UP, minRange: T.lunge.MIN_RANGE, metric: "min" },
     metrics(image, world) {
       const kneeL = angleAt(world[LM.hipL], world[LM.kneeL], world[LM.ankleL]);
@@ -283,7 +304,14 @@ export const EXERCISES = {
 
   ohp: {
     id: "ohp", label: "Overhead press",
-    setup: "Face the camera or side-on; press fully overhead.",
+    setup: "Face the camera; press fully overhead.",
+    camera: {
+      angle: "Front-on",
+      tips: [
+        "Face the camera — lockout is judged by your wrists finishing above your shoulders.",
+        "Leave headroom in frame so your hands stay visible at the top.",
+      ],
+    },
     rep: { key: "elbow", down: T.ohp.DOWN, up: T.ohp.UP, minRange: T.ohp.MIN_RANGE, metric: "min" },
     metrics(image, world) {
       const d = side(image, world);
@@ -310,6 +338,13 @@ export const EXERCISES = {
   curl: {
     id: "curl", label: "Biceps curl",
     setup: "Side-on. Keep your upper arm still.",
+    camera: {
+      angle: "Side-on",
+      tips: [
+        "Side-on — elbow swing (the cheat) is only visible from the profile.",
+        "Shoulder, elbow, and wrist of the near arm clearly in frame.",
+      ],
+    },
     rep: { key: "elbow", down: T.curl.DOWN, up: T.curl.UP, minRange: T.curl.MIN_RANGE, metric: "min" },
     metrics(image, world) {
       const d = side(image, world);
@@ -341,6 +376,13 @@ export const EXERCISES = {
   rdl: {
     id: "rdl", label: "Romanian deadlift / hinge",
     setup: "Side-on. Hinge at the hips, shins near-vertical.",
+    camera: {
+      angle: "Side-on",
+      tips: [
+        "Side-on — the hip hinge and shin angle only read from the profile.",
+        "Shoulders, hips, and knees in frame through the whole hinge.",
+      ],
+    },
     rep: { key: "hip", down: T.rdl.DOWN, up: T.rdl.UP, minRange: T.rdl.MIN_RANGE, metric: "min" },
     metrics(image, world) {
       const d = side(image, world);
@@ -367,6 +409,13 @@ export const EXERCISES = {
   hipthrust: {
     id: "hipthrust", label: "Glute bridge / hip thrust",
     setup: "Side-on, lying down. Drive hips to full lockout.",
+    camera: {
+      angle: "Side-on",
+      tips: [
+        "Camera low and side-on — hip lockout is judged from the profile.",
+        "Shoulders, hips, and knees visible at the top of every rep.",
+      ],
+    },
     rep: { key: "hip", down: T.hipthrust.DOWN, up: T.hipthrust.UP, minRange: T.hipthrust.MIN_RANGE, metric: "max" },
     metrics(image, world) {
       const d = side(image, world);
@@ -399,6 +448,13 @@ export const EXERCISES = {
   pullup: {
     id: "pullup", label: "Pull-up / chin-up",
     setup: "Face the camera, ~2–3 m back, whole body and hands in frame.",
+    camera: {
+      angle: "Front-on",
+      tips: [
+        "Face the camera (45° is fine) — chin-over-bar tracking needs your face visible, so a from-behind angle won't work.",
+        "Whole body plus your hands on the bar in frame; do the set, read the report after.",
+      ],
+    },
     rep: { key: "elbow", down: T.pullup.DOWN, up: T.pullup.UP, minRange: T.pullup.MIN_RANGE, metric: "min" },
     metrics(image, world) {
       const eL = angleAt(world[LM.shoulderL], world[LM.elbowL], world[LM.wristL]);
@@ -440,6 +496,13 @@ export const EXERCISES = {
   dip: {
     id: "dip", label: "Dip",
     setup: "Side-on or 45°, upper body clearly in frame.",
+    camera: {
+      angle: "Side-on or 45°",
+      tips: [
+        "Side-on or 45° — elbow depth reads best from the profile.",
+        "Shoulder, elbow, and wrist clearly in frame for the whole dip.",
+      ],
+    },
     rep: { key: "elbow", down: T.dip.DOWN, up: T.dip.UP, minRange: T.dip.MIN_RANGE, metric: "min" },
     metrics(image, world) {
       const d = side(image, world);
@@ -468,6 +531,13 @@ export const EXERCISES = {
     id: "general", label: "Other — auto rep counter",
     setup: "Works for any rep-based movement. Do a few reps to calibrate.",
     adaptive: true,
+    camera: {
+      angle: "Any angle",
+      tips: [
+        "Any angle with your full body in frame — it auto-detects the working joint.",
+        "Do a few full reps to calibrate before trusting the count.",
+      ],
+    },
     metrics(image, world) {
       const d = side(image, world);
       return {

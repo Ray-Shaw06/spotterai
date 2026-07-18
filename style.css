@@ -3802,6 +3802,32 @@ table {
 }
 
 /* Side readout panel */
+/* Recommended camera angle for the selected exercise (next to the picker). */
+.form-pick {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.form-pick .form-select {
+  flex: 1;
+  min-width: 0;
+}
+.form-angle {
+  order: 1; /* after the select */
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--accent);
+  background: var(--accent-soft, rgba(138, 109, 255, 0.12));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: var(--r-full);
+}
+
 .form-side {
   display: flex;
   flex-direction: column;
@@ -3857,6 +3883,10 @@ table {
   font-size: 0.78rem;
   color: var(--text-faint);
   border-top: 1px solid var(--border-soft);
+}
+.form-side__setup--constant {
+  color: var(--text-faint);
+  font-size: 0.78rem;
 }
 .form-lastrep {
   display: flex;

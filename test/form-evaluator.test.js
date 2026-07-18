@@ -179,3 +179,26 @@ test("dip reliability follows the arm joints like the push-up", () => {
   resetSideSelector();
   assert.equal(EXERCISES.dip.metrics(frame({ 16: 0.15 }), frame()).reliable, false);
 });
+
+// ---- per-exercise camera guidance -----------------------------------------
+
+test("every exercise declares its camera angle and setup tips", () => {
+  for (const ex of Object.values(EXERCISES)) {
+    assert.ok(ex.camera, `${ex.id} needs a camera block`);
+    assert.ok(typeof ex.camera.angle === "string" && ex.camera.angle.length, `${ex.id} needs an angle label`);
+    assert.ok(Array.isArray(ex.camera.tips) && ex.camera.tips.length >= 2, `${ex.id} needs at least two tips`);
+  }
+});
+
+test("angles match what each exercise's rules actually measure", () => {
+  // Side-view rules (depth / torso / hip-line) → side-on.
+  for (const id of ["squat", "pushup", "lunge", "curl", "rdl", "hipthrust"]) {
+    assert.match(EXERCISES[id].camera.angle, /^Side-on/, id);
+  }
+  // Wrist-above-shoulder lockout and chin-over-bar need the front view.
+  assert.equal(EXERCISES.ohp.camera.angle, "Front-on");
+  assert.equal(EXERCISES.pullup.camera.angle, "Front-on");
+  // The chin proxy uses the nose — a from-behind angle can't work; say so.
+  assert.match(EXERCISES.pullup.camera.tips.join(" "), /behind|face visible/i);
+  assert.equal(EXERCISES.general.camera.angle, "Any angle");
+});
