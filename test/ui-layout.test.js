@@ -102,7 +102,7 @@ test("History uses a centered dedicated empty row", () => {
 });
 
 test("achievement tiles have readable aligned internal rhythm", () => {
-  assert.match(rule(".badges"), /grid-auto-rows:\s*1fr/);
+  assert.match(rule(".badges__grid"), /grid-auto-rows:\s*1fr/);
 
   const badge = rule(".badge");
   assert.match(badge, /gap:\s*var\(--space-2\)/);
@@ -119,7 +119,7 @@ test("achievement tiles have readable aligned internal rhythm", () => {
 test("achievement columns and Nutrition targets adapt on phones", () => {
   assertInMedia(
     "(max-width: 480px)",
-    /\.badges\s*\{[^}]*minmax\(140px,\s*1fr\)/
+    /\.badges__grid\s*\{[^}]*minmax\(140px,\s*1fr\)/
   );
   assertInMedia(
     "(max-width: 600px)",

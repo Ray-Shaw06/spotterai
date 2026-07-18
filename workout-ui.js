@@ -634,9 +634,14 @@ function sessionFromPlanDay(day, source = "dashboard") {
 // ----------------------------------------------------------------------------
 // History
 // ----------------------------------------------------------------------------
+let historyExpanded = false;
+const HISTORY_COLLAPSED = 6;
+const HISTORY_MAX = 20;
 function renderHistory() {
   if (!el.history) return;
-  const workouts = [...getState().workouts].reverse().slice(0, 20);
+  const all = [...getState().workouts].reverse().slice(0, HISTORY_MAX);
+  const workouts = historyExpanded ? all : all.slice(0, HISTORY_COLLAPSED);
+  const hiddenCount = all.length - workouts.length;
   const u = unit();
   el.history.innerHTML = workouts.length
     ? workouts
@@ -666,6 +671,15 @@ function renderHistory() {
         })
         .join("")
     : `<li class="workout-empty muted">No workouts yet. Start one above.</li>`;
+  // Collapsed by default; one toggle reveals the rest. Info intact, wall gone.
+  if (hiddenCount > 0 || historyExpanded) {
+    el.history.insertAdjacentHTML(
+      "beforeend",
+      `<li class="hist-more"><button type="button" class="btn-link" data-act="toggle-history">${
+        historyExpanded ? "Show recent only" : `Show ${hiddenCount} more workout${hiddenCount === 1 ? "" : "s"}`
+      }</button></li>`
+    );
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -874,6 +888,11 @@ function init() {
 
   // History (delegated)
   el.history?.addEventListener("click", (e) => {
+    if (e.target.closest('[data-act="toggle-history"]')) {
+      historyExpanded = !historyExpanded;
+      renderHistory();
+      return;
+    }
     const li = e.target.closest(".hist");
     if (!li) return;
     if (e.target.closest('[data-act="toggle-hist"]')) {

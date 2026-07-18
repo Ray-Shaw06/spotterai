@@ -64,7 +64,7 @@ test("icon source is the purple SpotterAI shield and barbell, not the red-ring p
 });
 
 test("offline shell precaches every current install asset under a fresh cache", () => {
-  assert.match(serviceWorker, /const CACHE = "spotterai-v36"/);
+  assert.match(serviceWorker, /const CACHE = "spotterai-v37"/);
   for (const path of ["manifest.json", "notifications.js", "notification-client.js", "notification-ui.js", "reminders.js", ...Object.values(ICONS)]) {
     assert.ok(serviceWorker.includes(`"${path}"`), `${path} must be precached`);
   }

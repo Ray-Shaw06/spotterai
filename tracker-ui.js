@@ -82,7 +82,6 @@ function renderRank(s) {
     <div class="rank-meta">
       <div class="rank-meta__top">
         <span class="rank-xp">${s.totalXP.toLocaleString()} XP</span>
-        <span class="rank-streak" title="Day streak">${icon("flame")} ${s.streakDays}-day streak</span>
       </div>
       <div class="rank-bar"><span style="width:${(progress * 100).toFixed(1)}%; background:${tier.color}"></span></div>
       <p class="rank-next">${next ? `${xpForNext.toLocaleString()} XP to <strong>${esc(next.name)}</strong>` : "Top rank reached: Champion"}</p>
@@ -158,18 +157,29 @@ function renderDeload() {
     <button type="button" class="deload-flag__dismiss" data-act="deload-dismiss" aria-label="Dismiss">×</button>`;
 }
 
+let achievementsExpanded = false;
 function renderAchievements(s) {
   if (!els.achievements) return;
-  els.achievements.innerHTML = s.achievements
-    .map(
-      (a) => `<div class="badge ${a.unlocked ? "is-unlocked" : "is-locked"}" title="${esc(a.desc)}">
+  const badge = (a) => `<div class="badge ${a.unlocked ? "is-unlocked" : "is-locked"}" title="${esc(a.desc)}">
         <span class="badge__icon">${a.unlocked ? icon(a.icon) : lockIcon()}</span>
         <span class="badge__name">${esc(a.name)}</span>
         <span class="badge__desc">${esc(a.desc)}</span>
         <span class="badge__xp">+${a.xp} XP</span>
-      </div>`
-    )
-    .join("");
+      </div>`;
+  const unlocked = s.achievements.filter((a) => a.unlocked);
+  const locked = s.achievements.filter((a) => !a.unlocked);
+  // Collapsed: earned badges only, locked ones behind one toggle. Nothing lost,
+  // just not a wall of padlocks by default.
+  const shown = achievementsExpanded ? s.achievements : unlocked;
+  const empty = !unlocked.length && !achievementsExpanded
+    ? `<p class="muted badges__empty">No badges yet — your first workout unlocks one.</p>`
+    : "";
+  const toggle = locked.length
+    ? `<button type="button" class="btn-link badges__toggle" data-act="toggle-badges">${
+        achievementsExpanded ? "Hide locked badges" : `Show ${locked.length} locked badge${locked.length === 1 ? "" : "s"}`
+      }</button>`
+    : "";
+  els.achievements.innerHTML = `<div class="badges__grid">${shown.map(badge).join("")}</div>${empty}${toggle}`;
 }
 function lockIcon() {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
@@ -198,6 +208,14 @@ function init() {
     if (e.target.closest('[data-act="deload-dismiss"]')) {
       deloadDismissed = true;
       els.deload.hidden = true;
+    }
+  });
+
+  // Achievements locked-badges toggle
+  els.achievements?.addEventListener("click", (e) => {
+    if (e.target.closest('[data-act="toggle-badges"]')) {
+      achievementsExpanded = !achievementsExpanded;
+      renderAchievements(deriveStats());
     }
   });
 

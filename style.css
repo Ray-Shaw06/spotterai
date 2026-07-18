@@ -4471,12 +4471,21 @@ table {
 .btn-link-danger:hover { color: var(--danger); }
 
 /* Achievements */
-.badges {
+.badges__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   grid-auto-rows: 1fr;
   gap: var(--space-3);
 }
+.badges__toggle,
+.hist-more .btn-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: var(--space-2);
+}
+.badges__empty { margin: 0; }
+.hist-more { display: flex; justify-content: center; }
 .badge {
   display: flex;
   flex-direction: column;
@@ -4570,7 +4579,7 @@ table {
 }
 
 @media (max-width: 480px) {
-  .badges { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .badges__grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 }
 
 /* ----------------------------------------------------------------------------
