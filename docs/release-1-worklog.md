@@ -381,3 +381,13 @@ Each implementation, review, verification, or deployment entry must record:
 ## Release sign-off
 
 Release sign-off remains empty until all gates pass. Final sign-off must include the release commit, Vercel deployment identifier, Firebase function deployment identifier when enabled, complete automated test results, real-device notification evidence, unresolved known limitations, and the owner's production-promotion approval.
+
+### 2026-07-18 — Release 1 production sign-off (notifications dormant)
+
+- Owner approval: The owner verified the onboarding unit toggle behavior and explicitly approved merging `codex/release-1` to `main` for production promotion.
+- Release commit: merge commit `b20a02b` on `main` (branch head `0f3838d`, remediation `f32072a`). Merge conflicts were limited to the three add/add release documents from the original baseline cherry-pick and were resolved to the branch versions.
+- Vercel production deployment: GitHub deployment `5498504600` (Production) reached `success`; deployment URL `spotterai-mb5m65du2-rshaw06.vercel.app`; canonical domain `spotterai-flax.vercel.app`. Shell HTTP 200, service worker serving cache `spotterai-v36`, `GET /api/notifications` HTTP 200 `{"enabled":false}`, landing page rendered with zero browser console errors.
+- Automated tests: full suite 445/445 on the merged `main` tree after installing the root and `functions/` dependencies.
+- Firebase function deployment: none — the notification feature ships dormant by owner decision. Firebase Blaze billing, production VAPID secrets, WAF publication, real-device notification evidence, and dispatcher deployment are deferred until funded and remain the only open items.
+- Known limitations: scheduled Web Push reminders are inert until the deferred gates complete; the deferred Minor maintenance note on externally corrupted parked data missing `updatedAt` stands.
+- This entry constitutes the owner's production-promotion sign-off for the free Release 1 feature set.
