@@ -38,6 +38,7 @@ AI content.
 | 2026-07-18 | mp4-first MediaRecorder mime selection, webm fallback, timeline-only degraded path. | iOS Safari prefers mp4; the report must never fail because recording did. |
 | 2026-07-18 | Pull-up cues use bilateral joint averages and skip torso-lean rules. | Pull-ups are filmed front-on; side-on heuristics would fire nonsense cues. |
 | 2026-07-18 | Bench press deferred. | Lying posture defeats the current camera heuristics; needs its own design. |
+| 2026-07-18 | Camera-angle guidance is per exercise, driven by what each rule set measures. | Owner feedback: blanket "side-on" instructions were wrong for front-view lifts. Pull-up stays front-on (not from behind, despite gym convention) because chin-over-bar tracking needs the nose landmark; the UI explains this. Follow-up commit `d2463fe`, SW v40, deployment `5500531478` → success. |
 
 ## Verification evidence
 
