@@ -14,7 +14,7 @@
  * Bump CACHE when shipping changes so old caches are cleaned on activate.
  */
 
-const CACHE = "spotterai-v38";
+const CACHE = "spotterai-v39";
 // Explicit local module graph rooted at every <script type="module"> in index.html.
 // test/service-worker-behavior.test.js derives the graph independently so a new
 // boot import cannot be shipped without being added here.
@@ -44,6 +44,8 @@ const BOOT_MODULES = [
   "form-coach.js",
   "form-confidence.js",
   "form-evaluator.js",
+  "form-report.js",
+  "form-session.js",
   "gamify.js",
   "library-ui.js",
   "measurements.js",

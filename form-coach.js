@@ -20,6 +20,8 @@
 
 import { EXERCISES, RepCounter, AdaptiveRepCounter, OneEuroFilter, resetSideSelector, chooseModelTier } from "./form-evaluator.js";
 import { frameConfidence, confidenceLevel, canJudge } from "./form-confidence.js";
+import { SessionRecorder, tipsFor } from "./form-session.js";
+import { reportHTML } from "./form-report.js";
 
 // Pinned MediaPipe Tasks Vision build + a free, hosted pose model.
 const TASKS_VISION_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
@@ -74,6 +76,7 @@ const el = {
   confLabel: document.getElementById("form-confidence-label"),
   pain: document.getElementById("form-pain"),
   painMsg: document.getElementById("form-pain-msg"),
+  report: document.getElementById("form-report"),
 };
 
 // Confidence landmarks + thresholds live in form-confidence.js (pure, tested).
@@ -90,6 +93,7 @@ let rafId = null;
 let counter = null;
 let currentExercise = EXERCISES.squat;
 let smoothers = new Map(); // metric key -> OneEuroFilter
+let session = null; // SessionRecorder while the camera runs
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // ----------------------------------------------------------------------------
@@ -233,6 +237,9 @@ async function start() {
   if (el.placeholder) el.placeholder.hidden = true;
   if (el.overlay) el.overlay.hidden = false;
   if (el.select) el.select.disabled = true;
+  hideReport(); // a new set replaces the previous report
+  session = new SessionRecorder(currentExercise.id);
+  session.start(performance.now());
   setStatus("Camera active — start your set.", "good");
   loop();
 }
@@ -254,13 +261,42 @@ function stop() {
   if (el.placeholder) el.placeholder.hidden = false;
   if (el.select) el.select.disabled = false;
   if (el.conf) el.conf.hidden = true;
-  setStatus("Camera stopped.");
+
+  // Turn the recorded timeline into the post-set report (≥1 rep only).
+  if (session && counter && counter.reps > 0) {
+    renderReport(session.summary());
+    setStatus("Set finished — report below.", "good");
+  } else {
+    setStatus("Camera stopped.");
+  }
+  session = null;
 }
 
 function resetReadout() {
   if (el.repCount) el.repCount.textContent = "0";
   if (el.liveCues) el.liveCues.innerHTML = "";
   if (el.lastRep) el.lastRep.innerHTML = "";
+}
+
+// ----------------------------------------------------------------------------
+// Post-set report
+// ----------------------------------------------------------------------------
+
+function hideReport() {
+  if (el.report) {
+    el.report.hidden = true;
+    el.report.innerHTML = "";
+  }
+}
+
+function renderReport(summary) {
+  if (!el.report) return;
+  el.report.innerHTML = reportHTML(summary, currentExercise.label, tipsFor(summary), {
+    adaptive: Boolean(currentExercise.adaptive),
+  });
+  el.report.hidden = false;
+  // Bring the report into view without yanking focus-visible styling around.
+  el.report.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "nearest" });
 }
 
 function updateConfidence(conf) {
@@ -307,6 +343,9 @@ function loop() {
       let justCompleted = false;
       let lastRep = null;
 
+      const lowConf = !canJudge(conf);
+      if (session) session.recordConfidence(conf);
+
       if (currentExercise.adaptive) {
         const r = counter.update(metrics, t);
         justCompleted = r.justCompleted;
@@ -318,10 +357,20 @@ function loop() {
         const upd = counter.update(metrics, t);
         justCompleted = upd.justCompleted;
         lastRep = counter.lastRep;
+        // Findings only count from frames confident enough to judge.
+        if (session && !lowConf) session.recordCues(cues);
+      }
+
+      if (session && justCompleted) {
+        session.recordRep({
+          tMs: t,
+          rep: counter.reps,
+          verdict: lastRep ? lastRep.depth : null,
+          judged: !lowConf && !currentExercise.adaptive && !!lastRep,
+        });
       }
 
       // Low confidence: refuse strong form advice rather than guess.
-      const lowConf = !canJudge(conf);
       if (lowConf) cues = [{ level: "warn", text: "Camera angle or visibility is too limited for useful feedback — step fully into frame, side-on." }];
 
       draw(image, metrics, cues);
