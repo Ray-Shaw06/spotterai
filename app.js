@@ -19,7 +19,8 @@ import { screenRequest, GENERATOR_BOUNDARY } from "./safety-boundaries.js";
 import { ruleForCheck } from "./rule-explanations.js";
 import { planConfidence } from "./trust.js";
 import { setPlan, store } from "./store.js";
-import { getContext as getTrackerContext } from "./tracker-store.js";
+import { getContext as getTrackerContext, buildAdaptContext } from "./tracker-store.js";
+import { adaptPlan } from "./adapt-engine.js";
 import { swapExercise, removeExercise, addExercise } from "./plan-edit.js";
 import { suggestAlternatives } from "./exercise-data.js";
 import { searchExercises } from "./exercises.js";
@@ -606,13 +607,13 @@ function renderAdaptChanges(summary, changes) {
   adaptChanges.hidden = false;
 }
 
-async function adapt() {
-  const tracker = getTrackerContext();
-  if (!tracker) {
+function adapt() {
+  if (!store.plan) return;
+  const context = buildAdaptContext(store.plan);
+  if (!context) {
     updateAdaptHint();
     return;
   }
-  if (!store.plan) return;
 
   adaptBtn.disabled = true;
   adaptBtn.classList.add("is-loading");
@@ -621,33 +622,19 @@ async function adapt() {
   if (adaptHint) adaptHint.hidden = true;
 
   try {
-    const res = await fetch("api/adapt", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan: store.plan, tracker, inputs: store.inputs }),
-    });
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      const msg =
-        res.status === 429
-          ? "Rate-limited right now (free-tier limits). Give it a moment and try again."
-          : res.status === 503
-          ? "The AI's briefly overloaded. Give it a few seconds and try again."
-          : data.error || "Couldn't adapt the plan just now. Please try again shortly.";
-      showAdaptError(msg);
+    // Fully offline + deterministic: same evaluator re-audits every change.
+    const { plan, changes, summary, adapted } = adaptPlan(store.plan, context, store.inputs);
+    if (!adapted) {
+      showAdaptError("Your plan already matches your recent training — nothing to change yet. Keep logging and try again in a week.");
       return;
     }
-
-    const data = await res.json();
-    const adapted = data.plan;
     // Replace the current plan (persist + let chat/workout see it), re-audit,
     // re-render, then surface what changed and why.
-    publishPlan(adapted, store.inputs);
-    renderResults(adapted, store.inputs, false);
-    renderAdaptChanges(data.summary, data.changes);
+    publishPlan(plan, store.inputs);
+    renderResults(plan, store.inputs, false);
+    renderAdaptChanges(summary, changes);
   } catch {
-    showAdaptError("Couldn't reach the adapt service. It needs the live backend (deployed, or `vercel dev`), same as plan generation.");
+    showAdaptError("Couldn't adapt the plan just now. Please try again.");
   } finally {
     adaptBtn.classList.remove("is-loading");
     adaptBtn.textContent = label;

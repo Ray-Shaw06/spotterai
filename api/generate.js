@@ -21,7 +21,7 @@
 // Model name + endpoint live in one shared place (lib/gemini.js) so both
 // serverless functions stay in sync. Change the model there.
 import { callGemini as callLLM } from "../lib/gemini.js";
-// The plan schema + parse/validate/normalize helpers are shared with /api/adapt.
+// The plan schema + parse/validate/normalize helpers are shared with the client-side adapt engine.
 import { SCHEMA_HINT, clampNumber, extractJson, isValidPlan, normalizePlan } from "../lib/plan.js";
 
 // How many extra times we re-ask Gemini if it returns unparseable JSON.

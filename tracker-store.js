@@ -559,6 +559,63 @@ export function deloadCheck() {
   return deloadFromWeeklyVolume(lastNWeeksVolume(6));
 }
 
+/** Top working set per logged session of one exercise (oldest→newest). */
+function topSetHistory(name) {
+  const key = String(name || "").toLowerCase();
+  const out = [];
+  for (const w of state.workouts) {
+    const ex = (w.exercises || []).find((e) => String(e.name).toLowerCase() === key);
+    if (!ex) continue;
+    const sets = setsOf(ex).filter(setHasWork);
+    if (!sets.length) continue;
+    // Heaviest set; ties broken by more reps, so bodyweight (weight 0) still ranks by reps.
+    const top = sets.reduce((b, s) => {
+      if (s.weight > b.weight) return s;
+      if (s.weight === b.weight && s.reps > b.reps) return s;
+      return b;
+    }, sets[0]);
+    out.push({ date: w.date, weight: top.weight, reps: top.reps });
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Structured context for the deterministic adapt engine (adapt-engine.js).
+ * Everything the engine needs, as plain data — no display strings. Returns null
+ * when there's nothing logged. Only exercises that appear in BOTH the plan and
+ * the log get per-exercise history.
+ */
+export function buildAdaptContext(plan) {
+  const ctx = getContext();
+  if (!ctx) return null;
+
+  const wanted = new Set();
+  for (const d of plan?.days || []) for (const e of d.exercises || []) wanted.add(String(e.name).toLowerCase());
+
+  const exercises = {};
+  for (const name of wanted) {
+    const hist = topSetHistory(name);
+    if (!hist.length) continue;
+    const last = hist[hist.length - 1];
+    exercises[name] = {
+      sessions: hist.length,
+      latest: { weight: last.weight, reps: last.reps },
+      recentTopReps: [...hist].reverse().map((h) => h.reps), // newest first
+    };
+  }
+
+  return {
+    workoutsLogged: ctx.workoutsLogged,
+    thisWeek: ctx.thisWeek,
+    weeklySessions: ctx.last8WeeksSessions,
+    weeklyVolume: lastNWeeksVolume(6),
+    activeLimitations: ctx.activeLimitations,
+    recentPain: ctx.recentPain,
+    unit: state.unit,
+    exercises,
+  };
+}
+
 export function addCustomFood(food = {}) {
   const n = String(food.name || "").trim();
   if (!n || state.customFoods.some((f) => f.name.toLowerCase() === n.toLowerCase())) return;
