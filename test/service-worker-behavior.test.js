@@ -180,40 +180,13 @@ test("activation supports an offline relaunch for the complete local boot module
   }), undefined);
 });
 
-test("push handler falls back for malformed JSON and fixes every branded option", async () => {
-  const { handlers, shown } = harness();
-  await dispatch(handlers.get("push"), {
-    data: { json: () => { throw new Error("malformed"); } },
-  });
-
-  assert.deepEqual(structuredClone(shown), [["SpotterAI reminder", {
-    body: "Your training plan is ready when you are.",
-    icon: "/icons/spotterai-192.png",
-    tag: "spotterai-workout",
-    renotify: false,
-    data: { url: "/#/today", category: "workout" },
-  }]]);
+test("the service worker registers no push handler (remote Web Push is retired)", () => {
+  const { handlers } = harness();
+  assert.equal(handlers.has("push"), false);
+  assert.doesNotMatch(source, /addEventListener\(\s*["']push["']/);
 });
 
-test("push handler bounds text and allow-lists category and payload URL", async () => {
-  const { handlers, shown } = harness();
-  const payloads = [
-    { title: "x".repeat(91), body: "y".repeat(241), category: "private", url: "https://evil.example/#/today" },
-    { title: "Workout", body: "Ready", category: "recovery", url: "https://spotter.example/#/today" },
-  ];
-  for (const payload of payloads) {
-    await dispatch(handlers.get("push"), { data: { json: () => payload } });
-  }
-
-  assert.equal(shown[0][0], "SpotterAI reminder");
-  assert.equal(shown[0][1].body, "Your training plan is ready when you are.");
-  assert.deepEqual(structuredClone(shown[0][1].data), { url: "/#/today", category: "workout" });
-  assert.equal(shown[1][0], "Workout");
-  assert.deepEqual(structuredClone(shown[1][1].data), { url: "/#/today", category: "recovery" });
-  assert.equal(shown[1][1].tag, "spotterai-recovery");
-});
-
-test("notification click navigates and focuses only an existing same-origin client", async () => {
+test("notification click navigates and focuses only an existing same-origin client, ignoring any payload URL", async () => {
   const actions = [];
   const windows = [
     { url: "https://evil.example/", navigate: async () => actions.push("evil-navigate"), focus: async () => actions.push("evil-focus") },
@@ -221,20 +194,21 @@ test("notification click navigates and focuses only an existing same-origin clie
   ];
   const { handlers, opened } = harness({ windows });
   let closed = false;
+  // A payload URL must be completely ignored — the destination is fixed.
   await dispatch(handlers.get("notificationclick"), {
-    notification: { data: { category: "streak", url: "https://evil.example/" }, close: () => { closed = true; } },
+    notification: { data: { kind: "rest", url: "https://evil.example/" }, close: () => { closed = true; } },
   });
 
   assert.equal(closed, true);
-  assert.deepEqual(actions, [["navigate", "https://spotter.example/?notification=streak#/today"], "focus"]);
+  assert.deepEqual(actions, [["navigate", "https://spotter.example/#/today"], "focus"]);
   assert.deepEqual(opened, []);
 });
 
 test("notification click opens the canonical same-origin Today URL when no client is reusable", async () => {
   const { handlers, opened } = harness({ windows: [] });
   await dispatch(handlers.get("notificationclick"), {
-    notification: { data: { category: "unknown", url: "javascript:alert(1)" }, close: () => {} },
+    notification: { data: { url: "javascript:alert(1)" }, close: () => {} },
   });
 
-  assert.deepEqual(opened, ["https://spotter.example/?notification=workout#/today"]);
+  assert.deepEqual(opened, ["https://spotter.example/#/today"]);
 });

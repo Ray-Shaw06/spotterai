@@ -47,13 +47,15 @@ test("decorative inline SVGs are hidden from assistive tech where they're not la
   assert.ok((html.match(/aria-hidden="true"/g) || []).length >= 10);
 });
 
-test("notification preference controls expose labels and announced status states", () => {
-  assert.match(html, /id="notification-offer"[^>]*hidden/);
-  assert.match(html, /id="account-notifications"/);
-  assert.match(html, /id="notification-offer-status"[^>]*role="status"/);
-  assert.match(html, /id="notification-offer-error"[^>]*role="alert"/);
-  assert.match(html, /id="account-notification-status"[^>]*role="status"/);
-  assert.match(html, /id="account-notification-error"[^>]*role="alert"/);
+test("calendar export and workout-alert controls expose labels and announced status states", () => {
+  // Plan-results calendar export dialog.
+  assert.match(html, /id="calendar-export-dialog"[^>]*hidden/);
+  assert.match(html, /id="calendar-export-error"[^>]*role="alert"/);
+  assert.match(html, /<label class="field">\s*<span>Start date<\/span>/);
+  // Account local rest-timer alert control.
+  assert.match(html, /id="account-workout-alerts"/);
+  assert.match(html, /id="rest-alerts-toggle"[^>]*role="switch"/);
+  assert.match(html, /id="rest-alerts-status"[^>]*role="status"/);
 });
 
 test("onboarding choice buttons expose selection and unit rerenders restore focus", () => {

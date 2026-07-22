@@ -14,7 +14,7 @@
  * Bump CACHE when shipping changes so old caches are cleaned on activate.
  */
 
-const CACHE = "spotterai-v40";
+const CACHE = "spotterai-v41";
 // Explicit local module graph rooted at every <script type="module"> in index.html.
 // test/service-worker-behavior.test.js derives the graph independently so a new
 // boot import cannot be shipped without being added here.
@@ -25,6 +25,7 @@ const BOOT_MODULES = [
   "anim-gate.js",
   "app.js",
   "auth-ui.js",
+  "calendar-export.js",
   "charts.js",
   "chat-actions.js",
   "chat-guard.js",
@@ -50,10 +51,6 @@ const BOOT_MODULES = [
   "library-ui.js",
   "measurements.js",
   "movement-cues.js",
-  "notification-client.js",
-  "notification-guidance.js",
-  "notification-ui.js",
-  "notifications.js",
   "nutrition-safety.js",
   "nutrition-ui.js",
   "onboarding-ui.js",
@@ -80,6 +77,7 @@ const BOOT_MODULES = [
   "tracker-store.js",
   "tracker-ui.js",
   "trust.js",
+  "workout-alerts.js",
   "workout-summary.js",
   "workout-ui.js",
 ];
@@ -156,61 +154,16 @@ self.addEventListener("fetch", (event) => {
   // Cross-origin (fonts, CDNs) → default network handling.
 });
 
-const NOTIFICATION_CATEGORIES = new Set(["workout", "follow_up", "streak", "recovery"]);
-const FALLBACK_NOTIFICATION = Object.freeze({
-  title: "SpotterAI reminder",
-  body: "Your training plan is ready when you are.",
-});
-
-function safeText(value, fallback, maxLength) {
-  if (typeof value !== "string") return fallback;
-  const text = value.trim();
-  if (!text || text.length > maxLength || /[\u0000-\u001f\u007f]/.test(text)) return fallback;
-  return text;
-}
-
-function safeCategory(value) {
-  return NOTIFICATION_CATEGORIES.has(value) ? value : "workout";
-}
-
-function safeTodayUrl(value) {
-  if (typeof value !== "string" || value.length > 160) return "/#/today";
-  try {
-    const url = new URL(value, self.location.origin);
-    if (url.origin === self.location.origin && url.pathname === "/" && url.hash === "#/today" && !url.username && !url.password) {
-      return "/#/today";
-    }
-  } catch {}
-  return "/#/today";
-}
-
-self.addEventListener("push", (event) => {
-  event.waitUntil((async () => {
-    let payload = {};
-    try {
-      payload = event.data ? event.data.json() : {};
-      if (!payload || typeof payload !== "object" || Array.isArray(payload)) payload = {};
-    } catch {
-      payload = {};
-    }
-    const category = safeCategory(payload.category);
-    const title = safeText(payload.title, FALLBACK_NOTIFICATION.title, 90);
-    const body = safeText(payload.body, FALLBACK_NOTIFICATION.body, 240);
-    await self.registration.showNotification(title, {
-      body,
-      icon: "/icons/spotterai-192.png",
-      tag: `spotterai-${category}`,
-      renotify: false,
-      data: { url: safeTodayUrl(payload.url), category },
-    });
-  })());
-});
+// Local rest-timer alerts (workout-alerts.js) are the only notifications SpotterAI
+// shows — there is no `push` listener and no remote push path. The click handler
+// always routes to a FIXED same-origin destination, never a payload-provided URL,
+// so a notification can only ever reopen the app's Today surface.
+const NOTIFICATION_DESTINATION = "/#/today";
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil((async () => {
-    const category = safeCategory(event.notification?.data?.category);
-    const destination = new URL(`/?notification=${encodeURIComponent(category)}#/today`, self.location.origin);
+    const destination = new URL(NOTIFICATION_DESTINATION, self.location.origin);
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     for (const client of windows) {
       try {

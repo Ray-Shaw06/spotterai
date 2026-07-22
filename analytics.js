@@ -22,11 +22,11 @@ export const FUNNEL_EVENTS = deepFreeze({
   first_workout_completed: { source: ["plan", "today", "dashboard", "unknown"] },
   meal_photo_succeeded: {},
   meal_photo_failed: { failure_class: ["offline", "timeout", "rate_limited", "unavailable", "invalid_response", "unknown"] },
-  notification_offer_shown: { platform_group: ["ios_pwa", "android_pwa", "unsupported"] },
-  notification_prompted: { platform_group: ["ios_pwa", "android_pwa"] },
-  notification_allowed: { platform_group: ["ios_pwa", "android_pwa"] },
-  notification_denied: { platform_group: ["ios_pwa", "android_pwa"] },
-  notification_opened: { notification_category: ["workout", "follow_up", "streak", "recovery"] },
+  calendar_export_opened: {},
+  calendar_export_downloaded: { reminder: ["0", "10", "30", "60"] },
+  local_alert_prompted: {},
+  local_alert_allowed: {},
+  local_alert_denied: {},
 });
 
 export function trackFunnel(name, properties = {}) {

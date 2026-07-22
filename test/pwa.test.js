@@ -9,6 +9,7 @@ const html = readFileSync(join(root, "index.html"), "utf8");
 const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
 const serviceWorker = readFileSync(join(root, "service-worker.js"), "utf8");
 const reminders = readFileSync(join(root, "reminders.js"), "utf8");
+const workoutAlerts = readFileSync(join(root, "workout-alerts.js"), "utf8");
 
 const ICONS = {
   apple: "icons/spotterai-apple-touch-180.png",
@@ -64,36 +65,41 @@ test("icon source is the purple SpotterAI shield and barbell, not the red-ring p
 });
 
 test("offline shell precaches every current install asset under a fresh cache", () => {
-  assert.match(serviceWorker, /const CACHE = "spotterai-v40"/);
-  for (const path of ["manifest.json", "notifications.js", "notification-client.js", "notification-ui.js", "reminders.js", ...Object.values(ICONS)]) {
+  assert.match(serviceWorker, /const CACHE = "spotterai-v41"/);
+  for (const path of ["manifest.json", "calendar-export.js", "workout-alerts.js", "reminders.js", ...Object.values(ICONS)]) {
     assert.ok(serviceWorker.includes(`"${path}"`), `${path} must be precached`);
   }
 });
 
-test("service worker receives safe branded push and routes notification clicks to Today", () => {
-  assert.match(serviceWorker, /addEventListener\("push"/);
+test("service worker has no remote push path and routes clicks to a fixed same-origin Today URL", () => {
+  // Web Push is retired: no push listener, no remote subscription surface.
+  assert.doesNotMatch(serviceWorker, /addEventListener\(\s*["']push["']/);
+  assert.doesNotMatch(serviceWorker, /event\.data\.json\(\)/);
+  assert.doesNotMatch(serviceWorker, /PushManager|applicationServerKey|VAPID/i);
+
+  // The only notification interaction is a click handler with a FIXED destination.
   assert.match(serviceWorker, /addEventListener\("notificationclick"/);
-  assert.match(serviceWorker, /event\.data\.json\(\)/);
-  assert.match(serviceWorker, /showNotification/);
-  assert.match(serviceWorker, /icons\/spotterai-192\.png/);
-  assert.match(serviceWorker, /renotify:\s*false/);
-  assert.match(serviceWorker, /notification=\$\{encodeURIComponent\(category\)\}/);
-  assert.match(serviceWorker, /#\/today/);
+  assert.match(serviceWorker, /NOTIFICATION_DESTINATION = "\/#\/today"/);
   assert.match(serviceWorker, /clients\.matchAll/);
   assert.match(serviceWorker, /clients\.openWindow/);
-  assert.match(serviceWorker, /client\.navigate/);
-  assert.match(serviceWorker, /url\.origin\s*===\s*self\.location\.origin/);
-  assert.doesNotMatch(serviceWorker, /openWindow\(event\.notification\.data\.url\)/);
+  assert.match(serviceWorker, /url\.origin\s*!==\s*self\.location\.origin/);
+  // A payload URL must never reach navigate/openWindow.
+  assert.doesNotMatch(serviceWorker, /openWindow\(\s*event\.notification\.data/);
+  assert.doesNotMatch(serviceWorker, /navigate\(\s*event\.notification\.data/);
+});
+
+test("the only notification shown is the local rest alert, branded and same-origin", () => {
+  assert.match(workoutAlerts, /showNotification\(/);
+  assert.match(workoutAlerts, /icon:\s*"\/?icons\/spotterai-192\.png"/);
+  // On-device only: no subscription, VAPID, or server call anywhere in the module.
+  assert.doesNotMatch(workoutAlerts, /PushManager|applicationServerKey|VAPID|fetch\(/i);
 });
 
 test("production UI never points users back to the legacy red icons", () => {
-  const productionFiles = { html, manifest: JSON.stringify(manifest), serviceWorker, reminders };
+  const productionFiles = { html, manifest: JSON.stringify(manifest), serviceWorker, reminders, workoutAlerts };
   const legacyIcon = /icons\/(?:icon-192|icon-512|maskable-512)\.png/;
 
   for (const [name, contents] of Object.entries(productionFiles)) {
     assert.doesNotMatch(contents, legacyIcon, `${name} must use the branded icon set`);
   }
-
-  assert.match(serviceWorker, /icon:\s*"\/?icons\/spotterai-192\.png"/);
-  assert.doesNotMatch(reminders, /badge:\s*"icons\/spotterai-[^"]+"/);
 });

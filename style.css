@@ -3062,7 +3062,8 @@ table {
   margin-top: var(--space-3);
   width: 100%;
 }
-.notification-offer {
+/* Zero-cost calendar export (plan results) */
+.calendar-export {
   margin-top: var(--space-4);
   padding: var(--space-5);
   min-width: 0;
@@ -3071,24 +3072,35 @@ table {
   border-radius: var(--r-md);
   box-shadow: var(--shadow-md);
 }
-.notification-offer__head { margin-bottom: var(--space-4); }
-.notification-offer__head h3 { font-size: 1.05rem; }
-.notification-offer__head p { margin-top: var(--space-2); max-width: 68ch; color: var(--text-muted); font-size: var(--fs-small); }
-.notification-editor { min-width: 0; }
-.notification-timezone { margin-bottom: var(--space-3); color: var(--text-muted); font-size: 0.78rem; overflow-wrap: anywhere; }
-.notification-timezone strong { color: var(--text); font-family: var(--font-mono); font-size: 0.72rem; }
-.notification-fieldset { min-width: 0; padding: 0; border: 0; }
-.notification-fieldset + .notification-fieldset { margin-top: var(--space-4); }
-.notification-fieldset legend { margin-bottom: var(--space-2); color: var(--text); font-size: 0.8rem; font-weight: 600; }
-.notification-schedule { display: flex; flex-direction: column; gap: var(--space-1); }
-.notification-schedule__row {
-  display: grid;
-  grid-template-columns: minmax(10rem, 1fr) minmax(8rem, 0.65fr);
-  align-items: center;
+.calendar-export__head { margin-bottom: var(--space-4); }
+.calendar-export__head h3 { font-size: 1.05rem; }
+.calendar-export__head p { margin-top: var(--space-2); max-width: 68ch; color: var(--text-muted); font-size: var(--fs-small); }
+.calendar-export .btn--block { min-height: 48px; }
+.calendar-export__dialog {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
   min-width: 0;
 }
-.notification-control {
+.calendar-export__dialog .field .input,
+.calendar-export__dialog input,
+.calendar-export__dialog select { width: 100%; min-height: 44px; }
+.calendar-export__error {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--danger);
+  background: var(--danger-soft);
+  border: 1px solid color-mix(in srgb, var(--danger) 38%, transparent);
+  border-radius: var(--r-sm);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.calendar-export__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.calendar-export__actions .btn { min-height: 44px; }
+
+/* On-device rest-timer alert toggle (Account) */
+.toggle-row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -3097,30 +3109,15 @@ table {
   font-size: var(--fs-small);
   cursor: pointer;
 }
-.notification-control input { width: 20px; height: 20px; flex: none; accent-color: var(--accent); }
-.notification-control:has(input:disabled) { color: var(--text-faint); cursor: not-allowed; }
-.notification-time { min-width: 0; }
-.notification-time .input { width: 100%; min-height: 44px; }
-.notification-quiet { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-.notification-quiet label { display: flex; flex-direction: column; gap: var(--space-1); color: var(--text-muted); font-size: 0.76rem; }
-.notification-quiet .input { min-height: 44px; }
-.notification-categories { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--space-4); }
-.notification-status,
-.notification-error { margin: var(--space-3) 0; font-size: 0.8rem; line-height: 1.5; }
-.notification-status { color: var(--text-muted); }
-.notification-error { padding: var(--space-2) var(--space-3); color: var(--danger); background: var(--danger-soft); border: 1px solid color-mix(in srgb, var(--danger) 38%, transparent); border-radius: var(--r-sm); }
-.notification-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
-.notification-actions .btn { min-height: 44px; }
-.notification-details > summary { min-height: 44px; display: flex; align-items: center; color: var(--accent); font-size: var(--fs-small); font-weight: 600; cursor: pointer; }
-.notification-details[open] > summary { margin-bottom: var(--space-3); }
-.notification-offer .btn--block { min-height: 48px; }
+.toggle-row input { width: 20px; height: 20px; flex: none; accent-color: var(--accent); }
+.toggle-row:has(input:disabled) { color: var(--text-faint); cursor: not-allowed; }
+
+.notification-status { margin: var(--space-3) 0; font-size: 0.8rem; line-height: 1.5; color: var(--text-muted); }
+.notification-error { margin: var(--space-3) 0; padding: var(--space-2) var(--space-3); font-size: 0.8rem; line-height: 1.5; color: var(--danger); background: var(--danger-soft); border: 1px solid color-mix(in srgb, var(--danger) 38%, transparent); border-radius: var(--r-sm); }
 
 @media (max-width: 600px) {
-  .notification-offer { padding: var(--space-4); }
-  .notification-schedule__row { grid-template-columns: 1fr; gap: 0; padding-bottom: var(--space-2); border-bottom: 1px solid var(--border-soft); }
-  .notification-categories,
-  .notification-quiet { grid-template-columns: 1fr; }
-  .notification-actions .btn { width: 100%; }
+  .calendar-export { padding: var(--space-4); }
+  .calendar-export__actions .btn { width: 100%; }
 }
 
 /* ----------------------------------------------------------------------------
