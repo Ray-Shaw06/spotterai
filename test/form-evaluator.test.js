@@ -180,6 +180,36 @@ test("dip reliability follows the arm joints like the push-up", () => {
   assert.equal(EXERCISES.dip.metrics(frame({ 16: 0.15 }), frame()).reliable, false);
 });
 
+// ---- bench press ----------------------------------------------------------
+
+test("bench counter + depth verdicts follow the elbow (supported horizontal press)", () => {
+  const c = new RepCounter(EXERCISES.bench);
+  const done = runReps(c, [[0, 160], [200, 88], [800, 160]]);
+  assert.equal(c.reps, 1);
+  assert.equal(done[0].depth.level, "good");
+  assert.equal(done[0].depth.text, "Bar to chest");
+  const c2 = new RepCounter(EXERCISES.bench);
+  const d2 = runReps(c2, [[0, 160], [200, 115], [800, 160]]);
+  assert.equal(d2[0].depth.text, "Too shallow — bigger range");
+});
+
+test("bench cues: lockout at the top, bar-to-chest vs lower-the-bar at the bottom", () => {
+  const ex = EXERCISES.bench;
+  assert.deepEqual(ex.cues({ elbow: 156, reliable: true }).map((c) => c.text), ["Full lockout"]);
+  assert.deepEqual(ex.cues({ elbow: 88, reliable: true }).map((c) => c.text), ["Good depth — bar to chest"]);
+  assert.deepEqual(ex.cues({ elbow: 115, reliable: true }).map((c) => c.text), ["Lower the bar to your chest"]);
+  // Unreliable frame → no cues (never coach off untrustworthy landmarks).
+  assert.deepEqual(ex.cues({ elbow: 88, reliable: false }), []);
+});
+
+test("bench reliability follows the arm joints, ignoring the legs", () => {
+  resetSideSelector();
+  assert.equal(EXERCISES.bench.metrics(frame(), frame()).reliable, true);
+  resetSideSelector();
+  // Wrist occluded → elbow angle untrustworthy → not reliable, even with legs visible.
+  assert.equal(EXERCISES.bench.metrics(frame({ 16: 0.15, 24: 0.9, 26: 0.9 }), frame()).reliable, false);
+});
+
 // ---- per-exercise camera guidance -----------------------------------------
 
 test("every exercise declares its camera angle and setup tips", () => {
@@ -192,7 +222,7 @@ test("every exercise declares its camera angle and setup tips", () => {
 
 test("angles match what each exercise's rules actually measure", () => {
   // Side-view rules (depth / torso / hip-line) → side-on.
-  for (const id of ["squat", "pushup", "lunge", "curl", "rdl", "hipthrust"]) {
+  for (const id of ["squat", "pushup", "bench", "lunge", "curl", "rdl", "hipthrust"]) {
     assert.match(EXERCISES[id].camera.angle, /^Side-on/, id);
   }
   // Wrist-above-shoulder lockout and chin-over-bar need the front view.

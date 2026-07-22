@@ -38,8 +38,9 @@ that answers questions about your program and training in general. The app is
 organized into clean, separate **pages** (Plan · Dashboard · Nutrition ·
 Progress · Form check · Safety Lab) via a tiny client-side router, with optional local
 **profiles** so different people can keep separate data on the same browser —
-while optional Firebase sync and account-free Web Push remain separate, explicit
-opt-ins.
+while optional Firebase sync remains a separate, explicit opt-in. Reminders are
+zero-cost: an in-browser calendar export plus local on-device rest-timer alerts,
+with no remote push.
 
 ---
 
@@ -160,7 +161,7 @@ A quick pass before shipping (no automation required):
 | Activation | Generate a live plan → start day one → complete it once · fallback does not fake a new-plan offer |
 | AI recovery | Offline · timeout · rate limit · malformed response · explicit plan/photo retry |
 | Installed PWA | iPhone Home Screen · Android installed app · branded icon · offline shell |
-| Notifications | No pre-plan prompt · edit schedule · allow/deny · pause · delete · tap opens Today |
+| Reminders | Calendar `.ics` export of training days · local rest-timer alerts (opt-in, on-device) · no remote push |
 | Pain Mode | Mild → modify · severe → stop + professional, no rehab · re-audit after mapped pain |
 | Adapt | Missed workouts → fewer/shorter sessions · re-audited + Trust Report |
 | Nutrition | Extreme calorie target flagged · ED language refused · reasonable target not over-flagged |
@@ -285,8 +286,8 @@ to track 33 body landmarks, and [`form-evaluator.js`](form-evaluator.js) — pur
 code, the same style as `evaluator.js` — turns those landmarks into **joint
 angles**, **counts reps automatically**, and shows **live form cues**.
 
-**Coverage:** form cues for **squat, push-up, lunge, overhead press, biceps curl,
-pull-up / chin-up, dip, Romanian deadlift / hinge, and hip thrust**, plus an
+**Coverage:** form cues for **squat, push-up, bench press, lunge, overhead press,
+biceps curl, pull-up / chin-up, dip, Romanian deadlift / hinge, and hip thrust**, plus an
 **"Other" mode** — an adaptive rep counter that auto-detects the working joint and
 counts reps for *any* movement (no form cues, because I won't pretend to coach a
 lift there are no rules for).
@@ -383,11 +384,15 @@ remains an explicit opt-in.
   **1RM** calculators, and a transparent **deload flag** when weekly volume has
   climbed for 3 straight weeks into a new peak. The math lives in
   [`progression.js`](progression.js) and is **unit-tested**.
-- **Share + notifications** — render a **shareable progress card** (rank, streak,
+- **Share + reminders** — render a **shareable progress card** (rank, streak,
   weekly training, and your plan's safety score) to a PNG via canvas + the Web
-  Share API, and—after creating a plan—opt into editable, scheduled **standards-
-  based Web Push** in the installed iPhone or Android PWA. Quiet hours, categories,
-  pause, and device deletion remain under the user's control.
+  Share API. After creating a plan, **export your training days to your own
+  calendar** as recurring `.ics` events (with an optional native reminder) — your
+  calendar app owns the reminders after that; SpotterAI sends nothing and stores
+  nothing. During a workout, opt into **on-device rest-timer alerts** (a local
+  notification when a rest timer ends). There is no remote push, no subscription,
+  and no promise of anything after the app is closed — vibration, sound, and the
+  on-screen timer always work regardless.
 - **The coach sees all of it.** The tracker is summarized by
   [`tracker-store.js`](tracker-store.js) (`getContext()`) and passed to the
   chatbot, so **"summarize my week"**, "am I hitting protein?", and "what should I
@@ -433,32 +438,31 @@ remains an explicit opt-in.
   type scale) in CSS variables; [Space Grotesk + Inter](https://fonts.google.com)
   via Google Fonts; an animated, pure-SVG safety-score ring. No UI kit, no paid
   assets.
-- **Backend:** six Node.js Vercel functions — `api/generate.js` (plan
+- **Backend:** five Node.js Vercel functions — `api/generate.js` (plan
   generation), `api/adapt.js` (re-tune a plan from logged training), `api/chat.js`
   (coach chatbot), `api/estimate.js` (AI food-macro/photo + exercise-classification
-  estimates), `api/parse.js` (natural-language quick-log → structured entry), and
-  `api/notifications.js` (anonymous device-scoped notification preferences).
-  AI keys and Firebase Admin credentials remain server-only; notification access
-  uses signed, expiring device tokens.
-- **Scheduled notifications:** a Firebase v2 scheduled function runs every five
-  minutes, applies local-time schedules, quiet hours, category preferences, and a
-  two-per-day cap, then sends Web Push with VAPID. Enabling this dispatcher requires
-  a Blaze-linked Firebase project and owner-controlled secrets.
+  estimates), and `api/parse.js` (natural-language quick-log → structured entry).
+  AI keys remain server-only. There is **no notification backend** — reminders are
+  calendar files generated in the browser and local on-device alerts.
+- **Reminders (zero-cost, on-device):** training days export to a standards-based
+  `.ics` calendar file built entirely in the browser ([`calendar-export.js`](calendar-export.js));
+  rest-timer alerts are local notifications shown by the existing service worker
+  ([`workout-alerts.js`](workout-alerts.js)). No Web Push, no VAPID, no
+  subscription, no scheduled function, and no Firebase Blaze requirement.
 - **On-device computer vision:** **MediaPipe Tasks Vision** (pose estimation),
   loaded from a free CDN and run entirely in the browser for the real-time form
   check — no server, no key, nothing uploaded.
 - **Hosting:** the existing Vercel deployment for the site and API; Firebase is
-  used only for optional user sync and the separately enabled push dispatcher.
+  used only for optional user sync.
 - **Client-side persistence:** the gamified tracker (workouts, nutrition,
   bodyweight, XP, achievements) is stored in the browser's `localStorage` — no
   database or account is required before optional sync.
 - **Local-first, not account-required.** Core use needs no account. Optional Google
-  sync uses Firebase Auth; anonymous notification records contain only push and
-  scheduling data and are inaccessible directly from the browser.
+  sync uses Firebase Auth; nothing else is stored server-side.
 
-**Core consumer features stay free.** The site can remain within no-cost hosting
-and AI quotas, but scheduled Web Push requires Firebase Blaze (pay as you go), so
-configure budget alerts and do not promise a permanently $0 operator bill.
+**Core consumer features stay free — for real.** The whole app runs within no-cost
+hosting and AI quotas; retiring Web Push removed the only feature that would have
+needed a paid (Firebase Blaze) plan.
 
 ---
 
@@ -500,10 +504,9 @@ spotterai/
 ├─ measurements.js        # metric/imperial conversion + validation
 ├─ quick-log.js           # natural-language + voice quick logging (→ /api/parse)
 ├─ share-card.js          # render a shareable progress PNG (canvas, Web Share)
-├─ notifications.js       # pure notification preferences and schedule presets
-├─ notification-client.js # installed-PWA capability + anonymous API client
-├─ notification-ui.js     # post-plan offer and Account notification controls
-├─ reminders.js           # notification UI compatibility entry point
+├─ calendar-export.js     # in-browser .ics export of training days (zero-cost reminders)
+├─ workout-alerts.js      # local on-device rest-timer notifications (no push)
+├─ reminders.js           # entry point: legacy cleanup + calendar export + workout alerts
 ├─ demo-data.js           # one-click "Load demo data" (isolated Demo profile)
 
 ├─ router.js              # hash-based page router (Plan/Dashboard/Nutrition/…)
@@ -516,27 +519,22 @@ spotterai/
 │  ├─ adapt.js            # serverless Gemini proxy — re-tune plan from training
 │  ├─ chat.js             # serverless Gemini proxy — coach chatbot
 │  ├─ estimate.js         # serverless Gemini proxy — food macros (text or photo) + exercise tags
-│  ├─ parse.js            # serverless Gemini proxy — natural-language quick-log parser
-│  └─ notifications.js    # anonymous registration/update/delete API
+│  └─ parse.js            # serverless Gemini proxy — natural-language quick-log parser
 ├─ lib/
 │  ├─ gemini.js           # shared, hardened Gemini client (model name lives here)
-│  ├─ plan.js             # shared plan schema + parse/validate/normalize
-│  ├─ notification-auth.js       # signed device tokens + endpoint fingerprints
-│  ├─ notification-validation.js # strict server-side notification validation
-│  └─ notification-store.js      # server-only Firestore adapter
-├─ functions/             # Firebase scheduled Web Push dispatcher + dependencies
-├─ firebase.json          # Functions, Firestore rules, and indexes deployment config
-├─ firestore.rules        # owner-only sync + server-only notification collections
-├─ firestore.indexes.json # notification due-query index
+│  └─ plan.js             # shared plan schema + parse/validate/normalize
+├─ firebase.json          # Firestore rules + indexes deployment config (sync only)
+├─ firestore.rules        # owner-only /users sync + deny-all fallback
+├─ firestore.indexes.json # (empty — no server-side queries remain)
 ├─ data/
 │  └─ sample-plans.json   # offline fallback plans (429 / offline demo)
 ├─ test/                  # node --test unit tests (evaluator + search)
 ├─ .github/workflows/     # CI (runs the tests on every push)
 ├─ manifest.json          # PWA manifest (installable)
 ├─ service-worker.js      # PWA offline shell + runtime caching
-├─ icons/                 # branded PWA and notification icons
+├─ icons/                 # branded PWA icons
 ├─ docs/                  # screenshots
-├─ .env.example           # AI + notification environment-name checklist
+├─ .env.example           # AI environment-name checklist
 ├─ .gitignore             # ignores .env and node_modules
 ├─ vercel.json            # function config
 └─ README.md
@@ -556,24 +554,24 @@ spotterai/
   the built-in food/exercise databases working **offline** after the first visit.
   (The AI features need a connection and degrade gracefully without one.)
 - **iPhone:** in Safari, choose **Share → Add to Home Screen**, then launch
-  SpotterAI from the new Home Screen icon. Web Push requires iOS 16.4 or later
-  and works only from that installed Home Screen app. iPad uses the same web
-  standard but remains best-effort outside the Release 1 device-verification scope.
+  SpotterAI from the new Home Screen icon for the installed, offline-capable app.
 - **Android:** use the browser's **Install app** or **Add to Home screen** action,
-  then launch the installed app. Notification support is detected before SpotterAI
-  offers permission.
-- The notification proposal appears only after a newly generated live plan. It
-  shows editable days/times, quiet hours, and categories before the browser asks
-  for permission. Denying notifications never blocks the app. Existing installed
-  subscriptions renew their anonymous authorization silently when needed; renewal
-  never opens another permission prompt or creates a new browser subscription.
+  then launch the installed app.
+- **Reminders are zero-cost and never remote.** After a plan is generated you can
+  **export your training days to your calendar** (a `.ics` file built in the
+  browser, with an optional native reminder) — your calendar app owns it from
+  there. During a workout you can opt into **local rest-timer alerts** (Account →
+  Workout alerts); permission is requested only on a deliberate tap, the choice is
+  stored on that device only, and nothing is shown after the app is closed.
+  Vibration, sound, and the on-screen timer always work regardless of notification
+  support.
 
 ---
 
 ## Core setup & Vercel deploy (step by step)
 
-The core setup below can use no-cost tiers. Scheduled Web Push is a separate,
-owner-gated Blaze deployment documented later.
+The entire app runs on no-cost tiers. There is no paid notification path — reminders
+are in-browser calendar files and local on-device alerts.
 
 ### 1. Get a free Gemini API key
 
@@ -659,136 +657,28 @@ workout contents, AI prompts/responses, account identifiers, push endpoints, tok
 or raw errors to funnel paths. See Vercel's [Web Analytics
 guide](https://vercel.com/docs/analytics) for dashboard behavior.
 
-### Scheduled Web Push setup (owner-operated)
+### Reminders (zero-cost, no operator setup)
 
-Keep **production** `NOTIFICATION_REGISTRATION_ENABLED=false` throughout setup and
-preview verification. Registration may be enabled only in an owner-authorized,
-isolated preview after its controlled Firebase backend and WAF are ready; production
-stays disabled until that preview passes every gate below. Users do not need a
-Google account, but the operator needs a Firebase project linked to the **Blaze
-pay-as-you-go plan** for Cloud Functions and Cloud Scheduler. Set budget alerts
-first; alerts do not cap spending.
-Firebase documents the [billing model](https://firebase.google.com/docs/projects/billing/firebase-pricing-plans)
-and [scheduled-function costs](https://firebase.google.com/docs/functions/schedule-functions).
+Reminders need **no environment variables, no Firebase Blaze plan, no VAPID keys,
+and no server** — they were deliberately built to keep the operator bill at $0.
 
-1. Install dependencies and generate one VAPID keypair locally. The command prints
-   a private key to your own terminal; never paste it into Git, an issue, chat,
-   analytics, logs, or the release worklog.
+- **Calendar export.** After a plan is generated, **Add workouts to calendar**
+  builds a standards-based `.ics` file in the browser
+  ([`calendar-export.js`](calendar-export.js)): each training day becomes a
+  weekly-recurring event with an optional native reminder (none / 10 / 30 / 60 min).
+  The user's calendar app owns everything after import. SpotterAI never learns
+  whether an event was imported and stores no calendar data.
+- **Local rest-timer alerts.** In **Account → Workout alerts**, the user can opt
+  into a local notification when a rest timer ends
+  ([`workout-alerts.js`](workout-alerts.js)). Permission is requested only on a
+  deliberate tap; the enabled flag is stored on that device only. The alert is shown
+  by the already-installed service worker's `showNotification()` and its click
+  routes to a **fixed** same-origin Today URL.
 
-   ```bash
-   npm install
-   npm install --prefix functions
-   npm exec --prefix functions -- web-push generate-vapid-keys
-   ```
-
-2. After the owner approves Blaze billing, budget alerts, and secret configuration,
-   configure these **Vercel server-only environment variable names** for the
-   controlled preview. Do not reuse the two HMAC secrets, and do not put
-   `WEB_PUSH_PRIVATE_KEY` in Vercel—the dispatcher alone receives it through
-   Firebase Secret Manager.
-
-   ```text
-   FIREBASE_SERVICE_ACCOUNT_JSON
-   NOTIFICATION_TOKEN_SECRET
-   NOTIFICATION_DEDUP_SECRET
-   NOTIFICATION_ALLOWED_ORIGIN
-   NOTIFICATION_REGISTRATION_DAILY_CAP
-   NOTIFICATION_WAF_RATE_LIMIT_RULE_ID
-   WEB_PUSH_PUBLIC_KEY
-   NOTIFICATION_REGISTRATION_ENABLED
-   ```
-
-   In Preview, `NOTIFICATION_ALLOWED_ORIGIN` must be the exact stable HTTPS preview
-   origin; in Production, it must be the exact production origin.
-   `FIREBASE_SERVICE_ACCOUNT_JSON` is the credential JSON for the Firebase project
-   assigned to that environment, serialized as one environment value. The token and
-   dedup secrets must be different,
-   cryptographically random 32-byte base64url values. The daily cap is the bounded
-   global registration ceiling, not the per-device delivery cap, and must be from
-   1 to 10,000 so the five-minute cleanup job retains daily throughput headroom.
-   Keep registration disabled in both Preview and Production at this stage.
-
-3. In Vercel Firewall, publish a fixed-window per-IP rate-limit rule covering
-   `POST`, `PATCH`, and `DELETE /api/notifications`; place the real rule identifier
-   in `NOTIFICATION_WAF_RATE_LIMIT_RULE_ID`. The ID is only a fail-closed readiness
-   check; deployed 429 behavior must still be verified later.
-
-4. In the Firebase emulator suite or an owner-approved controlled project, set the
-   dispatcher secrets interactively and deploy the existing rules, index, and
-   scheduled function. Use the exact same public/private VAPID pair on Vercel and
-   Firebase. `WEB_PUSH_SUBJECT` should be an operator contact such as a `mailto:`
-   URI. Firebase documents these interactive [Secret Manager
-   commands](https://firebase.google.com/docs/functions/config-env#secret_parameters).
-
-   ```bash
-   firebase use <PROJECT_ID>
-   firebase functions:secrets:set WEB_PUSH_PRIVATE_KEY
-   firebase functions:secrets:set WEB_PUSH_PUBLIC_KEY
-   firebase functions:secrets:set WEB_PUSH_SUBJECT
-   firebase deploy --only "firestore:rules,firestore:indexes,functions:dispatchNotifications"
-   ```
-
-5. While registration is still disabled, verify the controlled Firestore deny
-   rules, indexes, dispatcher, cleanup, scheduling, WAF publication, and function
-   logs. After those gates pass, enable `NOTIFICATION_REGISTRATION_ENABLED=true`
-   **only for the owner-authorized preview**. Use preview registrations to prove
-   separate HTTP 429 behavior for excessive POST plus authenticated PATCH and
-   DELETE traffic, and verify real installed iPhone and Android delivery, tap,
-   preference editing, pause, and deletion.
-
-6. Keep production registration disabled until the preview evidence is recorded.
-   Then obtain exact-commit promotion approval, apply the verified secret set and
-   VAPID pair to the production backend/environment (changing the allowed origin to
-   the exact production origin), deploy the approved rules/index/function and WAF
-   configuration, enable production registration, and promote the exact verified
-   commit. Run production smoke and early-error checks immediately afterward.
-
-The function evaluates due devices every five minutes. Delivery therefore has a
-declared five-minute scheduling tolerance plus browser push-service variance; it
-is not an exact alarm clock. Notification records contain only the browser push
-subscription, time zone, schedule, quiet hours, category/pause controls, minimal
-completion/delivery state, and operational timestamps. Direct browser access to
-those collections is denied by [`firestore.rules`](firestore.rules).
-
-### Notification controls and emergency pause
-
-Each installed device manages its own schedule in **Account → Notifications**:
-edit days/times, edit quiet hours and categories, Save, Pause/Resume, or Delete.
-Delete clears local subscription credentials only after the server confirms the
-record removal. A delivery already holding a lease returns a safe retry message
-instead of reporting premature success. If an expired authorization must be
-renewed, SpotterAI preserves the exact existing browser-subscription proof until a
-later retry can finish. Clearing site data may remove only the local ability to
-manage an orphan until server expiry, so use Delete first when possible.
-
-To stop all sends immediately, pause the generated Cloud Scheduler job and confirm
-its state. Registration can separately be disabled in Vercel, but that alone does
-not stop already registered devices.
-
-```bash
-gcloud scheduler jobs pause firebase-schedule-dispatchNotifications-us-central1 \
-  --location=us-central1 --project=<PROJECT_ID>
-gcloud scheduler jobs describe firebase-schedule-dispatchNotifications-us-central1 \
-  --location=us-central1 --project=<PROJECT_ID>
-```
-
-After resolving the incident, use the matching `gcloud scheduler jobs resume ...`
-command and monitor the next invocation. Do not delete or change the generated
-schedule manually. Google documents the [pause/resume
-control](https://cloud.google.com/scheduler/docs/creating#pause_a_job).
-
-### Release 1 notification limits
-
-- A PWA cannot guarantee JavaScript timers while suspended or closed. Background
-  reminders come from Web Push; in-workout timers remain foreground behavior.
-- SpotterAI does not provide iOS Live Activities, Dynamic Island state, or Android
-  foreground-service workout controls. Those require a future native-app decision.
-- Push services and operating systems may delay or suppress delivery. SpotterAI
-  enforces quiet hours and a maximum of two sends per device/local day, but cannot
-  promise an exact arrival second.
-- On iPhone, standards-based Web Push requires iOS 16.4 or later and a Home
-  Screen installation. iPad remains best-effort for Release 1. See Apple's [Web Push
-  documentation](https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers).
+**Honest limits.** A closed or suspended PWA cannot run timers, and SpotterAI makes
+**no promise of any notification after the app is closed** — there is no background
+or scheduled push. Vibration, sound, and the on-screen timer are the universal
+fallback and always work, including when notifications are unsupported or blocked.
 
 ---
 
@@ -799,8 +689,8 @@ with Google"**, connect a **free Firebase** project (Spark plan — **no credit
 card**). The app stays local-first: sign-in is hidden until you configure this,
 and nothing breaks if you skip it.
 
-> This Spark guidance applies to optional user-data sync only. Deploying the
-> scheduled Web Push function is the separate Blaze owner gate described above.
+> This Spark guidance applies to optional user-data sync only — the only
+> server-side data SpotterAI stores. There is no paid notification path.
 
 **It's $0, and the config is not a secret** — a Firebase web `apiKey` is a public
 project identifier, not a credential. Your data is protected by the Firestore

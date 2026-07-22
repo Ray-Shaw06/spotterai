@@ -51,6 +51,10 @@ export const FORM_THRESHOLDS = {
   hipthrust: { DOWN: 135, UP: 162, MIN_RANGE: 22, GOOD_LOCK: 165, LOW_LOCK: 150 },
   pullup: { DOWN: 115, UP: 150, MIN_RANGE: 40, GOOD_PEAK: 80, SHALLOW_PEAK: 110, MAX_SWING: 20 },
   dip: { DOWN: 120, UP: 155, MIN_RANGE: 35, GOOD_DEPTH: 95, SHALLOW_DEPTH: 115 },
+  // Bench press: elbow-driven like a supported push-up. Bottom = bar to chest
+  // (deep elbow flexion), top = lockout. DOWN sits above SHALLOW_DEPTH so a
+  // too-shallow rep still counts (then gets flagged). LOCKOUT gates the cue.
+  bench: { DOWN: 120, UP: 155, MIN_RANGE: 35, GOOD_DEPTH: 90, SHALLOW_DEPTH: 110, LOCKOUT: 155 },
 
   general: { MIN_RANGE: 25, DOWN_FRAC: 0.35, UP_FRAC: 0.35, REP_DEBOUNCE_MS: 350 },
 };
@@ -523,6 +527,46 @@ export const EXERCISES = {
       return c;
     },
     depthFeedback: (min) => depthFlex(min, T.dip.GOOD_DEPTH, T.dip.SHALLOW_DEPTH, "Good dip depth"),
+  },
+
+  // Bench press is a supported horizontal press: same elbow-driven pattern as the
+  // push-up, filmed side-on at bench height on the pressing arm. Honest limit: a
+  // single 2D side camera reads elbow depth and lockout well, but it CANNOT judge
+  // elbow flare or left/right bar-path symmetry (those need an overhead/head view),
+  // so we don't pretend to cue them. Legs/hips are ignored — only the arm joints
+  // gate reliability, so a bench cutting off the lower body is fine.
+  bench: {
+    id: "bench", label: "Bench press",
+    setup: "Lie side-on on the bench; keep your pressing arm in frame.",
+    camera: {
+      angle: "Side-on",
+      tips: [
+        "Camera at bench height, side-on to the pressing arm — elbow depth and lockout read from the profile.",
+        "Shoulder, elbow, and wrist of the near arm in frame; a side view can't see elbow flare or bar tilt.",
+      ],
+    },
+    rep: { key: "elbow", down: T.bench.DOWN, up: T.bench.UP, minRange: T.bench.MIN_RANGE, metric: "min" },
+    metrics(image, world) {
+      const d = side(image, world);
+      return {
+        elbow: angleAt(d.shoulder.w, d.elbow.w, d.wrist.w),
+        confidence: d.confidence,
+        // Elbow angle drives the rep — gate on the arm joints only.
+        reliable: visMin(image, [LM["shoulder" + d.s], LM["elbow" + d.s], LM["wrist" + d.s]]) >= T.global.MIN_VIS,
+        focusJoints: [LM["shoulder" + d.s], LM["elbow" + d.s], LM["wrist" + d.s]],
+      };
+    },
+    cues(m) {
+      const c = [];
+      if (!m.reliable) return c;
+      if (m.elbow != null && m.elbow > T.bench.LOCKOUT) c.push({ level: "good", text: "Full lockout" });
+      if (m.elbow != null && m.elbow < 130) {
+        if (m.elbow <= T.bench.GOOD_DEPTH) c.push({ level: "good", text: "Good depth — bar to chest" });
+        else if (m.elbow > T.bench.SHALLOW_DEPTH) c.push({ level: "warn", text: "Lower the bar to your chest" });
+      }
+      return c;
+    },
+    depthFeedback: (min) => depthFlex(min, T.bench.GOOD_DEPTH, T.bench.SHALLOW_DEPTH, "Bar to chest"),
   },
 
   // Universal counter for any movement — auto-detects the working joint, no

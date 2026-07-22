@@ -15,7 +15,6 @@ import { barChart, lineChart } from "../charts.js";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const css = readFileSync(join(root, "style.css"), "utf8");
 const workoutUi = readFileSync(join(root, "workout-ui.js"), "utf8");
-const notificationUi = readFileSync(join(root, "notification-ui.js"), "utf8");
 
 function rule(selector) {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -127,16 +126,14 @@ test("achievement columns and Nutrition targets adapt on phones", () => {
   );
 });
 
-test("notification editors have full-width responsive rows and 44px touch targets", () => {
-  assert.match(rule(".notification-editor"), /min-width:\s*0/);
-  assert.match(rule(".notification-schedule__row"), /grid-template-columns/);
-  assert.match(rule(".notification-control"), /min-height:\s*44px/);
-  assert.match(rule(".notification-actions .btn"), /min-height:\s*44px/);
+test("calendar export and rest-alert controls have full-width fields and 44px touch targets", () => {
+  assert.match(rule(".calendar-export"), /min-width:\s*0/);
+  assert.match(rule(".calendar-export__actions .btn"), /min-height:\s*44px/);
+  assert.match(rule(".toggle-row"), /min-height:\s*44px/);
   assertInMedia(
     "(max-width: 600px)",
-    /\.notification-schedule__row\s*\{[^}]*grid-template-columns:\s*1fr/
+    /\.calendar-export__actions \.btn\s*\{[^}]*width:\s*100%/
   );
-  assert.match(notificationUi, /Intl\.DateTimeFormat\(\)\.resolvedOptions\(\)\.timeZone/);
 });
 
 test("onboarding choices enforce a 44px square touch target", () => {

@@ -13,7 +13,6 @@
 
 import { addNutrition, addWorkout } from "./tracker-store.js";
 import { findExercise } from "./exercises.js";
-import { syncWorkoutCompletion } from "./notification-client.js";
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -124,7 +123,6 @@ function confirmLog() {
         sets: e.sets.map((s) => ({ weight: s.weight, reps: s.reps })),
       })),
     });
-    syncWorkoutCompletion(workout.date).catch(() => {});
     success(`Logged <strong>${esc(workout.name)}</strong> · +${workout.xp} XP`);
   } else if (pending.kind === "nutrition") {
     const n = pending.nutrition;

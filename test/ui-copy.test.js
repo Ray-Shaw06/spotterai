@@ -16,9 +16,9 @@ const app = readFileSync(join(root, "app.js"), "utf8");
 const nutritionUi = readFileSync(join(root, "nutrition-ui.js"), "utf8");
 const router = readFileSync(join(root, "router.js"), "utf8");
 const onboardingUi = readFileSync(join(root, "onboarding-ui.js"), "utf8");
-const notificationUi = readFileSync(join(root, "notification-ui.js"), "utf8");
-const notificationGuidance = readFileSync(join(root, "notification-guidance.js"), "utf8");
 const reminders = readFileSync(join(root, "reminders.js"), "utf8");
+const calendarExport = readFileSync(join(root, "calendar-export.js"), "utf8");
+const workoutAlerts = readFileSync(join(root, "workout-alerts.js"), "utf8");
 const workoutUi = readFileSync(join(root, "workout-ui.js"), "utf8");
 const quickLog = readFileSync(join(root, "quick-log.js"), "utf8");
 const demoData = readFileSync(join(root, "demo-data.js"), "utf8");
@@ -113,102 +113,41 @@ test("invalid optional measurements also disable the About You skip control", ()
   assert.match(onboardingUi, /skipBtn\.disabled = !canAdvance\(\);/);
 });
 
-test("results offer notifications inline only beside the first-workout action", () => {
+test("plan results offer a calendar export beside the first-workout action, not remote notifications", () => {
   const firstWorkout = html.indexOf('id="start-first-workout"');
-  const offer = html.indexOf('id="notification-offer"');
+  const calendar = html.indexOf('id="calendar-export"');
   const adapt = html.indexOf('id="adapt-card"');
-  assert.ok(firstWorkout >= 0 && offer > firstWorkout && offer < adapt);
-  assert.equal((html.match(/id="notification-offer"/g) || []).length, 1);
-  assert.match(html, /Enable notifications/);
-  assert.doesNotMatch(html, /id="reminders-toggle"|local notification when you open/i);
+  assert.ok(firstWorkout >= 0 && calendar > firstWorkout && calendar < adapt);
+  assert.match(html, /Add workouts to calendar/);
+  // The retired Web Push offer copy and IDs are gone.
+  assert.doesNotMatch(html, /id="notification-offer"|Enable notifications|Pause notifications|Delete notifications/);
 });
 
-test("the notification offer listens only to a genuinely new live plan event", () => {
-  assert.match(app, /if \(!usedFallback\) window\.dispatchEvent\(new CustomEvent\("spotter:plan-generated"\)\);/);
-  assert.match(notificationUi, /addEventListener\("spotter:plan-generated"/);
-  assert.match(notificationUi, /addEventListener\("spotter:plan"/);
-  assert.match(notificationUi, /spotter:plan"[^\n]+renderAccount|onPlan[^\n]+renderAccount|handlePlan/);
+test("calendar export copy is honest: the user's own calendar owns reminders, nothing is sent", () => {
+  assert.match(html, /own calendar app owns the reminders/i);
+  assert.match(html, /SpotterAI sends nothing and stores nothing/i);
+  assert.match(calendarExport, /BEGIN:VCALENDAR/);
+  assert.match(calendarExport, /RRULE:FREQ=WEEKLY/);
 });
 
-test("shared notification editor covers schedule, quiet hours, categories, and account actions", () => {
-  assert.match(notificationUi, /renderPreferenceEditor/);
-  for (const copy of [
-    "Planned workout reminder",
-    "Follow-up if still unlogged",
-    "Streak-protection reminder",
-    "Next-morning recovery check-in",
-    "Quiet hours start",
-    "Quiet hours end",
-  ]) assert.ok(notificationUi.includes(copy), copy);
-  for (const copy of ["Enable notifications", "Save changes", "Pause notifications", "Delete notifications"]) assert.ok(html.includes(copy), copy);
-  assert.match(reminders, /initNotificationUI/);
+test("Account exposes a local on-device rest-alert toggle, not a remote schedule editor", () => {
+  assert.match(html, /id="account-workout-alerts"/);
+  assert.match(html, /Enable rest-timer alerts/);
+  assert.match(html, /nothing is sent when the app is closed/i);
+  // No leftover schedule/quiet-hours/category editor copy.
+  assert.doesNotMatch(html, /Quiet hours|Streak-protection reminder|id="notification-account-enable"/);
 });
 
-test("Account provides a deliberate enable path for an unsubscribed eligible device", () => {
-  assert.match(html, /id="notification-account-enable"[^>]*>Enable notifications</);
-  assert.match(notificationUi, /accountEnable\?\.addEventListener\("click", handleAccountEnable\)/);
-  assert.match(notificationUi, /accountEnable:\s*account\.enable/);
-  assert.match(notificationUi, /hasPlan:\s*Boolean\(store\.plan\)/);
-  assert.match(notificationUi, /spotter:plan-generated/);
-  assert.match(notificationUi, /getPlan:\s*\(\) => store\.plan/);
+test("workout alerts make no closed-app promise and stay fully on-device", () => {
+  assert.match(workoutAlerts, /notifyRestComplete/);
+  assert.doesNotMatch(workoutAlerts, /PushManager|VAPID|subscribe|fetch\(/i);
+  assert.match(reminders, /initWorkoutAlertsUI/);
+  assert.match(reminders, /initCalendarExport/);
 });
 
-test("a successful offer becomes an enabled state and cannot re-register", () => {
-  assert.match(notificationUi, /elements\.enable\.disabled = surface === "account" \? accountState\.enableDisabled : subscribed \|\| editorDisabled/);
-  assert.match(notificationUi, /Notifications are enabled\. Manage the schedule in Account\./);
-});
-
-test("denial and save errors restore a usable, capability-aware control state", () => {
-  assert.match(notificationUi, /catch \(error\) \{[\s\S]{0,500}renderSurface\(surface, result\.value\);/);
-  assert.match(notificationUi, /catch \(error\) \{\s*renderSurface\("account", current\);/);
-  assert.match(notificationUi, /function surfaceControlState\([\s\S]{0,500}notificationCapability\(globalThis\)/);
-  assert.match(notificationUi, /setSurfaceBusy\("offer", false\)/);
-});
-
-test("prompt analytics is emitted only by the client permission callback", () => {
-  assert.match(notificationUi, /onPermissionPrompt:\s*\(\) => trackFunnel\("notification_prompted"/);
-  assert.doesNotMatch(notificationUi, /if \(willPrompt\) trackFunnel\("notification_prompted"/);
-});
-
-test("Account proposal is expanded until subscribed and preflight status is neutral", () => {
-  assert.match(notificationUi, /disclosure:\s*surface === "account" && subscribed/);
-  assert.match(notificationUi, /Checking notification setup…/);
-  assert.match(notificationUi, /Waiting for your browser permission…/);
-});
-
-test("boot and visible resume recheck availability, renew authorization, and retry time-zone migration", () => {
-  assert.match(notificationUi, /visibilitychange/);
-  assert.match(notificationUi, /documentTarget\.visibilityState === "visible"/);
-  assert.match(notificationUi, /renewNotificationAuthorizationIfNeeded\(\)/);
-  assert.match(notificationUi, /Notification authorization could not be renewed\. Return to the app to retry\./);
-  assert.match(notificationUi, /timezoneMigrationController\.run\(\)/);
-});
-
-test("notification mutations share a centralized busy-state cleanup", () => {
-  assert.match(notificationUi, /createAccountMutationController\(\{ setBusy \}\)/);
-  assert.match(notificationUi, /Promise\.resolve\(result\)\.finally\(\(\) => \{/);
-  assert.match(notificationUi, /elements\.section\.setAttribute\("aria-busy", String\(value\)\)/);
-  assert.match(notificationUi, /setBusy:\s*\(value\) => \{[\s\S]{0,160}setSurfaceBusy\("account", value\);[\s\S]{0,100}setSurfaceBusy\("offer", value\);/);
-  assert.match(notificationUi, /if \(accountMutationController\.isBusy\(\)\) setSurfaceBusy\(surface, true\);/);
-  for (const kind of ["availability", "save", "delete"]) {
-    assert.match(notificationUi, new RegExp(`accountMutationController\\.run\\("${kind}"`));
-  }
-});
-
-test("unsupported and denied notification copy gives exact recovery guidance", () => {
-  assert.match(notificationUi, /Safari → Share → Add to Home Screen/);
-  assert.match(notificationUi, /install or add SpotterAI[^.]*then open the installed app/i);
-  assert.match(notificationGuidance, /iPhone[^.]*Settings app[^.]*SpotterAI[^.]*Allow Notifications/i);
-  assert.match(notificationGuidance, /Android[^.]*Settings[^.]*Apps[^.]*SpotterAI[^.]*Notifications/i);
-  assert.doesNotMatch(notificationGuidance, /browser settings/i);
-});
-
-test("notification opens and workout completion cross only privacy-safe boundaries", () => {
-  assert.match(notificationUi, /notification_opened/);
-  assert.match(notificationUi, /history\.replaceState/);
-  assert.match(workoutUi, /syncWorkoutCompletion\(workout\.date\)\.catch\(\(\) => \{\}\)/);
-  assert.match(quickLog, /syncWorkoutCompletion\(workout\.date\)\.catch\(\(\) => \{\}\)/);
-  assert.doesNotMatch(workoutUi, /updateWorkout\([^;]+;[\s\S]{0,240}syncWorkoutCompletion/);
+test("workout completion no longer syncs to any notification backend", () => {
+  assert.doesNotMatch(`${workoutUi}\n${quickLog}`, /syncWorkoutCompletion|notification-client/);
   assert.doesNotMatch(demoData, /syncWorkoutCompletion|notification-client/);
-  assert.doesNotMatch(`${workoutUi}\n${quickLog}`, /syncWorkoutCompletion\((?:workout\b(?!\.date)|exercises|durationSec|session|painToday|store)/);
+  // Rest-timer completion routes to the local alert helper instead.
+  assert.match(workoutUi, /notifyRestComplete\(\)\.catch\(\(\) => \{\}\)/);
 });

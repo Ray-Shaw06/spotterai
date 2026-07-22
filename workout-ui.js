@@ -18,7 +18,7 @@ import { epley1RM } from "./progression.js";
 import { store } from "./store.js";
 import { buildWorkoutSummary } from "./workout-summary.js";
 import { trackFunnel } from "./analytics.js";
-import { syncWorkoutCompletion } from "./notification-client.js";
+import { notifyRestComplete } from "./workout-alerts.js";
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -247,6 +247,9 @@ function restDone() {
     /* ignore */
   }
   beep();
+  // Optional on-device notification (only if the user enabled rest alerts and
+  // granted permission). Never blocks the visual/audio/vibration feedback above.
+  notifyRestComplete().catch(() => {});
   setTimeout(renderRestIdle, 1200);
 }
 function beep() {
@@ -381,7 +384,6 @@ function finishSession() {
   const { workout, newAchievements } = addWorkout({ name: el.name.value.trim() || session.name, exercises, durationSec, difficulty: session.difficulty });
   if (workout) {
     trackFunnel("first_workout_completed", { source });
-    syncWorkoutCompletion(workout.date).catch(() => {});
   }
   for (const a of newAchievements) toast(`Achievement · <strong>${esc(a.name)}</strong> · +${a.xp} XP`);
   session = null;
