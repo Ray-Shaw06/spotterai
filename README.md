@@ -99,24 +99,29 @@ with no remote push.
 ### The closed loop: adapt from real training
 
 The plan isn't a dead end. Once you've logged a few sessions, **Adapt my plan
-from my training** ([`/api/adapt`](api/adapt.js)) sends your current plan *plus a
-compact summary of what you've actually logged* (sessions vs target, weekly
-volume trend, PRs, adherence, protein) back to Gemini, which **revises the
-program** — progressing lifts you're beating, pulling back where adherence is
-low, rebalancing neglected muscles — and returns a short, data-cited **"what
-changed & why"** list. The **same `evaluator.js` then re-audits the new plan**,
-so every adaptation gets its own safety score.
+from my training** ([`adapt-engine.js`](adapt-engine.js)) re-tunes the program
+**entirely on-device — no AI, no network** — from what you've actually logged.
+Ordered transforms, recovery before progression: swap movements around active
+injuries, ease volume where adherence slipped, schedule a deload off a
+rising-volume peak, then progress the lifts you've been beating (2+ sessions at
+or above target). Every bullet in the **"what changed & why"** list cites a real
+number ("added a 4th set and suggested 62.5kg — you hit 8+ reps for 2 sessions"),
+and the **same `evaluator.js` re-audits the result** — with a hard invariant:
+the adapted plan can never carry more critical or warning flags than the one it
+started from.
 
 ```
    generate ──▶ plan ──▶ evaluator (score) ──▶ you train + log
        ▲                                              │
-       └──────────  /api/adapt  ◀── tracker summary ──┘
-                   (revise plan, then RE-AUDIT)
+       └────────  adapt-engine.js  ◀── your tracker ──┘
+              (deterministic re-tune, then RE-AUDIT)
 ```
 
-`/api/generate` and `/api/adapt` share one plan schema + validation
+Generation and adaptation share one plan schema + validation
 ([`lib/plan.js`](lib/plan.js)), and the revised plan is persisted per profile so
-the loop spans days, not just one session.
+the loop spans days, not just one session. Because adaptation is pure code, it
+runs offline, costs nothing, and is unit-tested end-to-end
+([`test/adapt-engine.test.js`](test/adapt-engine.test.js)).
 
 ---
 
@@ -438,10 +443,11 @@ remains an explicit opt-in.
   type scale) in CSS variables; [Space Grotesk + Inter](https://fonts.google.com)
   via Google Fonts; an animated, pure-SVG safety-score ring. No UI kit, no paid
   assets.
-- **Backend:** five Node.js Vercel functions — `api/generate.js` (plan
-  generation), `api/adapt.js` (re-tune a plan from logged training), `api/chat.js`
-  (coach chatbot), `api/estimate.js` (AI food-macro/photo + exercise-classification
-  estimates), and `api/parse.js` (natural-language quick-log → structured entry).
+- **Backend:** four Node.js Vercel functions — `api/generate.js` (plan
+  generation), `api/chat.js` (coach chatbot), `api/estimate.js` (AI
+  food-macro/photo + exercise-classification estimates), and `api/parse.js`
+  (natural-language quick-log → structured entry). Plan adaptation runs fully
+  client-side ([`adapt-engine.js`](adapt-engine.js)) — no function needed.
   AI keys remain server-only. There is **no notification backend** — reminders are
   calendar files generated in the browser and local on-device alerts.
 - **Reminders (zero-cost, on-device):** training days export to a standards-based
@@ -476,6 +482,7 @@ spotterai/
 ├─ evaluator.js           # ⭐ pure-code safety & quality auditor (flags-first, tiers)
 ├─ exercise-data.js       # ⭐ structured exercise knowledge layer (backs the checks)
 ├─ repair.js              # ⭐ deterministic plan-repair engine (flag → safer edit)
+├─ adapt-engine.js        # ⭐ deterministic adapt engine (re-tune plan from logged training, offline)
 ├─ trust.js               # ⭐ pure plan Trust Report confidence
 ├─ safety-boundaries.js   # ⭐ deterministic refusals (pain / diagnosis / ED / extreme)
 ├─ eval-suite.js          # ⭐ red-team fixtures + runner (powers Safety Lab + CI)
@@ -516,7 +523,6 @@ spotterai/
 ├─ firebase-config.js     # public Firebase config (paste yours to enable sync)
 ├─ api/
 │  ├─ generate.js         # serverless Gemini proxy — plan generation (holds key)
-│  ├─ adapt.js            # serverless Gemini proxy — re-tune plan from training
 │  ├─ chat.js             # serverless Gemini proxy — coach chatbot
 │  ├─ estimate.js         # serverless Gemini proxy — food macros (text or photo) + exercise tags
 │  └─ parse.js            # serverless Gemini proxy — natural-language quick-log parser
@@ -787,8 +793,6 @@ general plan, track habits, and catch obvious programming issues.
   concentrated in one session), not just total volume.
 - **Broader structured exercise coverage** so the recognition rate approaches
   100% and fewer lifts fall back to keyword logic.
-- A **fully deterministic adaptation engine** (the current adapt loop is
-  AI-assisted) so re-tuning works offline and is unit-testable end-to-end.
 - **Trust Report history** — track audits across plan versions over time.
 - **Equipment-fit and movement-pattern coverage** checks in the evaluator.
 

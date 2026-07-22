@@ -14,11 +14,12 @@
  * Bump CACHE when shipping changes so old caches are cleaned on activate.
  */
 
-const CACHE = "spotterai-v41";
+const CACHE = "spotterai-v42";
 // Explicit local module graph rooted at every <script type="module"> in index.html.
 // test/service-worker-behavior.test.js derives the graph independently so a new
 // boot import cannot be shipped without being added here.
 const BOOT_MODULES = [
+  "adapt-engine.js",
   "ai-errors.js",
   "ai.js",
   "analytics.js",
