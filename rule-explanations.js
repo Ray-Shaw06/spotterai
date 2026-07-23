@@ -56,6 +56,14 @@ export const RULE_EXPLANATIONS = [
     limitations: "Rep ranges overlap a lot, so this is a nudge, not a hard rule.",
   },
   {
+    id: "muscle_frequency",
+    name: "Training frequency",
+    checks: "For a hypertrophy goal, whether a muscle getting substantial weekly volume is trained on more than one day.",
+    why: "Splitting a muscle's weekly sets across about two sessions tends to grow it better than the same volume crammed into one day — more quality reps per set and better recovery between them.",
+    action: "Suggests spreading a once-a-week, high-volume muscle across two days. Purely informational: it never lowers the score, since the volume is already counted.",
+    limitations: "It uses population-level guidance, not your data, and only assesses frequency once weekly volume is meaningful.",
+  },
+  {
     id: "injury",
     name: "Injury & limitation conflicts",
     checks: "Movements commonly contraindicated for a stated injury (knee, lower back, shoulder, wrist).",

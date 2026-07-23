@@ -153,6 +153,17 @@ export const CASES = [
     ]),
     expect: [{ scoreAtLeast: 85 }, { check: "muscle_balance", status: "pass" }, { check: "leg_balance", status: "pass" }, { check: "weekly_volume", status: "pass" }],
   },
+  {
+    name: "High volume, trained once a week (frequency suggestion)",
+    desc: "A muscle gets plenty of weekly volume but all in one session — the frequency suggestion should fire.",
+    inputs: { goal: "Hypertrophy", experience: "Intermediate" },
+    plan: plan([
+      day("Chest", [ex("Barbell Bench Press", 3, "8-10", 8), ex("Incline Dumbbell Press", 3, "8-10", 8), ex("Cable Fly", 3, "12-15", 9), ex("Dumbbell Bench Press", 3, "10-12", 8)]),
+      day("Back", [ex("Barbell Row", 3, "8-10", 8), ex("Lat Pulldown", 3, "10-12", 8), ex("Seated Cable Row", 3, "10-12", 9), ex("Pull-up", 3, "8-10", 9)]),
+      day("Rest", []),
+    ]),
+    expect: [{ check: "muscle_frequency", status: "warn" }],
+  },
 ];
 
 // Scenario type per case, for the Safety Lab filters/labels.
