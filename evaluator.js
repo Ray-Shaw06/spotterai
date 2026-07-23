@@ -36,6 +36,10 @@ export const THRESHOLDS = {
   VERY_HIGH_WEEKLY_SETS_FAIL: 32, // clearly excessive for almost anyone
   LOW_WEEKLY_SETS_FOR_GROWTH: 6, // a prime mover below this is under-stimulated
 
+  // --- Training frequency (hypertrophy) -------------------------------------
+  FREQUENCY_MIN_SETS_TO_JUDGE: 10, // only assess frequency once a muscle gets real weekly volume
+  FREQUENCY_TARGET_DAYS: 2, // ~2x/week is the common frequency recommendation for growth
+
   // --- Push / pull balance (upper-body working-set ratio) -------------------
   BALANCE_RATIO_WARN: 2.0, // one side > 2× the other → imbalance (warn)
   BALANCE_RATIO_FAIL: 3.0, // one side > 3× the other → strong imbalance (fail)
@@ -77,6 +81,10 @@ export const PENALTY = {
   injury: { warn: 12, fail: 24 },
   beginner_load: { warn: 10, fail: 18 },
   goal_fit: { warn: 6, fail: 12 },
+  // Frequency is a pure coaching optimization, not a safety/quality deduction:
+  // the underlying volume is already scored by weekly_volume. Zero-weight so it
+  // surfaces as a suggestion without ever moving the score.
+  muscle_frequency: { warn: 0, fail: 0 },
 };
 
 // ============================================================================
@@ -283,6 +291,39 @@ export function computeWeeklyVolume(plan) {
   // Round to a tidy half-set so displayed numbers stay clean.
   for (const g of Object.keys(volume)) volume[g] = Math.round(volume[g] * 2) / 2;
   return volume;
+}
+
+/**
+ * Per-muscle weekly training FREQUENCY: how many distinct training days hit each
+ * group. A day counts for a group if any of its exercises contribute volume to
+ * that group (same recognition as computeWeeklyVolume — structured DB first,
+ * keyword fallback). Used by the frequency check and, later, the adapt engine.
+ */
+export function computeWeeklyFrequency(plan) {
+  const freq = {};
+  for (const group of Object.keys(MUSCLE_KEYWORDS)) freq[group] = 0;
+
+  for (const day of plan.days || []) {
+    const text = `${norm(day.day)} ${norm(day.focus)}`;
+    const isRest = /\b(rest|recovery|off day|day off|active recovery)\b/.test(text) || text.includes("mobility only");
+    if (isRest) continue;
+
+    const hit = new Set();
+    for (const ex of day.exercises || []) {
+      if ((Number(ex.sets) || 0) <= 0) continue;
+      const contrib = volumeContribution(ex.name);
+      if (contrib) {
+        for (const group of Object.keys(contrib)) if (group in freq) hit.add(group);
+      } else {
+        const name = norm(ex.name);
+        for (const [group, { include, exclude }] of Object.entries(MUSCLE_KEYWORDS)) {
+          if (include.some((kw) => name.includes(kw)) && !exclude.some((kw) => name.includes(kw))) hit.add(group);
+        }
+      }
+    }
+    for (const group of hit) freq[group] += 1;
+  }
+  return freq;
 }
 
 /** Sum the sets across a list of groups. */
@@ -518,6 +559,39 @@ function checkLegBalance(volume) {
   return finalize(id, label, "pass", `Quad and hamstring volume are reasonably balanced (quads ${round(quad)} vs hamstrings ${round(ham)} sets).`);
 }
 
+/**
+ * Training frequency — a hypertrophy optimization note. When a muscle gets
+ * substantial weekly volume but all of it lands in one session, spreading it
+ * across ~2 days tends to grow the muscle better (more quality reps per set,
+ * better recovery). Suggestion-tier and zero-weight: the volume is already
+ * scored by weekly_volume, so this never moves the number.
+ */
+function checkMuscleFrequency(plan, volume, frequency, goal) {
+  const id = "muscle_frequency";
+  const label = "Training frequency";
+
+  // The 2x-beats-1x evidence is clearest for hypertrophy; stay quiet otherwise.
+  if (goal !== "hypertrophy") {
+    return finalize(id, label, "pass", "Training frequency isn't a primary concern for this goal.");
+  }
+
+  const under = Object.keys(MUSCLE_KEYWORDS).filter(
+    (g) => (volume[g] || 0) >= THRESHOLDS.FREQUENCY_MIN_SETS_TO_JUDGE && (frequency[g] || 0) <= 1
+  );
+
+  if (under.length) {
+    const list = under.map((g) => `${g} (${round(volume[g])} sets in one day)`).join(", ");
+    const which = under.length === 1 ? "One muscle group gets" : "Some muscle groups get";
+    return finalize(
+      id,
+      label,
+      "warn",
+      `${which} substantial volume in a single weekly session: ${list}. Spreading it across about ${THRESHOLDS.FREQUENCY_TARGET_DAYS} days a week tends to grow a muscle better than the same sets in one session, through more quality reps and better recovery. This is an optimization, not a safety issue — the total volume is unchanged.`
+    );
+  }
+  return finalize(id, label, "pass", "Muscle groups with meaningful volume are trained at least a couple of times a week.");
+}
+
 /** Per-session set sanity — flags an extremely long single workout. */
 function checkSessionLoad(plan) {
   const id = "session_load";
@@ -561,7 +635,7 @@ function checkCoverage(plan) {
 // ============================================================================
 
 /** A stable version string surfaced in the Trust Report. Bump on rubric change. */
-export const EVALUATOR_VERSION = "v1.0.0";
+export const EVALUATOR_VERSION = "v1.1.0";
 
 /** Suggested fixes for the non-injury checks, keyed by check id. */
 const REMEDIES = {
@@ -577,6 +651,7 @@ const REMEDIES = {
     fix: "Lower intensity (leave 1–3 reps in reserve), drop max-effort sets, and build volume gradually.",
   },
   goal_fit: { fix: "Shift rep ranges toward your goal — lower reps (≈3–6) for strength, ≈6–15 for hypertrophy." },
+  muscle_frequency: { fix: "Split that muscle's weekly sets across two sessions (for example, half on one day and half on another) rather than one big session." },
 };
 
 /**
@@ -590,7 +665,7 @@ function tierFor(check) {
   if (check.status === "pass") return "pass";
   if (check.id === "invalid_plan") return "critical";
   // Quality / optimization / transparency notes, not safety flags.
-  if (check.id === "goal_fit" || check.id === "leg_balance" || check.id === "coverage") return "suggestion";
+  if (check.id === "goal_fit" || check.id === "leg_balance" || check.id === "coverage" || check.id === "muscle_frequency") return "suggestion";
   if (check.id.startsWith("injury_")) return check.status === "fail" ? "critical" : "warning";
   const CRITICAL_ON_FAIL = new Set(["rest_days", "weekly_volume", "beginner_load", "session_load"]);
   if (check.status === "fail" && CRITICAL_ON_FAIL.has(check.id)) return "critical";
@@ -648,6 +723,7 @@ export function evaluatePlan(plan, userInputs = {}) {
 
   const goal = goalBucket(userInputs.goal || plan.goal);
   const volume = computeWeeklyVolume(plan);
+  const frequency = computeWeeklyFrequency(plan);
 
   // Run every check. Injuries can contribute multiple rows.
   const checks = [
@@ -655,6 +731,7 @@ export function evaluatePlan(plan, userInputs = {}) {
     checkWeeklyVolume(plan, volume, goal),
     checkMuscleBalance(volume),
     checkLegBalance(volume),
+    checkMuscleFrequency(plan, volume, frequency, goal),
     checkSessionLoad(plan),
     ...checkInjuries(plan, userInputs),
     checkBeginnerLoad(plan, volume, userInputs),

@@ -199,6 +199,7 @@ safe.**
 | 7 | **Session length sanity** | Total working sets in a single workout | `warn` past ~30 sets; `fail` past ~40 (an extreme, form-degrading session) |
 | 8 | **Goal fit** | Checks average rep ranges and structure against the goal | `warn` when rep ranges don't match the stated goal |
 | 9 | **Exercise recognition** | Transparency: how much of the plan matched the structured DB vs fell back to keywords | `warn` (suggestion) when recognition is low, so the audit is honest about its own estimate quality |
+| 10 | **Training frequency** | For a hypertrophy goal, checks whether a muscle getting real weekly volume is trained on more than one day (`computeWeeklyFrequency`) | `warn` (suggestion, **zero score weight**) when a high-volume muscle is trained only 1×/week; spreading it across ~2 days grows it better. Volume is already scored, so this never moves the number |
 
 > Injuries generate **one check row per injury** so each gets its own explanation
 > and regression suggestion.
