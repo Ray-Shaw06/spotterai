@@ -164,6 +164,16 @@ export const CASES = [
     ]),
     expect: [{ check: "muscle_frequency", status: "warn" }],
   },
+  {
+    name: "Bodyweight user, gym lifts prescribed (equipment mismatch)",
+    desc: "A bodyweight-only user gets machine and barbell lifts — the equipment-fit check should fire.",
+    inputs: { goal: "Hypertrophy", experience: "Beginner", equipment: ["Bodyweight"] },
+    plan: plan([
+      day("Full body", [ex("Leg Press", 3, "10-12", 8), ex("Barbell Bench Press", 3, "8-10", 8), ex("Lat Pulldown", 3, "10-12", 8)]),
+      day("Rest", []),
+    ]),
+    expect: [{ check: "equipment_fit", status: "warn" }],
+  },
 ];
 
 // Scenario type per case, for the Safety Lab filters/labels.

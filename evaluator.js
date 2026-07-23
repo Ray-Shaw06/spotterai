@@ -20,7 +20,7 @@
  * Runs in the browser as an ES module.
  */
 
-import { lookupExercise, isContraindicated, volumeContribution } from "./exercise-data.js";
+import { lookupExercise, isContraindicated, volumeContribution, equipmentCapabilities, canPerform } from "./exercise-data.js";
 
 // ============================================================================
 // 1. TUNABLE CONSTANTS  (the rubric)
@@ -85,6 +85,9 @@ export const PENALTY = {
   // the underlying volume is already scored by weekly_volume. Zero-weight so it
   // surfaces as a suggestion without ever moving the score.
   muscle_frequency: { warn: 0, fail: 0 },
+  // Equipment fit is a usability note, not a safety flag; zero-weight so it
+  // surfaces without penalizing the score.
+  equipment_fit: { warn: 0, fail: 0 },
 };
 
 // ============================================================================
@@ -592,6 +595,42 @@ function checkMuscleFrequency(plan, volume, frequency, goal) {
   return finalize(id, label, "pass", "Muscle groups with meaningful volume are trained at least a couple of times a week.");
 }
 
+/**
+ * Equipment fit — flags prescribed exercises the user can't do with the
+ * equipment they selected. A usability check, not a safety one: suggestion-tier
+ * and zero-weight. Passes when no equipment was provided (nothing to assess) or
+ * when everything is performable. Only judges recognized exercises so unknown
+ * names are never over-flagged.
+ */
+function checkEquipmentFit(plan, userInputs) {
+  const id = "equipment_fit";
+  const label = "Equipment fit";
+  const caps = equipmentCapabilities(userInputs.equipment);
+
+  if (!caps) {
+    return finalize(id, label, "pass", "No equipment was specified, so exercise availability wasn't assessed.");
+  }
+
+  const missing = [];
+  for (const ex of allExercises(plan)) {
+    if (lookupExercise(ex.name) && !canPerform(ex.name, caps)) missing.push(ex.name);
+  }
+  const unique = [...new Set(missing)];
+
+  if (unique.length) {
+    const shown = unique.slice(0, 4).join(", ");
+    const more = unique.length > 4 ? `, and ${unique.length - 4} more` : "";
+    const one = unique.length === 1;
+    return finalize(
+      id,
+      label,
+      "warn",
+      `${unique.length} exercise${one ? "" : "s"} need${one ? "s" : ""} equipment you didn't list (${shown}${more}). Swap ${one ? "it" : "them"} for a movement your available equipment supports, or add the equipment to your profile.`
+    );
+  }
+  return finalize(id, label, "pass", "Every prescribed exercise fits the equipment you have available.");
+}
+
 /** Per-session set sanity — flags an extremely long single workout. */
 function checkSessionLoad(plan) {
   const id = "session_load";
@@ -635,7 +674,7 @@ function checkCoverage(plan) {
 // ============================================================================
 
 /** A stable version string surfaced in the Trust Report. Bump on rubric change. */
-export const EVALUATOR_VERSION = "v1.1.0";
+export const EVALUATOR_VERSION = "v1.2.0";
 
 /** Suggested fixes for the non-injury checks, keyed by check id. */
 const REMEDIES = {
@@ -652,6 +691,7 @@ const REMEDIES = {
   },
   goal_fit: { fix: "Shift rep ranges toward your goal — lower reps (≈3–6) for strength, ≈6–15 for hypertrophy." },
   muscle_frequency: { fix: "Split that muscle's weekly sets across two sessions (for example, half on one day and half on another) rather than one big session." },
+  equipment_fit: { fix: "Swap exercises that need unavailable equipment for ones your gear supports, or update the equipment in your profile." },
 };
 
 /**
@@ -665,7 +705,7 @@ function tierFor(check) {
   if (check.status === "pass") return "pass";
   if (check.id === "invalid_plan") return "critical";
   // Quality / optimization / transparency notes, not safety flags.
-  if (check.id === "goal_fit" || check.id === "leg_balance" || check.id === "coverage" || check.id === "muscle_frequency") return "suggestion";
+  if (check.id === "goal_fit" || check.id === "leg_balance" || check.id === "coverage" || check.id === "muscle_frequency" || check.id === "equipment_fit") return "suggestion";
   if (check.id.startsWith("injury_")) return check.status === "fail" ? "critical" : "warning";
   const CRITICAL_ON_FAIL = new Set(["rest_days", "weekly_volume", "beginner_load", "session_load"]);
   if (check.status === "fail" && CRITICAL_ON_FAIL.has(check.id)) return "critical";
@@ -732,6 +772,7 @@ export function evaluatePlan(plan, userInputs = {}) {
     checkMuscleBalance(volume),
     checkLegBalance(volume),
     checkMuscleFrequency(plan, volume, frequency, goal),
+    checkEquipmentFit(plan, userInputs),
     checkSessionLoad(plan),
     ...checkInjuries(plan, userInputs),
     checkBeginnerLoad(plan, volume, userInputs),

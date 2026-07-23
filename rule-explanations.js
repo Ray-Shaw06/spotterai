@@ -64,6 +64,14 @@ export const RULE_EXPLANATIONS = [
     limitations: "It uses population-level guidance, not your data, and only assesses frequency once weekly volume is meaningful.",
   },
   {
+    id: "equipment_fit",
+    name: "Equipment fit",
+    checks: "Whether every prescribed exercise can be performed with the equipment you selected (bodyweight, dumbbells, barbell, bands, or a full gym).",
+    why: "A plan full of movements you can't set up is a plan you won't run. Matching prescriptions to your actual equipment keeps the program usable.",
+    action: "Names exercises that need gear you didn't list and points you to available swaps. Purely informational: it never lowers the score.",
+    limitations: "It only judges recognized exercises, assumes a bodyweight option is always available, and can't see partial setups (for example a bench without a rack).",
+  },
+  {
     id: "injury",
     name: "Injury & limitation conflicts",
     checks: "Movements commonly contraindicated for a stated injury (knee, lower back, shoulder, wrist).",
