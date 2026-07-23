@@ -235,6 +235,10 @@ explanations are the product.
   evaluator versions, checks run/passed, limitations considered, main concerns,
   recommended edits, and a **Low / Medium / High confidence** ([`trust.js`](trust.js))
   with a clear reason and a "can't guarantee safety / not a coach" disclaimer.
+- **Trust Report history** ([`trust-history.js`](trust-history.js)) — each
+  generate/adapt snapshots the audit score per plan version, so the report shows
+  a trend line (v1 → v2 → v3) with each adaptation's reason attached. You watch
+  the plan get safer and fitter over time instead of trusting a single number.
 - **Safety boundaries** ([`safety-boundaries.js`](safety-boundaries.js)) — a
   deterministic screen that refuses pain / injury-diagnosis / medical-rehab /
   extreme-loss / disordered-eating / "ignore the warnings" requests *before* any
@@ -484,6 +488,7 @@ spotterai/
 ├─ repair.js              # ⭐ deterministic plan-repair engine (flag → safer edit)
 ├─ adapt-engine.js        # ⭐ deterministic adapt engine (re-tune plan from logged training, offline)
 ├─ trust.js               # ⭐ pure plan Trust Report confidence
+├─ trust-history.js       # ⭐ audit score across plan versions (Trust Report history)
 ├─ safety-boundaries.js   # ⭐ deterministic refusals (pain / diagnosis / ED / extreme)
 ├─ eval-suite.js          # ⭐ red-team fixtures + runner (powers Safety Lab + CI)
 ├─ eval-ui.js             # Safety Lab report (filters, scenario types, pass/fail)
@@ -793,7 +798,6 @@ general plan, track habits, and catch obvious programming issues.
   concentrated in one session), not just total volume.
 - **Broader structured exercise coverage** so the recognition rate approaches
   100% and fewer lifts fall back to keyword logic.
-- **Trust Report history** — track audits across plan versions over time.
 - **Equipment-fit and movement-pattern coverage** checks in the evaluator.
 
 ---

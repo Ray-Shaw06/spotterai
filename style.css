@@ -1050,6 +1050,20 @@ table {
 .trust__list li::before { content: "·"; position: absolute; left: 4px; color: var(--accent); }
 .trust__disclaimer { font-size: 0.8rem; color: var(--text-faint); border-top: 1px solid var(--border); padding-top: var(--space-3); }
 
+/* Audit history — watch the plan's score move over versions */
+.trust__history h5 { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
+.trust__trend { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.02em; text-transform: none; padding: 3px 8px; border-radius: var(--r-full); border: 1px solid var(--border); white-space: nowrap; }
+.trust__trend--up { color: var(--success); background: var(--success-soft); border-color: var(--success-ring); }
+.trust__trend--down { color: var(--danger); background: var(--danger-soft); }
+.trust__spark { max-width: 420px; margin: var(--space-2) 0 var(--space-3); }
+.trust__spark .chart { width: 100%; height: auto; }
+.trust__vers { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.trust__ver { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-2) 0; border-top: 1px solid var(--border-soft); }
+.trust__ver-tag { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.72rem; font-weight: 600; color: var(--text-muted); min-width: 2.2rem; }
+.trust__ver-score { font-weight: 700; font-size: var(--fs-small); color: var(--text); min-width: 1.8rem; }
+.trust__ver-when { font-size: 0.72rem; margin-left: auto; white-space: nowrap; }
+.trust__ver-note { flex-basis: 100%; font-size: 0.76rem; line-height: 1.35; }
+
 /* ----------------------------------------------------------------------------
    Safety Lab content — benchmark, catches/misses, bad-plan examples, architecture
 ---------------------------------------------------------------------------- */
