@@ -6,7 +6,7 @@
 **Your AI fitness copilot — plan, track, adapt, and audit your training.** &nbsp;·&nbsp; **[▶ Live demo](https://spotterai-flax.vercel.app)**
 
 <p align="center">
-  <img src="og-image.png" alt="SpotterAI — your AI fitness copilot. A flags-first plan safety audit: issues to review, severity tiers, and a demoted quality score." width="700" />
+  <img src="og-home.png" alt="SpotterAI — your AI fitness copilot. A flags-first plan safety audit: issues to review, severity tiers, and a demoted quality score." width="700" />
 </p>
 
 SpotterAI is an AI fitness copilot built around one idea: **don't blindly trust

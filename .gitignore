@@ -20,6 +20,9 @@ yarn-error.log*
 firebase-debug.log*
 firestore-debug.log*
 
+# Generated asset pipelines (not part of the app)
+output/
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db
