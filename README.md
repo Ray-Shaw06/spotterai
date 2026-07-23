@@ -200,6 +200,7 @@ safe.**
 | 8 | **Goal fit** | Checks average rep ranges and structure against the goal | `warn` when rep ranges don't match the stated goal |
 | 9 | **Exercise recognition** | Transparency: how much of the plan matched the structured DB vs fell back to keywords | `warn` (suggestion) when recognition is low, so the audit is honest about its own estimate quality |
 | 10 | **Training frequency** | For a hypertrophy goal, checks whether a muscle getting real weekly volume is trained on more than one day (`computeWeeklyFrequency`) | `warn` (suggestion, **zero score weight**) when a high-volume muscle is trained only 1×/week; spreading it across ~2 days grows it better. Volume is already scored, so this never moves the number |
+| 11 | **Equipment fit** | Maps the user's equipment (bodyweight / dumbbells / barbell / bands / full gym) to each exercise's requirements (`equipmentCapabilities` + `canPerform`) | `warn` (suggestion, **zero score weight**) naming any prescribed lift that needs gear the user didn't list, so the plan stays runnable |
 
 > Injuries generate **one check row per injury** so each gets its own explanation
 > and regression suggestion.

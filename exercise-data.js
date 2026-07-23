@@ -111,6 +111,14 @@ export const EXERCISE_DATA = [
   E("Ab Wheel Rollout", { primaryMuscles: ["core"], movementPattern: "isolation", equipment: ["bodyweight"], difficulty: "advanced", jointStress: ["lower_back"], contraindications: ["lower_back"], commonSubstitutions: ["Plank"], regressionOptions: ["Plank"], progressionOptions: [] }),
   E("Russian Twist", { primaryMuscles: ["core"], movementPattern: "isolation", equipment: ["bodyweight"], difficulty: "beginner", jointStress: ["lower_back"], contraindications: [], commonSubstitutions: ["Pallof Press"], regressionOptions: [], progressionOptions: [] }),
   E("Pallof Press", { primaryMuscles: ["core"], movementPattern: "isometric", equipment: ["cable"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Plank"], regressionOptions: [], progressionOptions: [] }),
+
+  // --- Machines (commercial-gym additions; also close substitution gaps) -----
+  E("Machine Shoulder Press", { primaryMuscles: ["shoulders"], secondaryMuscles: ["triceps"], movementPattern: "vertical_push", equipment: ["machine"], difficulty: "beginner", jointStress: ["shoulder"], contraindications: [], commonSubstitutions: ["Dumbbell Shoulder Press", "Overhead Press"], regressionOptions: [], progressionOptions: ["Overhead Press"] }),
+  E("Reverse Pec Deck", { primaryMuscles: ["shoulders"], secondaryMuscles: ["back"], movementPattern: "isolation", equipment: ["machine"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Face Pull", "Chest-Supported Row"], regressionOptions: [], progressionOptions: [] }),
+  E("Assisted Pull-up", { primaryMuscles: ["back"], secondaryMuscles: ["biceps"], movementPattern: "vertical_pull", equipment: ["machine"], difficulty: "beginner", jointStress: ["shoulder"], contraindications: [], commonSubstitutions: ["Lat Pulldown", "Pull-up"], regressionOptions: ["Lat Pulldown"], progressionOptions: ["Pull-up"] }),
+  E("Assisted Dip", { primaryMuscles: ["chest", "triceps"], movementPattern: "vertical_push", equipment: ["machine"], difficulty: "beginner", jointStress: ["shoulder"], contraindications: ["shoulder"], commonSubstitutions: ["Machine Dip", "Dips"], regressionOptions: [], progressionOptions: ["Dips"] }),
+  E("Machine Row", { primaryMuscles: ["back"], secondaryMuscles: ["biceps"], movementPattern: "horizontal_pull", equipment: ["machine"], difficulty: "beginner", jointStress: [], contraindications: [], commonSubstitutions: ["Seated Cable Row", "Chest-Supported Row"], regressionOptions: [], progressionOptions: [] }),
+  E("Smith Machine Squat", { primaryMuscles: ["quads", "glutes"], movementPattern: "squat", equipment: ["machine"], difficulty: "beginner", jointStress: ["knee"], contraindications: [], commonSubstitutions: ["Back Squat", "Leg Press", "Hack Squat"], regressionOptions: ["Leg Press"], progressionOptions: ["Back Squat"] }),
 ];
 
 // ----------------------------------------------------------------------------
@@ -139,6 +147,55 @@ export function lookupExercise(name) {
 export function isContraindicated(name, injuryKey) {
   const e = lookupExercise(name);
   return !!e && e.contraindications.includes(injuryKey);
+}
+
+// ----------------------------------------------------------------------------
+// Equipment fit — map the user's coarse onboarding choices to the DB's tags.
+// ----------------------------------------------------------------------------
+
+// Onboarding offers coarse options ("Full gym", "Dumbbells", "Barbell",
+// "Bodyweight", "Bands"). Each unlocks a set of the DB's fine-grained equipment
+// tags. Bodyweight is always available. Kept here so both the evaluator's
+// equipment-fit check and the substitution filter share one source of truth.
+const EQUIPMENT_MAP = {
+  "full gym": ["barbell", "rack", "bench", "dumbbell", "machine", "cable", "band", "kettlebell", "bodyweight"],
+  dumbbells: ["dumbbell", "bench", "bodyweight"],
+  dumbbell: ["dumbbell", "bench", "bodyweight"],
+  barbell: ["barbell", "rack", "bench", "bodyweight"],
+  bands: ["band", "bodyweight"],
+  band: ["band", "bodyweight"],
+  bodyweight: ["bodyweight"],
+};
+
+/**
+ * Turn the user's selected equipment into the set of usable DB equipment tags.
+ * Returns null for an empty or fully-unrecognized selection, meaning "no
+ * constraint — don't assess" (callers treat null as everything-allowed).
+ */
+export function equipmentCapabilities(userEquipment) {
+  if (!Array.isArray(userEquipment) || !userEquipment.length) return null;
+  const caps = new Set(["bodyweight"]);
+  let known = false;
+  for (const item of userEquipment) {
+    const tags = EQUIPMENT_MAP[norm(item)];
+    if (tags) {
+      known = true;
+      for (const t of tags) caps.add(t);
+    }
+  }
+  return known ? caps : null;
+}
+
+/**
+ * Can this exercise be performed with the given capability set? Unknown
+ * exercises and entries without equipment tags are assumed performable, so the
+ * check never over-flags. OR semantics: usable if ANY required tag is available.
+ */
+export function canPerform(name, caps) {
+  if (!caps) return true;
+  const e = lookupExercise(name);
+  if (!e || !e.equipment || !e.equipment.length) return true;
+  return e.equipment.some((tag) => caps.has(String(tag).toLowerCase()));
 }
 
 // The ten muscle groups the evaluator scores volume against.
