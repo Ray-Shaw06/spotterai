@@ -18,6 +18,8 @@ import { repairPlan } from "./repair.js";
 import { screenRequest, GENERATOR_BOUNDARY } from "./safety-boundaries.js";
 import { ruleForCheck } from "./rule-explanations.js";
 import { planConfidence } from "./trust.js";
+import { buildAuditEntry, recordAudit, getAuditHistory, auditTrend } from "./trust-history.js";
+import { lineChart } from "./charts.js";
 import { setPlan, store } from "./store.js";
 import { getContext as getTrackerContext, buildAdaptContext } from "./tracker-store.js";
 import { adaptPlan } from "./adapt-engine.js";
@@ -232,7 +234,7 @@ async function generate(inputsOverride) {
 const safetyBoundary = document.getElementById("safety-boundary");
 const safetyBoundaryText = document.getElementById("safety-boundary-text");
 
-function renderResults(plan, inputs, usedFallback, { focus = true, failureClass = "unknown" } = {}) {
+function renderResults(plan, inputs, usedFallback, { focus = true, failureClass = "unknown", note = "" } = {}) {
   revealGenerator();
   fallbackNotice.hidden = !usedFallback;
   if (usedFallback) {
@@ -249,6 +251,14 @@ function renderResults(plan, inputs, usedFallback, { focus = true, failureClass 
 
   // Run the pure-code audit, then render it flags-first.
   const audit = evaluatePlan(plan, inputs);
+
+  // Snapshot this audit into the per-profile history (real user plans only, not
+  // the saved fallback example). Deduped, so re-renders don't pile up.
+  if (!usedFallback) {
+    const injuries = (inputs?.injuries || []).filter((v) => v && v !== "none");
+    const hasInjuries = injuries.length > 0 || !!(inputs?.injuryNotes || "").trim();
+    recordAudit(buildAuditEntry(plan, audit, { hasInjuries, note }));
+  }
 
   renderAudit(audit);
   renderRepair(plan, inputs, audit);
@@ -365,6 +375,51 @@ function animateCount(el, target, duration) {
 // summary attached to every generated plan.
 // ----------------------------------------------------------------------------
 
+/** Short relative time for the audit-history list ("just now", "3d ago", date). */
+function relTime(ts) {
+  const diff = Date.now() - Number(ts || 0);
+  if (!Number.isFinite(diff) || diff < 0) return "";
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day}d ago`;
+  return new Date(Number(ts)).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/** The "watch the plan improve over versions" block, shown once there are 2+ audits. */
+function trustHistoryBlock() {
+  const history = getAuditHistory();
+  if (history.length < 2) return "";
+  const trend = auditTrend(history);
+  const up = trend.delta >= 0;
+  const chart = lineChart(
+    history.map((h) => ({ label: h.version, value: h.score })),
+    { height: 96 }
+  );
+  const rows = [...history]
+    .reverse()
+    .map(
+      (h) => `<li class="trust__ver">
+        <span class="trust__ver-tag">${esc(h.version)}</span>
+        <span class="trust__ver-score">${h.score}</span>
+        <span class="trust__conf trust__conf--${h.level.toLowerCase()}">${h.level}</span>
+        <span class="trust__ver-when muted">${relTime(h.at)}</span>
+        ${h.note ? `<span class="trust__ver-note muted">${esc(h.note)}</span>` : ""}
+      </li>`
+    )
+    .join("");
+  return `<div class="trust__block trust__history">
+      <h5>Audit history
+        <span class="trust__trend trust__trend--${up ? "up" : "down"}">${up ? "▲" : "▼"} ${up ? "+" : ""}${trend.delta} over ${trend.points} versions</span>
+      </h5>
+      <div class="trust__spark">${chart}</div>
+      <ol class="trust__vers">${rows}</ol>
+    </div>`;
+}
+
 function renderTrustReport(plan, inputs, audit) {
   if (!trustReportEl) return;
   const s = audit.summary;
@@ -402,6 +457,7 @@ function renderTrustReport(plan, inputs, audit) {
           ${row("Checks passed", `${s.passed}/${s.total}`)}
           ${row("Confidence", `${conf.level}: ${esc(conf.why)}`)}
         </dl>
+        ${trustHistoryBlock()}
         <div class="trust__block"><h5>User limitations considered</h5>${list(limitations, "No limitations were provided.")}</div>
         <div class="trust__block"><h5>Main concerns</h5>${list(concerns, "No critical issues or warnings.")}</div>
         <div class="trust__block"><h5>Recommended edits</h5>${list(edits, "No edits recommended.")}</div>
@@ -631,7 +687,7 @@ function adapt() {
     // Replace the current plan (persist + let chat/workout see it), re-audit,
     // re-render, then surface what changed and why.
     publishPlan(plan, store.inputs);
-    renderResults(plan, store.inputs, false);
+    renderResults(plan, store.inputs, false, { note: summary });
     renderAdaptChanges(summary, changes);
   } catch {
     showAdaptError("Couldn't adapt the plan just now. Please try again.");

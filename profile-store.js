@@ -16,6 +16,7 @@
 const META_KEY = "spotterai.profiles.v1";
 const TRACKER_BASE = "spotterai.tracker.v1";
 const PLAN_BASE = "spotterai.plan.v1";
+const AUDIT_HISTORY_BASE = "spotterai.audit.v1";
 
 function loadMeta() {
   try {
@@ -81,6 +82,11 @@ export function trackerKey(id = getActiveId()) {
 /** Storage key for the active profile's current generated/adapted plan. */
 export function planKey(id = getActiveId()) {
   return `${PLAN_BASE}::${id}`;
+}
+
+/** Storage key for the active profile's plan-audit history (score over versions). */
+export function auditHistoryKey(id = getActiveId()) {
+  return `${AUDIT_HISTORY_BASE}::${id}`;
 }
 
 export function listProfiles() {
@@ -155,6 +161,7 @@ export function deleteProfile(id) {
   try {
     localStorage.removeItem(trackerKey(id));
     localStorage.removeItem(planKey(id));
+    localStorage.removeItem(auditHistoryKey(id));
   } catch {
     /* ignore */
   }
