@@ -31,39 +31,44 @@
 :root {
   /* Color — base: cool paper white with a faint iris undertone ("Record").
      Deliberately NOT a warm cream/sand: the tint runs toward the brand's own
-     violet hue, not toward default warmth. Surfaces are opaque, not glass —
-     depth comes from hairline borders, not blur and bloom. */
-  --bg: #f6f5fa;
-  --bg-soft: #f1f0f8; /* second neutral layer: sidebar, toolbars, panels */
+     forest-green hue, not toward default warmth. Surfaces are opaque, not
+     glass — depth comes from hairline borders, not blur and bloom. */
+  --bg: #f5f8f6;
+  --bg-soft: #eef2ef; /* second neutral layer: sidebar, toolbars, panels */
   --surface: #ffffff; /* card / elevated */
   --surface-solid: #ffffff; /* opaque variant where blur isn't wanted */
-  --surface-2: #f1f0f8; /* control / hover */
-  --border: #dedbe9; /* hairline */
-  --border-soft: #e9e7f1;
+  --surface-2: #eff3f0; /* control / hover */
+  --border: #dbe3dd; /* hairline */
+  --border-soft: #e7ede9;
   --sheen: transparent; /* no glass highlight in the light register */
 
-  /* Color — text: near-black ink with a faint violet cast → cool greys.
+  /* Color — text: near-black ink with a faint green cast → cool greys.
      Every tier verified ≥4.5:1 (AA body) on bg, surface, AND surface-2. */
-  --text: #16141f; /* 16.8:1 on bg */
-  --text-muted: #565270; /* 6.8:1 on bg */
-  --text-faint: #64607e; /* 5.5:1 on bg — quietest tier, still AA body */
+  --text: #141a17; /* 16.5:1 on bg */
+  --text-muted: #4f5a54; /* 6.7:1 on bg */
+  --text-faint: #5d6a63; /* 5.3:1 on bg — quietest tier, still AA body */
 
-  /* Color — accent: the same iris violet identity, deepened so it carries AA
-     as text on white (7.0:1) and takes white ink on fills (7.6:1). */
-  --accent: #5333d1;
-  --accent-hover: #4526bd;
-  --accent-soft: rgba(83, 51, 209, 0.09);
-  --accent-ring: rgba(83, 51, 209, 0.30);
+  /* Color — accent: deep forest green. Carries AA as text on paper (7.4:1)
+     and takes white ink on fills (7.9:1).
+     NOTE — this deliberately merges the brand with the "passed / safe" signal
+     that core_values.md previously kept separate. In a product whose whole
+     claim is that plans get checked, green meaning both "our brand" and
+     "this passed" is one idea, not two. Warn (amber) and danger (red) carry
+     the other tiers, and the severity glyphs/pills do the discriminating. */
+  --accent: #1a5c42;
+  --accent-hover: #12452f;
+  --accent-soft: rgba(26, 92, 66, 0.09);
+  --accent-ring: rgba(26, 92, 66, 0.30);
   --accent-ink: #ffffff; /* white ink on accent fills (AA-strong) */
-  --accent-2: #7b3fc4; /* orchid companion — quiet, used sparingly */
+  --accent-2: #1f6b57; /* pine companion — quiet, used sparingly */
 
-  /* Color — status. Green is reserved for "passed / safe", never the brand.
-     Darkened for light surfaces; all three clear AA body on bg/surface/ctrl. */
-  --success: #0e7a58;
+  /* Color — status. "Passed / safe" is now the brand green itself (see above).
+     All tiers clear AA body on bg, surface, and surface-2. */
+  --success: #1a5c42;
   --warn: #87620d;
   --danger: #c22f26;
-  --success-soft: rgba(14, 122, 88, 0.10);
-  --success-ring: rgba(14, 122, 88, 0.28);
+  --success-soft: rgba(26, 92, 66, 0.10);
+  --success-ring: rgba(26, 92, 66, 0.28);
   --warn-soft: rgba(135, 98, 13, 0.10);
   --danger-soft: rgba(194, 47, 38, 0.09);
 
@@ -86,11 +91,11 @@
   --r-full: 999px;
 
   /* Shadows — near-flat. Elevation reads through borders, not drop shadows. */
-  --shadow-sm: 0 1px 2px rgba(22, 20, 31, 0.05);
-  --shadow-md: 0 1px 2px rgba(22, 20, 31, 0.04), 0 8px 20px -14px rgba(22, 20, 31, 0.18);
-  --shadow-lg: 0 1px 3px rgba(22, 20, 31, 0.05), 0 24px 48px -28px rgba(22, 20, 31, 0.24);
-  --glow-accent: 0 1px 2px rgba(22, 20, 31, 0.10);
-  --glow-accent-strong: 0 0 0 1px var(--accent-ring), 0 2px 6px -2px rgba(83, 51, 209, 0.28);
+  --shadow-sm: 0 1px 2px rgba(20, 26, 23, 0.05);
+  --shadow-md: 0 1px 2px rgba(20, 26, 23, 0.04), 0 8px 20px -14px rgba(20, 26, 23, 0.18);
+  --shadow-lg: 0 1px 3px rgba(20, 26, 23, 0.05), 0 24px 48px -28px rgba(20, 26, 23, 0.24);
+  --glow-accent: 0 1px 2px rgba(20, 26, 23, 0.10);
+  --glow-accent-strong: 0 0 0 1px var(--accent-ring), 0 2px 6px -2px rgba(26, 92, 66, 0.28);
 
   /* Typography — Sora (display) + Inter (UI) + JetBrains Mono (data) */
   --font-display: "Sora", "Inter", system-ui, sans-serif;
@@ -448,7 +453,7 @@ table {
   opacity: 0.75;
 }
 .sidebar__nav .nav-link:hover {
-  background: rgba(22, 20, 31, 0.05);
+  background: rgba(20, 26, 23, 0.05);
   color: var(--text);
 }
 .sidebar__nav .nav-link.is-active {
@@ -1020,7 +1025,7 @@ table {
 .flag__sev { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; padding: 3px 9px; border-radius: var(--r-full); }
 .flag--critical .flag__sev { color: var(--danger); background: var(--danger-soft); }
 .flag--warning .flag__sev { color: var(--warn); background: var(--warn-soft); }
-.flag--suggestion .flag__sev { color: var(--text-muted); background: rgba(22, 20, 31, 0.06); }
+.flag--suggestion .flag__sev { color: var(--text-muted); background: rgba(20, 26, 23, 0.06); }
 .flag__label { font-weight: 600; letter-spacing: -0.01em; }
 .flag__why { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.55; }
 .flag__row { margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text); line-height: 1.5; }
@@ -1123,7 +1128,7 @@ table {
 /* ----------------------------------------------------------------------------
    Guided onboarding overlay
 ---------------------------------------------------------------------------- */
-.onb { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: var(--space-4); background: rgba(22, 20, 31, 0.42); }
+.onb { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: var(--space-4); background: rgba(20, 26, 23, 0.42); }
 .onb.is-open { display: flex; }
 .onb__panel { width: 100%; max-width: 560px; max-height: 92vh; display: flex; flex-direction: column; background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--r-xl); box-shadow: var(--shadow-lg); overflow: hidden; }
 .onb__head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-5) 0; }
@@ -1178,7 +1183,7 @@ table {
 .ex-plate { fill: #9aa2b3; }
 .ex-collar { fill: #dfe3ec; } /* plate hub / dumbbell bell highlight */
 .ex-ground { stroke: var(--border); stroke-width: 2; stroke-linecap: round; }
-.ex-shadow { fill: rgba(22, 20, 31, 0.14); }
+.ex-shadow { fill: rgba(20, 26, 23, 0.14); }
 .ex-anim__cap { font-size: 0.8rem; color: var(--text-muted); text-align: center; line-height: 1.4; }
 .ex-anim__dot { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--accent); vertical-align: middle; box-shadow: 0 0 8px 1px var(--accent); animation: ex-pulse 1.7s ease-in-out infinite; }
 
@@ -3245,7 +3250,7 @@ table {
 .eval-case__type { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; padding: 2px 7px; border-radius: var(--r-full); vertical-align: middle; margin-left: 6px; }
 .eval-case__type--good, .eval-case__type--guard { color: var(--success); background: var(--success-soft); }
 .eval-case__type--risky { color: var(--warn); background: var(--warn-soft); }
-.eval-case__type--edge { color: var(--text-muted); background: rgba(22, 20, 31, 0.06); }
+.eval-case__type--edge { color: var(--text-muted); background: rgba(20, 26, 23, 0.06); }
 .eval-flagchips { display: flex; flex-wrap: wrap; gap: 6px; }
 .eval-chip { font-size: 0.72rem; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); padding: 3px 10px; }
 .eval-case__sub--muted { color: var(--text-faint); }
@@ -4942,7 +4947,7 @@ table {
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: rgba(22, 20, 31, 0.38);
+  background: rgba(20, 26, 23, 0.38);
   opacity: 0;
   /* visibility:hidden takes the closed overlay out of compositing entirely.
      It flips after the fade so the transition still reads. (The backdrop-blur
@@ -5405,7 +5410,7 @@ table {
   display: grid;
   place-items: start center;
   padding: 8vh var(--space-4) var(--space-4);
-  background: rgba(22, 20, 31, 0.38);
+  background: rgba(20, 26, 23, 0.38);
   opacity: 0;
   /* See .account-modal: keep the closed full-screen layer out of compositing. */
   visibility: hidden;
@@ -5713,8 +5718,8 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
    No film grain — grain on paper reads as dirt, not texture. */
 body::before {
   background-image:
-    linear-gradient(to right, rgba(22, 20, 31, 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(22, 20, 31, 0.035) 1px, transparent 1px);
+    linear-gradient(to right, rgba(20, 26, 23, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(20, 26, 23, 0.035) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
