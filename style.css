@@ -481,7 +481,19 @@ table {
 .sidebar__nav button.nav-link { font: inherit; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; text-align: left; }
 /* Account lives in the sidebar foot on desktop; only surface it in the mobile
    bottom nav (where there's no visible foot). */
-.sidebar__nav .nav-link--more { display: none; }
+/* It's a <button>, so it inherits the UA's `2px outset` border unless reset.
+   That border was invisible against the near-black shell and drew a hard black
+   box around the tab on paper. */
+.sidebar__nav .nav-link--more {
+  display: none;
+  border: 0;
+  background: none;
+  /* family only — font-size must keep cascading from .nav-link so the label
+     matches its siblings instead of jumping to the UA button size. */
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+}
 /* Mobile "More" sheet (secondary destinations + Account) — desktop never shows it. */
 .more-sheet { display: none; }
 .sidebar__foot {
@@ -548,8 +560,11 @@ table {
   .sidebar__foot .profile-btn__avatar { width: 32px; height: 32px; font-size: 0.85rem; }
   .profile-btn__chev { display: none; }
   .profile-btn__name { display: inline-block; max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; font-size: 0.8rem; }
-  /* Surface "Account" as a real tab in the bottom nav. */
-  .sidebar__nav .nav-link--more { display: flex; }
+  /* Surface "Account" as a real tab in the bottom nav. The `button.nav-link`
+     selector elsewhere sets `font-size: inherit`, which outranks a plain
+     `.nav-link--more`; match its specificity so the label sizes like its
+     sibling tabs instead of inheriting the 1rem shell size. */
+  .sidebar__nav button.nav-link--more { display: flex; font-size: 0.64rem; }
   /* Keep 5 fixed tabs; the rest move into the More sheet. */
   .sidebar__nav .nav-link--sec { display: none; }
   .more-sheet:not([hidden]) {
@@ -592,9 +607,11 @@ table {
     flex-direction: row;
     gap: 0;
     padding: 6px max(6px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px));
-    /* Solid-ish bg like the top bar — blur on an always-visible fixed bar is
-       a constant compositing cost on low-end phones for no legibility gain. */
-    background: color-mix(in srgb, var(--bg) 96%, transparent);
+    /* Fully opaque. Blur on an always-visible fixed bar is a constant
+       compositing cost on low-end phones for no legibility gain — and the old
+       96% bg let page text ghost through the bar, which was invisible against
+       near-black but obvious on paper. */
+    background: var(--bg);
     border-top: 1px solid var(--border);
     overflow-x: auto;
     scrollbar-width: none;
@@ -6031,4 +6048,152 @@ body::before {
   .set-done::after,
   .set-del::after { content: ""; position: absolute; inset: -7px -2px; }
   .ex-act::after { content: ""; position: absolute; inset: -3px -1px; }
+}
+
+/* ============================================================================
+   D. TYPE & SURFACE PASS
+   ----------------------------------------------------------------------------
+   Fourth layer (see the CONTENTS block at the top of this file). Fixes the
+   three things that made the light build still read as machine-generated:
+
+     1. A blueprint grid behind every page. Technical-looking texture that
+        serves no task. Removed; the page is paper now.
+     2. A geometric display sans at a fluid clamp up to 4.9rem with -0.04em
+        tracking. That combination is the generated-hero signature. Replaced
+        with a warm humanist serif on a fixed, smaller scale, paired against
+        Inter on a real contrast axis (serif vs sans) instead of two sans faces.
+     3. Tracked uppercase micro-labels on ~66 rules. Caps-plus-tracking is
+        scaffolding when it labels an ordinary field. It survives only where a
+        short caps token is a genuine convention: severity and status pills.
+
+   Additive layer: these rules override earlier ones purely by cascade order.
+   ============================================================================ */
+
+/* --- 1. Surface: no grid ---------------------------------------------------- */
+body::before {
+  background-image: none;
+}
+
+/* --- 2. Type: humanist serif display on a fixed scale ----------------------- */
+:root {
+  --font-display: "Literata", Georgia, "Times New Roman", serif;
+  /* Fixed scale, ratio ~1.4 at the top and ~1.2 through the middle. The hero
+     keeps a narrow clamp purely so long words can't overflow at 320px; the
+     ceiling is well under the shouting range the old 4.9rem sat in. */
+  --fs-display: clamp(2.15rem, 4.6vw, 3.2rem);
+  --fs-h1: 2.15rem;
+  --fs-h2: 1.55rem;
+}
+
+h1, h2, h3, h4, h5,
+.hero__title,
+.section-title--lg,
+.cmd__title {
+  /* A serif needs air where the geometric sans needed none: near-zero tracking
+     and a looser leading, or the ascenders and descenders collide. */
+  letter-spacing: -0.008em;
+  line-height: 1.18;
+  font-weight: 700;
+}
+.hero__title,
+.cmd__title {
+  font-size: var(--fs-display);
+  font-weight: 700;
+  line-height: 1.12;
+}
+.sidebar__brand,
+.wordmark {
+  letter-spacing: -0.005em;
+}
+
+/* --- 3. Field labels: sentence case, body font ------------------------------
+   The label families below all did the same job — naming a field inside a card
+   — in tracked caps. They read as ordinary labels now. */
+.audit__eyebrow,
+.audit__score-label,
+.flag__row-label,
+.trust__row dt,
+.trust__block h5,
+.bench__item dt,
+.badplan__label,
+.onb-flabel,
+.lib-card__diff,
+.lib-h5,
+.summary-k,
+.pain-label,
+.fw-eyebrow,
+.fw-k,
+.week-strip__label,
+.today-card__eyebrow,
+.scenario__k,
+.rule-card__k,
+.nut-wontdo__col h5,
+.workout-grouplabel,
+.food-grouplabel,
+.account-h,
+.split-legend,
+.plan__eyebrow,
+.eyebrow {
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: 0.005em;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+/* Data readouts keep the mono voice — numerals, versions, durations, scores.
+   That is the part of the instrument language that was always earned. */
+.audit-card__score,
+.split-score__n,
+.today-stat__v,
+.summary-stat__v,
+.fw-stat__v,
+.session-timer,
+.rest-timer__time,
+.bench__item dd {
+  font-family: var(--font-mono);
+}
+
+/* --- 4. Caps survive only as status tokens --------------------------------- */
+.flag__sev,
+.trust__conf,
+.bench__status,
+.badplan__tag,
+.sflag__tier,
+.wcard__badge,
+.lib-badge,
+.today-badge,
+.summary-prs__badge,
+.audit-card__live {
+  font-family: var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+}
+
+/* --- 5. Navigation labels: sentence case ------------------------------------
+   The desktop rail rendered its tabs as tracked mono caps (TODAY / PLAN /
+   SPLIT LAB). Same scaffolding as the field labels above, and the most visible
+   instance of it, since the rail is on every screen. The bench chip is a
+   descriptor, not a status, so it de-caps too; PASSING stays a status pill. */
+@media (min-width: 961px) {
+  .sidebar__nav .nav-link {
+    font-family: var(--font-body);
+    font-size: 0.68rem;
+    letter-spacing: 0.005em;
+    text-transform: none;
+    font-weight: 500;
+  }
+}
+@media (max-width: 960px) {
+  .sidebar__nav .nav-link,
+  .sidebar__nav button.nav-link--more {
+    font-family: var(--font-body);
+    letter-spacing: 0.005em;
+    text-transform: none;
+  }
+}
+.bench__tag {
+  text-transform: none;
+  letter-spacing: 0.005em;
+  font-size: 0.72rem;
 }
