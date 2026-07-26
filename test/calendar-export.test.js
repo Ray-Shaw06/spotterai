@@ -63,7 +63,7 @@ test("exercise details are escaped and included; no other plan data leaks", () =
   const plan = { days: [{ day: "Day 1", focus: "Push, Pull", exercises: [{ name: "Curl, Barbell", sets: 3, reps: 10 }] }] };
   const ics = buildWorkoutCalendar({ plan, startDate: "2026-07-22", time: "07:15", now: NOW });
   assert.match(ics, /SUMMARY:SpotterAI: Push\\, Pull/);
-  assert.match(ics, /DESCRIPTION:Curl\\, Barbell — 3×10/);
+  assert.match(ics, /DESCRIPTION:Curl\\, Barbell - 3×10/);
 });
 
 test("a reminder adds a VALARM with the right offset; none omits it", () => {

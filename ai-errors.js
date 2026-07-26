@@ -1,10 +1,10 @@
 const COPY = {
   offline: "You're offline. Reconnect and try again.",
-  timeout: "That took longer than expected. Your inputs are still here—try once more.",
+  timeout: "That took longer than expected. Your inputs are still here-try once more.",
   rate_limited: "The coach is busy right now. Wait a moment and try again.",
   unavailable: "The coach is temporarily unavailable. Try again shortly.",
   invalid_response: "The coach returned an incomplete result. Try again for a fresh response.",
-  unknown: "Something interrupted the request. Your inputs are still here—try again.",
+  unknown: "Something interrupted the request. Your inputs are still here-try again.",
 };
 
 function invalidResponseError(message) {

@@ -172,7 +172,7 @@ function renderAchievements(s) {
   // just not a wall of padlocks by default.
   const shown = achievementsExpanded ? s.achievements : unlocked;
   const empty = !unlocked.length && !achievementsExpanded
-    ? `<p class="muted badges__empty">No badges yet — your first workout unlocks one.</p>`
+    ? `<p class="muted badges__empty">No badges yet, your first workout unlocks one.</p>`
     : "";
   const toggle = locked.length
     ? `<button type="button" class="btn-link badges__toggle" data-act="toggle-badges">${

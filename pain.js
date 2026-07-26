@@ -35,7 +35,7 @@ export function assessPain({ location, severity } = {}) {
       tone: "critical",
       headline: `Stop training ${lower} movements today.`,
       advice: [
-        "Stop the painful movement now — don't push through sharp or severe pain.",
+        "Stop the painful movement now, don't push through sharp or severe pain.",
         "SpotterAI won't give you a diagnosis or rehab instructions.",
         "Please see a qualified professional (a doctor or physiotherapist), especially if this is persistent or worsening.",
       ],
@@ -73,7 +73,7 @@ export function assessPain({ location, severity } = {}) {
     advice: [
       "Stop or modify the specific movement that caused discomfort today.",
       `SpotterAI offers lower-risk substitutions and marks ${lower} as a limitation.`,
-      "Check in again — if it keeps happening, treat it as more serious.",
+      "Check in again, if it keeps happening, treat it as more serious.",
     ],
     blockAggressive: false,
     addLimitation: !!injuryKey,

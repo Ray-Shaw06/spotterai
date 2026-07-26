@@ -475,7 +475,7 @@ async function enrichExercise(name) {
   try {
     info = await classifyExercise(name);
   } catch {
-    return; // AI unavailable — it stays a plain custom entry
+    return; // AI unavailable, it stays a plain custom entry
   }
   if (!info) return;
   updateCustomExercise(name, info.muscle, info.cardio);
@@ -661,7 +661,7 @@ function renderHistory() {
           return `<li class="hist" data-id="${w.id}">
             <button type="button" class="hist__head" data-act="toggle-hist">
               <span class="hist__main"><span class="hist__name">${esc(w.name)}</span><span class="hist__sub">${esc(w.date)}${dur} · ${setCount} ${setCount === 1 ? "set" : "sets"}</span></span>
-              <span class="hist__vol">${w.volume ? (w.volume / 1000).toFixed(1) + "k" : "—"}</span>
+              <span class="hist__vol">${w.volume ? (w.volume / 1000).toFixed(1) + "k" : "-"}</span>
             </button>
             <div class="hist__detail" hidden>${detail}
               <div class="hist__acts">

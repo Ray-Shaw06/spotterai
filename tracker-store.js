@@ -233,7 +233,7 @@ export function updateWorkout(id, { name, exercises = [], durationSec, difficult
   const w = state.workouts.find((x) => x.id === id);
   if (!w) return null;
   const clean = cleanExercises(exercises);
-  if (!clean.length) return null; // an edit can't empty a workout — delete instead
+  if (!clean.length) return null; // an edit can't empty a workout, delete instead
   const volume = workoutVolume({ exercises: clean });
   w.name = String(name || w.name);
   w.exercises = clean;
@@ -414,7 +414,7 @@ export function addPainReport({ location, severity, timing = "", note = "", inju
   if (!Array.isArray(state.painReports)) state.painReports = [];
   state.painReports.push(entry);
   persist();
-  unlockAchievements(); // "Body Awareness" — reporting pain is healthy, not a failure
+  unlockAchievements(); // "Body Awareness", reporting pain is healthy, not a failure
   return entry;
 }
 export function getPainReports() {

@@ -107,11 +107,11 @@ test("pull-up depth verdicts: almost vs partial", () => {
   // Peak flexion 100° → inside SHALLOW_PEAK → "Almost".
   const c1 = new RepCounter(EXERCISES.pullup);
   const d1 = runReps(c1, [[0, 165], [200, 100], [800, 165]]);
-  assert.equal(d1[0].depth.text, "Almost — chin over the bar");
+  assert.equal(d1[0].depth.text, "Almost, chin over the bar");
   // Peak flexion 112° → beyond SHALLOW_PEAK but enough ROM → "Partial rep".
   const c2 = new RepCounter(EXERCISES.pullup);
   const d2 = runReps(c2, [[0, 168], [200, 112], [800, 168]]);
-  assert.equal(d2[0].depth.text, "Partial rep — aim for full range");
+  assert.equal(d2[0].depth.text, "Partial rep, aim for full range");
 });
 
 test("pull-up counter rejects tiny bounces (min range of motion)", () => {
@@ -130,7 +130,7 @@ test("pull-up cues: chin over the bar vs pull higher, near the top only", () => 
   );
   assert.deepEqual(
     ex.cues({ ...base, elbow: 90, chinOverBar: false }).map((c) => c.text),
-    ["Pull higher — chin to the bar"]
+    ["Pull higher, chin to the bar"]
   );
   // Mid-pull (elbow 120) says nothing about the chin.
   assert.deepEqual(ex.cues({ ...base, elbow: 120, chinOverBar: false }), []);
@@ -139,7 +139,7 @@ test("pull-up cues: chin over the bar vs pull higher, near the top only", () => 
 test("pull-up swing cue fires only past the threshold", () => {
   const ex = EXERCISES.pullup;
   const swing = ex.cues({ reliable: true, elbow: 140, torsoSwing: P.MAX_SWING + 5, chinOverBar: false });
-  assert.equal(swing[0].text, "Minimize the swing — quiet body");
+  assert.equal(swing[0].text, "Minimize the swing, quiet body");
   assert.deepEqual(ex.cues({ reliable: true, elbow: 140, torsoSwing: P.MAX_SWING - 5, chinOverBar: false }), []);
 });
 
@@ -159,7 +159,7 @@ test("pull-up chin proxy: nose above the hands reads as chin over bar", () => {
   assert.equal(EXERCISES.pullup.metrics(f, frame()).chinOverBar, true);
   resetSideSelector();
   const g = frame();
-  g[0] = { ...g[0], y: 0.7 }; // nose below the hands — still hanging
+  g[0] = { ...g[0], y: 0.7 }; // nose below the hands, still hanging
   assert.equal(EXERCISES.pullup.metrics(g, frame()).chinOverBar, false);
 });
 
@@ -170,7 +170,7 @@ test("dip counter + depth verdicts follow the elbow", () => {
   assert.equal(done[0].depth.level, "good");
   const c2 = new RepCounter(EXERCISES.dip);
   const d2 = runReps(c2, [[0, 160], [200, 117], [800, 160]]);
-  assert.equal(d2[0].depth.text, "Too shallow — bigger range");
+  assert.equal(d2[0].depth.text, "Too shallow, bigger range");
 });
 
 test("dip reliability follows the arm joints like the push-up", () => {
@@ -190,13 +190,13 @@ test("bench counter + depth verdicts follow the elbow (supported horizontal pres
   assert.equal(done[0].depth.text, "Bar to chest");
   const c2 = new RepCounter(EXERCISES.bench);
   const d2 = runReps(c2, [[0, 160], [200, 115], [800, 160]]);
-  assert.equal(d2[0].depth.text, "Too shallow — bigger range");
+  assert.equal(d2[0].depth.text, "Too shallow, bigger range");
 });
 
 test("bench cues: lockout at the top, bar-to-chest vs lower-the-bar at the bottom", () => {
   const ex = EXERCISES.bench;
   assert.deepEqual(ex.cues({ elbow: 156, reliable: true }).map((c) => c.text), ["Full lockout"]);
-  assert.deepEqual(ex.cues({ elbow: 88, reliable: true }).map((c) => c.text), ["Good depth — bar to chest"]);
+  assert.deepEqual(ex.cues({ elbow: 88, reliable: true }).map((c) => c.text), ["Good depth, bar to chest"]);
   assert.deepEqual(ex.cues({ elbow: 115, reliable: true }).map((c) => c.text), ["Lower the bar to your chest"]);
   // Unreliable frame → no cues (never coach off untrustworthy landmarks).
   assert.deepEqual(ex.cues({ elbow: 88, reliable: false }), []);

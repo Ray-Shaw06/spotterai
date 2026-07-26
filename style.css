@@ -6204,8 +6204,7 @@ h1, h2, h3, h4, h5,
    set, extracted mechanically: every selector in layers A-C that set
    `text-transform: uppercase`, minus the ten status tokens listed in section 4,
    which keep their caps because a short state word is genuinely easier to scan
-   that way. Kept: severity pills, trust confidence, PASSING, tier badges. */
-.account-h,
+   that way. Kept: severity pills, trust confidence, PASSING, tier badges. */.account-h,
 .adapt-card__eyebrow,
 .adapt-changes__badge,
 .adapt-changes__label,
@@ -6260,10 +6259,7 @@ h1, h2, h3, h4, h5,
 .trust__block h5,
 .trust__row dt,
 .week-strip__label,
-.workout-grouplabel,
-Safety Lab content — benchmark,
-bad-plan examples,
-catches/misses {
+.workout-grouplabel {
   font-family: var(--font-body);
   text-transform: none;
   letter-spacing: 0.005em;

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>SpotterAI — your AI fitness copilot (plan, track, adapt, audit)</title>
+  <title>SpotterAI, your AI fitness copilot (plan, track, adapt, audit)</title>
   <meta
     name="description"
     content="Your AI fitness copilot: generate a workout plan, log training and nutrition, track progress, adapt over time, and audit every plan with transparent, code-based guardrails. Free to use, no signup, local-first."
@@ -19,19 +19,19 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="SpotterAI" />
 
-  <!-- Open Graph + Twitter — rich link previews. NOTE: if your deployed domain
+  <!-- Open Graph + Twitter, rich link previews. NOTE: if your deployed domain
        isn't spotterai-flax.vercel.app, update the absolute URLs below. -->
   <meta property="og:site_name" content="SpotterAI" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://spotterai-flax.vercel.app/" />
-  <meta property="og:title" content="SpotterAI — your AI fitness copilot" />
+  <meta property="og:title" content="SpotterAI, your AI fitness copilot" />
   <meta property="og:description" content="It writes your training plan, then a code-based evaluator checks it for common safety and quality issues before you trust it. Free to use, no signup, local-first." />
   <meta property="og:image" content="https://spotterai-flax.vercel.app/og-home.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="628" />
-  <meta property="og:image:alt" content="SpotterAI — your AI fitness copilot, showing a transparent, flags-first plan safety audit." />
+  <meta property="og:image:alt" content="SpotterAI, your AI fitness copilot, showing a transparent, flags-first plan safety audit." />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="SpotterAI — your AI fitness copilot" />
+  <meta name="twitter:title" content="SpotterAI, your AI fitness copilot" />
   <meta name="twitter:description" content="Plan, track, adapt, and audit your training. Every plan gets a transparent, code-based safety audit. Free to use, no signup, local-first." />
   <meta name="twitter:image" content="https://spotterai-flax.vercel.app/og-home.png" />
 
@@ -41,7 +41,7 @@
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a090f'/%3E%3Cpath d='M16 4l9 3.3v7.4c0 5.5-3.7 9.7-9 12-5.3-2.3-9-6.5-9-12V7.3L16 4z' fill='none' stroke='%238a6dff' stroke-width='1.9' stroke-linejoin='round'/%3E%3Cpath d='M12 18h8M12 16.1v3.8M20 16.1v3.8M10.4 16.8v2.4M21.6 16.8v2.4' fill='none' stroke='%238a6dff' stroke-width='1.7' stroke-linecap='round'/%3E%3Cpath d='M13.8 12.4c.1-2.4 2-4.2 4.5-4.2 0 2.5-1.8 4.3-4.2 4.4' fill='none' stroke='%238a6dff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
   />
 
-  <!-- Fonts: Literata (display serif) + Inter (UI) + JetBrains Mono (data) — free via Google Fonts -->
+  <!-- Fonts: Literata (display serif) + Inter (UI) + JetBrains Mono (data), free via Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -346,7 +346,7 @@
               <p id="safety-boundary-text"></p>
             </div>
 
-            <!-- Audit summary — flags first, quality score demoted -->
+            <!-- Audit summary, flags first, quality score demoted -->
             <div class="card audit">
               <div class="audit__head">
                 <div class="audit__headline">
@@ -370,10 +370,10 @@
               </p>
             </div>
 
-            <!-- Plan repair (before/after) — populated by app.js when flags exist -->
+            <!-- Plan repair (before/after), populated by app.js when flags exist -->
             <div id="repair-mount"></div>
 
-            <!-- Trust report (expandable) — populated by app.js -->
+            <!-- Trust report (expandable), populated by app.js -->
             <div id="trust-report"></div>
 
             <!-- The plan itself -->
@@ -387,7 +387,7 @@
             <section class="calendar-export" id="calendar-export" aria-labelledby="calendar-export-title">
               <div class="calendar-export__head">
                 <h3 id="calendar-export-title">Add your workouts to your calendar</h3>
-                <p>Download your training days as recurring calendar events. Your own calendar app owns the reminders after that — SpotterAI sends nothing and stores nothing.</p>
+                <p>Download your training days as recurring calendar events. Your own calendar app owns the reminders after that, SpotterAI sends nothing and stores nothing.</p>
               </div>
               <button type="button" class="btn btn--ghost btn--block" id="calendar-export-open">Add workouts to calendar</button>
 
@@ -474,7 +474,7 @@
           <li><strong>Safety boundaries:</strong> refuse pain / diagnosis / ED requests pre-call.</li>
           <li><strong>Nutrition guardrails:</strong> conservative target checks + Trust Report.</li>
           <li><strong>Local-first tracking:</strong> workouts, meals, progress in your browser.</li>
-          <li><strong>70+ tests:</strong> evaluator, repair, boundaries, trust, benchmark, UI labels.</li>
+          <li><strong>334 tests:</strong> evaluator, repair, boundaries, trust, benchmark, UI labels.</li>
         </ul>
       </div>
     </section>
@@ -575,7 +575,7 @@
             <h3 class="card-title">Quick log <span class="quicklog__badge">AI</span></h3>
           </div>
           <form id="quicklog-form" class="quicklog__form">
-            <input id="quicklog-input" class="input quicklog__input" placeholder="Try “bench 3×5 at 60kg” or “ate a chicken burrito”…" aria-label="Log a workout or a meal in plain English — you confirm before it's saved" autocomplete="off" />
+            <input id="quicklog-input" class="input quicklog__input" placeholder="Try “bench 3×5 at 60kg” or “ate a chicken burrito”…" aria-label="Log a workout or a meal in plain English, you confirm before it's saved" autocomplete="off" />
             <button type="button" id="quicklog-mic" class="quicklog__mic" aria-label="Log by voice" title="Log by voice">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
             </button>
@@ -604,7 +604,7 @@
                 <span id="session-timer" class="session-timer" aria-label="Duration">0:00</span>
               </div>
 
-              <!-- Rest timer — pick a duration, start manually, or it auto-starts
+              <!-- Rest timer, pick a duration, start manually, or it auto-starts
                    when you mark a set done -->
               <div id="rest-timer" class="rest-timer">
                 <div class="rest-timer__row">
@@ -928,7 +928,7 @@
             <div class="form-conf" id="form-confidence" hidden>
               <div class="form-conf__top">
                 <span class="form-side__heading">Confidence</span>
-                <span class="form-conf__label" id="form-confidence-label">—</span>
+                <span class="form-conf__label" id="form-confidence-label">-</span>
               </div>
               <div class="form-conf__track"><span class="form-conf__bar" id="form-confidence-bar"></span></div>
               <p class="form-conf__note" id="form-confidence-note">Higher when your full body is clearly in frame.</p>
@@ -938,7 +938,7 @@
               <h3 class="form-side__heading">Camera setup</h3>
               <p id="form-setup" class="form-side__setup">Stand side-on to the camera, full body in frame.</p>
               <ul id="form-camera-tips" class="form-side__list form-side__list--tight">
-                <li>Stand side-on, 2–3 m back — depth and torso lean are judged from the side.</li>
+                <li>Stand side-on, 2–3 m back, depth and torso lean are judged from the side.</li>
                 <li>Hips, knees, and ankles must all stay in frame for the whole rep.</li>
               </ul>
               <p class="form-side__setup form-side__setup--constant">Good, even lighting; ~2–3 m back; avoid baggy clothing.</p>
@@ -954,7 +954,7 @@
               <ul class="form-side__list">
                 <li>Auto rep counting from 3D joint angles, smoothed to cut jitter.</li>
                 <li>Form cues for squat, push-up, bench press, lunge, overhead press, biceps curl, pull-up, dip, RDL/hinge, and hip thrust.</li>
-                <li>A set report after you stop — per-rep results, recurring flags, and tips. Built for moves you can’t watch mid-set, like pull-ups.</li>
+                <li>A set report after you stop, per-rep results, recurring flags, and tips. Built for moves you can’t watch mid-set, like pull-ups.</li>
                 <li>“Other” counts reps for any movement (no form cues).</li>
               </ul>
             </div>
@@ -978,7 +978,7 @@
           </aside>
         </div>
 
-        <!-- Post-set report — rendered by form-coach.js after Stop when ≥1 rep was counted -->
+        <!-- Post-set report, rendered by form-coach.js after Stop when ≥1 rep was counted -->
         <section id="form-report" class="card form-report" hidden aria-label="Set report" tabindex="-1"></section>
       </div>
     </section>
@@ -1160,7 +1160,7 @@
 
       <div class="account-section account-workout-alerts" id="account-workout-alerts" aria-busy="true">
         <h3 class="account-h">Workout alerts</h3>
-        <p class="account-note">On-device only. When a rest timer ends, this device shows a notification — nothing is sent when the app is closed, and this preference never leaves your device. Vibration and sound always work regardless.</p>
+        <p class="account-note">On-device only. When a rest timer ends, this device shows a notification, nothing is sent when the app is closed, and this preference never leaves your device. Vibration and sound always work regardless.</p>
         <label class="toggle-row">
           <input type="checkbox" id="rest-alerts-toggle" role="switch" aria-checked="false" disabled />
           <span>Enable rest-timer alerts</span>

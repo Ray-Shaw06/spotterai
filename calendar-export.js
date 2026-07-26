@@ -99,7 +99,7 @@ function exerciseLines(day) {
       if (!name) return null;
       const sets = ex?.sets;
       const reps = ex?.reps;
-      if (sets != null && reps != null) return `${name} — ${sets}×${reps}`;
+      if (sets != null && reps != null) return `${name} - ${sets}×${reps}`;
       return name;
     })
     .filter(Boolean);

@@ -124,7 +124,7 @@ test("excessive weekly volume for one muscle is flagged", () => {
   assert.equal(check(audit, "weekly_volume").status, "fail");
 });
 
-test("a malformed plan never throws — it returns score 0 and an invalid-plan flag", () => {
+test("a malformed plan never throws, it returns score 0 and an invalid-plan flag", () => {
   for (const bad of [null, undefined, {}, { days: "nope" }]) {
     const audit = evaluatePlan(bad, {});
     assert.equal(audit.score, 0);

@@ -105,7 +105,7 @@ let recordedChunks = [];
 let recorderMime = null;
 let recorderTimer = null;
 let videoUrl = null;
-const RECORD_MAX_MS = 10 * 60 * 1000; // bound memory — video stops, the set continues
+const RECORD_MAX_MS = 10 * 60 * 1000; // bound memory, video stops, the set continues
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // ----------------------------------------------------------------------------
@@ -225,7 +225,7 @@ async function start() {
   try {
     await ensureModel();
   } catch {
-    setStatus("Couldn't load the pose model — check your connection and try again.", "warn");
+    setStatus("Couldn't load the pose model, check your connection and try again.", "warn");
     el.start.disabled = false;
     return;
   }
@@ -264,7 +264,7 @@ async function start() {
   session = new SessionRecorder(currentExercise.id);
   startRecording(); // best-effort; the session works fine without it
   session.start(performance.now());
-  setStatus("Camera active — start your set.", "good");
+  setStatus("Camera active, start your set.", "good");
   loop();
 }
 
@@ -290,7 +290,7 @@ function stop() {
   const summary = session && counter && counter.reps > 0 ? session.summary() : null;
   if (summary) {
     renderReport(summary);
-    setStatus("Set finished — report below.", "good");
+    setStatus("Set finished, report below.", "good");
   } else {
     setStatus("Camera stopped.");
   }
@@ -316,7 +316,7 @@ function startRecording() {
   try {
     recorder = new MediaRecorder(stream, recorderMime ? { mimeType: recorderMime } : undefined);
   } catch {
-    recorder = null; // no recording — the live session and report still work
+    recorder = null; // no recording, the live session and report still work
     return;
   }
   recorder.ondataavailable = (e) => {
@@ -476,8 +476,8 @@ function loop() {
         const r = counter.update(metrics, t);
         justCompleted = r.justCompleted;
         cues = r.calibrating
-          ? [{ level: "warn", text: "Calibrating — do a few full reps" }]
-          : [{ level: "good", text: `Counting via ${JOINT_LABEL[r.dominant] || "motion"} — pick a lift for form cues` }];
+          ? [{ level: "warn", text: "Calibrating, do a few full reps" }]
+          : [{ level: "good", text: `Counting via ${JOINT_LABEL[r.dominant] || "motion"}, pick a lift for form cues` }];
       } else {
         cues = currentExercise.cues(metrics);
         const upd = counter.update(metrics, t);
@@ -499,7 +499,7 @@ function loop() {
       // Low confidence: refuse strong form advice rather than guess.
       if (lowConf) {
         const angle = currentExercise.camera ? currentExercise.camera.angle.toLowerCase() : "full";
-        cues = [{ level: "warn", text: `Camera angle or visibility is too limited for useful feedback — step fully into frame, ${angle}.` }];
+        cues = [{ level: "warn", text: `Camera angle or visibility is too limited for useful feedback, step fully into frame, ${angle}.` }];
       }
 
       draw(image, metrics, cues);
@@ -507,7 +507,7 @@ function loop() {
     } else {
       const ctx = el.canvas.getContext("2d");
       ctx.clearRect(0, 0, el.canvas.width, el.canvas.height);
-      if (el.liveCues) el.liveCues.innerHTML = badge("warn", "Step into frame — full body in view");
+      if (el.liveCues) el.liveCues.innerHTML = badge("warn", "Step into frame, full body in view");
     }
   }
 
@@ -571,7 +571,7 @@ function renderReadout(cues, justCompleted, lastRep, lowConf = false) {
   if (el.liveCues) {
     el.liveCues.innerHTML = cues.length
       ? cues.map((c) => badge(c.level, c.text)).join("")
-      : badge("good", "Looking good — keep going");
+      : badge("good", "Looking good, keep going");
   }
 
   // When confidence is low, don't grade the rep — say so plainly.
@@ -600,7 +600,7 @@ if (hasUI) {
   el.pain?.addEventListener("click", () => {
     if (el.painMsg) el.painMsg.hidden = false;
     if (running) stop();
-    setStatus("Stopped — please read the note below.", "warn");
+    setStatus("Stopped, please read the note below.", "warn");
   });
 
   // Switching exercise rebuilds the counter, smoothers, and setup hint.

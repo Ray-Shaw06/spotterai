@@ -35,7 +35,7 @@ export function evaluateNutrition({ targets = {}, bodyweight = null, unit = "kg"
   // 1. Absolute calorie floor.
   if (kcal) {
     if (kcal < T.VERY_LOW_KCAL) {
-      F("critical", "Very low calorie target", `A target of ${kcal} kcal/day is below a safe floor for almost any adult — it risks under-fueling, muscle and bone loss, and disordered patterns.`, "Raise calories toward a moderate intake and speak with a doctor or registered dietitian if you have medical concerns.");
+      F("critical", "Very low calorie target", `A target of ${kcal} kcal/day is below a safe floor for almost any adult, it risks under-fueling, muscle and bone loss, and disordered patterns.`, "Raise calories toward a moderate intake and speak with a doctor or registered dietitian if you have medical concerns.");
     } else if (kcal < T.LOW_KCAL) {
       F("warning", "Low calorie target", `${kcal} kcal/day is quite low and may be more aggressive than you need.`, "A smaller deficit is usually more sustainable and protects training and recovery.");
     }
@@ -45,7 +45,7 @@ export function evaluateNutrition({ targets = {}, bodyweight = null, unit = "kg"
   if (kg && kcal) {
     const maint = Math.round(kg * T.MAINTENANCE_KCAL_PER_KG);
     if (kcal < maint * (1 - T.AGGRESSIVE_DEFICIT)) {
-      F("warning", "Aggressive deficit", `Your target (${kcal} kcal) is more than ${Math.round(T.AGGRESSIVE_DEFICIT * 100)}% below your rough estimated maintenance (~${maint} kcal) — a fast cut that's hard to sustain.`, "Aim for roughly a 10–20% deficit for steadier fat loss and better adherence.");
+      F("warning", "Aggressive deficit", `Your target (${kcal} kcal) is more than ${Math.round(T.AGGRESSIVE_DEFICIT * 100)}% below your rough estimated maintenance (~${maint} kcal), a fast cut that's hard to sustain.`, "Aim for roughly a 10–20% deficit for steadier fat loss and better adherence.");
     }
   }
 
@@ -152,7 +152,7 @@ export function screenNutritionText(text) {
 }
 
 export const NUTRITION_REDIRECT =
-  "I can't help build a plan based on starvation, purging, or ignoring warning signs. I can support general habits like regular meals, hydration, and balanced protein — but this is best handled with qualified support. If you're struggling, please reach out to a doctor or a trusted professional.";
+  "I can't help build a plan based on starvation, purging, or ignoring warning signs. I can support general habits like regular meals, hydration, and balanced protein, but this is best handled with qualified support. If you're struggling, please reach out to a doctor or a trusted professional.";
 
 export const NUTRITION_DISCLAIMER =
   "Nutrition estimates are approximate. SpotterAI can support general habit tracking, but it cannot diagnose conditions, prescribe diets, or replace a registered dietitian or medical professional.";

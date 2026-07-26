@@ -22,36 +22,36 @@
 /** Deterministic tip lines, keyed by the exact cue/verdict text that earned them. */
 export const TIPS = {
   // Squat
-  "Chest up — too much forward lean": "Brace before you descend and keep your eyes forward — if the lean persists, try lightening the load or elevating your heels.",
-  "Go deeper — aim for parallel": "Slow the descent and pause at your comfortable bottom — depth improves faster with control than with bouncing.",
+  "Chest up, too much forward lean": "Brace before you descend and keep your eyes forward, if the lean persists, try lightening the load or elevating your heels.",
+  "Go deeper, aim for parallel": "Slow the descent and pause at your comfortable bottom, depth improves faster with control than with bouncing.",
   // Push-up
-  "Hips sagging — brace your core": "Squeeze glutes and think \"ribs down\" before each rep — a straight line from shoulders to ankles is the rep standard.",
-  "Hips too high — flatten your back": "Walk your hands a touch forward and tuck your hips until your body forms one line.",
-  "Lower a little more": "Aim your chest toward the floor until your elbows pass 90° — shorten the set if depth fades with fatigue.",
+  "Hips sagging, brace your core": "Squeeze glutes and think \"ribs down\" before each rep, a straight line from shoulders to ankles is the rep standard.",
+  "Hips too high, flatten your back": "Walk your hands a touch forward and tuck your hips until your body forms one line.",
+  "Lower a little more": "Aim your chest toward the floor until your elbows pass 90°, shorten the set if depth fades with fatigue.",
   // Lunge
-  "Stay tall — keep the torso upright": "Shorten the step slightly and keep your ribs stacked over your hips.",
-  "Drop a little deeper": "Lower until the back knee hovers just off the floor — hold something stable if balance is the limiter.",
+  "Stay tall, keep the torso upright": "Shorten the step slightly and keep your ribs stacked over your hips.",
+  "Drop a little deeper": "Lower until the back knee hovers just off the floor, hold something stable if balance is the limiter.",
   // Overhead press
-  "Press fully overhead": "Finish each rep with biceps by your ears — if lockout won't come, the weight is doing the deciding.",
+  "Press fully overhead": "Finish each rep with biceps by your ears, if lockout won't come, the weight is doing the deciding.",
   // Curl
-  "Keep your elbow pinned — no swinging": "Pin your elbow to your side and curl only with the forearm — swinging means the weight is too heavy for strict reps.",
+  "Keep your elbow pinned, no swinging": "Pin your elbow to your side and curl only with the forearm, swinging means the weight is too heavy for strict reps.",
   // RDL
-  "It's a hinge, not a squat — sit the hips back": "Push your hips back toward the wall behind you and keep shins near-vertical — the stretch belongs in the hamstrings.",
+  "It's a hinge, not a squat, sit the hips back": "Push your hips back toward the wall behind you and keep shins near-vertical, the stretch belongs in the hamstrings.",
   // Hip thrust
   "Drive hips higher to lock out": "Finish each rep with a deliberate glute squeeze at the top rather than rushing the next rep.",
   // Pull-up
-  "Minimize the swing — quiet body": "Squeeze glutes and cross your ankles into a hollow line before pulling — a quiet body puts every rep in the lats.",
-  "Pull higher — chin to the bar": "Drive your elbows down toward your ribs and finish with your chin clearing your hands — a band under one foot builds the top range.",
-  "Almost — chin over the bar": "Pause a beat at your highest point each rep — the last few centimeters come from finishing the pull, not starting it faster.",
-  "Partial rep — aim for full range": "Do fewer, fuller reps — an assisted variation keeps the full range while you build the strength.",
+  "Minimize the swing, quiet body": "Squeeze glutes and cross your ankles into a hollow line before pulling, a quiet body puts every rep in the lats.",
+  "Pull higher, chin to the bar": "Drive your elbows down toward your ribs and finish with your chin clearing your hands, a band under one foot builds the top range.",
+  "Almost, chin over the bar": "Pause a beat at your highest point each rep, the last few centimeters come from finishing the pull, not starting it faster.",
+  "Partial rep, aim for full range": "Do fewer, fuller reps, an assisted variation keeps the full range while you build the strength.",
   // Dip
-  "A little deeper — upper arms to parallel": "Lower with control until your upper arms reach parallel — shorten the set before you shorten the reps.",
+  "A little deeper, upper arms to parallel": "Lower with control until your upper arms reach parallel, shorten the set before you shorten the reps.",
   // Depth verdicts
-  "Just shy of full depth": "You're close — a brief pause at the bottom usually buys the last few degrees.",
-  "Too shallow — bigger range": "Cut the weight or slow the tempo until the full range is yours — partial reps build partial strength.",
-  "Curl a bit higher": "Curl until your forearm meets your biceps — squeeze for a beat at the top.",
-  "Partial rep": "Reset and use a lighter weight for full-range reps — range first, load second.",
-  "Almost — lock out harder": "Drive through your heels and finish each rep with the hips fully extended.",
+  "Just shy of full depth": "You're close, a brief pause at the bottom usually buys the last few degrees.",
+  "Too shallow, bigger range": "Cut the weight or slow the tempo until the full range is yours, partial reps build partial strength.",
+  "Curl a bit higher": "Curl until your forearm meets your biceps, squeeze for a beat at the top.",
+  "Partial rep": "Reset and use a lighter weight for full-range reps, range first, load second.",
+  "Almost, lock out harder": "Drive through your heels and finish each rep with the hips fully extended.",
   "Short lockout": "Think \"hips to the ceiling\" and hold the top position for a full second.",
 };
 

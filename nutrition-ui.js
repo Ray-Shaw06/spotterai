@@ -139,13 +139,13 @@ function renderNutritionSafety() {
         <div class="trust__body">
           <dl class="trust__grid">
             ${row("Goal", esc(trust.goal))}
-            ${row("Calorie target", trust.kcalTarget ? `${trust.kcalTarget} kcal` : "—")}
-            ${row("Protein target", trust.proteinTarget ? `${trust.proteinTarget} g` : "—")}
-            ${row("Fat target", trust.fatTarget ? `${trust.fatTarget} g` : "—")}
+            ${row("Calorie target", trust.kcalTarget ? `${trust.kcalTarget} kcal` : "-")}
+            ${row("Protein target", trust.proteinTarget ? `${trust.proteinTarget} g` : "-")}
+            ${row("Fat target", trust.fatTarget ? `${trust.fatTarget} g` : "-")}
             ${row("Confidence", `${trust.confidence}: ${esc(trust.whyLimited)}`)}
           </dl>
           <div class="trust__block"><h5>Safer target range</h5><span class="muted">${esc(trust.saferSuggestion)}</span></div>
-          <div class="trust__block"><h5>What data was used</h5>${list(trust.dataUsed, "—")}</div>
+          <div class="trust__block"><h5>What data was used</h5>${list(trust.dataUsed, "-")}</div>
           <div class="trust__block"><h5>What's missing</h5>${list(trust.dataMissing, "Nothing major.")}</div>
           <p class="trust__disclaimer">${esc(NUTRITION_DISCLAIMER)}</p>
         </div>
