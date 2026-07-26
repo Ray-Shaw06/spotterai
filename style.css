@@ -6197,3 +6197,74 @@ h1, h2, h3, h4, h5,
   letter-spacing: 0.005em;
   font-size: 0.72rem;
 }
+
+/* --- 6. Complete de-caps sweep ----------------------------------------------
+   Section 3 enumerated the label classes by hand and missed a third of them
+   (form check, adapt cards, chat guard, library, nutrition). This is the full
+   set, extracted mechanically: every selector in layers A-C that set
+   `text-transform: uppercase`, minus the ten status tokens listed in section 4,
+   which keep their caps because a short state word is genuinely easier to scan
+   that way. Kept: severity pills, trust confidence, PASSING, tier badges. */
+.account-h,
+.adapt-card__eyebrow,
+.adapt-changes__badge,
+.adapt-changes__label,
+.audit__eyebrow,
+.audit__score-label,
+.badplan__label,
+.bench__item dt,
+.bench__tag,
+.cam-overlay__reps-label,
+.chat-guard__head,
+.check__badge,
+.cmd__eyebrow,
+.cmd__manifest-label,
+.dash-subchart__label,
+.day-card__day,
+.eval-case__sub,
+.eval-case__type,
+.eval-check__badge,
+.ex-table thead th,
+.eyebrow,
+.flag__row-label,
+.food-edit__grid label,
+.food-grouplabel,
+.food-opt__tag,
+.form-angle,
+.form-report__heading,
+.form-side__heading,
+.fw-eyebrow,
+.fw-k,
+.lib-card__diff,
+.lib-h5,
+.nut-wontdo__col h5,
+.onb-flabel,
+.pain-label,
+.plan-note h5,
+.plan__eyebrow,
+.plan__facts dt,
+.rank-badge__level,
+.repair__col-label,
+.repair__eyebrow,
+.repair__k,
+.rest-timer__label,
+.rule-card__k,
+.scenario__k,
+.score-card__eyebrow,
+.set-table th,
+.sidebar__nav .nav-link,
+.split-legend,
+.stat-tile__label,
+.summary-k,
+.today-card__eyebrow,
+.trust__block h5,
+.trust__row dt,
+.week-strip__label,
+.workout-grouplabel,
+Safety Lab content — benchmark,
+bad-plan examples,
+catches/misses {
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: 0.005em;
+}
