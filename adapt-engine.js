@@ -167,7 +167,7 @@ export function adaptPlan(plan, context, inputs = {}) {
     const trimmed = pullBack(work, changes, pulledBack);
     if (trimmed) {
       changes.push(
-        `Eased back ${trimmed} accessory set${trimmed > 1 ? "s" : ""} — you've averaged about ${adh.avg} of ${adh.target} planned sessions the last few weeks, so this keeps the plan realistic instead of piling on.`
+        `Eased back ${trimmed} accessory set${trimmed > 1 ? "s" : ""}, you've averaged about ${adh.avg} of ${adh.target} planned sessions the last few weeks, so this keeps the plan realistic instead of piling on.`
       );
     }
   }
@@ -220,11 +220,11 @@ export function adaptPlan(plan, context, inputs = {}) {
           const topW = hist.latest && hist.latest.weight > 0 ? ` @ ${hist.latest.weight}${unit}` : "";
           const earned = `you hit ${tmax}+ reps${topW} for ${hits} sessions`;
           if (added && loaded) {
-            changes.push(`${ex.name}: added a ${ex.sets}th set and suggested ${sug.weight}${unit} next — ${earned}.`);
+            changes.push(`${ex.name}: added a ${ex.sets}th set and suggested ${sug.weight}${unit} next, ${earned}.`);
           } else if (added) {
-            changes.push(`${ex.name}: added a ${ex.sets}th set — ${earned}.`);
+            changes.push(`${ex.name}: added a ${ex.sets}th set, ${earned}.`);
           } else {
-            changes.push(`${ex.name}: suggested ${sug.weight}${unit} next — ${earned}.`);
+            changes.push(`${ex.name}: suggested ${sug.weight}${unit} next, ${earned}.`);
           }
         }
       }
@@ -238,19 +238,19 @@ export function adaptPlan(plan, context, inputs = {}) {
 
   // 6. Safety close: repair injuries + anything our edits disturbed, then re-audit.
   const safety = repairPlan(work, effInputs);
-  for (const c of safety.changes) changes.push(`${c.fix} — ${c.why}`);
+  for (const c of safety.changes) changes.push(`${c.fix}, ${c.why}`);
   const after = safety.after.summary;
 
   // HARD INVARIANT: never emit more critical/warning flags than we started with.
   if (after.critical > baseline.critical || after.warning > baseline.warning) {
     const safe = repairPlan(plan, effInputs);
-    const fb = safe.changes.map((c) => `${c.fix} — ${c.why}`);
+    const fb = safe.changes.map((c) => `${c.fix}, ${c.why}`);
     return {
       plan: safe.plan,
       changes: fb,
       summary: fb.length
         ? "Re-checked your plan against your recent training and tightened a few things for safety."
-        : "Your plan already fits your training — nothing to change yet.",
+        : "Your plan already fits your training, nothing to change yet.",
       adapted: fb.length > 0,
     };
   }
@@ -270,7 +270,7 @@ export function adaptPlan(plan, context, inputs = {}) {
 
 /** Deterministic 1-2 sentence overview from what actually changed. */
 function buildSummary(changes, deloaded, adh) {
-  if (!changes.length) return "Your plan already fits your training — nothing to change yet.";
+  if (!changes.length) return "Your plan already fits your training, nothing to change yet.";
   const parts = [];
   if (deloaded) parts.push("scheduled a lighter deload week to let you recover");
   else if (adh.behind) parts.push("eased the volume to match how much you've actually been training");

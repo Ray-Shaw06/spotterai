@@ -35,9 +35,9 @@ export const MOVEMENT_CUES = {
   },
   hinge: {
     setup: "Soft knees, weight over mid-foot, lats engaged. Set a flat, braced back before you move.",
-    howto: ["Push your hips back, letting the torso fold while the back stays flat.", "Lower until you feel a stretch in the hamstrings, not a round in the back.", "Drive the hips forward to stand tall — don't yank with the lower back."],
+    howto: ["Push your hips back, letting the torso fold while the back stays flat.", "Lower until you feel a stretch in the hamstrings, not a round in the back.", "Drive the hips forward to stand tall, don't yank with the lower back."],
     mistakes: ["Rounding the lower back", "Turning it into a squat (too much knee bend)", "Hyperextending / leaning back hard at the top"],
-    safety: "Hinges load the lower back — keep the spine neutral and the load moderate if you're prone to back pain.",
+    safety: "Hinges load the lower back, keep the spine neutral and the load moderate if you're prone to back pain.",
   },
   horizontal_push: {
     setup: "Stable shoulder blades pulled back and down, wrists stacked over elbows, feet planted.",
@@ -49,7 +49,7 @@ export const MOVEMENT_CUES = {
     setup: "Ribs down, glutes and core braced, wrists stacked over the elbows.",
     howto: ["Press overhead in a straight line, moving your head 'through the window' as the weight passes.", "Keep the core tight so you don't arch the lower back.", "Lower under control to about chin height or where you have control."],
     mistakes: ["Over-arching the lower back to press", "Pressing the weight out in front instead of overhead", "Shrugging before the press starts"],
-    safety: "Overhead pressing is shoulder-intensive — skip or substitute if it's painful overhead.",
+    safety: "Overhead pressing is shoulder-intensive, skip or substitute if it's painful overhead.",
   },
   horizontal_pull: {
     setup: "Hinge to a stable torso angle (or use chest support), shoulders set, core braced.",
@@ -67,13 +67,13 @@ export const MOVEMENT_CUES = {
     setup: "Position the joint so the target muscle does the work; brace everything else.",
     howto: ["Move slowly and deliberately through the full range.", "Keep tension on the target muscle the whole time.", "Avoid swinging or using other muscles to cheat the weight up."],
     mistakes: ["Using momentum instead of control", "Cutting the range of motion short", "Letting bigger muscles take over"],
-    safety: "Isolation work should feel like muscular effort, not joint pain — stop if a joint hurts.",
+    safety: "Isolation work should feel like muscular effort, not joint pain, stop if a joint hurts.",
   },
   plyometric: {
     setup: "Warm, fresh, and on a forgiving surface. Plyometrics are skill + impact work, not for fatigue training.",
-    howto: ["Land softly through the whole foot, absorbing with the hips and knees.", "Keep the knees tracking over the toes on landing.", "Reset fully between reps — quality over quantity."],
+    howto: ["Land softly through the whole foot, absorbing with the hips and knees.", "Keep the knees tracking over the toes on landing.", "Reset fully between reps, quality over quantity."],
     mistakes: ["Landing stiff or with knees caving in", "Chasing high rep counts when fatigued", "Doing them with an existing knee/ankle issue"],
-    safety: "High impact on the knees and ankles — skip entirely if you have a knee, ankle, or hip issue.",
+    safety: "High impact on the knees and ankles, skip entirely if you have a knee, ankle, or hip issue.",
   },
   isometric: {
     setup: "Set a neutral spine and full-body tension before the clock starts.",

@@ -11,7 +11,7 @@ const ids = (t) => auditReply(t).map((f) => f.id);
 
 test("flags training through pain", () => {
   assert.ok(ids("Just push through the pain and finish your sets.").includes("pain"));
-  assert.ok(ids("No pain, no gain — keep going!").includes("pain"));
+  assert.ok(ids("No pain, no gain, keep going!").includes("pain"));
 });
 
 test("flags crash-diet calories in a daily context", () => {

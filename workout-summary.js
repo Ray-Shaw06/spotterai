@@ -10,9 +10,9 @@
 export const DIFFICULTY_LABEL = { easy: "Too easy", just_right: "Just right", hard: "Too hard" };
 
 export const NEXT_ACTION = {
-  easy: "It felt easy — add a little load or a rep or two next time, gradually.",
-  just_right: "Right in the zone — repeat it, and progress a little when it starts to feel easy.",
-  hard: "That was tough — keep the load the same (or ease off slightly) next time and focus on clean reps.",
+  easy: "It felt easy, add a little load or a rep or two next time, gradually.",
+  just_right: "Right in the zone, repeat it, and progress a little when it starts to feel easy.",
+  hard: "That was tough, keep the load the same (or ease off slightly) next time and focus on clean reps.",
   default: "Tell SpotterAI how it felt next time so it can tune your progression.",
 };
 

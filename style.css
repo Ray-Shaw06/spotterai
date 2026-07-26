@@ -29,38 +29,48 @@
    1. Design tokens
 ---------------------------------------------------------------------------- */
 :root {
-  /* Color — base: deep slate-black with a faint iris undertone ("Nightfall") */
-  --bg: #0a090f;
-  --bg-soft: #0c0b13;
-  /* Surfaces are translucent glass — the ambient iris bloom tints through them. */
-  --surface: rgba(25, 23, 34, 0.74); /* card / elevated */
-  --surface-solid: #181522; /* opaque variant where blur isn't wanted */
-  --surface-2: rgba(38, 35, 52, 0.85); /* control / hover */
-  --border: rgba(255, 255, 255, 0.10); /* hairline */
-  --border-soft: rgba(255, 255, 255, 0.06);
-  --sheen: rgba(255, 255, 255, 0.06); /* top-edge highlight on glass */
+  /* Color — base: cool paper white with a faint iris undertone ("Record").
+     Deliberately NOT a warm cream/sand: the tint runs toward the brand's own
+     forest-green hue, not toward default warmth. Surfaces are opaque, not
+     glass — depth comes from hairline borders, not blur and bloom. */
+  --bg: #f5f8f6;
+  --bg-soft: #eef2ef; /* second neutral layer: sidebar, toolbars, panels */
+  --surface: #ffffff; /* card / elevated */
+  --surface-solid: #ffffff; /* opaque variant where blur isn't wanted */
+  --surface-2: #eff3f0; /* control / hover */
+  --border: #dbe3dd; /* hairline */
+  --border-soft: #e7ede9;
+  --sheen: transparent; /* no glass highlight in the light register */
 
-  /* Color — text: crisp near-white → cool greys */
-  --text: #f4f4f8;
-  --text-muted: #9c9aae;
-  --text-faint: #8d8ba1; /* quietest text tier; ≥4.5:1 (AA) on bg, surface, and surface-2 */
+  /* Color — text: near-black ink with a faint green cast → cool greys.
+     Every tier verified ≥4.5:1 (AA body) on bg, surface, AND surface-2. */
+  --text: #141a17; /* 16.5:1 on bg */
+  --text-muted: #4f5a54; /* 6.7:1 on bg */
+  --text-faint: #5d6a63; /* 5.3:1 on bg — quietest tier, still AA body */
 
-  /* Color — accent: a refined electric "iris" violet — distinctive, premium */
-  --accent: #8a6dff;
-  --accent-hover: #a48dff;
-  --accent-soft: rgba(138, 109, 255, 0.16);
-  --accent-ring: rgba(138, 109, 255, 0.38);
-  --accent-ink: #0c0717; /* dark iris ink on accent fills (AA-strong) */
-  --accent-2: #c878f0; /* orchid companion — used only in ambient blooms */
+  /* Color — accent: deep forest green. Carries AA as text on paper (7.4:1)
+     and takes white ink on fills (7.9:1).
+     NOTE — this deliberately merges the brand with the "passed / safe" signal
+     that core_values.md previously kept separate. In a product whose whole
+     claim is that plans get checked, green meaning both "our brand" and
+     "this passed" is one idea, not two. Warn (amber) and danger (red) carry
+     the other tiers, and the severity glyphs/pills do the discriminating. */
+  --accent: #1a5c42;
+  --accent-hover: #12452f;
+  --accent-soft: rgba(26, 92, 66, 0.09);
+  --accent-ring: rgba(26, 92, 66, 0.30);
+  --accent-ink: #ffffff; /* white ink on accent fills (AA-strong) */
+  --accent-2: #1f6b57; /* pine companion — quiet, used sparingly */
 
-  /* Color — status. Green is reserved for "passed / safe", never the brand. */
-  --success: #2dd4a2;
-  --warn: #e0b455;
-  --danger: #e26a62;
-  --success-soft: rgba(45, 212, 162, 0.14);
-  --success-ring: rgba(45, 212, 162, 0.34);
-  --warn-soft: rgba(224, 180, 85, 0.13);
-  --danger-soft: rgba(226, 106, 98, 0.13);
+  /* Color — status. "Passed / safe" is now the brand green itself (see above).
+     All tiers clear AA body on bg, surface, and surface-2. */
+  --success: #1a5c42;
+  --warn: #87620d;
+  --danger: #c22f26;
+  --success-soft: rgba(26, 92, 66, 0.10);
+  --success-ring: rgba(26, 92, 66, 0.28);
+  --warn-soft: rgba(135, 98, 13, 0.10);
+  --danger-soft: rgba(194, 47, 38, 0.09);
 
   /* Spacing scale */
   --space-1: 0.25rem;
@@ -73,19 +83,19 @@
   --space-8: 4rem;
   --space-9: 6rem;
 
-  /* Radius — crisp */
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 16px;
-  --r-xl: 22px;
+  /* Radius — tightened for the record/document register (was 8/12/16/22) */
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 10px;
+  --r-xl: 12px;
   --r-full: 999px;
 
-  /* Shadows — deep + soft, with a glass top-sheen highlight baked in */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 18px 44px -22px rgba(0, 0, 0, 0.8), inset 0 1px 0 var(--sheen);
-  --shadow-lg: 0 50px 100px -40px rgba(0, 0, 0, 0.9), 0 16px 36px -24px rgba(0, 0, 0, 0.7), inset 0 1px 0 var(--sheen);
-  --glow-accent: 0 10px 30px -8px rgba(138, 109, 255, 0.5);
-  --glow-accent-strong: 0 0 0 1px var(--accent-ring), 0 12px 36px -6px rgba(138, 109, 255, 0.55);
+  /* Shadows — near-flat. Elevation reads through borders, not drop shadows. */
+  --shadow-sm: 0 1px 2px rgba(20, 26, 23, 0.05);
+  --shadow-md: 0 1px 2px rgba(20, 26, 23, 0.04), 0 8px 20px -14px rgba(20, 26, 23, 0.18);
+  --shadow-lg: 0 1px 3px rgba(20, 26, 23, 0.05), 0 24px 48px -28px rgba(20, 26, 23, 0.24);
+  --glow-accent: 0 1px 2px rgba(20, 26, 23, 0.10);
+  --glow-accent-strong: 0 0 0 1px var(--accent-ring), 0 2px 6px -2px rgba(26, 92, 66, 0.28);
 
   /* Typography — Sora (display) + Inter (UI) + JetBrains Mono (data) */
   --font-display: "Sora", "Inter", system-ui, sans-serif;
@@ -122,6 +132,8 @@
 }
 
 html {
+  /* Tells the UA to render form controls, scrollbars, and the caret light. */
+  color-scheme: light;
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
 }
@@ -138,19 +150,15 @@ body {
   min-height: 100vh;
 }
 
-/* Aurora — fixed, full-viewport ambient glow blooms (iris + orchid) that sit
-   behind everything. Translucent glass surfaces let this tint through. */
+/* Ambient field. The dark build ran violet/orchid glow blooms here; the light
+   register drops them entirely — glow on paper reads as a smudge. Layer B
+   (search "Atmosphere") paints the ruled measure grid onto this same element. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background:
-    radial-gradient(58rem 42rem at 82% -12%, rgba(138, 109, 255, 0.20), transparent 60%),
-    radial-gradient(52rem 40rem at 6% 2%, rgba(200, 120, 240, 0.12), transparent 58%),
-    radial-gradient(46rem 40rem at 50% 116%, rgba(138, 109, 255, 0.13), transparent 60%),
-    radial-gradient(30rem 30rem at 96% 70%, rgba(200, 120, 240, 0.07), transparent 60%);
 }
 
 h1, h2, h3, h4, h5 {
@@ -239,6 +247,15 @@ table {
   background: var(--bg-soft);
   border-top: 1px solid var(--border-soft);
   border-bottom: 1px solid var(--border-soft);
+}
+/* App views also carry .section--alt. On the dark build the alt band was
+   imperceptible (#0a090f vs #0c0b13); on paper it paints a tinted slab that
+   ends mid-page and leaves a hard seam wherever the view is shorter than the
+   viewport. App screens get one continuous surface; the cards carry contrast. */
+.view.section--alt {
+  background: transparent;
+  border-top: 0;
+  border-bottom: 0;
 }
 
 .section-head {
@@ -336,13 +353,13 @@ table {
 }
 
 .btn--primary {
-  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  background: var(--accent);
   color: var(--accent-ink);
-  box-shadow: var(--glow-accent), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow: var(--glow-accent);
 }
 .btn--primary:hover {
-  background: linear-gradient(180deg, #bcaaff, var(--accent-hover));
-  box-shadow: var(--glow-accent-strong), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  background: var(--accent-hover);
+  box-shadow: var(--glow-accent-strong);
   transform: translateY(-1px);
 }
 
@@ -386,8 +403,8 @@ table {
   display: flex;
   flex-direction: column;
   padding: var(--space-5) var(--space-4);
-  border-right: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.008));
+  border-right: 1px solid var(--border);
+  background: var(--bg-soft);
 }
 .sidebar__brand {
   display: inline-flex;
@@ -406,7 +423,7 @@ table {
   width: 34px;
   height: 34px;
   border-radius: var(--r-sm);
-  background: radial-gradient(120% 120% at 30% 0%, var(--accent-soft), var(--surface-2));
+  background: var(--accent-soft);
   border: 1px solid var(--accent-ring);
   color: var(--accent);
   box-shadow: var(--glow-accent);
@@ -436,13 +453,13 @@ table {
   opacity: 0.75;
 }
 .sidebar__nav .nav-link:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(20, 26, 23, 0.05);
   color: var(--text);
 }
 .sidebar__nav .nav-link.is-active {
-  background: linear-gradient(90deg, var(--accent-soft), rgba(45, 212, 162, 0.04));
+  background: var(--accent-soft);
   color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent-ring), 0 6px 18px -10px rgba(45, 212, 162, 0.6);
+  box-shadow: inset 0 0 0 1px var(--accent-ring);
 }
 /* Glowing left indicator bar on the active item */
 .sidebar__nav .nav-link.is-active::before {
@@ -464,7 +481,19 @@ table {
 .sidebar__nav button.nav-link { font: inherit; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; text-align: left; }
 /* Account lives in the sidebar foot on desktop; only surface it in the mobile
    bottom nav (where there's no visible foot). */
-.sidebar__nav .nav-link--more { display: none; }
+/* It's a <button>, so it inherits the UA's `2px outset` border unless reset.
+   That border was invisible against the near-black shell and drew a hard black
+   box around the tab on paper. */
+.sidebar__nav .nav-link--more {
+  display: none;
+  border: 0;
+  background: none;
+  /* family only — font-size must keep cascading from .nav-link so the label
+     matches its siblings instead of jumping to the UA button size. */
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+}
 /* Mobile "More" sheet (secondary destinations + Account) — desktop never shows it. */
 .more-sheet { display: none; }
 .sidebar__foot {
@@ -531,8 +560,11 @@ table {
   .sidebar__foot .profile-btn__avatar { width: 32px; height: 32px; font-size: 0.85rem; }
   .profile-btn__chev { display: none; }
   .profile-btn__name { display: inline-block; max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; font-size: 0.8rem; }
-  /* Surface "Account" as a real tab in the bottom nav. */
-  .sidebar__nav .nav-link--more { display: flex; }
+  /* Surface "Account" as a real tab in the bottom nav. The `button.nav-link`
+     selector elsewhere sets `font-size: inherit`, which outranks a plain
+     `.nav-link--more`; match its specificity so the label sizes like its
+     sibling tabs instead of inheriting the 1rem shell size. */
+  .sidebar__nav button.nav-link--more { display: flex; font-size: 0.64rem; }
   /* Keep 5 fixed tabs; the rest move into the More sheet. */
   .sidebar__nav .nav-link--sec { display: none; }
   .more-sheet:not([hidden]) {
@@ -575,9 +607,11 @@ table {
     flex-direction: row;
     gap: 0;
     padding: 6px max(6px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px));
-    /* Solid-ish bg like the top bar — blur on an always-visible fixed bar is
-       a constant compositing cost on low-end phones for no legibility gain. */
-    background: color-mix(in srgb, var(--bg) 96%, transparent);
+    /* Fully opaque. Blur on an always-visible fixed bar is a constant
+       compositing cost on low-end phones for no legibility gain — and the old
+       96% bg let page text ghost through the bar, which was invisible against
+       near-black but obvious on paper. */
+    background: var(--bg);
     border-top: 1px solid var(--border);
     overflow-x: auto;
     scrollbar-width: none;
@@ -612,10 +646,10 @@ table {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: color-mix(in srgb, var(--bg) 80%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border-soft);
+  /* Solid, not frosted: translucency + blur is the dark-UI move, and on paper
+     it muddies the ruled grid showing through. */
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
 }
 .site-header__inner {
   display: flex;
@@ -726,11 +760,10 @@ table {
   max-width: 400px;
   padding: var(--space-5);
   background:
-    radial-gradient(120% 90% at 100% 0%, var(--accent-soft), transparent 60%),
     var(--surface);
   border: 1px solid var(--border);
-  border-radius: 20px;
-  box-shadow: 0 30px 60px -25px rgba(0, 0, 0, 0.6);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
 }
 .audit-card__head {
   display: flex;
@@ -897,7 +930,7 @@ table {
 }
 .loop__step--accent {
   border-color: var(--accent-ring);
-  box-shadow: var(--shadow-md), 0 0 0 1px var(--accent-ring), 0 18px 40px -28px rgba(45, 212, 162, 0.6);
+  box-shadow: var(--shadow-md), 0 0 0 1px var(--accent-ring);
 }
 .loop__num {
   display: grid;
@@ -1009,7 +1042,7 @@ table {
 .flag__sev { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; padding: 3px 9px; border-radius: var(--r-full); }
 .flag--critical .flag__sev { color: var(--danger); background: var(--danger-soft); }
 .flag--warning .flag__sev { color: var(--warn); background: var(--warn-soft); }
-.flag--suggestion .flag__sev { color: var(--text-muted); background: rgba(255, 255, 255, 0.06); }
+.flag--suggestion .flag__sev { color: var(--text-muted); background: rgba(20, 26, 23, 0.06); }
 .flag__label { font-weight: 600; letter-spacing: -0.01em; }
 .flag__why { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.55; }
 .flag__row { margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text); line-height: 1.5; }
@@ -1112,7 +1145,7 @@ table {
 /* ----------------------------------------------------------------------------
    Guided onboarding overlay
 ---------------------------------------------------------------------------- */
-.onb { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: var(--space-4); background: rgba(4, 5, 8, 0.72); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.onb { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: var(--space-4); background: rgba(20, 26, 23, 0.42); }
 .onb.is-open { display: flex; }
 .onb__panel { width: 100%; max-width: 560px; max-height: 92vh; display: flex; flex-direction: column; background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--r-xl); box-shadow: var(--shadow-lg); overflow: hidden; }
 .onb__head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-5) 0; }
@@ -1149,7 +1182,7 @@ table {
    Exercise Library — animated movement demos
 ---------------------------------------------------------------------------- */
 .ex-anim { margin: 0 0 var(--space-4); padding: var(--space-3); display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
-  background: radial-gradient(120% 90% at 50% 0%, var(--accent-soft), transparent 62%), var(--surface-2);
+  background: var(--surface-2);
   border: 1px solid var(--border); border-radius: var(--r-lg); }
 .ex-anim__svg { width: 152px; height: 190px; }
 .ex-limbfill, .ex-head { fill: url(#exBody); }
@@ -1167,7 +1200,7 @@ table {
 .ex-plate { fill: #9aa2b3; }
 .ex-collar { fill: #dfe3ec; } /* plate hub / dumbbell bell highlight */
 .ex-ground { stroke: var(--border); stroke-width: 2; stroke-linecap: round; }
-.ex-shadow { fill: rgba(0, 0, 0, 0.32); }
+.ex-shadow { fill: rgba(20, 26, 23, 0.14); }
 .ex-anim__cap { font-size: 0.8rem; color: var(--text-muted); text-align: center; line-height: 1.4; }
 .ex-anim__dot { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--accent); vertical-align: middle; box-shadow: 0 0 8px 1px var(--accent); animation: ex-pulse 1.7s ease-in-out infinite; }
 
@@ -1745,7 +1778,7 @@ table {
    First-week guided experience
 ---------------------------------------------------------------------------- */
 .fw-card { position: relative; padding: var(--space-5); margin-bottom: var(--space-5); border-color: var(--accent-ring); box-shadow: var(--shadow-md), 0 0 0 1px var(--accent-ring); }
-.fw-card--review { background: radial-gradient(120% 130% at 100% 0%, var(--accent-soft), transparent 60%), var(--surface); }
+.fw-card--review { background: var(--accent-soft); }
 .fw-dismiss { position: absolute; top: var(--space-3); right: var(--space-3); width: 28px; height: 28px; display: grid; place-items: center; font-size: 1.1rem; color: var(--text-faint); background: none; border: none; border-radius: var(--r-sm); cursor: pointer; }
 .fw-dismiss:hover { color: var(--text); background: var(--surface-2); }
 .fw-eyebrow { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); font-weight: 600; }
@@ -1851,7 +1884,7 @@ table {
 .arch-grid strong { color: var(--text); font-weight: 600; }
 
 /* Final CTA (homepage) */
-.final-cta { text-align: center; padding: var(--space-8) var(--space-5); background: radial-gradient(80% 130% at 50% 0%, var(--accent-soft), transparent 70%); border: 1px solid var(--border); border-radius: var(--r-xl); }
+.final-cta { text-align: center; padding: var(--space-8) var(--space-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl); }
 .final-cta__title { font-size: clamp(1.6rem, 4vw, 2.6rem); font-weight: 700; letter-spacing: -0.03em; }
 .final-cta__sub { margin: var(--space-3) auto 0; max-width: 56ch; color: var(--text-muted); }
 .final-cta__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: center; margin-top: var(--space-5); }
@@ -2012,11 +2045,9 @@ table {
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-md);
-  /* saturate only: enriches the aurora tint through the glass. The blur that
-     used to sit here bought nothing — the backdrop is a static gradient —
-     and cost a GPU blur layer per card. */
-  -webkit-backdrop-filter: saturate(1.25);
-  backdrop-filter: saturate(1.25);
+  /* No backdrop-filter. The dark build kept a saturate() pass to enrich the
+     aurora bloom through translucent glass; surfaces are opaque now, so the
+     filter had nothing left to act on and only cost a compositing layer. */
 }
 .card-title {
   font-size: 1.05rem;
@@ -2738,8 +2769,8 @@ table {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.45);
-  border-top-color: #fff;
+  border: 2px solid color-mix(in srgb, var(--accent-ink) 45%, transparent);
+  border-top-color: var(--accent-ink);
   animation: spin 0.8s linear infinite;
 }
 .adapt-changes {
@@ -3236,7 +3267,7 @@ table {
 .eval-case__type { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; padding: 2px 7px; border-radius: var(--r-full); vertical-align: middle; margin-left: 6px; }
 .eval-case__type--good, .eval-case__type--guard { color: var(--success); background: var(--success-soft); }
 .eval-case__type--risky { color: var(--warn); background: var(--warn-soft); }
-.eval-case__type--edge { color: var(--text-muted); background: rgba(255, 255, 255, 0.06); }
+.eval-case__type--edge { color: var(--text-muted); background: rgba(20, 26, 23, 0.06); }
 .eval-flagchips { display: flex; flex-wrap: wrap; gap: 6px; }
 .eval-chip { font-size: 0.72rem; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); padding: 3px 10px; }
 .eval-case__sub--muted { color: var(--text-faint); }
@@ -3834,7 +3865,7 @@ table {
   text-transform: uppercase;
   white-space: nowrap;
   color: var(--accent);
-  background: var(--accent-soft, rgba(138, 109, 255, 0.12));
+  background: var(--accent-soft);
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   border-radius: var(--r-full);
 }
@@ -4427,7 +4458,6 @@ table {
   padding: var(--space-5);
   margin-bottom: var(--space-4);
   background:
-    radial-gradient(120% 140% at 0% 0%, var(--accent-soft), transparent 55%),
     var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
@@ -4934,13 +4964,13 @@ table {
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: rgba(5, 6, 8, 0.66);
-  backdrop-filter: blur(4px);
+  background: rgba(20, 26, 23, 0.38);
   opacity: 0;
-  /* visibility:hidden takes the closed overlay (a full-viewport backdrop-blur)
-     out of compositing entirely — otherwise every closed modal re-samples a
-     full-screen blur each frame, including during scroll. It flips after the
-     fade so the transition still reads. */
+  /* visibility:hidden takes the closed overlay out of compositing entirely.
+     It flips after the fade so the transition still reads. (The backdrop-blur
+     this originally guarded against is gone in the light register; the rule
+     stays because it also keeps a closed full-viewport layer off the
+     compositor.) */
   visibility: hidden;
   pointer-events: none;
   transition: opacity var(--transition), visibility 0s linear 240ms;
@@ -5231,7 +5261,7 @@ table {
   flex: 1; display: flex; flex-direction: column; gap: 3px; text-align: left;
   padding: 0.85rem 0.95rem; padding-right: 2.4rem;
   font-family: var(--font-body); color: var(--text); cursor: pointer;
-  background: radial-gradient(120% 120% at 100% 0%, var(--accent-soft), transparent 70%), var(--surface-2);
+  background: var(--surface-2);
   border: 1px solid var(--accent-ring); border-radius: var(--r-md); transition: var(--transition);
 }
 .saved-w__load:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--glow-accent); }
@@ -5397,10 +5427,9 @@ table {
   display: grid;
   place-items: start center;
   padding: 8vh var(--space-4) var(--space-4);
-  background: rgba(5, 6, 8, 0.66);
-  backdrop-filter: blur(4px);
+  background: rgba(20, 26, 23, 0.38);
   opacity: 0;
-  /* See .account-modal: keep closed full-screen blur out of compositing. */
+  /* See .account-modal: keep the closed full-screen layer out of compositing. */
   visibility: hidden;
   pointer-events: none;
   transition: opacity var(--transition), visibility 0s linear 240ms;
@@ -5700,26 +5729,15 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   --hud-tick-soft: color-mix(in srgb, var(--accent) 26%, transparent);
 }
 
-/* --- 1. Atmosphere: blueprint dot-grid over the violet blooms ------------- */
+/* --- 1. Atmosphere: ruled measure grid ------------------------------------
+   Light register: a faint ruled grid in ink, the way graph paper and record
+   forms are ruled. Replaces the dark build's dot-grid-over-violet-blooms.
+   No film grain — grain on paper reads as dirt, not texture. */
 body::before {
-  background:
-    radial-gradient(circle at 1px 1px, rgba(244, 244, 248, 0.05) 1px, transparent 1.4px),
-    radial-gradient(58rem 42rem at 82% -12%, rgba(138, 109, 255, 0.20), transparent 60%),
-    radial-gradient(52rem 40rem at 6% 2%, rgba(200, 120, 240, 0.12), transparent 58%),
-    radial-gradient(46rem 40rem at 50% 116%, rgba(138, 109, 255, 0.13), transparent 60%),
-    radial-gradient(30rem 30rem at 96% 70%, rgba(200, 120, 240, 0.07), transparent 60%);
-  background-size: 30px 30px, auto, auto, auto, auto;
-}
-/* Film grain — a whisper of texture so the dark fields never look flat. */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  pointer-events: none;
-  opacity: 0.05;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-image:
+    linear-gradient(to right, rgba(20, 26, 23, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(20, 26, 23, 0.035) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 
 /* --- 2. Mono HUD readouts -------------------------------------------------- */
@@ -5777,70 +5795,23 @@ body::after {
   background-repeat: no-repeat;
 }
 
-/* --- 4. The audit card SCANS (it's auditing, after all) -------------------- */
+/* --- 4/5. Ambient loops removed in the light register ----------------------
+   The dark build ran two always-on decorative loops: a violet scan sweep
+   across the audit card and a 26s conic radar bloom behind the hero. Both are
+   decoration, not state, and on paper they read as a printing defect. Removed
+   rather than recolored. `anim-gate.js` still stamps .is-offstage; the rule
+   below stays so the pulse it targets keeps pausing off-screen.
+   Motion that survives: state transitions only (150-250ms). */
 .audit-card {
   overflow: hidden;
 }
-.audit-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    transparent 42%,
-    rgba(138, 109, 255, 0.07) 48%,
-    rgba(200, 120, 240, 0.14) 50%,
-    rgba(138, 109, 255, 0.07) 52%,
-    transparent 58%,
-    transparent 100%
-  );
-  background-size: 100% 250%;
-  animation: hud-scan 8s linear infinite;
-}
-@keyframes hud-scan {
-  from { background-position: 0 250%; }
-  to { background-position: 0 -250%; }
-}
-/* The radar/scan loops are ambient; anim-gate.js stamps .is-offstage when the
-   hero scrolls out of view so they stop burning GPU while invisible. */
-.hero.is-offstage::after,
-.hero.is-offstage .audit-card::before,
 .hero.is-offstage .audit-card__pulse {
   animation-play-state: paused;
 }
 
-/* --- 5. Hero: slow radar bloom behind the audit card ----------------------- */
 .hero {
   position: relative;
   overflow: hidden;
-}
-.hero::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: -8%;
-  width: 46rem;
-  height: 46rem;
-  margin-top: -23rem;
-  pointer-events: none;
-  z-index: 0;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    rgba(138, 109, 255, 0.16) 40deg,
-    transparent 90deg,
-    transparent 200deg,
-    rgba(200, 120, 240, 0.09) 250deg,
-    transparent 310deg
-  );
-  border-radius: 50%;
-  filter: blur(34px);
-  animation: hud-radar 26s linear infinite;
-}
-@keyframes hud-radar {
-  to { transform: rotate(360deg); }
 }
 .hero > * { position: relative; z-index: 1; }
 .hero__title { letter-spacing: -0.04em; }
@@ -5852,42 +5823,23 @@ body::after {
 .bal__l,
 .bal__r,
 .rest-timer__fill {
+  /* Ticks cut out of the filled bar, so they read on accent and status fills. */
   background-image: repeating-linear-gradient(
     90deg,
     transparent 0 6px,
-    rgba(10, 9, 15, 0.45) 6px 8px
+    rgba(255, 255, 255, 0.62) 6px 8px
   );
 }
 
-/* --- 7. Primary buttons: sheen sweep on hover ------------------------------ */
-.btn--primary {
-  position: relative;
-  overflow: hidden;
-}
-.btn--primary::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -35%;
-  width: 22%;
-  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-  transform: skewX(-18deg);
-  opacity: 0;
-}
-.btn--primary:hover::after {
-  animation: hud-sheen 0.55s ease forwards;
-}
-@keyframes hud-sheen {
-  from { left: -35%; opacity: 1; }
-  to { left: 125%; opacity: 1; }
-}
+/* --- 7. Primary buttons ----------------------------------------------------
+   The hover sheen sweep is gone: a specular glint is a dark-UI device, and on
+   a white button field it just flashes. Hover is carried by the color step. */
 
 /* --- 8. Details: selection matches the instrument --------------------------- */
 ::selection { background: var(--accent); color: var(--accent-ink); }
 
 @media (prefers-reduced-motion: reduce) {
-  .audit-card::before, .hero::after, .btn--primary::after { animation: none !important; }
+  .audit-card__pulse { animation: none !important; }
 }
 
 /* --- 9. Display titles: solid ink, tight tracking --------------------------- */
@@ -5984,7 +5936,6 @@ body::after {
   padding: var(--space-6);
   margin-bottom: var(--space-4);
   background:
-    radial-gradient(110% 130% at 0% 0%, var(--accent-soft), transparent 55%),
     var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-xl);
@@ -6097,4 +6048,219 @@ body::after {
   .set-done::after,
   .set-del::after { content: ""; position: absolute; inset: -7px -2px; }
   .ex-act::after { content: ""; position: absolute; inset: -3px -1px; }
+}
+
+/* ============================================================================
+   D. TYPE & SURFACE PASS
+   ----------------------------------------------------------------------------
+   Fourth layer (see the CONTENTS block at the top of this file). Fixes the
+   three things that made the light build still read as machine-generated:
+
+     1. A blueprint grid behind every page. Technical-looking texture that
+        serves no task. Removed; the page is paper now.
+     2. A geometric display sans at a fluid clamp up to 4.9rem with -0.04em
+        tracking. That combination is the generated-hero signature. Replaced
+        with a warm humanist serif on a fixed, smaller scale, paired against
+        Inter on a real contrast axis (serif vs sans) instead of two sans faces.
+     3. Tracked uppercase micro-labels on ~66 rules. Caps-plus-tracking is
+        scaffolding when it labels an ordinary field. It survives only where a
+        short caps token is a genuine convention: severity and status pills.
+
+   Additive layer: these rules override earlier ones purely by cascade order.
+   ============================================================================ */
+
+/* --- 1. Surface: no grid ---------------------------------------------------- */
+body::before {
+  background-image: none;
+}
+
+/* --- 2. Type: humanist serif display on a fixed scale ----------------------- */
+:root {
+  --font-display: "Literata", Georgia, "Times New Roman", serif;
+  /* Fixed scale, ratio ~1.4 at the top and ~1.2 through the middle. The hero
+     keeps a narrow clamp purely so long words can't overflow at 320px; the
+     ceiling is well under the shouting range the old 4.9rem sat in. */
+  --fs-display: clamp(2.15rem, 4.6vw, 3.2rem);
+  --fs-h1: 2.15rem;
+  --fs-h2: 1.55rem;
+}
+
+h1, h2, h3, h4, h5,
+.hero__title,
+.section-title--lg,
+.cmd__title {
+  /* A serif needs air where the geometric sans needed none: near-zero tracking
+     and a looser leading, or the ascenders and descenders collide. */
+  letter-spacing: -0.008em;
+  line-height: 1.18;
+  font-weight: 700;
+}
+.hero__title,
+.cmd__title {
+  font-size: var(--fs-display);
+  font-weight: 700;
+  line-height: 1.12;
+}
+.sidebar__brand,
+.wordmark {
+  letter-spacing: -0.005em;
+}
+
+/* --- 3. Field labels: sentence case, body font ------------------------------
+   The label families below all did the same job — naming a field inside a card
+   — in tracked caps. They read as ordinary labels now. */
+.audit__eyebrow,
+.audit__score-label,
+.flag__row-label,
+.trust__row dt,
+.trust__block h5,
+.bench__item dt,
+.badplan__label,
+.onb-flabel,
+.lib-card__diff,
+.lib-h5,
+.summary-k,
+.pain-label,
+.fw-eyebrow,
+.fw-k,
+.week-strip__label,
+.today-card__eyebrow,
+.scenario__k,
+.rule-card__k,
+.nut-wontdo__col h5,
+.workout-grouplabel,
+.food-grouplabel,
+.account-h,
+.split-legend,
+.plan__eyebrow,
+.eyebrow {
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: 0.005em;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+/* Data readouts keep the mono voice — numerals, versions, durations, scores.
+   That is the part of the instrument language that was always earned. */
+.audit-card__score,
+.split-score__n,
+.today-stat__v,
+.summary-stat__v,
+.fw-stat__v,
+.session-timer,
+.rest-timer__time,
+.bench__item dd {
+  font-family: var(--font-mono);
+}
+
+/* --- 4. Caps survive only as status tokens --------------------------------- */
+.flag__sev,
+.trust__conf,
+.bench__status,
+.badplan__tag,
+.sflag__tier,
+.wcard__badge,
+.lib-badge,
+.today-badge,
+.summary-prs__badge,
+.audit-card__live {
+  font-family: var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+}
+
+/* --- 5. Navigation labels: sentence case ------------------------------------
+   The desktop rail rendered its tabs as tracked mono caps (TODAY / PLAN /
+   SPLIT LAB). Same scaffolding as the field labels above, and the most visible
+   instance of it, since the rail is on every screen. The bench chip is a
+   descriptor, not a status, so it de-caps too; PASSING stays a status pill. */
+@media (min-width: 961px) {
+  .sidebar__nav .nav-link {
+    font-family: var(--font-body);
+    font-size: 0.68rem;
+    letter-spacing: 0.005em;
+    text-transform: none;
+    font-weight: 500;
+  }
+}
+@media (max-width: 960px) {
+  .sidebar__nav .nav-link,
+  .sidebar__nav button.nav-link--more {
+    font-family: var(--font-body);
+    letter-spacing: 0.005em;
+    text-transform: none;
+  }
+}
+.bench__tag {
+  text-transform: none;
+  letter-spacing: 0.005em;
+  font-size: 0.72rem;
+}
+
+/* --- 6. Complete de-caps sweep ----------------------------------------------
+   Section 3 enumerated the label classes by hand and missed a third of them
+   (form check, adapt cards, chat guard, library, nutrition). This is the full
+   set, extracted mechanically: every selector in layers A-C that set
+   `text-transform: uppercase`, minus the ten status tokens listed in section 4,
+   which keep their caps because a short state word is genuinely easier to scan
+   that way. Kept: severity pills, trust confidence, PASSING, tier badges. */.account-h,
+.adapt-card__eyebrow,
+.adapt-changes__badge,
+.adapt-changes__label,
+.audit__eyebrow,
+.audit__score-label,
+.badplan__label,
+.bench__item dt,
+.bench__tag,
+.cam-overlay__reps-label,
+.chat-guard__head,
+.check__badge,
+.cmd__eyebrow,
+.cmd__manifest-label,
+.dash-subchart__label,
+.day-card__day,
+.eval-case__sub,
+.eval-case__type,
+.eval-check__badge,
+.ex-table thead th,
+.eyebrow,
+.flag__row-label,
+.food-edit__grid label,
+.food-grouplabel,
+.food-opt__tag,
+.form-angle,
+.form-report__heading,
+.form-side__heading,
+.fw-eyebrow,
+.fw-k,
+.lib-card__diff,
+.lib-h5,
+.nut-wontdo__col h5,
+.onb-flabel,
+.pain-label,
+.plan-note h5,
+.plan__eyebrow,
+.plan__facts dt,
+.rank-badge__level,
+.repair__col-label,
+.repair__eyebrow,
+.repair__k,
+.rest-timer__label,
+.rule-card__k,
+.scenario__k,
+.score-card__eyebrow,
+.set-table th,
+.sidebar__nav .nav-link,
+.split-legend,
+.stat-tile__label,
+.summary-k,
+.today-card__eyebrow,
+.trust__block h5,
+.trust__row dt,
+.week-strip__label,
+.workout-grouplabel {
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: 0.005em;
 }

@@ -96,7 +96,7 @@ function close() {
   modal.setAttribute("aria-hidden", "true");
 }
 
-const list = (arr) => (arr && arr.length ? `<ul class="lib-list">${arr.map((x) => `<li>${esc(cap(x))}</li>`).join("")}</ul>` : `<span class="muted">—</span>`);
+const list = (arr) => (arr && arr.length ? `<ul class="lib-list">${arr.map((x) => `<li>${esc(cap(x))}</li>`).join("")}</ul>` : `<span class="muted">-</span>`);
 
 function renderDetail() {
   if (titleEl) titleEl.textContent = currentName;

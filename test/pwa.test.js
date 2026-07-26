@@ -31,8 +31,8 @@ test("manifest defines a stable standalone app rooted at SpotterAI", () => {
   assert.equal(manifest.start_url, "/");
   assert.equal(manifest.scope, "/");
   assert.equal(manifest.display, "standalone");
-  assert.equal(manifest.theme_color, "#0a090f");
-  assert.equal(manifest.background_color, "#0a090f");
+  assert.equal(manifest.theme_color, "#f5f8f6");
+  assert.equal(manifest.background_color, "#f5f8f6");
 });
 
 test("manifest and iOS metadata use the branded cache-safe icons", () => {
@@ -54,11 +54,11 @@ test("home-screen artwork has the required platform dimensions", () => {
   assert.deepEqual(pngSize(ICONS.maskable), { width: 512, height: 512 });
 });
 
-test("icon source is the purple SpotterAI shield and barbell, not the red-ring placeholder", () => {
+test("icon source is the forest-green SpotterAI shield and barbell, not the red-ring placeholder", () => {
   const sourcePath = join(root, "icons/spotterai-app-icon.svg");
   assert.ok(existsSync(sourcePath), "the reusable app-icon source must exist");
   const source = readFileSync(sourcePath, "utf8");
-  assert.match(source, /#8a6dff/i);
+  assert.match(source, /#1a5c42/i);
   assert.match(source, /M16 3\.6l9\.4 3\.4v7\.6/);
   assert.match(source, /M12 18h8/);
   assert.doesNotMatch(source, /#ff3b3f|#ff3838/i);

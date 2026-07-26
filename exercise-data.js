@@ -214,7 +214,7 @@ export function suggestAlternatives(name, { limitations = [], equipment = [] } =
   const lim = new Set(limitations.filter(Boolean));
   const safeFor = (altName) => {
     const a = lookupExercise(altName);
-    if (!a) return true; // unknown alt — don't assume unsafe
+    if (!a) return true; // unknown alt, don't assume unsafe
     return !a.contraindications.some((c) => lim.has(c)) && !a.jointStress.some((j) => lim.has(j));
   };
   const eqOk = (altName) => {

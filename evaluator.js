@@ -64,7 +64,7 @@ export const THRESHOLDS = {
 
   // --- Per-session set sanity ----------------------------------------------
   SESSION_SETS_WARN: 30, // a very long single session
-  SESSION_SETS_FAIL: 40, // extreme — quality collapses late in the workout
+  SESSION_SETS_FAIL: 40, // extreme, quality collapses late in the workout
 
   // --- Structured-data coverage (transparency about estimate quality) ------
   COVERAGE_MIN: 0.7, // below this, many lifts fell back to rougher keyword logic
@@ -413,8 +413,8 @@ function checkWeeklyVolume(plan, volume, goal) {
   }
   if (high.length || low.length) {
     const parts = [];
-    if (high.length) parts.push(`High weekly volume for ${high.join(", ")} sets — past ~${THRESHOLDS.HIGH_WEEKLY_SETS_WARN} sets/week, returns diminish for most people.`);
-    if (low.length) parts.push(`Light volume for a ${goal} goal on ${low.join(", ")} sets — consider adding work to drive progress.`);
+    if (high.length) parts.push(`High weekly volume for ${high.join(", ")} sets, past ~${THRESHOLDS.HIGH_WEEKLY_SETS_WARN} sets/week, returns diminish for most people.`);
+    if (low.length) parts.push(`Light volume for a ${goal} goal on ${low.join(", ")} sets, consider adding work to drive progress.`);
     return finalize(id, label, "warn", parts.join(" "));
   }
   return finalize(id, label, "pass", "Estimated weekly sets per muscle group land in a reasonable, productive range.");
@@ -434,7 +434,7 @@ function checkMuscleBalance(volume) {
   }
 
   // One side entirely missing while the other is substantial → strong imbalance.
-  if (pull === 0) return finalize(id, label, "fail", `All pushing, no pulling (push ${push} vs pull ${pull} sets). This commonly drives rounded-shoulder posture and shoulder issues — add rows and pull-ups.`);
+  if (pull === 0) return finalize(id, label, "fail", `All pushing, no pulling (push ${push} vs pull ${pull} sets). This commonly drives rounded-shoulder posture and shoulder issues, add rows and pull-ups.`);
   if (push === 0) return finalize(id, label, "fail", `All pulling, no pushing (push ${push} vs pull ${pull} sets). Add pressing work to balance the program.`);
 
   const ratio = Math.max(push, pull) / Math.min(push, pull);
@@ -459,7 +459,7 @@ function checkInjuries(plan, userInputs) {
   for (const key of injuries) {
     const rule = INJURY_RULES[key];
     const id = `injury_${key}`;
-    const label = `Injury safety — ${rule.label}`;
+    const label = `Injury safety, ${rule.label}`;
 
     // Find which prescribed exercises are risky for this injury. Prefer the
     // structured exercise DB (curated contraindications); fall back to keyword
@@ -492,7 +492,7 @@ function checkBeginnerLoad(plan, volume, userInputs) {
   const isBeginner = norm(userInputs.experience).includes("beginner");
 
   if (!isBeginner) {
-    return finalize(id, label, "pass", "Not a beginner — advanced intensity is appropriate when well managed.");
+    return finalize(id, label, "pass", "Not a beginner, advanced intensity is appropriate when well managed.");
   }
 
   const exercises = allExercises(plan);
@@ -501,7 +501,7 @@ function checkBeginnerLoad(plan, volume, userInputs) {
   const overVolume = Object.entries(volume).filter(([, s]) => s > THRESHOLDS.BEGINNER_MAX_WEEKLY_SETS_PER_MUSCLE).map(([g, s]) => `${g} (${s})`);
 
   if (maxedOut.length) {
-    return finalize(id, label, "fail", `Prescribes max-effort RPE ${THRESHOLDS.BEGINNER_MAXOUT_RPE} work to a beginner (${maxedOut.length} exercise${maxedOut.length > 1 ? "s" : ""}). Beginners build skill and connective-tissue resilience faster with 1-3 reps in reserve — keep intensity around RPE 6-8.`);
+    return finalize(id, label, "fail", `Prescribes max-effort RPE ${THRESHOLDS.BEGINNER_MAXOUT_RPE} work to a beginner (${maxedOut.length} exercise${maxedOut.length > 1 ? "s" : ""}). Beginners build skill and connective-tissue resilience faster with 1-3 reps in reserve, keep intensity around RPE 6-8.`);
   }
   if (highRpe.length >= 2 || overVolume.length) {
     const parts = [];
@@ -552,7 +552,7 @@ function checkLegBalance(volume) {
     return finalize(id, label, "pass", "Not enough lower-body volume this week to assess quad/hamstring balance.");
   }
   if (ham === 0) {
-    return finalize(id, label, "warn", `Quad work with no direct hamstring work (quads ${round(quad)} vs hamstrings 0 sets). Add a hinge or leg curl — balanced posterior-chain volume supports the knees.`);
+    return finalize(id, label, "warn", `Quad work with no direct hamstring work (quads ${round(quad)} vs hamstrings 0 sets). Add a hinge or leg curl, balanced posterior-chain volume supports the knees.`);
   }
   const ratio = Math.max(quad, ham) / Math.min(quad, ham);
   const heavier = quad > ham ? "quads" : "hamstrings";
@@ -589,7 +589,7 @@ function checkMuscleFrequency(plan, volume, frequency, goal) {
       id,
       label,
       "warn",
-      `${which} substantial volume in a single weekly session: ${list}. Spreading it across about ${THRESHOLDS.FREQUENCY_TARGET_DAYS} days a week tends to grow a muscle better than the same sets in one session, through more quality reps and better recovery. This is an optimization, not a safety issue — the total volume is unchanged.`
+      `${which} substantial volume in a single weekly session: ${list}. Spreading it across about ${THRESHOLDS.FREQUENCY_TARGET_DAYS} days a week tends to grow a muscle better than the same sets in one session, through more quality reps and better recovery. This is an optimization, not a safety issue, the total volume is unchanged.`
     );
   }
   return finalize(id, label, "pass", "Muscle groups with meaningful volume are trained at least a couple of times a week.");
@@ -644,10 +644,10 @@ function checkSessionLoad(plan) {
     if (sets > worst) { worst = sets; worstDay = day.focus || day.day || "a session"; }
   }
   if (worst >= THRESHOLDS.SESSION_SETS_FAIL) {
-    return finalize(id, label, "fail", `One session prescribes ${worst} working sets (${worstDay}). That's an extreme, very long workout — quality and form decay late on, raising injury risk. Split it across days.`);
+    return finalize(id, label, "fail", `One session prescribes ${worst} working sets (${worstDay}). That's an extreme, very long workout, quality and form decay late on, raising injury risk. Split it across days.`);
   }
   if (worst >= THRESHOLDS.SESSION_SETS_WARN) {
-    return finalize(id, label, "warn", `A session prescribes ${worst} working sets (${worstDay}) — a long workout. Consider trimming or splitting it for better quality per set.`);
+    return finalize(id, label, "warn", `A session prescribes ${worst} working sets (${worstDay}), a long workout. Consider trimming or splitting it for better quality per set.`);
   }
   return finalize(id, label, "pass", "No single session is overloaded with working sets.");
 }
@@ -678,18 +678,18 @@ export const EVALUATOR_VERSION = "v1.2.0";
 
 /** Suggested fixes for the non-injury checks, keyed by check id. */
 const REMEDIES = {
-  rest_days: { fix: "Schedule at least one full rest day — or convert a training day to active recovery." },
+  rest_days: { fix: "Schedule at least one full rest day, or convert a training day to active recovery." },
   weekly_volume: {
     fix: "Trim sets on the most overrepresented muscle group and remove redundant accessory work; add a little volume to anything under-stimulated.",
   },
   muscle_balance: {
-    fix: "Even out the push:pull ratio — add pulling volume, or trim excess pressing.",
+    fix: "Even out the push:pull ratio, add pulling volume, or trim excess pressing.",
     alternatives: ["Barbell / dumbbell row", "Lat pulldown", "Face pull", "Rear-delt fly", "Chest-supported row"],
   },
   beginner_load: {
     fix: "Lower intensity (leave 1–3 reps in reserve), drop max-effort sets, and build volume gradually.",
   },
-  goal_fit: { fix: "Shift rep ranges toward your goal — lower reps (≈3–6) for strength, ≈6–15 for hypertrophy." },
+  goal_fit: { fix: "Shift rep ranges toward your goal, lower reps (≈3–6) for strength, ≈6–15 for hypertrophy." },
   muscle_frequency: { fix: "Split that muscle's weekly sets across two sessions (for example, half on one day and half on another) rather than one big session." },
   equipment_fit: { fix: "Swap exercises that need unavailable equipment for ones your gear supports, or update the equipment in your profile." },
 };

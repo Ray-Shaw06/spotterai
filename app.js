@@ -578,7 +578,7 @@ function renderPlan(plan) {
                   </td>
                   <td class="num">${esc(ex.sets)}</td>
                   <td class="num">${esc(ex.reps)}</td>
-                  <td class="num">${ex.rpe == null || ex.rpe === "" ? "—" : esc(ex.rpe)}</td>
+                  <td class="num">${ex.rpe == null || ex.rpe === "" ? "-" : esc(ex.rpe)}</td>
                   <td class="ex-row-acts">
                     <button type="button" class="ex-act" data-act="ex-swap" data-day="${idx}" data-name="${esc(ex.name)}" title="Substitute" aria-label="Substitute ${esc(ex.name)}">⇄</button>
                     <button type="button" class="ex-act ex-act--del" data-act="ex-remove" data-day="${idx}" data-name="${esc(ex.name)}" title="Remove" aria-label="Remove ${esc(ex.name)}">×</button>
@@ -681,7 +681,7 @@ function adapt() {
     // Fully offline + deterministic: same evaluator re-audits every change.
     const { plan, changes, summary, adapted } = adaptPlan(store.plan, context, store.inputs);
     if (!adapted) {
-      showAdaptError("Your plan already matches your recent training — nothing to change yet. Keep logging and try again in a week.");
+      showAdaptError("Your plan already matches your recent training, nothing to change yet. Keep logging and try again in a week.");
       return;
     }
     // Replace the current plan (persist + let chat/workout see it), re-audit,

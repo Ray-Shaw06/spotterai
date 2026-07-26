@@ -173,9 +173,9 @@ export function initWorkoutAlertsUI(doc = globalThis.document) {
     } else if (cap === "denied") {
       setStatus("Notifications are blocked in your device settings. The rest timer still buzzes, beeps, and counts down on screen.");
     } else if (enabled && cap === "ready") {
-      setStatus("On — when a rest timer ends you'll get a notification on this device. Nothing is sent when the app is closed.");
+      setStatus("On, when a rest timer ends you'll get a notification on this device. Nothing is sent when the app is closed.");
     } else {
-      setStatus("Off — turn on to get a notification on this device when a rest timer ends. Vibration and sound always work.");
+      setStatus("Off, turn on to get a notification on this device when a rest timer ends. Vibration and sound always work.");
     }
     section.removeAttribute("aria-busy");
   }

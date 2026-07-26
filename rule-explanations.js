@@ -11,17 +11,17 @@ export const RULE_EXPLANATIONS = [
     id: "rest_days",
     name: "Recovery & rest days",
     checks: "Whether the week leaves at least one full rest or active-recovery day.",
-    why: "Muscle, connective tissue, and the nervous system adapt during recovery — not just during training. Zero rest days raises injury and burnout risk.",
+    why: "Muscle, connective tissue, and the nervous system adapt during recovery, not just during training. Zero rest days raises injury and burnout risk.",
     action: "Flags 6–7 training days; in repair, converts a training day to active recovery.",
     limitations: "It can't see your sleep, stress, age, or how hard each session actually is.",
   },
   {
     id: "weekly_volume",
     name: "Weekly volume",
-    checks: "Estimated hard sets per muscle group per week — too much (junk volume) or too little for the goal.",
+    checks: "Estimated hard sets per muscle group per week, too much (junk volume) or too little for the goal.",
     why: "There's a productive range of sets per muscle. Far above it adds fatigue and injury risk without extra benefit; far below it under-stimulates progress.",
     action: "Flags very high or low volume; in repair, trims the most overrepresented muscle.",
-    limitations: "Volume tolerance is individual — this uses population-level ranges, not your data.",
+    limitations: "Volume tolerance is individual, this uses population-level ranges, not your data.",
   },
   {
     id: "muscle_balance",
@@ -51,7 +51,7 @@ export const RULE_EXPLANATIONS = [
     id: "goal_fit",
     name: "Goal alignment",
     checks: "Whether rep ranges and structure match the stated goal (strength vs hypertrophy).",
-    why: "Adaptations are somewhat specific — strength favors heavier, lower-rep work; hypertrophy favors moderate reps taken near failure.",
+    why: "Adaptations are somewhat specific, strength favors heavier, lower-rep work; hypertrophy favors moderate reps taken near failure.",
     action: "Suggests shifting rep ranges toward the goal.",
     limitations: "Rep ranges overlap a lot, so this is a nudge, not a hard rule.",
   },
@@ -59,7 +59,7 @@ export const RULE_EXPLANATIONS = [
     id: "muscle_frequency",
     name: "Training frequency",
     checks: "For a hypertrophy goal, whether a muscle getting substantial weekly volume is trained on more than one day.",
-    why: "Splitting a muscle's weekly sets across about two sessions tends to grow it better than the same volume crammed into one day — more quality reps per set and better recovery between them.",
+    why: "Splitting a muscle's weekly sets across about two sessions tends to grow it better than the same volume crammed into one day, more quality reps per set and better recovery between them.",
     action: "Suggests spreading a once-a-week, high-volume muscle across two days. Purely informational: it never lowers the score, since the volume is already counted.",
     limitations: "It uses population-level guidance, not your data, and only assesses frequency once weekly volume is meaningful.",
   },
@@ -77,13 +77,13 @@ export const RULE_EXPLANATIONS = [
     checks: "Movements commonly contraindicated for a stated injury (knee, lower back, shoulder, wrist).",
     why: "Loading a movement that aggravates an existing issue can set back recovery. Respecting stated limitations is the conservative default.",
     action: "Flags risky movements; in repair, swaps them for a muscle-preserving, joint-friendly alternative.",
-    limitations: "It can't diagnose anything or know your pain threshold — see a professional for injuries.",
+    limitations: "It can't diagnose anything or know your pain threshold, see a professional for injuries.",
   },
   {
     id: "session_load",
     name: "Session length sanity",
     checks: "Total working sets prescribed in a single workout.",
-    why: "Very long sessions see form and focus decay late on — when injury risk is highest — with diminishing returns.",
+    why: "Very long sessions see form and focus decay late on, when injury risk is highest, with diminishing returns.",
     action: "Flags an extreme single session and suggests splitting it across days.",
     limitations: "Work capacity varies; some advanced lifters tolerate longer sessions.",
   },
@@ -99,7 +99,7 @@ export const RULE_EXPLANATIONS = [
     id: "substitution",
     name: "Exercise substitution quality",
     checks: "When the plan-repair engine swaps a flagged movement, whether the replacement still trains the original muscle.",
-    why: "A safer swap shouldn't quietly delete training stimulus — e.g. swapping a knee-aggravating lunge for a hip thrust would drop quad work.",
+    why: "A safer swap shouldn't quietly delete training stimulus, e.g. swapping a knee-aggravating lunge for a hip thrust would drop quad work.",
     action: "Prefers an alternative from the structured DB that preserves the original's primary muscle, and shows the tradeoff.",
     limitations: "Substitutions are template-based, not personalized to your equipment access or preferences.",
   },
@@ -124,4 +124,4 @@ export const TRAINING_PRINCIPLES = [
 ];
 
 export const PRINCIPLES_NOTE =
-  "These rules are conservative heuristics based on common strength-training programming principles — not clinical validation. They're designed to catch obvious programming issues and explain the tradeoffs, not to certify a plan as safe.";
+  "These rules are conservative heuristics based on common strength-training programming principles, not clinical validation. They're designed to catch obvious programming issues and explain the tradeoffs, not to certify a plan as safe.";

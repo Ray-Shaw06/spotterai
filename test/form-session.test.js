@@ -10,8 +10,8 @@ import assert from "node:assert/strict";
 import { SessionRecorder, tipsFor, TIPS } from "../form-session.js";
 
 const GOOD = { level: "good", text: "Hit depth" };
-const SHALLOW = { level: "warn", text: "Too shallow — bigger range" };
-const SAG = { level: "warn", text: "Hips sagging — brace your core" };
+const SHALLOW = { level: "warn", text: "Too shallow, bigger range" };
+const SAG = { level: "warn", text: "Hips sagging, brace your core" };
 
 function record(recorder, { tMs, rep, verdict, judged = true, cueFrames = [] }) {
   for (const cues of cueFrames) recorder.recordCues(cues);
@@ -30,7 +30,7 @@ test("a cue on many frames of one rep counts as one rep affected", () => {
   assert.equal(s.reps, 2);
 });
 
-test("cue windows reset per rep — three affected reps count 3 of 4", () => {
+test("cue windows reset per rep, three affected reps count 3 of 4", () => {
   const r = new SessionRecorder("pushup");
   r.start(0);
   record(r, { tMs: 2000, rep: 1, verdict: GOOD, cueFrames: [[SAG]] });
@@ -154,8 +154,8 @@ test("tips cap at three, ordered by how many reps each finding affected", () => 
   const r = new SessionRecorder("squat");
   r.start(0);
   const c = (text) => ({ level: "warn", text });
-  const lean = c("Chest up — too much forward lean");
-  const deep = c("Go deeper — aim for parallel");
+  const lean = c("Chest up, too much forward lean");
+  const deep = c("Go deeper, aim for parallel");
   record(r, { tMs: 1000, rep: 1, verdict: SHALLOW, cueFrames: [[lean, deep]] });
   record(r, { tMs: 2000, rep: 2, verdict: SHALLOW, cueFrames: [[lean, deep]] });
   record(r, { tMs: 3000, rep: 3, verdict: SHALLOW, cueFrames: [[lean]] });

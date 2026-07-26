@@ -38,11 +38,11 @@ export function analyzeWorkout(workout = {}) {
   const groupsHit = hit.length;
 
   let rating, note;
-  if (sets === 0) { rating = "empty"; note = "No working sets yet — add some sets to assess this one."; }
-  else if (sets > 30) { rating = "too-long"; note = `${sets} sets is a very long session — later lifts suffer as fatigue builds. Consider splitting it across two days.`; }
-  else if (groupsHit >= 6) { rating = "full-body"; note = `Touches ${groupsHit} muscle groups — more of a full-body day than a focused one. Great for low frequency, harder to push hard on each.`; }
-  else if (sets < 8) { rating = "light"; note = `${sets} sets — a short, focused session. Fine as an accessory or time-crunched day.`; }
-  else { rating = "balanced"; note = `${sets} sets, mostly ${top.join(", ")} — a focused, well-sized session.`; }
+  if (sets === 0) { rating = "empty"; note = "No working sets yet, add some sets to assess this one."; }
+  else if (sets > 30) { rating = "too-long"; note = `${sets} sets is a very long session, later lifts suffer as fatigue builds. Consider splitting it across two days.`; }
+  else if (groupsHit >= 6) { rating = "full-body"; note = `Touches ${groupsHit} muscle groups, more of a full-body day than a focused one. Great for low frequency, harder to push hard on each.`; }
+  else if (sets < 8) { rating = "light"; note = `${sets} sets, a short, focused session. Fine as an accessory or time-crunched day.`; }
+  else { rating = "balanced"; note = `${sets} sets, mostly ${top.join(", ")}, a focused, well-sized session.`; }
   return { name: workout.name || "Workout", sets, groupsHit, top, rating, note };
 }
 
@@ -83,7 +83,7 @@ export function analyzeSplit(workouts = [], opts = {}) {
   // Junk volume.
   for (const g of groups) {
     const v = volume[g] || 0;
-    if (v >= THRESHOLDS.HIGH_WEEKLY_SETS_WARN) add("warning", `${cap(g)} volume is very high`, `~${v} sets/week — past ~${THRESHOLDS.HIGH_WEEKLY_SETS_WARN}, extra sets tend to add fatigue more than growth.`);
+    if (v >= THRESHOLDS.HIGH_WEEKLY_SETS_WARN) add("warning", `${cap(g)} volume is very high`, `~${v} sets/week, past ~${THRESHOLDS.HIGH_WEEKLY_SETS_WARN}, extra sets tend to add fatigue more than growth.`);
   }
   // Push / pull balance.
   if (push + pull >= THRESHOLDS.BALANCE_MIN_SETS_TO_JUDGE && ratio(push, pull) >= THRESHOLDS.BALANCE_RATIO_WARN) {
@@ -130,8 +130,8 @@ function summarize(count, flags, inOptimal) {
   const warns = flags.filter((f) => f.tier === "warning").length;
   const cov = inOptimal.length
     ? `${inOptimal.length} major muscle${inOptimal.length === 1 ? "" : "s"} in the ideal weekly range`
-    : "Volumes look modest — if you run these once a week, adding sets or a second session would help";
+    : "Volumes look modest, if you run these once a week, adding sets or a second session would help";
   if (warns) return `${cap(cov)}, with ${warns} thing${warns === 1 ? "" : "s"} to address below.`;
-  if (flags.length) return `${cap(cov)} — plus a few small tweaks to consider below.`;
-  return `Well-balanced split — every major muscle sits in a sensible weekly range. Keep progressing gradually.`;
+  if (flags.length) return `${cap(cov)}, plus a few small tweaks to consider below.`;
+  return `Well-balanced split, every major muscle sits in a sensible weekly range. Keep progressing gradually.`;
 }

@@ -33,8 +33,8 @@ export function screenRequest(text) {
 
 /** The conservative redirect SpotterAI gives instead of an unsafe answer. */
 export const SAFE_REDIRECT =
-  "I can't responsibly build or coach that exact request. I can help with a lower-risk, general fitness approach — but pain, injury, medical, or disordered-eating concerns should be handled by a qualified professional such as a doctor, physiotherapist, or registered dietitian. If you're in pain right now, please stop training and seek help.";
+  "I can't responsibly build or coach that exact request. I can help with a lower-risk, general fitness approach, but pain, injury, medical, or disordered-eating concerns should be handled by a qualified professional such as a doctor, physiotherapist, or registered dietitian. If you're in pain right now, please stop training and seek help.";
 
 /** Shorter note for the generator, shown prominently above a general plan. */
 export const GENERATOR_BOUNDARY =
-  "Your notes mention something that needs real-world care (pain, injury, or a medical/extreme-goal concern). SpotterAI generated a general, conservative plan and did not try to program around that — please consult a qualified professional before training, and don't push through pain.";
+  "Your notes mention something that needs real-world care (pain, injury, or a medical/extreme-goal concern). SpotterAI generated a general, conservative plan and did not try to program around that, please consult a qualified professional before training, and don't push through pain.";

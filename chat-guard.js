@@ -65,7 +65,7 @@ const RULES = [
     label: "Training through pain",
     severity: "warn",
     test: (t) => unnegated(t, /(?:push|train|work|powering?)\s+(?:through|past)\s+(?:the\s+|your\s+|any\s+)?(?:sharp\s+|joint\s+)?pain\b/i) || unnegated(t, /\bno pain,?\s*no gain\b/i),
-    note: "Sharp or joint pain is a stop signal, not something to push through — ease off and get it checked if it persists.",
+    note: "Sharp or joint pain is a stop signal, not something to push through, ease off and get it checked if it persists.",
   },
   {
     id: "crash_calories",
@@ -100,28 +100,28 @@ const RULES = [
     label: "Skipping the warm-up",
     severity: "caution",
     test: (t) => unnegated(t, /\b(?:skip|skipping|forget)\s+(?:the\s+|a\s+|your\s+)?warm[\s-]?ups?\b/i),
-    note: "A couple of warm-up sets prime the joints and the movement — worth the few minutes.",
+    note: "A couple of warm-up sets prime the joints and the movement, worth the few minutes.",
   },
   {
     id: "dehydrate",
     label: "Dehydration / water cut",
     severity: "warn",
     test: (t) => unnegated(t, /\bwater[\s-]?cut\b/i) || unnegated(t, /\bdehydrat\w*/i) || unnegated(t, /\bsweat (?:out|off) (?:the )?water\b/i) || unnegated(t, /\bsauna\b[^.]*\b(?:cut|lose|weight)\b/i),
-    note: "Cutting water or dehydrating to make weight is risky and only temporary — not advisable without professional supervision.",
+    note: "Cutting water or dehydrating to make weight is risky and only temporary, not advisable without professional supervision.",
   },
   {
     id: "peds",
     label: "Performance-enhancing drugs",
     severity: "warn",
     test: (t) => unnegated(t, /\b(?:steroids?|anabolics?|sarms?|clenbuterol|trenbolone|dianabol|dbol|winstrol|anavar)\b/i),
-    note: "These carry serious health and legal risks. This app can't advise on them — please consult qualified medical professionals.",
+    note: "These carry serious health and legal risks. This app can't advise on them, please consult qualified medical professionals.",
   },
   {
     id: "skip_pro",
     label: "Dismissing professional help",
     severity: "warn",
     test: (t) => /\b(?:no need|don'?t need|you don'?t have to|skip(?:ping)?)\s+(?:to\s+)?(?:see|visit|consult)\s+(?:a\s+)?(?:doctor|physio(?:therapist)?|professional|gp)\b/i.test(t),
-    note: "For pain, injury, or anything medical, a qualified professional is the right call — don't skip it.",
+    note: "For pain, injury, or anything medical, a qualified professional is the right call, don't skip it.",
   },
 ];
 

@@ -64,7 +64,7 @@ export function markersFor(summary) {
       ...m,
       atMs: r.atMs,
       seekS: Math.max(0, r.atMs / 1000 - SEEK_LEAD_S),
-      label: `${m.kind === "best" ? "Best — rep" : "Rep"} ${m.rep} · ${mmss(r.atMs)}`,
+      label: `${m.kind === "best" ? "Best, rep" : "Rep"} ${m.rep} · ${mmss(r.atMs)}`,
     };
   });
 }
@@ -81,7 +81,7 @@ export function videoHTML(markers) {
       <h4 class="form-report__heading">Session recording</h4>
       <video class="form-video__player" playsinline controls preload="metadata"></video>
       ${markers.length ? `<div class="form-video__markers">${buttons}</div>` : ""}
-      <p class="form-report__note form-video__note">Recorded on this device only — never uploaded, gone when you leave or start a new set.</p>
+      <p class="form-report__note form-video__note">Recorded on this device only, never uploaded, gone when you leave or start a new set.</p>
     </div>`;
 }
 
@@ -97,7 +97,7 @@ export function reportHTML(summary, exerciseLabel, tips, opts = {}) {
 
   const head = `
     <header class="form-report__head">
-      <h3 class="form-report__title">Set report — ${esc(exerciseLabel)}</h3>
+      <h3 class="form-report__title">Set report, ${esc(exerciseLabel)}</h3>
       <p class="form-report__meta">${reps} rep${reps === 1 ? "" : "s"} · ${mmss(durationMs)}${
         opts.adaptive ? "" : ` · judged ${judgedReps} of ${reps}`
       }</p>
@@ -106,14 +106,14 @@ export function reportHTML(summary, exerciseLabel, tips, opts = {}) {
   // The auto counter deliberately has no form rules — say so, don't pretend.
   if (opts.adaptive) {
     return `${head}
-    <p class="form-report__note">Rep counting only — pick a specific lift to get form analysis and a full report.</p>`;
+    <p class="form-report__note">Rep counting only, pick a specific lift to get form analysis and a full report.</p>`;
   }
 
   const chips = repRecords
     .map((r) => {
       const state = !r.judged ? "unjudged" : r.verdict.level === "good" && !r.cues.some((c) => c.level === "warn") ? "good" : "warn";
       const marks = [r.rep === bestRep ? "Best rep" : "", r.rep === worstRep ? "Needs the most work" : ""].filter(Boolean);
-      const title = [...marks, !r.judged ? "Unable to judge" : r.verdict.text].join(" — ");
+      const title = [...marks, !r.judged ? "Unable to judge" : r.verdict.text].join(", ");
       const best = r.rep === bestRep ? " rep-chip--best" : "";
       return `<span class="rep-chip rep-chip--${state}${best}" role="listitem" title="${esc(title)}">${r.rep}</span>`;
     })
@@ -125,7 +125,7 @@ export function reportHTML(summary, exerciseLabel, tips, opts = {}) {
     `<li class="form-finding form-finding--${e.level}">${esc(e.text)} <span class="form-finding__count">${e.reps} of ${reps} rep${reps === 1 ? "" : "s"}</span></li>`;
   const clean =
     judgedReps > 0 && !warns.length
-      ? `<p class="form-report__clean">Clean set — no recurring form flags.</p>`
+      ? `<p class="form-report__clean">Clean set, no recurring form flags.</p>`
       : "";
   const findings =
     warns.length || bestGood || clean
@@ -140,7 +140,7 @@ export function reportHTML(summary, exerciseLabel, tips, opts = {}) {
     ? `<div class="form-report__block">
       <h4 class="form-report__heading">Work on next</h4>
       <ul class="form-report__tips">${tips
-        .map((t) => `<li><strong>${esc(t.finding)}</strong> — ${esc(t.tip)}</li>`)
+        .map((t) => `<li><strong>${esc(t.finding)}</strong>, ${esc(t.tip)}</li>`)
         .join("")}</ul>
     </div>`
     : "";
@@ -148,7 +148,7 @@ export function reportHTML(summary, exerciseLabel, tips, opts = {}) {
   const angleHint = opts.angle ? `A ${String(opts.angle).toLowerCase()}, full-body view helps.` : "A full-body view helps.";
   const lowJudged =
     judgedReps < reps
-      ? `<p class="form-report__note">${reps - judgedReps} rep${reps - judgedReps === 1 ? " was" : "s were"} not judged — camera angle or visibility was too limited. ${esc(angleHint)}</p>`
+      ? `<p class="form-report__note">${reps - judgedReps} rep${reps - judgedReps === 1 ? " was" : "s were"} not judged, camera angle or visibility was too limited. ${esc(angleHint)}</p>`
       : "";
 
   return `${head}
@@ -159,5 +159,5 @@ export function reportHTML(summary, exerciseLabel, tips, opts = {}) {
     ${findings}
     ${tipsBlock}
     ${lowJudged}
-    <p class="form-report__note">Estimated from a single camera — a mirror, not a judge. Nothing was uploaded.</p>`;
+    <p class="form-report__note">Estimated from a single camera, a mirror, not a judge. Nothing was uploaded.</p>`;
 }

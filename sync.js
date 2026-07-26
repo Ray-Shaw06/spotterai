@@ -84,13 +84,13 @@ function friendlyAuthError(e) {
   if (code === "auth/operation-not-allowed")
     return "Google sign-in isn't enabled for this project. Turn it on under Firebase → Authentication → Sign-in method → Google.";
   if (code === "auth/network-request-failed")
-    return "Network error — check your connection and try again.";
+    return "Network error, check your connection and try again.";
   if (code === "auth/popup-blocked")
-    return "Your browser blocked the sign-in popup — allow popups for this site and try again.";
+    return "Your browser blocked the sign-in popup, allow popups for this site and try again.";
   if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request")
     return "Sign-in cancelled.";
   if (/api-key-not-valid/i.test(code + msg) || code === "auth/configuration-not-found")
-    return "The Firebase config looks invalid — double-check firebase-config.js against your project's web-app settings.";
+    return "The Firebase config looks invalid, double-check firebase-config.js against your project's web-app settings.";
   return msg || "Sign-in failed.";
 }
 

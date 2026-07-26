@@ -53,6 +53,6 @@ export function deloadFromWeeklyVolume(weeks) {
   const pct = a > 0 ? Math.round(((d - a) / a) * 100) : 0;
   return {
     recommend: true,
-    reason: `Your weekly training volume has climbed 3 weeks running${pct > 0 ? ` (about +${pct}%)` : ""} to a new high. Consider an easier deload week — roughly −40% volume — to recover, then push again.`,
+    reason: `Your weekly training volume has climbed 3 weeks running${pct > 0 ? ` (about +${pct}%)` : ""} to a new high. Consider an easier deload week, roughly −40% volume, to recover, then push again.`,
   };
 }

@@ -186,7 +186,7 @@ function depthFlex(val, good, shallow, okText = "Good depth") {
   if (val == null) return { level: "warn", text: "Couldn't read depth" };
   if (val <= good) return { level: "good", text: okText };
   if (val <= shallow) return { level: "warn", text: "Just shy of full depth" };
-  return { level: "warn", text: "Too shallow — bigger range" };
+  return { level: "warn", text: "Too shallow, bigger range" };
 }
 
 // ============================================================================
@@ -202,7 +202,7 @@ export const EXERCISES = {
     camera: {
       angle: "Side-on",
       tips: [
-        "Stand side-on, 2–3 m back — depth and torso lean are judged from the side.",
+        "Stand side-on, 2–3 m back, depth and torso lean are judged from the side.",
         "Hips, knees, and ankles must all stay in frame for the whole rep.",
       ],
     },
@@ -222,10 +222,10 @@ export const EXERCISES = {
       const c = [];
       if (!m.reliable) return c;
       if (m.torsoLean != null && m.knee != null && m.knee < 150 && m.torsoLean > T.squat.MAX_TORSO_LEAN)
-        c.push({ level: "warn", text: "Chest up — too much forward lean", joints: [LM.shoulderL, LM.hipL, LM.shoulderR, LM.hipR] });
+        c.push({ level: "warn", text: "Chest up, too much forward lean", joints: [LM.shoulderL, LM.hipL, LM.shoulderR, LM.hipR] });
       if (m.knee != null && m.knee < 135) {
-        if (m.knee <= T.squat.GOOD_DEPTH) c.push({ level: "good", text: "Good depth — at/below parallel" });
-        else if (m.knee > T.squat.SHALLOW_DEPTH) c.push({ level: "warn", text: "Go deeper — aim for parallel" });
+        if (m.knee <= T.squat.GOOD_DEPTH) c.push({ level: "good", text: "Good depth, at/below parallel" });
+        else if (m.knee > T.squat.SHALLOW_DEPTH) c.push({ level: "warn", text: "Go deeper, aim for parallel" });
       }
       return c;
     },
@@ -238,7 +238,7 @@ export const EXERCISES = {
     camera: {
       angle: "Side-on",
       tips: [
-        "Camera at floor level, side-on — elbow depth and the hip line need the profile view.",
+        "Camera at floor level, side-on, elbow depth and the hip line need the profile view.",
         "Shoulders through ankles in frame; a sagging hip can't be seen from the front.",
       ],
     },
@@ -257,8 +257,8 @@ export const EXERCISES = {
     cues(m) {
       const c = [];
       if (!m.reliable) return c;
-      if (m.hipDev > T.pushup.BODY_SAG) c.push({ level: "warn", text: "Hips sagging — brace your core", joints: [LM.hipL, LM.hipR] });
-      else if (m.hipDev < -T.pushup.BODY_SAG) c.push({ level: "warn", text: "Hips too high — flatten your back", joints: [LM.hipL, LM.hipR] });
+      if (m.hipDev > T.pushup.BODY_SAG) c.push({ level: "warn", text: "Hips sagging, brace your core", joints: [LM.hipL, LM.hipR] });
+      else if (m.hipDev < -T.pushup.BODY_SAG) c.push({ level: "warn", text: "Hips too high, flatten your back", joints: [LM.hipL, LM.hipR] });
       if (m.elbow != null && m.elbow < 130) {
         if (m.elbow <= T.pushup.GOOD_DEPTH) c.push({ level: "good", text: "Good depth" });
         else if (m.elbow > T.pushup.SHALLOW_DEPTH) c.push({ level: "warn", text: "Lower a little more" });
@@ -275,7 +275,7 @@ export const EXERCISES = {
       angle: "Side-on",
       tips: [
         "Side-on, stepping across the frame (not toward the camera).",
-        "Both legs and your torso in frame — front-knee depth drives the count.",
+        "Both legs and your torso in frame, front-knee depth drives the count.",
       ],
     },
     rep: { key: "frontKnee", down: T.lunge.DOWN, up: T.lunge.UP, minRange: T.lunge.MIN_RANGE, metric: "min" },
@@ -296,7 +296,7 @@ export const EXERCISES = {
       const c = [];
       if (!m.reliable) return c;
       if (m.torsoLean != null && m.frontKnee != null && m.frontKnee < 150 && m.torsoLean > T.lunge.MAX_TORSO_LEAN)
-        c.push({ level: "warn", text: "Stay tall — keep the torso upright", joints: [LM.shoulderL, LM.hipL] });
+        c.push({ level: "warn", text: "Stay tall, keep the torso upright", joints: [LM.shoulderL, LM.hipL] });
       if (m.frontKnee != null && m.frontKnee < 130) {
         if (m.frontKnee <= T.lunge.GOOD_DEPTH) c.push({ level: "good", text: "Good lunge depth" });
         else if (m.frontKnee > T.lunge.SHALLOW_DEPTH) c.push({ level: "warn", text: "Drop a little deeper" });
@@ -312,7 +312,7 @@ export const EXERCISES = {
     camera: {
       angle: "Front-on",
       tips: [
-        "Face the camera — lockout is judged by your wrists finishing above your shoulders.",
+        "Face the camera, lockout is judged by your wrists finishing above your shoulders.",
         "Leave headroom in frame so your hands stay visible at the top.",
       ],
     },
@@ -345,7 +345,7 @@ export const EXERCISES = {
     camera: {
       angle: "Side-on",
       tips: [
-        "Side-on — elbow swing (the cheat) is only visible from the profile.",
+        "Side-on, elbow swing (the cheat) is only visible from the profile.",
         "Shoulder, elbow, and wrist of the near arm clearly in frame.",
       ],
     },
@@ -365,7 +365,7 @@ export const EXERCISES = {
       const c = [];
       if (!m.reliable) return c;
       if (m.upperArmSwing != null && m.upperArmSwing > T.curl.ELBOW_DRIFT)
-        c.push({ level: "warn", text: "Keep your elbow pinned — no swinging", joints: [LM.elbowL, LM.elbowR] });
+        c.push({ level: "warn", text: "Keep your elbow pinned, no swinging", joints: [LM.elbowL, LM.elbowR] });
       if (m.elbow != null && m.elbow <= T.curl.GOOD_PEAK) c.push({ level: "good", text: "Full contraction" });
       return c;
     },
@@ -383,7 +383,7 @@ export const EXERCISES = {
     camera: {
       angle: "Side-on",
       tips: [
-        "Side-on — the hip hinge and shin angle only read from the profile.",
+        "Side-on, the hip hinge and shin angle only read from the profile.",
         "Shoulders, hips, and knees in frame through the whole hinge.",
       ],
     },
@@ -403,7 +403,7 @@ export const EXERCISES = {
       if (!m.reliable) return c;
       // Bending the knees a lot turns a hinge into a squat.
       if (m.hip != null && m.hip < 150 && m.knee != null && m.knee < T.rdl.KNEE_SQUAT)
-        c.push({ level: "warn", text: "It's a hinge, not a squat — sit the hips back", joints: [LM.kneeL, LM.kneeR] });
+        c.push({ level: "warn", text: "It's a hinge, not a squat, sit the hips back", joints: [LM.kneeL, LM.kneeR] });
       if (m.hip != null && m.hip <= T.rdl.GOOD_DEPTH) c.push({ level: "good", text: "Good hip hinge" });
       return c;
     },
@@ -416,7 +416,7 @@ export const EXERCISES = {
     camera: {
       angle: "Side-on",
       tips: [
-        "Camera low and side-on — hip lockout is judged from the profile.",
+        "Camera low and side-on, hip lockout is judged from the profile.",
         "Shoulders, hips, and knees visible at the top of every rep.",
       ],
     },
@@ -433,14 +433,14 @@ export const EXERCISES = {
     cues(m) {
       const c = [];
       if (!m.reliable) return c;
-      if (m.hip != null && m.hip >= T.hipthrust.GOOD_LOCK) c.push({ level: "good", text: "Full lockout — squeeze glutes" });
+      if (m.hip != null && m.hip >= T.hipthrust.GOOD_LOCK) c.push({ level: "good", text: "Full lockout, squeeze glutes" });
       else if (m.hip != null && m.hip > 140 && m.hip < T.hipthrust.LOW_LOCK) c.push({ level: "warn", text: "Drive hips higher to lock out" });
       return c;
     },
     depthFeedback: (max) => {
       if (max == null) return { level: "warn", text: "Couldn't read lockout" };
       if (max >= T.hipthrust.GOOD_LOCK) return { level: "good", text: "Full lockout" };
-      if (max >= T.hipthrust.LOW_LOCK) return { level: "warn", text: "Almost — lock out harder" };
+      if (max >= T.hipthrust.LOW_LOCK) return { level: "warn", text: "Almost, lock out harder" };
       return { level: "warn", text: "Short lockout" };
     },
   },
@@ -455,7 +455,7 @@ export const EXERCISES = {
     camera: {
       angle: "Front-on",
       tips: [
-        "Face the camera (45° is fine) — chin-over-bar tracking needs your face visible, so a from-behind angle won't work.",
+        "Face the camera (45° is fine), chin-over-bar tracking needs your face visible, so a from-behind angle won't work.",
         "Whole body plus your hands on the bar in frame; do the set, read the report after.",
       ],
     },
@@ -482,18 +482,18 @@ export const EXERCISES = {
       const c = [];
       if (!m.reliable) return c;
       if (m.torsoSwing != null && m.torsoSwing > T.pullup.MAX_SWING)
-        c.push({ level: "warn", text: "Minimize the swing — quiet body", joints: [LM.hipL, LM.hipR] });
+        c.push({ level: "warn", text: "Minimize the swing, quiet body", joints: [LM.hipL, LM.hipR] });
       if (m.elbow != null && m.elbow < 100) {
         if (m.chinOverBar) c.push({ level: "good", text: "Chin over the bar" });
-        else c.push({ level: "warn", text: "Pull higher — chin to the bar", joints: [LM.nose] });
+        else c.push({ level: "warn", text: "Pull higher, chin to the bar", joints: [LM.nose] });
       }
       return c;
     },
     depthFeedback: (min) => {
       if (min == null) return { level: "warn", text: "Couldn't read range" };
       if (min <= T.pullup.GOOD_PEAK) return { level: "good", text: "Full pull" };
-      if (min <= T.pullup.SHALLOW_PEAK) return { level: "warn", text: "Almost — chin over the bar" };
-      return { level: "warn", text: "Partial rep — aim for full range" };
+      if (min <= T.pullup.SHALLOW_PEAK) return { level: "warn", text: "Almost, chin over the bar" };
+      return { level: "warn", text: "Partial rep, aim for full range" };
     },
   },
 
@@ -503,7 +503,7 @@ export const EXERCISES = {
     camera: {
       angle: "Side-on or 45°",
       tips: [
-        "Side-on or 45° — elbow depth reads best from the profile.",
+        "Side-on or 45°, elbow depth reads best from the profile.",
         "Shoulder, elbow, and wrist clearly in frame for the whole dip.",
       ],
     },
@@ -522,7 +522,7 @@ export const EXERCISES = {
       if (!m.reliable) return c;
       if (m.elbow != null && m.elbow < 135) {
         if (m.elbow <= T.dip.GOOD_DEPTH) c.push({ level: "good", text: "Good dip depth" });
-        else if (m.elbow > T.dip.SHALLOW_DEPTH) c.push({ level: "warn", text: "A little deeper — upper arms to parallel" });
+        else if (m.elbow > T.dip.SHALLOW_DEPTH) c.push({ level: "warn", text: "A little deeper, upper arms to parallel" });
       }
       return c;
     },
@@ -541,7 +541,7 @@ export const EXERCISES = {
     camera: {
       angle: "Side-on",
       tips: [
-        "Camera at bench height, side-on to the pressing arm — elbow depth and lockout read from the profile.",
+        "Camera at bench height, side-on to the pressing arm, elbow depth and lockout read from the profile.",
         "Shoulder, elbow, and wrist of the near arm in frame; a side view can't see elbow flare or bar tilt.",
       ],
     },
@@ -561,7 +561,7 @@ export const EXERCISES = {
       if (!m.reliable) return c;
       if (m.elbow != null && m.elbow > T.bench.LOCKOUT) c.push({ level: "good", text: "Full lockout" });
       if (m.elbow != null && m.elbow < 130) {
-        if (m.elbow <= T.bench.GOOD_DEPTH) c.push({ level: "good", text: "Good depth — bar to chest" });
+        if (m.elbow <= T.bench.GOOD_DEPTH) c.push({ level: "good", text: "Good depth, bar to chest" });
         else if (m.elbow > T.bench.SHALLOW_DEPTH) c.push({ level: "warn", text: "Lower the bar to your chest" });
       }
       return c;
@@ -572,13 +572,13 @@ export const EXERCISES = {
   // Universal counter for any movement — auto-detects the working joint, no
   // form cues (we won't pretend to coach a lift we don't have rules for).
   general: {
-    id: "general", label: "Other — auto rep counter",
+    id: "general", label: "Other, auto rep counter",
     setup: "Works for any rep-based movement. Do a few reps to calibrate.",
     adaptive: true,
     camera: {
       angle: "Any angle",
       tips: [
-        "Any angle with your full body in frame — it auto-detects the working joint.",
+        "Any angle with your full body in frame, it auto-detects the working joint.",
         "Do a few full reps to calibrate before trusting the count.",
       ],
     },
