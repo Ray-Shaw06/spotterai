@@ -53,6 +53,7 @@ const BOOT_MODULES = [
   "library-ui.js",
   "measurements.js",
   "movement-cues.js",
+  "nutrition-prompt-ui.js",
   "nutrition-safety.js",
   "nutrition-ui.js",
   "onboarding-ui.js",

@@ -167,3 +167,12 @@ test("the onboarding Nutrition step exists and never offers a minor a deficit", 
   assert.match(targets, /won't set a calorie deficit/i);
   assert.match(targets, /doctor or a registered dietitian/i);
 });
+
+test("a nutrition-stats prompt exists for users who predate the feature", () => {
+  const nutritionPrompt = readFileSync(join(root, "nutrition-prompt-ui.js"), "utf8");
+  assert.match(html, /id="nutrition-prompt"/, "mount div present");
+  assert.match(html, /nutrition-prompt-ui\.js/, "script tag present");
+  assert.match(nutritionPrompt, /cut, recomp, or bulk/i, "explains the new capability");
+  // Existing users may have hand-tuned targets: applying must be an explicit tap.
+  assert.match(nutritionPrompt, /Your current targets stay as they are until you choose to update them/);
+});
