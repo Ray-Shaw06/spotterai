@@ -9,7 +9,8 @@
  * Display areas re-render on change; inputs in the food picker are short-lived.
  */
 
-import { addCustomFood, addNutrition, addWater, copyMeal, deriveStats, getCustomFoods, getMealTemplates, getRecentFoods, getState, getWater, logMealTemplate, removeEntry, removeMealTemplate, resetAll, saveMealTemplate, setTargets, subscribe, updateNutrition } from "./tracker-store.js";
+import { addCustomFood, addNutrition, addWater, copyMeal, deriveStats, getBodyStats, getCustomFoods, getMealTemplates, getRecentFoods, getState, getWater, logMealTemplate, removeEntry, removeMealTemplate, resetAll, saveMealTemplate, setBodyStats, setTargets, subscribe, updateNutrition } from "./tracker-store.js";
+import { calculateTargets, estimateTdee, targetsDrift, AGE_MIDPOINTS, DAILY_ACTIVITY, NUTRITION_INTENTS } from "./lib/nutrition-targets.js";
 import { lookupBarcode, searchFoods, searchOpenFoodFacts } from "./foods.js";
 import { estimateFood, estimateMealPhoto } from "./ai.js";
 import { ring } from "./charts.js";
@@ -32,6 +33,8 @@ const el = {
   targetsForm: $("nut-targets-form"),
   reset: $("nut-reset"),
   safety: $("nutrition-safety"),
+  stats: $("nut-stats"),
+  drift: $("nut-drift"),
   // picker
   picker: $("food-picker"),
   search: $("food-search"),
@@ -87,7 +90,92 @@ function render() {
   renderSummary(entries);
   renderMeals(entries);
   renderWater();
+  renderTargetStats();
+  renderDrift();
   renderNutritionSafety();
+}
+
+// --- Targets calculated from the user's stats ------------------------------
+const LB_TO_KG = 0.45359237;
+const DRIFT_KEY = "spotterai_nut_drift_dismissed";
+
+/** Saved stats in the shape lib/nutrition-targets.js expects. */
+function statsForTargets() {
+  const b = getBodyStats();
+  const s = deriveStats();
+  const raw = s.bodyweight?.latest ?? null;
+  return {
+    kg: raw == null ? null : s.unit === "lb" ? raw * LB_TO_KG : raw,
+    cm: b.heightCm,
+    ageRange: b.ageRange,
+    sex: b.sex,
+    dailyActivity: b.dailyActivity,
+    daysPerWeek: b.daysPerWeek,
+    sessionLength: b.sessionLength,
+    intent: b.intent,
+  };
+}
+
+/**
+ * An accurate maintenance figure for the audit when we have the stats to
+ * compute one. Returns null otherwise, which makes evaluateNutrition fall back
+ * to its per-kg heuristic exactly as before.
+ */
+function maintenanceForAudit() {
+  const st = statsForTargets();
+  return estimateTdee({ ...st, age: AGE_MIDPOINTS[st.ageRange] });
+}
+
+/** Shared figure line, so the block and the banner cannot drift apart. */
+function figuresLine(t) {
+  return `${t.kcal.toLocaleString("en-US")} kcal · ${t.protein}P · ${t.carbs}C · ${t.fat}F`;
+}
+
+function statsChips(field, options, active) {
+  return `<div class="nut-stats__chips" data-field="${field}">${options
+    .map((o) => {
+      const on = o.value === active;
+      return `<button type="button" class="onb-chip${on ? " is-active" : ""}" data-value="${esc(o.value)}" aria-pressed="${on ? "true" : "false"}">${esc(o.label)}</button>`;
+    })
+    .join("")}</div>`;
+}
+
+function renderTargetStats() {
+  if (!el.stats) return;
+  const b = getBodyStats();
+  const calculated = calculateTargets(statsForTargets());
+  if (!calculated) {
+    el.stats.innerHTML = `<p class="dash-hint nut-stats__empty">Add your height, bodyweight, and eating goal to calculate targets from your stats. <button type="button" class="btn-link" data-act="nut-setup">Set this up</button></p>`;
+    return;
+  }
+  el.stats.innerHTML = `<div class="nut-stats">
+      <p class="nut-stats__basis">${esc(calculated.basis)}</p>
+      ${statsChips("intent", NUTRITION_INTENTS, calculated.requestedIntent)}
+      ${statsChips("dailyActivity", DAILY_ACTIVITY, b.dailyActivity)}
+      <p class="nut-stats__figures">${figuresLine(calculated)}</p>
+      ${calculated.notice ? `<p class="nut-stats__notice">${esc(calculated.notice)}</p>` : ""}
+      <button type="button" class="btn btn--ghost btn--sm" data-act="nut-apply">Use these targets</button>
+      <p class="dash-hint">Confidence: ${esc(calculated.confidence)}. These are estimates, not a prescription.</p>
+    </div>`;
+}
+
+function renderDrift() {
+  if (!el.drift) return;
+  const calculated = calculateTargets(statsForTargets());
+  if (!calculated) { el.drift.innerHTML = ""; return; }
+  const { drifted, deltaKcal } = targetsDrift(getState().targets, calculated);
+  let dismissed = null;
+  try { dismissed = JSON.parse(localStorage.getItem(DRIFT_KEY) || "null"); } catch { dismissed = null; }
+  // Re-offer only once the number has moved on from whatever was dismissed.
+  if (!drifted || (dismissed && Math.abs(calculated.kcal - dismissed) < 100)) { el.drift.innerHTML = ""; return; }
+
+  el.drift.innerHTML = `<div class="nut-drift">
+      <p class="nut-drift__text">Your weight has changed, so your targets are out of date. Based on your stats now, ${calculated.kcal.toLocaleString("en-US")} kcal (${deltaKcal > 0 ? "+" : ""}${deltaKcal}) fits better.</p>
+      <div class="nut-drift__actions">
+        <button type="button" class="btn btn--ghost btn--sm" data-act="nut-apply">Update targets</button>
+        <button type="button" class="btn-link" data-act="nut-drift-dismiss">Not now</button>
+      </div>
+    </div>`;
 }
 
 // --- Nutrition safety guardrails + Trust Report ----------------------------
@@ -101,6 +189,7 @@ function renderNutritionSafety() {
     bodyweight: s.bodyweight?.latest ?? null,
     unit: s.unit,
     goal: store.inputs?.goal || "",
+    maintenance: maintenanceForAudit(),
   });
 
   const verdict = flags.some((f) => f.tier === "critical")
@@ -784,6 +873,32 @@ function init() {
   el.reset?.addEventListener("click", () => {
     if (confirm("Reset all tracked data for this profile? This can't be undone.")) resetAll();
   });
+
+  // Stats-derived targets: chips edit bodyStats, apply writes the targets. Both
+  // mounts share a handler; setBodyStats/setTargets persist, which re-renders.
+  const onStatsClick = (e) => {
+    const chip = e.target.closest(".nut-stats__chips .onb-chip");
+    if (chip) {
+      setBodyStats({ [chip.closest(".nut-stats__chips").dataset.field]: chip.dataset.value });
+      return;
+    }
+    const act = e.target.closest("[data-act]")?.dataset.act;
+    if (act === "nut-apply") {
+      const c = calculateTargets(statsForTargets());
+      if (!c) return;
+      setTargets({ kcal: c.kcal, protein: c.protein, carbs: c.carbs, fat: c.fat });
+      try { localStorage.removeItem(DRIFT_KEY); } catch {}
+    } else if (act === "nut-drift-dismiss") {
+      const c = calculateTargets(statsForTargets());
+      try { localStorage.setItem(DRIFT_KEY, JSON.stringify(c ? c.kcal : 0)); } catch {}
+      renderDrift();
+    } else if (act === "nut-setup") {
+      window.dispatchEvent(new CustomEvent("spotter:nutrition-setup"));
+    }
+  };
+  el.stats?.addEventListener("click", onStatsClick);
+  el.drift?.addEventListener("click", onStatsClick);
+
   prefillTargets();
 
   subscribe(() => {

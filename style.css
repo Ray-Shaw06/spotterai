@@ -1182,6 +1182,18 @@ table {
 .onb-nut-basis { margin-top: var(--space-3); font-size: var(--fs-small); color: var(--text-muted); }
 .onb-nut-notice { margin-top: var(--space-3); padding-left: var(--space-3); border-left: 3px solid var(--warn); font-size: var(--fs-small); color: var(--text-muted); }
 .onb-nut-empty { margin-top: var(--space-4); }
+
+/* Nutrition page: targets calculated from stats, and the drift nudge */
+.nut-stats { display: grid; gap: var(--space-3); margin-bottom: var(--space-4); padding: var(--space-4); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-lg); }
+.nut-stats__basis { font-size: var(--fs-small); color: var(--text-muted); }
+.nut-stats__chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.nut-stats__figures { font-weight: 600; }
+.nut-stats__notice { padding-left: var(--space-3); border-left: 3px solid var(--warn); font-size: var(--fs-small); color: var(--text-muted); }
+.nut-stats__empty { margin-bottom: var(--space-4); }
+.nut-stats .btn { justify-self: start; }
+.nut-drift { margin-bottom: var(--space-4); padding: var(--space-4); background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: var(--r-lg); }
+.nut-drift__text { font-size: var(--fs-small); margin-bottom: var(--space-3); }
+.nut-drift__actions { display: flex; gap: var(--space-3); align-items: center; }
 .onb-cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
 .onb-ack { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; }
 .onb-ack input { margin-top: 3px; flex: none; accent-color: var(--accent); }
