@@ -153,3 +153,34 @@ test("the basis line explains the number without an em dash", () => {
   assert.match(t.basis, /20%/);
   assert.ok(!t.basis.includes("—"), "no em dashes in user-facing copy");
 });
+
+import { intentForGoal, targetsDrift, DRIFT_KCAL } from "../lib/nutrition-targets.js";
+
+test("every training goal maps to a default eating intent", () => {
+  assert.equal(intentForGoal("fatloss"), "cut");
+  assert.equal(intentForGoal("muscle"), "bulk");
+  assert.equal(intentForGoal("strength"), "recomp");
+  assert.equal(intentForGoal("general"), "recomp");
+  assert.equal(intentForGoal("consistency"), "recomp");
+});
+
+test("an unknown goal defaults to recomp rather than guessing a deficit", () => {
+  assert.equal(intentForGoal("something-else"), "recomp");
+  assert.equal(intentForGoal(undefined), "recomp");
+});
+
+test("drift fires at the threshold and not one calorie under it", () => {
+  assert.equal(targetsDrift({ kcal: 2000 }, { kcal: 2000 + DRIFT_KCAL }).drifted, true);
+  assert.equal(targetsDrift({ kcal: 2000 }, { kcal: 2000 + DRIFT_KCAL - 1 }).drifted, false);
+  assert.equal(targetsDrift({ kcal: 2000 }, { kcal: 2000 - DRIFT_KCAL }).drifted, true, "drops count too");
+});
+
+test("drift reports a signed delta so the UI can say up or down", () => {
+  assert.equal(targetsDrift({ kcal: 2000 }, { kcal: 2150 }).deltaKcal, 150);
+  assert.equal(targetsDrift({ kcal: 2000 }, { kcal: 1850 }).deltaKcal, -150);
+});
+
+test("drift is inert when either side is missing", () => {
+  assert.deepEqual(targetsDrift(null, { kcal: 2000 }), { drifted: false, deltaKcal: 0 });
+  assert.deepEqual(targetsDrift({ kcal: 2000 }, null), { drifted: false, deltaKcal: 0 });
+});
