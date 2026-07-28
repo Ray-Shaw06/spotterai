@@ -82,7 +82,7 @@ test("the three daily-activity options ascend", () => {
   assert.deepEqual(bases, [1.2, 1.35, 1.5]);
 });
 
-const BASE ={ kg: 80, cm: 178, ageRange: "18–29", sex: "Male", dailyActivity: "sitting", daysPerWeek: 4, sessionLength: 60 };
+const BASE = { kg: 80, cm: 178, ageRange: "18–29", sex: "Male", dailyActivity: "sitting", daysPerWeek: 4, sessionLength: 60 };
 
 test("SAFETY: under 18 never gets a deficit, whatever intent was asked for", () => {
   const t = calculateTargets({ ...BASE, ageRange: "Under 18", intent: "cut" });
