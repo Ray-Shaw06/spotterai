@@ -73,3 +73,83 @@ test("the three daily-activity options ascend", () => {
   const bases = DAILY_ACTIVITY.map((d) => d.base);
   assert.deepEqual(bases, [1.2, 1.35, 1.5]);
 });
+
+import { calculateTargets, MINOR_NOTICE } from "../lib/nutrition-targets.js";
+import { macroKcal } from "../lib/nutrition-math.js";
+import { NUTRITION_THRESHOLDS } from "../nutrition-safety.js";
+
+const BASE = { kg: 80, cm: 178, ageRange: "18–29", sex: "Male", dailyActivity: "sitting", daysPerWeek: 4, sessionLength: 60 };
+
+test("SAFETY: under 18 never gets a deficit, whatever intent was asked for", () => {
+  const t = calculateTargets({ ...BASE, ageRange: "Under 18", intent: "cut" });
+  assert.equal(t.intent, "recomp", "the applied intent is forced to maintenance");
+  assert.equal(t.requestedIntent, "cut", "what the user asked for is still reported");
+  assert.equal(t.notice, MINOR_NOTICE);
+  const maintenance = calculateTargets({ ...BASE, ageRange: "Under 18", intent: "recomp" });
+  assert.equal(t.kcal, maintenance.kcal, "a requested cut yields maintenance calories");
+});
+
+test("adults get no minor notice", () => {
+  assert.equal(calculateTargets({ ...BASE, intent: "cut" }).notice, null);
+});
+
+test("the worked example from the spec reproduces exactly", () => {
+  const cut = calculateTargets({ ...BASE, intent: "cut" });
+  assert.deepEqual(
+    { kcal: cut.kcal, protein: cut.protein, carbs: cut.carbs, fat: cut.fat },
+    { kcal: 2075, protein: 144, carbs: 245, fat: 58 }
+  );
+  const recomp = calculateTargets({ ...BASE, intent: "recomp" });
+  assert.deepEqual(
+    { kcal: recomp.kcal, protein: recomp.protein, carbs: recomp.carbs, fat: recomp.fat },
+    { kcal: 2600, protein: 144, carbs: 344, fat: 72 }
+  );
+  const bulk = calculateTargets({ ...BASE, intent: "bulk" });
+  assert.deepEqual(
+    { kcal: bulk.kcal, protein: bulk.protein, carbs: bulk.carbs, fat: bulk.fat },
+    { kcal: 2850, protein: 128, carbs: 406, fat: 79 }
+  );
+});
+
+test("cut is below recomp is below bulk for identical stats", () => {
+  const k = (intent) => calculateTargets({ ...BASE, intent }).kcal;
+  assert.ok(k("cut") < k("recomp"), "cut under recomp");
+  assert.ok(k("recomp") < k("bulk"), "recomp under bulk");
+});
+
+test("calories never fall below the greater of the safety floor and BMR", () => {
+  const t = calculateTargets({ ...BASE, kg: 45, cm: 150, ageRange: "60+", sex: "Female", intent: "cut" });
+  assert.ok(t.kcal >= NUTRITION_THRESHOLDS.LOW_KCAL, `${t.kcal} >= ${NUTRITION_THRESHOLDS.LOW_KCAL}`);
+  assert.ok(t.kcal >= t.bmr - 25, `${t.kcal} not below BMR ${t.bmr} beyond rounding`);
+});
+
+test("macros reconstruct the calorie total within 2%", () => {
+  for (const intent of ["cut", "recomp", "bulk"]) {
+    const t = calculateTargets({ ...BASE, intent });
+    const drift = Math.abs(macroKcal(t) / t.kcal - 1);
+    assert.ok(drift < 0.02, `${intent} drifted ${(drift * 100).toFixed(2)}%`);
+  }
+});
+
+test("an unstated sex is reported as Medium confidence, a stated one as High", () => {
+  assert.equal(calculateTargets({ ...BASE, intent: "cut" }).confidence, "High");
+  assert.equal(calculateTargets({ ...BASE, sex: "Prefer not to say", intent: "cut" }).confidence, "Medium");
+  assert.equal(calculateTargets({ ...BASE, sex: null, intent: "cut" }).confidence, "Medium");
+});
+
+test("null without height or weight, so callers can fall back", () => {
+  assert.equal(calculateTargets({ ...BASE, cm: null, intent: "cut" }), null);
+  assert.equal(calculateTargets({ ...BASE, kg: null, intent: "cut" }), null);
+});
+
+test("an unknown or missing intent falls back to recomp", () => {
+  assert.equal(calculateTargets({ ...BASE, intent: "nonsense" }).intent, "recomp");
+  assert.equal(calculateTargets({ ...BASE }).intent, "recomp");
+});
+
+test("the basis line explains the number without an em dash", () => {
+  const t = calculateTargets({ ...BASE, intent: "cut" });
+  assert.match(t.basis, /maintenance/i);
+  assert.match(t.basis, /20%/);
+  assert.ok(!t.basis.includes("—"), "no em dashes in user-facing copy");
+});
