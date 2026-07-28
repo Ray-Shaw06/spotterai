@@ -19,6 +19,9 @@ const DEFAULTS = {
   nutrition: [], // { id, date, name, kcal, protein }
   bodyweight: [], // { id, date, value }
   targets: { kcal: 2200, protein: 140, carbs: 250, fat: 70, weeklyWorkouts: 4, waterMl: 2500 },
+  // Stats behind the calculated nutrition targets (lib/nutrition-targets.js).
+  // Bodyweight is NOT duplicated here: it comes from the bodyweight[] log.
+  bodyStats: { heightCm: null, ageRange: null, sex: null, dailyActivity: null, intent: null, daysPerWeek: null, sessionLength: null },
   achievements: [], // unlocked ids
   routines: [], // saved workout templates
   customExercises: [], // user-added exercises { name, muscle, cardio }
@@ -38,7 +41,12 @@ const MEALS = ["breakfast", "lunch", "dinner", "snacks"];
 function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(trackerKey()) || "{}");
-    return { ...DEFAULTS, ...raw, targets: { ...DEFAULTS.targets, ...(raw.targets || {}) } };
+    return {
+      ...DEFAULTS,
+      ...raw,
+      targets: { ...DEFAULTS.targets, ...(raw.targets || {}) },
+      bodyStats: { ...DEFAULTS.bodyStats, ...(raw.bodyStats || {}) },
+    };
   } catch {
     return structuredClone(DEFAULTS);
   }
@@ -108,6 +116,7 @@ export function importData(obj) {
     ...structuredClone(DEFAULTS),
     ...incoming,
     targets: { ...DEFAULTS.targets, ...(incoming.targets || {}) },
+    bodyStats: { ...DEFAULTS.bodyStats, ...(incoming.bodyStats || {}) },
     workouts: Array.isArray(incoming.workouts) ? incoming.workouts : [],
     nutrition: Array.isArray(incoming.nutrition) ? incoming.nutrition : [],
     bodyweight: Array.isArray(incoming.bodyweight) ? incoming.bodyweight : [],
@@ -644,6 +653,17 @@ export function addBodyweight({ value, date } = {}) {
 
 export function setTargets(t) {
   state.targets = { ...state.targets, ...t };
+  persist();
+}
+
+/** The stats behind calculated nutrition targets. Always a full object. */
+export function getBodyStats() {
+  return { ...DEFAULTS.bodyStats, ...(state.bodyStats || {}) };
+}
+
+/** Merge in whatever stats the user just supplied. */
+export function setBodyStats(patch) {
+  state.bodyStats = { ...getBodyStats(), ...(patch || {}) };
   persist();
 }
 
