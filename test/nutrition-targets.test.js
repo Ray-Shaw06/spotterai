@@ -10,9 +10,17 @@ import {
   estimateBmr,
   activityMultiplier,
   estimateTdee,
+  calculateTargets,
+  intentForGoal,
+  targetsDrift,
   AGE_MIDPOINTS,
   DAILY_ACTIVITY,
+  NUTRITION_INTENTS,
+  MINOR_NOTICE,
+  DRIFT_KCAL,
 } from "../lib/nutrition-targets.js";
+import { macroKcal } from "../lib/nutrition-math.js";
+import { evaluateNutrition, NUTRITION_THRESHOLDS } from "../nutrition-safety.js";
 
 test("BMR follows Mifflin-St Jeor for a known male case", () => {
   // 10(80) + 6.25(178) - 5(24) + 5 = 1797.5
@@ -74,11 +82,7 @@ test("the three daily-activity options ascend", () => {
   assert.deepEqual(bases, [1.2, 1.35, 1.5]);
 });
 
-import { calculateTargets, MINOR_NOTICE } from "../lib/nutrition-targets.js";
-import { macroKcal } from "../lib/nutrition-math.js";
-import { NUTRITION_THRESHOLDS } from "../nutrition-safety.js";
-
-const BASE = { kg: 80, cm: 178, ageRange: "18–29", sex: "Male", dailyActivity: "sitting", daysPerWeek: 4, sessionLength: 60 };
+const BASE ={ kg: 80, cm: 178, ageRange: "18–29", sex: "Male", dailyActivity: "sitting", daysPerWeek: 4, sessionLength: 60 };
 
 test("SAFETY: under 18 never gets a deficit, whatever intent was asked for", () => {
   const t = calculateTargets({ ...BASE, ageRange: "Under 18", intent: "cut" });
@@ -154,8 +158,6 @@ test("the basis line explains the number without an em dash", () => {
   assert.ok(!t.basis.includes("—"), "no em dashes in user-facing copy");
 });
 
-import { intentForGoal, targetsDrift, DRIFT_KCAL } from "../lib/nutrition-targets.js";
-
 test("every training goal maps to a default eating intent", () => {
   assert.equal(intentForGoal("fatloss"), "cut");
   assert.equal(intentForGoal("muscle"), "bulk");
@@ -183,4 +185,71 @@ test("drift reports a signed delta so the UI can say up or down", () => {
 test("drift is inert when either side is missing", () => {
   assert.deepEqual(targetsDrift(null, { kcal: 2000 }), { drifted: false, deltaKcal: 0 });
   assert.deepEqual(targetsDrift({ kcal: 2000 }, null), { drifted: false, deltaKcal: 0 });
+});
+
+// ---------------------------------------------------------------------------
+// Cross-system sweep. This module PRESCRIBES targets; nutrition-safety.js
+// AUDITS them. Neither file's own unit tests can catch the two disagreeing, so
+// this sweep runs the whole realistic stat space through both. It is what
+// caught the auditor's per-kg maintenance heuristic overestimating by up to 41%
+// for heavier bodies. Do NOT weaken these assertions to make a change pass: a
+// failure here means the calculator and the auditor genuinely disagree, which
+// is a finding, not a broken test.
+// ---------------------------------------------------------------------------
+
+test("SWEEP: no calculated target ever trips its own auditor", () => {
+  const weights = [45, 55, 65, 75, 85, 95, 110, 130, 150];
+  const heights = [150, 160, 170, 180, 190, 200];
+  const ages = Object.keys(AGE_MIDPOINTS);
+  const sexes = ["Male", "Female", "Prefer not to say", null];
+  const activities = DAILY_ACTIVITY.map((d) => d.value);
+  const volumes = [[2, 30], [3, 45], [4, 60], [5, 60], [6, 90]];
+  const intents = NUTRITION_INTENTS.map((i) => i.value);
+  const goalFor = { cut: "Fat loss", bulk: "Hypertrophy", recomp: "General" };
+
+  let checked = 0;
+  const failures = [];
+
+  for (const kg of weights)
+    for (const cm of heights)
+      for (const ageRange of ages)
+        for (const sex of sexes)
+          for (const dailyActivity of activities)
+            for (const [daysPerWeek, sessionLength] of volumes)
+              for (const intent of intents) {
+                const stats = { kg, cm, ageRange, sex, dailyActivity, daysPerWeek, sessionLength, intent };
+                const t = calculateTargets(stats);
+                assert.ok(t, `expected targets for ${JSON.stringify(stats)}`);
+                checked++;
+
+                const { flags } = evaluateNutrition({
+                  targets: { kcal: t.kcal, protein: t.protein, fat: t.fat },
+                  bodyweight: kg,
+                  unit: "kg",
+                  goal: goalFor[t.intent],
+                  maintenance: estimateTdee({ kg, cm, age: AGE_MIDPOINTS[ageRange], sex, dailyActivity, daysPerWeek, sessionLength }),
+                });
+
+                if (flags.length && failures.length < 5) {
+                  failures.push({ ...stats, kcal: t.kcal, protein: t.protein, fat: t.fat, flags: flags.map((f) => f.label) });
+                }
+              }
+
+  assert.equal(checked, 48600, "the sweep covers the whole grid");
+  assert.deepEqual(failures, [], `calculated targets were flagged:\n${JSON.stringify(failures, null, 2)}`);
+});
+
+test("SWEEP: every calculated target holds the per-kg and macro boundaries", () => {
+  const T = NUTRITION_THRESHOLDS;
+  for (const kg of [45, 65, 85, 110, 150])
+    for (const cm of [150, 170, 190])
+      for (const ageRange of Object.keys(AGE_MIDPOINTS))
+        for (const intent of ["cut", "recomp", "bulk"]) {
+          const t = calculateTargets({ kg, cm, ageRange, sex: "Female", dailyActivity: "sitting", daysPerWeek: 3, sessionLength: 45, intent });
+          const label = `${kg}kg ${cm}cm ${ageRange} ${intent}`;
+          assert.ok(t.protein / kg >= T.PROTEIN_PER_KG_LOW, `${label}: protein ${(t.protein / kg).toFixed(2)} g/kg under floor`);
+          assert.ok((t.fat * 9) / t.kcal >= T.FAT_PCT_VERY_LOW, `${label}: fat too low`);
+          assert.ok(t.kcal >= T.LOW_KCAL, `${label}: kcal under floor`);
+          assert.ok(Math.abs(macroKcal(t) / t.kcal - 1) < 0.02, `${label}: macros do not reconstruct kcal`);
+        }
 });
