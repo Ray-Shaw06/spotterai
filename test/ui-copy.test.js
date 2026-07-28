@@ -106,7 +106,7 @@ test("AI recovery keeps retries user-actionable without provider error copy", ()
 test("onboarding labels measurement systems and explains optional measurement use", () => {
   assert.ok(onboardingUi.includes('label: "Metric"'));
   assert.ok(onboardingUi.includes('label: "Imperial"'));
-  assert.ok(onboardingUi.includes("Optional. Weight can help set a starting nutrition range; height is saved only while you complete setup."));
+  assert.ok(onboardingUi.includes("Optional. Height and weight are saved on this device so SpotterAI can keep your calorie and macro targets accurate. Nothing leaves your browser."));
 });
 
 test("invalid optional measurements also disable the About You skip control", () => {
@@ -150,4 +150,20 @@ test("workout completion no longer syncs to any notification backend", () => {
   assert.doesNotMatch(demoData, /syncWorkoutCompletion|notification-client/);
   // Rest-timer completion routes to the local alert helper instead.
   assert.match(workoutUi, /notifyRestComplete\(\)\.catch\(\(\) => \{\}\)/);
+});
+
+test("onboarding no longer promises height is discarded after setup", () => {
+  // bodyStats now persists height so targets can be recalculated as weight changes.
+  // The old copy said it was kept only for the duration of setup, which stopped being true.
+  assert.doesNotMatch(onboardingUi, /height is saved only while you complete setup/i);
+  assert.match(onboardingUi, /saved on this device/i);
+  assert.match(onboardingUi, /Nothing leaves your browser/i);
+});
+
+test("the onboarding Nutrition step exists and never offers a minor a deficit", () => {
+  assert.match(onboardingUi, /Your nutrition goal/);
+  assert.match(onboardingUi, /Outside training, your day is/);
+  const targets = readFileSync(join(root, "lib/nutrition-targets.js"), "utf8");
+  assert.match(targets, /won't set a calorie deficit/i);
+  assert.match(targets, /doctor or a registered dietitian/i);
 });

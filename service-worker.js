@@ -49,6 +49,7 @@ const BOOT_MODULES = [
   "form-report.js",
   "form-session.js",
   "gamify.js",
+  "lib/nutrition-targets.js",
   "library-ui.js",
   "measurements.js",
   "movement-cues.js",

@@ -41,7 +41,8 @@ export const SAFETY_AREAS = [
 ];
 const INJURY_KEYS = new Set(SAFETY_AREAS.filter((a) => a.injuryKey).map((a) => a.injuryKey));
 
-export const ONBOARDING_STEPS = ["Goal", "About you", "Schedule", "Safety", "Preferences"];
+// Nutrition sits after Schedule: the activity multiplier needs days + session length.
+export const ONBOARDING_STEPS = ["Goal", "About you", "Schedule", "Nutrition", "Safety", "Preferences"];
 
 /** Map the collected intake onto the generator's input shape. */
 export function mapOnboardingToInputs(d = {}) {

@@ -23,7 +23,8 @@ import {
 } from "./onboarding.js";
 import { bodyweightKg, clearMeasurementCorrection, measurementSystem, switchMeasurementSystem, validateMeasurements } from "./measurements.js";
 import { saferTargets } from "./nutrition-safety.js";
-import { setTargets, setUnit } from "./tracker-store.js";
+import { calculateTargets, intentForGoal, NUTRITION_INTENTS, DAILY_ACTIVITY } from "./lib/nutrition-targets.js";
+import { setBodyStats, setTargets, setUnit } from "./tracker-store.js";
 import { trackFunnel } from "./analytics.js";
 
 const $ = (id) => document.getElementById(id);
@@ -86,7 +87,7 @@ function stepGoal() {
 function stepBody() {
   const imperial = measurementSystem(data) === "imperial";
   return `<h3 class="onb-title">A little about you</h3>
-    <p class="onb-sub">Optional. Weight can help set a starting nutrition range; height is saved only while you complete setup.</p>
+    <p class="onb-sub">Optional. Height and weight are saved on this device so SpotterAI can keep your calorie and macro targets accurate. Nothing leaves your browser.</p>
     ${field("Age range", chips("ageRange", AGE_RANGES))}
     ${field("Units", chips("units", [{ value: "kg", label: "Metric" }, { value: "lb", label: "Imperial" }]))}
     <div class="onb-cols">${imperial
@@ -104,6 +105,46 @@ function stepSchedule() {
     ${field("Training at", chips("location", ["Gym", "Home"]))}
     ${field("Equipment", chips("equipment", EQUIPMENT_OPTIONS, true), "Select all that apply")}`;
 }
+/** Stats gathered so far, in the shape lib/nutrition-targets.js expects. */
+function nutritionStats() {
+  const cm = measurementSystem(data) === "imperial"
+    ? ((Number(data.heightFt) || 0) * 12 + (Number(data.heightIn) || 0)) * 2.54
+    : Number(data.height) || 0;
+  return {
+    kg: bodyweightKg(data),
+    cm: cm > 0 ? cm : null,
+    ageRange: data.ageRange || null,
+    sex: data.sex || null,
+    dailyActivity: data.dailyActivity || null,
+    daysPerWeek: Number(data.days) || 0,
+    sessionLength: Number(data.sessionLength) || 0,
+    intent: data.intent || intentForGoal(data.goal),
+  };
+}
+
+function nutritionPreview() {
+  const t = calculateTargets(nutritionStats());
+  if (!t) {
+    return `<p class="onb-sub onb-nut-empty">Add your height and bodyweight on the previous step to get calorie and macro targets. You can always set them later on the Nutrition page.</p>`;
+  }
+  const macro = (label, grams) => `<div class="onb-nut-macro"><span class="onb-nut-mval">${grams}g</span><span class="onb-nut-mlabel">${esc(label)}</span></div>`;
+  return `<div class="onb-nut-preview">
+      <div class="onb-nut-kcal"><strong>${t.kcal.toLocaleString("en-US")}</strong> kcal a day</div>
+      <div class="onb-nut-macros">${macro("Protein", t.protein)}${macro("Carbs", t.carbs)}${macro("Fat", t.fat)}</div>
+      <p class="onb-nut-basis">${esc(t.basis)}</p>
+      ${t.notice ? `<p class="onb-nut-notice">${esc(t.notice)}</p>` : ""}
+    </div>`;
+}
+
+function stepNutrition() {
+  if (!data.intent) data.intent = intentForGoal(data.goal);
+  return `<h3 class="onb-title">Your nutrition goal</h3>
+    <p class="onb-sub">Optional. This sets your starting calorie and macro targets, and you can change them any time.</p>
+    ${field("Eating goal", chips("intent", NUTRITION_INTENTS))}
+    ${field("Outside training, your day is", chips("dailyActivity", DAILY_ACTIVITY))}
+    <div id="onb-nut-preview">${nutritionPreview()}</div>`;
+}
+
 function stepSafety() {
   return `<h3 class="onb-title">Anything to keep safe?</h3>
     <p class="onb-sub">SpotterAI uses this to cap risky volume and offer safer swaps. It can't diagnose anything.</p>
@@ -120,13 +161,14 @@ function stepPrefs() {
     ${field("Intensity", chips("intensity", INTENSITY_PREFS))}
     ${field("Coaching style", chips("coaching", COACHING_STYLES))}`;
 }
-const STEP_RENDER = [stepGoal, stepBody, stepSchedule, stepSafety, stepPrefs];
+const STEP_RENDER = [stepGoal, stepBody, stepSchedule, stepNutrition, stepSafety, stepPrefs];
+const SAFETY_STEP = STEP_RENDER.indexOf(stepSafety);
 
 // --- validation (only the essentials block progress) -----------------------
 function canAdvance() {
   if (step === 0) return !!data.goal; // need a goal
   if (step === 1) return validateMeasurements(data).valid;
-  if (step === 3) return !!data.ack; // must acknowledge the disclaimer
+  if (step === SAFETY_STEP) return !!data.ack; // must acknowledge the disclaimer
   return true;
 }
 
@@ -140,7 +182,7 @@ function updateMeasurementErrors() {
   });
 }
 function isOptionalStep() {
-  return step !== 0 && step !== 3; // goal + safety-ack aren't skippable
+  return step !== 0 && step !== SAFETY_STEP; // goal + safety-ack aren't skippable
 }
 
 // --- render ----------------------------------------------------------------
@@ -176,10 +218,23 @@ function finish() {
   const inputs = mapOnboardingToInputs(data);
   // Apply the chosen measurement system (kg/lb → also drives ml/floz, km/mi).
   setUnit(data.units === "lb" ? "lb" : "kg");
-  // Seed conservative nutrition targets from bodyweight + goal.
-  const kg = bodyweightKg(data);
-  if (kg) {
-    const s = saferTargets({ bodyweight: kg, unit: "kg", goal: inputs.goal });
+  // Persist the stats behind nutrition targets, then seed the targets themselves.
+  const stats = nutritionStats();
+  setBodyStats({
+    heightCm: stats.cm ? Math.round(stats.cm) : null,
+    ageRange: stats.ageRange,
+    sex: stats.sex,
+    dailyActivity: stats.dailyActivity,
+    intent: stats.intent,
+    daysPerWeek: stats.daysPerWeek || null,
+    sessionLength: stats.sessionLength || null,
+  });
+  const calculated = calculateTargets(stats);
+  if (calculated) {
+    setTargets({ kcal: calculated.kcal, protein: calculated.protein, carbs: calculated.carbs, fat: calculated.fat });
+  } else if (stats.kg) {
+    // No height, so fall back to the bodyweight-only suggestion.
+    const s = saferTargets({ bodyweight: stats.kg, unit: "kg", goal: inputs.goal });
     if (s) setTargets({ kcal: Math.round((s.kcalLow + s.kcalHigh) / 2), protein: Math.round((s.proteinLow + s.proteinHigh) / 2) });
   }
   try { localStorage.removeItem(KEY); } catch {}
@@ -214,6 +269,10 @@ if (overlay && body) {
     save();
     if (f === "units") render({ focusField: f, focusValue: value });
     else nextBtn.disabled = !canAdvance();
+    if (f === "intent" || f === "dailyActivity") {
+      const preview = body.querySelector("#onb-nut-preview");
+      if (preview) preview.innerHTML = nutritionPreview();
+    }
   });
   body.addEventListener("input", (e) => {
     const el = e.target.closest("[data-input]");
