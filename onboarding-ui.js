@@ -233,7 +233,7 @@ function finish() {
   // Core value 1: nothing generated reaches the user unchecked. The sweep in
   // test/nutrition-targets.test.js says this can never flag, so if it ever does
   // the calculator is wrong and the conservative suggestion is the safer seed.
-  const audited = calculated
+  const failedAudit = calculated
     ? evaluateNutrition({
         targets: { kcal: calculated.kcal, protein: calculated.protein, fat: calculated.fat },
         bodyweight: stats.kg,
@@ -242,10 +242,11 @@ function finish() {
         maintenance: calculated.tdee,
       }).flags.some((f) => f.tier === "critical")
     : false;
-  if (calculated && !audited) {
+  if (calculated && !failedAudit) {
     setTargets({ kcal: calculated.kcal, protein: calculated.protein, carbs: calculated.carbs, fat: calculated.fat });
   } else if (stats.kg) {
-    // No height, so fall back to the bodyweight-only suggestion.
+    // Reached with no height (nothing to calculate from), or if the audit ever
+    // rejects a calculated target. Either way, the conservative suggestion.
     const s = saferTargets({ bodyweight: stats.kg, unit: "kg", goal: inputs.goal });
     if (s) setTargets({ kcal: Math.round((s.kcalLow + s.kcalHigh) / 2), protein: Math.round((s.proteinLow + s.proteinHigh) / 2) });
   }

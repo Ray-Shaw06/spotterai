@@ -14,9 +14,12 @@
 import { calculateTargets, NUTRITION_INTENTS, DAILY_ACTIVITY } from "./lib/nutrition-targets.js";
 import { AGE_RANGES } from "./onboarding.js";
 import { deriveStats, getBodyStats, setBodyStats, setTargets } from "./tracker-store.js";
+import { getActiveId } from "./profile-store.js";
 
 const mount = document.getElementById("nutrition-prompt");
-const KEY = "spotterai_nutrition_prompt";
+// Namespaced per profile, like tracker data: one person dismissing this must
+// not suppress it for everyone else sharing the browser.
+const dismissKey = () => `spotterai_nutrition_prompt::${getActiveId()}`;
 const LB_TO_KG = 0.45359237;
 
 // These users never answered onboarding's schedule questions, so assume a
@@ -32,10 +35,10 @@ function esc(t) {
   return d.innerHTML;
 }
 const dismissed = () => {
-  try { return localStorage.getItem(KEY) === "1"; } catch { return false; }
+  try { return localStorage.getItem(dismissKey()) === "1"; } catch { return false; }
 };
 const dismiss = () => {
-  try { localStorage.setItem(KEY, "1"); } catch { /* storage disabled */ }
+  try { localStorage.setItem(dismissKey(), "1"); } catch { /* storage disabled */ }
 };
 
 /** Enough stats to calculate? Height and an eating goal are the usual gaps. */
@@ -169,6 +172,9 @@ if (mount) {
     heightDraft = e.target.value;
     const cm = Number(e.target.value);
     setBodyStats({ heightCm: cm >= 100 && cm <= 250 ? cm : null });
+    // The tracker listener deliberately skips re-rendering while the sheet is
+    // open, so patch the two things that depend on height in place. This keeps
+    // the field, its focus, and the caret exactly where the user left them.
     const preview = mount.querySelector("#np-preview");
     if (preview) preview.innerHTML = previewHtml();
     const apply = mount.querySelector('[data-np="apply"]');
@@ -177,10 +183,24 @@ if (mount) {
   // The Nutrition page's "Set this up" link opens the same sheet.
   window.addEventListener("spotter:nutrition-setup", () => {
     sheetOpen = true;
+    startedSetup = true;
     render();
     location.hash = "#/today";
   });
-  window.addEventListener("spotter:tracker", render);
-  window.addEventListener("spotter:profile", render);
+  // While the sheet is open the user is typing into it, and every keystroke
+  // calls setBodyStats -> persist -> spotter:tracker. Re-rendering here would
+  // destroy the field mid-word and drop focus to <body>. The sheet's own
+  // handlers keep it current instead.
+  window.addEventListener("spotter:tracker", () => {
+    if (!sheetOpen) render();
+  });
+  // Profiles switch without a page reload, so this module-level state has to be
+  // cleared or one profile's half-finished setup follows another into view.
+  window.addEventListener("spotter:profile", () => {
+    sheetOpen = false;
+    startedSetup = false;
+    heightDraft = null;
+    render();
+  });
   render();
 }

@@ -162,6 +162,10 @@ export function deleteProfile(id) {
     localStorage.removeItem(trackerKey(id));
     localStorage.removeItem(planKey(id));
     localStorage.removeItem(auditHistoryKey(id));
+    // Per-profile nutrition UI state, or a recreated "guest" inherits the old
+    // body's dismissed calorie number.
+    localStorage.removeItem(`spotterai_nut_drift_dismissed::${id}`);
+    localStorage.removeItem(`spotterai_nutrition_prompt::${id}`);
   } catch {
     /* ignore */
   }
