@@ -23,7 +23,7 @@ import {
 } from "./onboarding.js";
 import { bodyweightKg, clearMeasurementCorrection, measurementSystem, switchMeasurementSystem, validateMeasurements } from "./measurements.js";
 import { evaluateNutrition, saferTargets } from "./nutrition-safety.js";
-import { calculateTargets, intentForGoal, NUTRITION_INTENTS, DAILY_ACTIVITY } from "./lib/nutrition-targets.js";
+import { calculateTargets, completeMacros, intentForGoal, NUTRITION_INTENTS, DAILY_ACTIVITY } from "./lib/nutrition-targets.js";
 import { setBodyStats, setTargets, setUnit } from "./tracker-store.js";
 import { trackFunnel } from "./analytics.js";
 
@@ -248,7 +248,15 @@ function finish() {
     // Reached with no height (nothing to calculate from), or if the audit ever
     // rejects a calculated target. Either way, the conservative suggestion.
     const s = saferTargets({ bodyweight: stats.kg, unit: "kg", goal: inputs.goal });
-    if (s) setTargets({ kcal: Math.round((s.kcalLow + s.kcalHigh) / 2), protein: Math.round((s.proteinLow + s.proteinHigh) / 2) });
+    if (s) {
+      const kcal = Math.round((s.kcalLow + s.kcalHigh) / 2);
+      const protein = Math.round((s.proteinLow + s.proteinHigh) / 2);
+      // saferTargets gives calories and protein only. Fill carbs and fat with
+      // the same rules the calculator uses, so this path cannot ship macros
+      // that contradict their own calorie total.
+      const macros = completeMacros({ kcal, protein });
+      setTargets(macros ? { kcal, ...macros } : { kcal, protein });
+    }
   }
   try { localStorage.removeItem(KEY); } catch {}
   close();

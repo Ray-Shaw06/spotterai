@@ -18,6 +18,7 @@ import {
   NUTRITION_INTENTS,
   MINOR_NOTICE,
   DRIFT_KCAL,
+  completeMacros,
 } from "../lib/nutrition-targets.js";
 import { macroKcal } from "../lib/nutrition-math.js";
 import { evaluateNutrition, NUTRITION_THRESHOLDS } from "../nutrition-safety.js";
@@ -252,4 +253,44 @@ test("SWEEP: every calculated target holds the per-kg and macro boundaries", () 
           assert.ok(t.kcal >= T.LOW_KCAL, `${label}: kcal under floor`);
           assert.ok(Math.abs(macroKcal(t) / t.kcal - 1) < 0.02, `${label}: macros do not reconstruct kcal`);
         }
+});
+
+// ---------------------------------------------------------------------------
+// completeMacros: the no-height fallback. When height is missing the calculator
+// cannot run, and onboarding falls back to nutrition-safety's conservative
+// bodyweight-only suggestion, which supplies a calorie and a protein figure but
+// no carbs or fat. Left alone that reproduced the exact defect this feature
+// exists to remove: macros that do not add up to their own calorie target.
+// ---------------------------------------------------------------------------
+
+test("completeMacros fills carbs and fat so they reconstruct the calorie total", () => {
+  const t = { kcal: 2100, ...completeMacros({ kcal: 2100, protein: 150 }) };
+  const drift = Math.abs(macroKcal(t) / t.kcal - 1);
+  assert.ok(drift < 0.02, `drifted ${(drift * 100).toFixed(2)}%`);
+});
+
+test("completeMacros holds the same fat and carb boundaries as the calculator", () => {
+  const T = NUTRITION_THRESHOLDS;
+  for (const kcal of [1200, 1500, 1800, 2100, 2600, 3200, 4000])
+    for (const protein of [80, 120, 160, 200, 260]) {
+      const m = completeMacros({ kcal, protein });
+      const label = `${kcal} kcal / ${protein}g protein`;
+      assert.ok((m.fat * 9) / kcal >= T.FAT_PCT_VERY_LOW, `${label}: fat under the 15% floor`);
+      assert.ok(m.carbs >= 0, `${label}: negative carbs`);
+      const drift = Math.abs(macroKcal({ ...m }) / kcal - 1);
+      assert.ok(drift < 0.02, `${label}: drifted ${(drift * 100).toFixed(2)}%`);
+    }
+});
+
+test("completeMacros agrees with the calculator's own split for the same inputs", () => {
+  // Same protein grams the calculator would choose, so the two paths must match.
+  const full = calculateTargets({ ...BASE, intent: "cut" });
+  const viaComplete = completeMacros({ kcal: full.kcal, protein: full.protein });
+  assert.deepEqual(viaComplete, { protein: full.protein, carbs: full.carbs, fat: full.fat });
+});
+
+test("completeMacros returns null on unusable input rather than guessing", () => {
+  assert.equal(completeMacros({ kcal: 0, protein: 100 }), null);
+  assert.equal(completeMacros({ kcal: 2000 }), null);
+  assert.equal(completeMacros({}), null);
 });
