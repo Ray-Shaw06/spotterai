@@ -6,6 +6,9 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { mapOnboardingToInputs, bodyweightKg, ONBOARDING_STEPS } from "../onboarding.js";
 import { measurementSystem, switchMeasurementSystem, validateMeasurements } from "../measurements.js";
 
@@ -62,4 +65,36 @@ test("legacy kg and lb values keep their respective measurement systems", () => 
 
 test("there are a small number of intake steps (coach-style, not a giant form)", () => {
   assert.ok(ONBOARDING_STEPS.length >= 4 && ONBOARDING_STEPS.length <= 6);
+});
+
+test("Nutrition sits after Schedule, which is what makes the activity multiplier work", () => {
+  assert.equal(ONBOARDING_STEPS[3], "Nutrition");
+  assert.ok(
+    ONBOARDING_STEPS.indexOf("Nutrition") > ONBOARDING_STEPS.indexOf("Schedule"),
+    "the multiplier needs days per week and session length, collected on Schedule"
+  );
+});
+
+// ONBOARDING_STEPS (the progress-bar labels, here) and STEP_RENDER (the actual
+// renderers, in onboarding-ui.js) are two ordered lists that must stay aligned.
+// Nothing in the app couples them, so reordering one silently mislabels every
+// step. This reads the UI module as text to pin the pairing.
+test("the step labels and the step renderers stay in the same order", () => {
+  const ui = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "onboarding-ui.js"), "utf8");
+  const renderers = ui.match(/const STEP_RENDER = \[([^\]]+)\]/)?.[1].split(",").map((s) => s.trim());
+  assert.ok(renderers, "STEP_RENDER is still declared as a flat array literal");
+  assert.equal(renderers.length, ONBOARDING_STEPS.length, "one renderer per label");
+  // Explicit pairing: renderer names do not all mirror their labels
+  // ("About you" is rendered by stepBody), so the mapping is pinned by hand.
+  assert.deepEqual(
+    ONBOARDING_STEPS.map((label, i) => [label, renderers[i]]),
+    [
+      ["Goal", "stepGoal"],
+      ["About you", "stepBody"],
+      ["Schedule", "stepSchedule"],
+      ["Nutrition", "stepNutrition"],
+      ["Safety", "stepSafety"],
+      ["Preferences", "stepPrefs"],
+    ]
+  );
 });

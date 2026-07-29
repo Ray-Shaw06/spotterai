@@ -22,7 +22,7 @@ import {
   mapOnboardingToInputs,
 } from "./onboarding.js";
 import { bodyweightKg, clearMeasurementCorrection, measurementSystem, switchMeasurementSystem, validateMeasurements } from "./measurements.js";
-import { saferTargets } from "./nutrition-safety.js";
+import { evaluateNutrition, saferTargets } from "./nutrition-safety.js";
 import { calculateTargets, intentForGoal, NUTRITION_INTENTS, DAILY_ACTIVITY } from "./lib/nutrition-targets.js";
 import { setBodyStats, setTargets, setUnit } from "./tracker-store.js";
 import { trackFunnel } from "./analytics.js";
@@ -230,7 +230,19 @@ function finish() {
     sessionLength: stats.sessionLength || null,
   });
   const calculated = calculateTargets(stats);
-  if (calculated) {
+  // Core value 1: nothing generated reaches the user unchecked. The sweep in
+  // test/nutrition-targets.test.js says this can never flag, so if it ever does
+  // the calculator is wrong and the conservative suggestion is the safer seed.
+  const audited = calculated
+    ? evaluateNutrition({
+        targets: { kcal: calculated.kcal, protein: calculated.protein, fat: calculated.fat },
+        bodyweight: stats.kg,
+        unit: "kg",
+        goal: inputs.goal,
+        maintenance: calculated.tdee,
+      }).flags.some((f) => f.tier === "critical")
+    : false;
+  if (calculated && !audited) {
     setTargets({ kcal: calculated.kcal, protein: calculated.protein, carbs: calculated.carbs, fat: calculated.fat });
   } else if (stats.kg) {
     // No height, so fall back to the bodyweight-only suggestion.

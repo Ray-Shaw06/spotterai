@@ -51,6 +51,14 @@ function hasHistory() {
 }
 
 let sheetOpen = false;
+// Cancel must not behave like a permanent dismiss. Chip taps write straight to
+// bodyStats, so a user who fills the sheet and then cancels satisfies
+// isComplete() and would lose the card without ever applying targets. This
+// keeps the card for the rest of the session once setup has been started.
+let startedSetup = false;
+// The height field is rebuilt on every render, so a half-typed value that is
+// not yet a valid height (say "17") would be wiped by the next chip tap.
+let heightDraft = null;
 
 /** Saved stats plus the latest logged bodyweight, in calculator shape. */
 function draft() {
@@ -95,7 +103,7 @@ function sheet() {
   return `<div class="card np-sheet">
       <h3 class="card-title">Calculate your targets</h3>
       <p class="dash-hint">Saved on this device only. Nothing leaves your browser.</p>
-      <label class="field-label-sm">Height (cm)<input id="np-height" class="input" type="number" min="100" max="250" inputmode="numeric" value="${d.cm || ""}" /></label>
+      <label class="field-label-sm">Height (cm)<input id="np-height" class="input" type="number" min="100" max="250" inputmode="numeric" value="${heightDraft ?? d.cm ?? ""}" /></label>
       <span class="onb-flabel">Age range</span>${chips("ageRange", AGE_RANGES, d.ageRange)}
       <span class="onb-flabel">Sex (optional)</span>${chips("sex", ["Male", "Female", "Prefer not to say"], d.sex)}
       <span class="onb-flabel">Eating goal</span>${chips("intent", NUTRITION_INTENTS, d.intent)}
@@ -121,19 +129,24 @@ function card() {
 function render() {
   if (!mount) return;
   if (sheetOpen) { mount.innerHTML = sheet(); return; }
-  mount.innerHTML = !dismissed() && hasHistory() && !isComplete() ? card() : "";
+  const wanted = !dismissed() && hasHistory() && (!isComplete() || startedSetup);
+  mount.innerHTML = wanted ? card() : "";
 }
 
 if (mount) {
   mount.addEventListener("click", (e) => {
     const chip = e.target.closest(".np-chips .onb-chip");
     if (chip) {
-      setBodyStats({ [chip.closest(".np-chips").dataset.field]: chip.dataset.value });
+      const field = chip.closest(".np-chips").dataset.field;
+      const value = chip.dataset.value;
+      setBodyStats({ [field]: value });
       render();
+      // Restore focus onto the tapped chip; the render above replaced it.
+      mount.querySelector(`.np-chips[data-field="${CSS.escape(field)}"] [data-value="${CSS.escape(value)}"]`)?.focus();
       return;
     }
     const act = e.target.closest("[data-np]")?.dataset.np;
-    if (act === "open") { sheetOpen = true; render(); }
+    if (act === "open") { sheetOpen = true; startedSetup = true; render(); }
     else if (act === "close") { sheetOpen = false; render(); }
     else if (act === "dismiss") { dismiss(); render(); }
     else if (act === "apply") {
@@ -146,11 +159,14 @@ if (mount) {
       setBodyStats({ daysPerWeek: d.daysPerWeek, sessionLength: d.sessionLength });
       dismiss();
       sheetOpen = false;
+      startedSetup = false;
+      heightDraft = null;
       render();
     }
   });
   mount.addEventListener("input", (e) => {
     if (e.target.id !== "np-height") return;
+    heightDraft = e.target.value;
     const cm = Number(e.target.value);
     setBodyStats({ heightCm: cm >= 100 && cm <= 250 ? cm : null });
     const preview = mount.querySelector("#np-preview");

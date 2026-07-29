@@ -10,7 +10,8 @@
  */
 
 import { addCustomFood, addNutrition, addWater, copyMeal, deriveStats, getBodyStats, getCustomFoods, getMealTemplates, getRecentFoods, getState, getWater, logMealTemplate, removeEntry, removeMealTemplate, resetAll, saveMealTemplate, setBodyStats, setTargets, subscribe, updateNutrition } from "./tracker-store.js";
-import { calculateTargets, estimateTdee, targetsDrift, AGE_MIDPOINTS, DAILY_ACTIVITY, NUTRITION_INTENTS } from "./lib/nutrition-targets.js";
+import { calculateTargets, estimateTdee, targetsDrift, AGE_MIDPOINTS, DAILY_ACTIVITY, DRIFT_KCAL, NUTRITION_INTENTS } from "./lib/nutrition-targets.js";
+import { getActiveId } from "./profile-store.js";
 import { lookupBarcode, searchFoods, searchOpenFoodFacts } from "./foods.js";
 import { estimateFood, estimateMealPhoto } from "./ai.js";
 import { ring } from "./charts.js";
@@ -97,7 +98,11 @@ function render() {
 
 // --- Targets calculated from the user's stats ------------------------------
 const LB_TO_KG = 0.45359237;
-const DRIFT_KEY = "spotterai_nut_drift_dismissed";
+
+// The dismissed value is a calorie number derived from ONE profile's body, so
+// the key has to be namespaced the same way tracker data is. A global key would
+// be read back against a different profile's numbers after a profile switch.
+const driftKey = () => `spotterai_nut_drift_dismissed::${getActiveId()}`;
 
 /** Saved stats in the shape lib/nutrition-targets.js expects. */
 function statsForTargets() {
@@ -126,7 +131,8 @@ function maintenanceForAudit() {
   return estimateTdee({ ...st, age: AGE_MIDPOINTS[st.ageRange] });
 }
 
-/** Shared figure line, so the block and the banner cannot drift apart. */
+/** Figure line shared by this page's block and banner. Scoped to this module:
+ *  nutrition-prompt-ui.js formats its own, per the per-module UI convention. */
 function figuresLine(t) {
   return `${t.kcal.toLocaleString("en-US")} kcal · ${t.protein}P · ${t.carbs}C · ${t.fat}F`;
 }
@@ -165,12 +171,16 @@ function renderDrift() {
   if (!calculated) { el.drift.innerHTML = ""; return; }
   const { drifted, deltaKcal } = targetsDrift(getState().targets, calculated);
   let dismissed = null;
-  try { dismissed = JSON.parse(localStorage.getItem(DRIFT_KEY) || "null"); } catch { dismissed = null; }
+  try { dismissed = JSON.parse(localStorage.getItem(driftKey()) || "null"); } catch { dismissed = null; }
   // Re-offer only once the number has moved on from whatever was dismissed.
-  if (!drifted || (dismissed && Math.abs(calculated.kcal - dismissed) < 100)) { el.drift.innerHTML = ""; return; }
+  // Number.isFinite, not truthiness: a dismissed 0 is a real value, not "none".
+  if (!drifted || (Number.isFinite(dismissed) && Math.abs(calculated.kcal - dismissed) < DRIFT_KCAL)) {
+    el.drift.innerHTML = "";
+    return;
+  }
 
   el.drift.innerHTML = `<div class="nut-drift">
-      <p class="nut-drift__text">Your weight has changed, so your targets are out of date. Based on your stats now, ${calculated.kcal.toLocaleString("en-US")} kcal (${deltaKcal > 0 ? "+" : ""}${deltaKcal}) fits better.</p>
+      <p class="nut-drift__text">Your saved targets no longer match your stats. Based on your stats now, ${calculated.kcal.toLocaleString("en-US")} kcal (${deltaKcal > 0 ? "+" : ""}${deltaKcal}) fits better.</p>
       <div class="nut-drift__actions">
         <button type="button" class="btn btn--ghost btn--sm" data-act="nut-apply">Update targets</button>
         <button type="button" class="btn-link" data-act="nut-drift-dismiss">Not now</button>
@@ -879,7 +889,13 @@ function init() {
   const onStatsClick = (e) => {
     const chip = e.target.closest(".nut-stats__chips .onb-chip");
     if (chip) {
-      setBodyStats({ [chip.closest(".nut-stats__chips").dataset.field]: chip.dataset.value });
+      const field = chip.closest(".nut-stats__chips").dataset.field;
+      const value = chip.dataset.value;
+      setBodyStats({ [field]: value });
+      // persist() dispatches synchronously, so the block has already re-rendered.
+      // Put focus back on the chip that was tapped, or keyboard users are
+      // dumped on <body> after every choice.
+      el.stats.querySelector(`.nut-stats__chips[data-field="${CSS.escape(field)}"] [data-value="${CSS.escape(value)}"]`)?.focus();
       return;
     }
     const act = e.target.closest("[data-act]")?.dataset.act;
@@ -887,10 +903,14 @@ function init() {
       const c = calculateTargets(statsForTargets());
       if (!c) return;
       setTargets({ kcal: c.kcal, protein: c.protein, carbs: c.carbs, fat: c.fat });
-      try { localStorage.removeItem(DRIFT_KEY); } catch {}
+      try { localStorage.removeItem(driftKey()); } catch {}
     } else if (act === "nut-drift-dismiss") {
       const c = calculateTargets(statsForTargets());
-      try { localStorage.setItem(DRIFT_KEY, JSON.stringify(c ? c.kcal : 0)); } catch {}
+      // Only a real number is a meaningful dismissal; otherwise clear it.
+      try {
+        if (c) localStorage.setItem(driftKey(), JSON.stringify(c.kcal));
+        else localStorage.removeItem(driftKey());
+      } catch {}
       renderDrift();
     } else if (act === "nut-setup") {
       window.dispatchEvent(new CustomEvent("spotter:nutrition-setup"));
