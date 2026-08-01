@@ -54,7 +54,9 @@ export function assessPain({ location, severity } = {}) {
       headline: `Stop ${lower} work for today and switch to conservative alternatives.`,
       advice: [
         "Stop the movement that hurt for today.",
-        "SpotterAI will reduce related volume and swap in lower-risk alternatives.",
+        injuryKey
+          ? `SpotterAI marks ${lower} as a limitation and re-audits your plan so related flags and lower-risk alternatives are visible.`
+          : "SpotterAI logs this for your records; skip painful movements and choose a lower-risk option you can do comfortably.",
         "If this is persistent or worsening, see a qualified professional.",
       ],
       blockAggressive: true,
@@ -72,7 +74,9 @@ export function assessPain({ location, severity } = {}) {
     headline: `Modify or skip the ${lower} movement today.`,
     advice: [
       "Stop or modify the specific movement that caused discomfort today.",
-      `SpotterAI offers lower-risk substitutions and marks ${lower} as a limitation.`,
+      injuryKey
+        ? `SpotterAI marks ${lower} as a limitation and re-audits your plan so related flags and lower-risk alternatives are visible.`
+        : "SpotterAI logs this for your records; skip painful movements and choose a lower-risk option you can do comfortably.",
       "Check in again, if it keeps happening, treat it as more serious.",
     ],
     blockAggressive: false,

@@ -41,3 +41,11 @@ test("evaluator-mapped locations become a limitation; unmapped ones still respon
   assert.equal(neck.addLimitation, false);
   assert.ok(neck.advice.length > 0); // still gives a conservative response
 });
+
+test("Pain Mode describes what it does now without claiming automatic plan edits", () => {
+  for (const severity of ["mild", "moderate"]) {
+    const text = allText(assessPain({ location: "knee", severity }));
+    assert.doesNotMatch(text, /spotterai (will reduce|reduces|caps|swaps|will swap)/i);
+    assert.match(text, /limitation|audit|lower-risk/i);
+  }
+});

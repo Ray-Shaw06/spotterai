@@ -22,6 +22,7 @@ const workoutAlerts = readFileSync(join(root, "workout-alerts.js"), "utf8");
 const workoutUi = readFileSync(join(root, "workout-ui.js"), "utf8");
 const quickLog = readFileSync(join(root, "quick-log.js"), "utf8");
 const demoData = readFileSync(join(root, "demo-data.js"), "utf8");
+const safetyLab = readFileSync(join(root, "safety-lab.js"), "utf8");
 
 test("nav uses 'Safety Lab', not the old 'Evals' label", () => {
   assert.ok(html.includes("<span>Safety Lab</span>"), "Safety Lab nav label present");
@@ -37,6 +38,16 @@ test("a 'Today' daily home base exists in the nav and routes", () => {
 
 test("a Pain Mode modal exists", () => {
   assert.ok(/id="pain-modal"/.test(html));
+});
+
+test("privacy copy discloses configured cloud, analytics, and AI data paths", () => {
+  assert.doesNotMatch(safetyLab, /there are no third-party trackers/i);
+  assert.match(safetyLab, /Firebase/i);
+  assert.match(safetyLab, /Vercel (Web )?Analytics/i);
+  assert.match(safetyLab, /Gemini/i);
+  assert.match(safetyLab, /Groq/i);
+  assert.match(safetyLab, /meal photo|food description/i);
+  assert.match(safetyLab, /quick.log|plain.language log/i);
 });
 
 test("an Exercise Library exists in the nav, routes, and has a detail modal", () => {

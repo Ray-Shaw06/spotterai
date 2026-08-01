@@ -41,7 +41,7 @@ export function weekStrip(plan, sessionsThisWeek = 0) {
 export function coachNote({ sessions = 0, target = 0, lastWeekSessions = 0, injuries = [] } = {}) {
   const inj = (injuries || []).filter((v) => v && v !== "none");
   if (inj.length) {
-    return { tone: "warn", text: `Your ${inj.join(" / ")} limitation is active, so SpotterAI caps related volume today and offers joint-friendly swaps. Stop and check in if anything hurts.` };
+    return { tone: "warn", text: `Your ${inj.join(" / ")} limitation is active. SpotterAI re-audits the plan and flags related risks or lower-risk alternatives. Stop and check in if anything hurts.` };
   }
   if (target && sessions >= target) {
     return { tone: "ok", text: `You've hit ${sessions}/${target} sessions this week: strong consistency. Keep intensity controlled and prioritise recovery.` };
