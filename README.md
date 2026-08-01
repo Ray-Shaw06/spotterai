@@ -3,9 +3,9 @@
 [![CI](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml/badge.svg)](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml)
 &nbsp;[![License: MIT](https://img.shields.io/badge/License-MIT-3b8ef5.svg)](LICENSE)
 
-**Your AI fitness copilot: plan, track, adapt, and audit your training.** &nbsp;·&nbsp; **[▶ Live demo](https://spotterai-flax.vercel.app)**
+**Your AI fitness copilot: plan, track, adapt, and audit your training.** &nbsp;·&nbsp; **[▶ Live demo](https://spotterai.xyz)**
 
-> **At a glance:** solo-built by a CS student. Vanilla JavaScript (ES modules, no build step), Node serverless functions on Vercel, Google Gemini, and on-device MediaPipe pose estimation. A pure-code layer audits every AI-generated plan against 11 checks; 334 unit tests and a red-team eval suite run in CI. Try the [live demo](https://spotterai-flax.vercel.app), then open the Profile menu and choose "Load demo data" to see it fully populated.
+> **At a glance:** solo-built by a CS student. Vanilla JavaScript (ES modules, no build step), Node serverless functions on Vercel, Google Gemini, and on-device MediaPipe pose estimation. A pure-code layer audits every AI-generated plan against 11 checks; 340+ automated tests and a red-team eval suite run in CI. Try the [live demo](https://spotterai.xyz), then open the Profile menu and choose "Load demo data" to see it fully populated.
 
 <p align="center">
   <img src="og-home.png" alt="SpotterAI, your AI fitness copilot. A flags-first plan safety audit: issues to review, severity tiers, and a demoted quality score." width="700" />
@@ -255,7 +255,7 @@ explanations are the product.
 
 ### Tested + CI, and a live "red-team" proof page
 
-The trust logic is covered by **334 tests** across the evaluator (tiers, the
+The trust logic is covered by **340+ automated tests** across the evaluator (tiers, the
 fractional volume model, structured-data injury matching), the plan-repair
 engine, safety boundaries, nutrition guardrails, rule explanations, plan/nutrition
 **Trust Report confidence**, **form-check confidence** thresholds, the benchmark
@@ -448,7 +448,7 @@ remains an explicit opt-in.
   cross-device sync, lazy-loaded from Google's CDN and fully optional (local-first;
   off until you add a config). Sync alone can run on Firebase's Spark plan.
 - **Design:** a hand-built design-token system (color, spacing, radius, shadow,
-  type scale) in CSS variables; [Space Grotesk + Inter](https://fonts.google.com)
+  type scale) in CSS variables; [Literata + Inter](https://fonts.google.com)
   via Google Fonts; an animated, pure-SVG safety-score ring. No UI kit, no paid
   assets.
 - **Backend:** four Node.js Vercel functions, `api/generate.js` (plan

@@ -64,6 +64,20 @@ test("icon source is the forest-green SpotterAI shield and barbell, not the red-
   assert.doesNotMatch(source, /#ff3b3f|#ff3838/i);
 });
 
+test("social previews use the canonical SpotterAI domain", () => {
+  assert.match(html, /<meta property="og:url" content="https:\/\/spotterai\.xyz\/"/);
+  assert.match(html, /<meta property="og:image" content="https:\/\/spotterai\.xyz\/og-home\.png"/);
+  assert.match(html, /<meta name="twitter:image" content="https:\/\/spotterai\.xyz\/og-home\.png"/);
+  assert.doesNotMatch(html, /spotterai-flax\.vercel\.app/);
+});
+
+test("inline favicon uses the current light forest brand", () => {
+  const favicon = html.match(/<link\s+rel="icon"\s+href="([^"]+)"/s)?.[1] || "";
+  assert.match(favicon, /%23f5f8f6/i);
+  assert.match(favicon, /%231a5c42/i);
+  assert.doesNotMatch(favicon, /%230a090f|%238a6dff/i);
+});
+
 test("offline shell precaches every current install asset under a fresh cache", () => {
   assert.match(serviceWorker, /const CACHE = "spotterai-v46"/);
   for (const path of ["manifest.json", "calendar-export.js", "workout-alerts.js", "reminders.js", ...Object.values(ICONS)]) {
