@@ -15,6 +15,12 @@ import { auditReply } from "./chat-guard.js";
 import { screenRequest, SAFE_REDIRECT } from "./safety-boundaries.js";
 import { parseCoachActions, describeAction } from "./chat-actions.js";
 import { applyPlanAction } from "./plan-edit.js";
+import { aiFailureMessage, classifyAiFailure, fetchWithTimeout } from "./ai-errors.js";
+
+// Bound the request like the plan surface does. The server's own ladder (two
+// models, two tries each) can run long under provider overload; without a
+// deadline here a stalled request leaves the coach typing forever.
+const REQUEST_TIMEOUT_MS = 45_000;
 
 const fab = document.getElementById("chat-fab");
 const panel = document.getElementById("chat-panel");
@@ -237,11 +243,11 @@ async function send() {
     // reports an overload (503), wait briefly and try once more from the client.
     let res;
     for (let attempt = 0; attempt < 2; attempt++) {
-      res = await fetch("api/chat", {
+      res = await fetchWithTimeout("api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages, plan: store.plan, tracker: getTrackerContext() }),
-      });
+      }, REQUEST_TIMEOUT_MS);
       if (res.status !== 503) break;
       await new Promise((r) => setTimeout(r, 1500));
     }
@@ -272,12 +278,12 @@ async function send() {
         if (applied.length) bubble.appendChild(renderApplied(applied));
       }
     }
-  } catch {
+  } catch (err) {
     hideTyping();
-    addBubble(
-      "assistant",
-      "I can't reach the coach right now. This feature needs the live API. If you're previewing the static files, generation and chat both require the deployed (or `vercel dev`) backend."
-    );
+    // The request never produced a response: offline, a dropped connection, or
+    // our own deadline. Classify it the way the plan surface does so the user
+    // sees the actual cause instead of a guess about static previews.
+    addBubble("assistant", aiFailureMessage("chat", classifyAiFailure(err, { online: navigator.onLine })));
   } finally {
     pending = false;
     sendBtn.disabled = false;

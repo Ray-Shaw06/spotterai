@@ -1,10 +1,17 @@
 const COPY = {
   offline: "You're offline. Reconnect and try again.",
-  timeout: "That took longer than expected. Your inputs are still here-try once more.",
+  timeout: "That took longer than expected. Your inputs are still here, so try once more.",
   rate_limited: "The coach is busy right now. Wait a moment and try again.",
   unavailable: "The coach is temporarily unavailable. Try again shortly.",
   invalid_response: "The coach returned an incomplete result. Try again for a fresh response.",
-  unknown: "Something interrupted the request. Your inputs are still here-try again.",
+  unknown: "Something interrupted the request. Your inputs are still here, so try again.",
+};
+
+// The chat composer clears the moment a message is sent, so the plan surface's
+// "your inputs are still here" reassurance would be false in the coach panel.
+const CHAT_COPY = {
+  timeout: "That took longer than expected. Ask me again.",
+  unknown: "Something interrupted the request. Ask me again.",
 };
 
 function invalidResponseError(message) {
@@ -72,6 +79,7 @@ export function classifyAiFailure(error, { online } = {}) {
 }
 
 /** Safe, provider-agnostic copy for every user-facing AI failure surface. */
-export function aiFailureMessage(_surface, failureClass, _options = {}) {
+export function aiFailureMessage(surface, failureClass, _options = {}) {
+  if (surface === "chat" && CHAT_COPY[failureClass]) return CHAT_COPY[failureClass];
   return COPY[failureClass] || COPY.unknown;
 }

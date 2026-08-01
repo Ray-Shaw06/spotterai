@@ -5,6 +5,9 @@
     "api/generate.js": {
       "maxDuration": 60
     },
+    "api/chat.js": {
+      "maxDuration": 30
+    },
     "api/estimate.js": {
       "maxDuration": 30
     },
