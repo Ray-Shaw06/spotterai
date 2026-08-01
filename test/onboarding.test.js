@@ -23,6 +23,13 @@ test("mapped injuries only include evaluator-recognised areas; the rest go to no
   assert.match(i.injuryNotes, /overhead pressing/i);
 });
 
+test("choosing no current pain does not tell the generator that pain exists", () => {
+  const noPain = mapOnboardingToInputs({ currentPain: "no" });
+  const hasPain = mapOnboardingToInputs({ currentPain: "yes" });
+  assert.doesNotMatch(noPain.injuryNotes, /current discomfort/i);
+  assert.match(hasPain.injuryNotes, /current discomfort/i);
+});
+
 test("'return to consistency' adds a conservative note and a general goal", () => {
   const i = mapOnboardingToInputs({ goal: "consistency", trainingAge: "some" });
   assert.equal(i.goal, "General");
