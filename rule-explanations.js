@@ -72,6 +72,14 @@ export const RULE_EXPLANATIONS = [
     limitations: "It only judges recognized exercises, assumes a bodyweight option is always available, and can't see partial setups (for example a bench without a rack).",
   },
   {
+    id: "progressive_overload",
+    name: "Progressive overload",
+    checks: "Whether the plan states a concrete rule for getting harder over time, and whether that rule is specific rather than encouragement.",
+    why: "A week you repeat unchanged stops working after a few weeks. Your body adapts to the load it has already handled, so without a rule for adding weight or reps the plan quietly stops producing results, and most people blame themselves rather than the program.",
+    action: "Flags a plan with no progression note, or one that says something like \"train hard and stay consistent\" instead of what to add and when. Purely informational: it never lowers the score.",
+    limitations: "The plan is a single week, so this cannot verify that load actually goes up over time; there is no week 2 to compare against. It checks that a scheme exists and is specific, not that the rate of progression suits you.",
+  },
+  {
     id: "injury",
     name: "Injury & limitation conflicts",
     checks: "Movements commonly contraindicated for a stated injury (knee, lower back, shoulder, wrist).",

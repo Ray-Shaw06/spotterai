@@ -57,6 +57,9 @@ const checksList = document.getElementById("checks-list");
 const countPass = document.getElementById("count-pass");
 const auditPassed = document.getElementById("audit-passed");
 const auditPassedList = document.getElementById("audit-passed-list");
+const countNotAssessed = document.getElementById("count-not-assessed");
+const auditNotAssessed = document.getElementById("audit-not-assessed");
+const auditNotAssessedList = document.getElementById("audit-not-assessed-list");
 const trustReportEl = document.getElementById("trust-report");
 const repairMount = document.getElementById("repair-mount");
 const planOutput = document.getElementById("plan-output");
@@ -289,9 +292,15 @@ function renderResults(plan, inputs, usedFallback, { focus = true, failureClass 
 /** Plain-English verdict, led by severity (never "safe"). */
 function auditVerdictText(summary) {
   const { critical, warning, suggestion } = summary;
-  if (critical > 0) return { tone: "critical", text: `${critical} critical issue${critical > 1 ? "s" : ""} to resolve before training` };
-  if (warning > 0) return { tone: "warning", text: `${warning} issue${warning > 1 ? "s" : ""} to review before training` };
-  if (suggestion > 0) return { tone: "suggestion", text: `No safety flags: ${suggestion} optional suggestion${suggestion > 1 ? "s" : ""}` };
+  const unassessed = summary.not_assessed || 0;
+  // v1.3.0: never report a clean verdict without saying how much we could not
+  // judge. "No issues flagged" on a plan where four checks never ran is the same
+  // false reassurance the not-assessed tier exists to remove.
+  const caveat = unassessed > 0 ? `, ${unassessed} not assessed` : "";
+  if (critical > 0) return { tone: "critical", text: `${critical} critical issue${critical > 1 ? "s" : ""} to resolve before training${caveat}` };
+  if (warning > 0) return { tone: "warning", text: `${warning} issue${warning > 1 ? "s" : ""} to review before training${caveat}` };
+  if (suggestion > 0) return { tone: "suggestion", text: `No safety flags: ${suggestion} optional suggestion${suggestion > 1 ? "s" : ""}${caveat}` };
+  if (unassessed > 0) return { tone: "suggestion", text: `Nothing flagged, but ${unassessed} check${unassessed > 1 ? "s" : ""} could not be assessed` };
   return { tone: "ok", text: "No issues flagged by the audit" };
 }
 
@@ -309,13 +318,18 @@ function renderAudit(audit) {
     { cls: "is-sugg", n: s.suggestion, label: "suggestions" },
     { cls: "is-ok", n: `${s.passed}/${s.total}`, label: "passed" },
   ]
+    .concat(s.not_assessed > 0 ? [{ cls: "is-unknown", n: s.not_assessed, label: "not assessed" }] : [])
     .map((c) => `<li class="${c.cls}"><strong>${esc(c.n)}</strong> ${c.label}</li>`)
     .join("");
 
   // Flag cards (critical → warning → suggestion). Passed checks go in the
   // collapsed disclosure below, so the page leads with what needs attention.
+  //
+  // `not_assessed` is excluded from BOTH lists (v1.3.0). It is not a problem with
+  // the plan, so it must not appear as a flag; and it is not a clean result, so
+  // it must not appear as a pass. It gets its own quiet section instead.
   const flagged = audit.checks
-    .filter((c) => c.tier !== "pass")
+    .filter((c) => c.tier !== "pass" && c.tier !== "not_assessed")
     .sort((a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier]);
 
   checksList.innerHTML = flagged.length
@@ -329,6 +343,17 @@ function renderAudit(audit) {
   auditPassedList.innerHTML = passed
     .map((c) => `<li><span class="audit__passed-label">${esc(c.label)}</span><span class="audit__passed-detail">${esc(c.detail)}</span></li>`)
     .join("");
+
+  // Not-assessed checks: things we could not judge because we never asked.
+  // Rendered as an honest gap the user can close, never as a verdict.
+  const notAssessed = audit.checks.filter((c) => c.tier === "not_assessed");
+  if (auditNotAssessed && auditNotAssessedList) {
+    auditNotAssessed.hidden = notAssessed.length === 0;
+    if (countNotAssessed) countNotAssessed.textContent = notAssessed.length;
+    auditNotAssessedList.innerHTML = notAssessed
+      .map((c) => `<li><span class="audit__passed-label">${esc(c.label)}</span><span class="audit__passed-detail">${esc(c.detail)}</span></li>`)
+      .join("");
+  }
 
   // Demoted quality score (no big gauge).
   if (prefersReducedMotion) scoreValueEl.textContent = String(audit.score);

@@ -1030,6 +1030,9 @@ table {
 .audit__counts .is-crit strong { color: var(--danger); }
 .audit__counts .is-warn strong { color: var(--warn); }
 .audit__counts .is-ok strong { color: var(--success); }
+/* "Not assessed" is deliberately neutral ink, not a status colour: it is a gap
+   in our inputs, not a judgement about the plan. */
+.audit__counts .is-unknown strong { color: var(--text-muted); }
 .audit__flags { display: flex; flex-direction: column; gap: var(--space-3); }
 .audit__clear { color: var(--text-muted); font-size: var(--fs-small); }
 

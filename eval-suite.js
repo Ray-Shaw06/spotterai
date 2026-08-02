@@ -17,6 +17,11 @@ const ex = (name, sets, reps, rpe = null) => ({ name, sets, reps, rpe, notes: ""
 const day = (focus, exercises) => ({ day: "Day", focus, exercises });
 const plan = (days, extra = {}) => ({ program_name: "Case", goal: "Hypertrophy", days_per_week: days.length, days, progression: "", general_notes: "", ...extra });
 
+// A real progression rule, so the known-good fixtures are actually complete
+// programs rather than week templates with the progression field left blank.
+const GOOD_PROGRESSION =
+  "Add 2.5kg to each main lift once you hit the top of the rep range on every set, then drop back to the bottom of the range. Deload week 5.";
+
 function balancedWeek() {
   return plan([
     day("Upper Body", [ex("Barbell Bench Press", 4, "6-8", 8), ex("Barbell Row", 4, "6-8", 8), ex("Overhead Press", 3, "8-10", 8), ex("Lat Pulldown", 3, "10-12", 9), ex("Dumbbell Curl", 3, "12-15", 9), ex("Triceps Rope Pushdown", 3, "12-15", 9)]),
@@ -26,7 +31,7 @@ function balancedWeek() {
     day("Lower Body", [ex("Front Squat", 3, "6-8", 8), ex("Hip Thrust", 3, "8-10", 8), ex("Walking Lunge", 3, "10-12", 8), ex("Seated Leg Curl", 3, "12-15", 9), ex("Seated Calf Raise", 4, "15-20", 9)]),
     day("Rest", []),
     day("Rest", []),
-  ]);
+  ], { progression: GOOD_PROGRESSION });
 }
 
 /** Each case: a plan + inputs + expectations the auditor must satisfy. */
@@ -79,6 +84,60 @@ export const CASES = [
     inputs: { goal: "Strength", experience: "Intermediate" },
     plan: plan([day("Full Body A", [ex("Back Squat", 3, "12-15", 8), ex("Bench Press", 3, "12-15", 8), ex("Barbell Row", 3, "12-15", 8)]), day("Rest", []), day("Full Body B", [ex("Deadlift", 3, "12-15", 8), ex("Overhead Press", 3, "12-15", 8), ex("Lat Pulldown", 3, "12-15", 8)]), day("Rest", [])]),
     expect: [{ check: "goal_fit", status: "warn" }],
+  },
+  {
+    // Added v1.3.0. The founding real-world case: a plan pasted out of a chatbot
+    // with no goal stated, every lift at the same rep target, and no rule for
+    // getting harder. Before v1.3.0 the evaluator reported this as reasonable.
+    name: "Directionless chatbot plan (no goal, uniform reps, no progression)",
+    desc: "A goal-less week at 4x12 throughout with no progression scheme, the exact shape of a plan copied out of a chat window.",
+    inputs: {},
+    plan: plan(
+      [
+        day("Push", [ex("Barbell Bench Press", 4, "12", 8), ex("Overhead Press", 4, "12", 8), ex("Triceps Rope Pushdown", 4, "12", 8)]),
+        day("Pull", [ex("Barbell Row", 4, "12", 8), ex("Lat Pulldown", 4, "12", 8), ex("Dumbbell Curl", 4, "12", 8)]),
+        day("Legs", [ex("Back Squat", 4, "12", 8), ex("Romanian Deadlift", 4, "12", 8), ex("Standing Calf Raise", 4, "12", 8)]),
+        day("Rest", []),
+        day("Rest", []),
+      ],
+      { goal: "General fitness", progression: "" }
+    ),
+    expect: [
+      { check: "goal_fit", status: "warn" },
+      { check: "progressive_overload", status: "warn" },
+    ],
+  },
+  {
+    // Added v1.3.0 (review). The counterweight to the case above: uniform reps
+    // are only a finding when there is nothing to progress toward. A novice
+    // linear progression is uniform ON PURPOSE and moves the load instead, so
+    // the goal_fit shape check must leave it alone. Without this guard, the
+    // evaluator tells a 5x5 lifter to "vary the main lifts from the accessories",
+    // which would break a program that works.
+    name: "Novice 5x5 linear progression (rep-shape guard)",
+    desc: "Every lift at 5 reps by design, with a concrete load progression. The rep-shape and progression checks must stay quiet here. The push/pull and quad/hamstring flags it does raise are real, long-standing criticisms of 5x5, not false positives.",
+    inputs: {},
+    plan: plan(
+      [
+        day("Workout A", [ex("Back Squat", 5, "5", 8), ex("Barbell Bench Press", 5, "5", 8), ex("Barbell Row", 5, "5", 8)]),
+        day("Rest", []),
+        day("Workout B", [ex("Back Squat", 5, "5", 8), ex("Overhead Press", 5, "5", 8), ex("Deadlift", 1, "5", 8)]),
+        day("Rest", []),
+      ],
+      { goal: "General fitness", progression: "Add 2.5kg to every lift each session. On the third failed session, deload 10% and work back up." }
+    ),
+    expect: [
+      { check: "goal_fit", status: "pass" },
+      { check: "progressive_overload", status: "pass" },
+    ],
+  },
+  {
+    // Added v1.3.0. Encouragement is not a progression scheme.
+    name: "Progression note is encouragement, not a rule",
+    desc: "A solid week whose only progression guidance is 'train hard and stay consistent'.",
+    inputs: { goal: "Hypertrophy", experience: "Intermediate" },
+    plan: plan(balancedWeek().days, { progression: "Train hard and stay consistent!" }),
+    expect: [{ check: "progressive_overload", status: "warn" }],
   },
   {
     name: "Malformed plan",
@@ -135,7 +194,7 @@ export const CASES = [
     name: "Knee-aware plan (false-positive guard)",
     desc: "Knee injury declared, but every lift is knee-friendly, the injury check must NOT fire.",
     inputs: { goal: "Hypertrophy", injuries: ["knee"] },
-    plan: plan([day("Lower", [ex("Leg Press", 3, "12", 7), ex("Hip Thrust", 3, "10", 7), ex("Seated Leg Curl", 3, "12", 8), ex("Step-up", 3, "10", 7)]), day("Rest", [])]),
+    plan: plan([day("Lower", [ex("Leg Press", 3, "12", 7), ex("Hip Thrust", 3, "10", 7), ex("Seated Leg Curl", 3, "12", 8), ex("Step-up", 3, "10", 7)]), day("Rest", [])], { progression: GOOD_PROGRESSION }),
     expect: [{ check: "injury_knee", status: "pass" }],
   },
   {
@@ -150,7 +209,7 @@ export const CASES = [
       day("Full Body C", [ex("Front Squat", 3, "8", 8), ex("Incline Dumbbell Press", 3, "10", 8), ex("Pull-up", 3, "8", 8), ex("Hip Thrust", 3, "10", 8), ex("Triceps Pushdown", 3, "12", 8)]),
       day("Rest", []),
       day("Rest", []),
-    ]),
+    ], { progression: GOOD_PROGRESSION }),
     expect: [{ scoreAtLeast: 85 }, { check: "muscle_balance", status: "pass" }, { check: "leg_balance", status: "pass" }, { check: "weekly_volume", status: "pass" }],
   },
   {
@@ -181,6 +240,7 @@ const CASE_TYPES = {
   "Balanced hypertrophy week": "good",
   "Balanced full-body (false-positive guard)": "guard",
   "Knee-aware plan (false-positive guard)": "guard",
+  "Novice 5x5 linear progression (rep-shape guard)": "guard",
   "Malformed plan": "edge",
 };
 export function caseType(name) {
@@ -199,7 +259,11 @@ export function runEvalSuite() {
   return CASES.map((cse) => {
     const res = evaluatePlan(cse.plan, cse.inputs || {});
     const expectations = cse.expect.map((e) => evalExpectation(e, res));
-    const flagged = res.checks.filter((c) => c.tier && c.tier !== "pass").map((c) => c.label);
+    // v1.3.0: `not_assessed` is neither a pass nor a flag. Excluding it here
+    // matters because this list is what the public Safety Lab page renders — a
+    // known-good plan listing "Equipment fit" as flagged would say the evaluator
+    // found a problem it did not find.
+    const flagged = res.checks.filter((c) => c.tier && c.tier !== "pass" && c.tier !== "not_assessed").map((c) => c.label);
     return { name: cse.name, desc: cse.desc, type: caseType(cse.name), score: res.score, checks: res.checks, flagged, expectations, passed: expectations.every((x) => x.ok) };
   });
 }
