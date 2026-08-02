@@ -147,10 +147,14 @@
             </div>
             <p class="audit-card__verdict-line">2 issues to review before training</p>
             <ul class="audit-card__counts">
+              <!-- These must satisfy the same invariant the real evaluator does:
+                   critical + warnings + suggestions + passed === total. A mock
+                   whose own arithmetic is wrong undercuts the one claim this
+                   page makes. test/ui-copy.test.js enforces it. -->
               <li class="is-crit"><strong>0</strong> critical</li>
               <li class="is-warn"><strong>2</strong> warnings</li>
-              <li class="is-sugg"><strong>3</strong> suggestions</li>
-              <li class="is-ok"><strong>5/7</strong> passed</li>
+              <li class="is-sugg"><strong>1</strong> suggestion</li>
+              <li class="is-ok"><strong>8/11</strong> passed</li>
             </ul>
             <ul class="audit-card__checks">
               <li class="is-warn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 8v5m0 3h.01M10.3 4 2 18h20L13.7 4a2 2 0 0 0-3.4 0z" /></svg> High squat frequency: monitor fatigue</li>
@@ -166,7 +170,7 @@
     <!-- Three quick value props, one quiet line -->
     <div class="container">
       <p class="hero__facts" aria-label="What SpotterAI does">
-        <span><strong>6</strong> automated safety &amp; quality checks</span>
+        <span><strong>11</strong> automated safety &amp; quality checks</span>
         <span><strong>0–100</strong> transparent, rubric-based score</span>
         <span>a heuristic that flags concerns, never certifies</span>
       </p>

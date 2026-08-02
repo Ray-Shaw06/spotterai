@@ -24,6 +24,77 @@ const quickLog = readFileSync(join(root, "quick-log.js"), "utf8");
 const demoData = readFileSync(join(root, "demo-data.js"), "utf8");
 const safetyLab = readFileSync(join(root, "safety-lab.js"), "utf8");
 
+// Imported, not read as text: the landing page advertises a check count and
+// shows a mock audit, and both must agree with what the evaluator really does.
+const { evaluatePlan } = await import("../evaluator.js");
+
+// ============================================================================
+// The landing page makes two numeric claims about the evaluator. Found live on
+// spotterai.xyz by /qa on 2026-08-02: the hero mock read "0 critical, 2
+// warnings, 3 suggestions, 5/7 passed" (the parts sum to 10, not 7) and the
+// facts line advertised 6 checks while the evaluator ran 10. On a page whose
+// entire claim is a deterministic auditor you can check, marketing numbers that
+// contradict the code are the most expensive kind of typo. Derived from
+// evaluatePlan so they cannot drift again.
+// ============================================================================
+
+/** A plain, valid week. Enough to make the evaluator emit its full check set. */
+function samplePlan() {
+  const ex = (name, sets, reps) => ({ name, sets, reps, rpe: 8, notes: "" });
+  return {
+    program_name: "Sample",
+    goal: "Hypertrophy",
+    days_per_week: 4,
+    progression: "Add 2.5kg to the main lift when you hit the top of the rep range on every set.",
+    general_notes: "",
+    days: [
+      { day: "Day", focus: "Push", exercises: [ex("Barbell Bench Press", 4, "6-8"), ex("Overhead Press", 3, "8-10")] },
+      { day: "Day", focus: "Pull", exercises: [ex("Barbell Row", 4, "6-8"), ex("Lat Pulldown", 3, "10-12")] },
+      { day: "Day", focus: "Legs", exercises: [ex("Back Squat", 4, "6-8"), ex("Romanian Deadlift", 3, "8-10")] },
+      { day: "Rest", focus: "Rest", exercises: [] },
+    ],
+  };
+}
+
+test("the advertised check count matches how many checks the evaluator runs", () => {
+  const advertised = Number(html.match(/<strong>(\d+)<\/strong>\s*automated safety/)?.[1]);
+  assert.ok(Number.isInteger(advertised), "could not read the advertised check count from index.html");
+
+  // No injuries declared, so checkInjuries contributes nothing: this is the
+  // count every plan gets, which is what the landing page is claiming.
+  const audit = evaluatePlan(samplePlan(), { goal: "Hypertrophy", experience: "Intermediate" });
+  assert.equal(
+    advertised,
+    audit.checks.length,
+    `index.html advertises ${advertised} checks but evaluatePlan returns ${audit.checks.length}`
+  );
+});
+
+test("the hero audit mock obeys the evaluator's own summary invariant", () => {
+  const num = (label) => {
+    const m = html.match(new RegExp(`<strong>([\\d/]+)</strong>\\s*${label}`));
+    assert.ok(m, `could not read "${label}" from the hero audit card`);
+    return m[1];
+  };
+  const critical = Number(num("critical"));
+  const warnings = Number(num("warnings"));
+  const suggestions = Number(num("suggestions?"));
+  const [passed, total] = num("passed").split("/").map(Number);
+
+  // Exactly the invariant asserted against real audits in evaluator.test.js.
+  assert.equal(
+    critical + warnings + suggestions + passed,
+    total,
+    `hero mock: ${critical}+${warnings}+${suggestions}+${passed} != ${total}`
+  );
+
+  // And the verdict line must be the one auditVerdictText would actually
+  // produce for those counts: warnings lead when there are no criticals.
+  const verdict = html.match(/audit-card__verdict-line">([^<]+)</)?.[1] || "";
+  assert.equal(critical, 0, "mock assumes a no-critical audit");
+  assert.match(verdict, new RegExp(`^${warnings} issues? to review before training`));
+});
+
 test("nav uses 'Safety Lab', not the old 'Evals' label", () => {
   assert.ok(html.includes("<span>Safety Lab</span>"), "Safety Lab nav label present");
   assert.ok(!html.includes("<span>Evals</span>"), "old Evals nav label gone");
