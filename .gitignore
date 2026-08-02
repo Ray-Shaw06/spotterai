@@ -29,3 +29,8 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+.gstack/
+
+# Local-only brain context. Currently protected by .git/info/exclude, which is
+# machine-local and not versioned; keep it here too so a fresh clone is safe.
+CLAUDE.local.md
