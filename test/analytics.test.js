@@ -143,3 +143,23 @@ test("a storage failure over-reports rather than losing the activation", async (
     delete globalThis.localStorage;
   }
 });
+
+test("REGRESSION: plan_generation_succeeded never fires on the fallback path", () => {
+  // Found by /qa on 2026-08-03: a failed generation emitted
+  // plan_generation_succeeded/true alongside plan_fallback_shown, so the event
+  // named "succeeded" was recording failures. The funnel table read it
+  // correctly by accident; the name inverts the moment someone reads it fast.
+  const app = readFileSync(join(root, "app.js"), "utf8");
+  assert.doesNotMatch(
+    app,
+    /plan_generation_succeeded",\s*\{\s*fallback_used:\s*String\(/,
+    "the success event must not be parameterised on whether it failed"
+  );
+  assert.match(
+    app,
+    /trackFunnel\("plan_generation_succeeded",\s*\{\s*fallback_used:\s*"false"\s*\}\)/,
+    "the surviving call pins fallback_used to false so the existing series stays continuous"
+  );
+  // The fallback branch must still be recorded somewhere, or we lose the signal.
+  assert.match(app, /trackFunnel\("plan_fallback_shown"/);
+});

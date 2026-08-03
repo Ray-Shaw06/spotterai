@@ -225,9 +225,20 @@ async function generate(inputsOverride) {
   stopLoadingSteps();
   publishPlan(plan, inputs);
   renderResults(plan, inputs, usedFallback, { failureClass: fallbackFailureClass });
-  trackFunnel("plan_generation_succeeded", { fallback_used: String(usedFallback) });
-  if (usedFallback) trackFunnel("plan_fallback_shown", { failure_class: fallbackFailureClass });
-  if (!usedFallback) window.dispatchEvent(new CustomEvent("spotter:plan-generated"));
+  // Only a real generated plan counts as success. The fallback is a failure the
+  // user can still train on, and `plan_fallback_shown` already records it —
+  // firing "succeeded" there gave us an event whose name said success and whose
+  // `true` case meant failure, one careless read away from inverting the funnel.
+  //
+  // `fallback_used` stays, pinned to "false", purely so the existing
+  // /funnel/plan_generation_succeeded/false series keeps accumulating in the
+  // Vercel dashboard instead of splitting into a new path. It no longer varies.
+  if (usedFallback) {
+    trackFunnel("plan_fallback_shown", { failure_class: fallbackFailureClass });
+  } else {
+    trackFunnel("plan_generation_succeeded", { fallback_used: "false" });
+    window.dispatchEvent(new CustomEvent("spotter:plan-generated"));
+  }
 }
 
 // ----------------------------------------------------------------------------
