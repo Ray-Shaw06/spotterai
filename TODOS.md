@@ -119,21 +119,93 @@ compare against a per-case allowlist of expected flags rather than requiring zer
 
 ---
 
-## README says "11 checks"; the evaluator now runs 11 plus injuries
+## ~~README says "11 checks"~~ — SETTLED 2026-08-03
 
-**What:** `README.md:8` claims "audits every AI-generated plan against 11 checks".
-As of v1.3.0 a zero-injury audit returns 11 rows (`checkInjuries` is spread in and
-contributes 0 when no injuries are declared), so the real count is 11 + injuries.
-The same line was accurate at v1.2.0, when a zero-injury audit returned 10.
+The number is now defined as **checks that run on every plan = 11**, with injury
+checks additional and conditional. `README.md:8` already said 11 and is correct
+under that definition. `index.html` said 6 and was fixed by `/qa` (`66ad5bf`),
+and `test/ui-copy.test.js` now asserts the advertised count equals
+`evaluatePlan(...).checks.length` for a no-injury audit, so the definition is
+pinned by a test rather than by prose.
 
-**Why:** Small, but it is a public accuracy claim on the artifact most likely to be
-read by a recruiter or an HN visitor, in a project whose entire pitch is that its
-numbers are checkable.
+Still drifting but still true: `index.html:482` says "340+ tests"; the suite is
+at 370.
 
-**Context:** Found during `/review` of v1.3.0. `rule-explanations.js` has 13 entries,
-but two of those (`injury`, `substitution`) are not one-per-check, so pick the number
-deliberately rather than reading it off that array. `index.html:482` says "340+ tests"
-and the suite is now at 361, which is still true but drifting.
+---
+
+## Skipped onboarding steps become asserted facts in the audit
+
+**What:** `onboarding.js:61-67` fills `experience: "Beginner"` and
+`equipment: ["Bodyweight"]` for steps the user skipped, before the evaluator sees
+anything. The audit then reports those defaults as assessed findings.
+
+**Why:** Walked the funnel on 2026-08-03 skipping the two optional steps. The
+resulting audit showed `Beginner load sanity` as a **warning** ("14 exercises
+exceed RPE 8, which is aggressive for a beginner") and `Equipment fit` as a
+suggestion ("21 exercises need equipment you didn't list"). I never said I was a
+beginner and never declined to list equipment — I skipped the questions. Both
+flags are artifacts of manufactured answers, not properties of the plan. The
+Equipment fit copy even says "equipment you didn't list" while running against a
+default.
+
+This is the same false-precision the `not_assessed` tier removes. v1.3.0 fixed
+the import path (`if (!experience)`, `if (!caps)`) and left the **primary** path,
+because the defaulting happens upstream and the evaluator never sees a blank.
+
+**Context:** The fix has to separate two consumers that currently share one
+object. `buildPrompt` genuinely needs a conservative default (a generator with no
+experience level should assume beginner). The evaluator must not. Options: pass
+the raw onboarding answers to `evaluatePlan` alongside the generator-facing
+mapped inputs, or have `mapOnboardingToInputs` return `{ forGenerator, forAudit }`.
+Governed by `safety_evaluator_change.md` — direction is a tightening, not a
+loosening, but the regression case goes in first.
+
+**Effort:** M (human) → S (with CC)
+**Priority:** P1
+**Depends on:** nothing.
+
+---
+
+## `plan_generation_succeeded` fires when generation failed
+
+**What:** The event fires on the fallback path too, discriminated by
+`fallback_used`. So `/funnel/plan_generation_succeeded/true` means the canned
+example plan (failure) and `/false` means a real AI plan (success).
+
+**Why:** Confirmed on 2026-08-03 by walking the funnel against a server with no
+API route: the app emitted `plan_generation_succeeded/true` plus
+`plan_fallback_shown/unknown` after showing the saved example. The funnel table
+currently reads it correctly (`/false` = 4 = real plans), but an event whose name
+says success and whose `true` means failure inverts the first time someone reads
+it quickly, including you in three months.
+
+**Context:** Same class as the `first_workout_*` gating bug above. Renaming
+breaks continuity with existing Vercel dashboard data, which keys on the path, so
+decide deliberately: either rename and accept the discontinuity, or keep the name
+and add a note wherever the funnel is read. `plan_fallback_shown` already
+captures the failure case cleanly, so the simplest fix may be to stop firing
+`plan_generation_succeeded` at all when `fallback_used` is true.
+
+**Effort:** S (human) → S (with CC)
+**Priority:** P2
+**Depends on:** nothing.
+
+---
+
+## No security headers beyond HSTS
+
+**What:** `curl -sI https://spotterai.xyz/` returns only
+`strict-transport-security: max-age=63072000`. No `Content-Security-Policy`,
+`X-Frame-Options` / `frame-ancestors`, `X-Content-Type-Options: nosniff`, or
+`Referrer-Policy`.
+
+**Why:** Low for a local-first app with no destructive authenticated action, but
+there is Google sign-in and Firebase sync, and the site can currently be framed.
+A `headers` block in `vercel.json` covers all of it.
+
+**Context:** Found by `/qa` on 2026-08-03. CSP is the fiddly one because the app
+loads Google Fonts, MediaPipe, and Firebase from CDNs, so start with the three
+cheap headers and treat CSP as its own task.
 
 **Effort:** S (human) → S (with CC)
 **Priority:** P3
