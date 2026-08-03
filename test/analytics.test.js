@@ -58,3 +58,88 @@ test("a null generation response is classified as an invalid response", () => {
   const app = readFileSync(join(root, "app.js"), "utf8");
   assert.match(app, /plan = assertPlanShape\(data\?\.plan\);/);
 });
+
+// ============================================================================
+// Activation events must fire once per profile, ever.
+//
+// `first_workout_completed` used to fire on every addWorkout (workout-ui.js),
+// and `first_workout_started` once per browser session forever. Because the
+// owner trains and logs in the app, both stayed lit in every window and could
+// never show whether a stranger got going. Both the 2026-07-22 and 2026-08-02
+// traffic snapshots were misread as a result.
+// ============================================================================
+
+/** Stub window.va + a working localStorage, and hand back the recorded calls. */
+function withBrowser(run) {
+  const calls = [];
+  const mem = new Map();
+  globalThis.window = { va: (...args) => calls.push(args) };
+  globalThis.localStorage = {
+    getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)),
+    removeItem: (k) => mem.delete(k),
+  };
+  try {
+    return run(calls, mem);
+  } finally {
+    delete globalThis.window;
+    delete globalThis.localStorage;
+  }
+}
+
+test("REGRESSION: an activation event fires once and never again", async () => {
+  const { trackFunnelOnce } = await import("../analytics.js");
+  withBrowser((calls) => {
+    assert.equal(trackFunnelOnce("first_workout_completed", { source: "dashboard" }), true);
+    assert.equal(trackFunnelOnce("first_workout_completed", { source: "dashboard" }), false);
+    assert.equal(trackFunnelOnce("first_workout_completed", { source: "today" }), false);
+    assert.equal(calls.length, 1, "the owner's 40th workout must not look like an activation");
+    assert.equal(calls[0][1].path, "/funnel/first_workout_completed/dashboard");
+  });
+});
+
+test("the one-shot marker survives a reload, not just a session", async () => {
+  const { trackFunnelOnce } = await import("../analytics.js");
+  withBrowser((calls, mem) => {
+    trackFunnelOnce("first_workout_started", { source: "dashboard" });
+    const persisted = [...mem.entries()].find(([k]) => k.startsWith("spotterai.funnel.v1"));
+    assert.ok(persisted, "the marker must be written to storage, not held in memory");
+    assert.match(persisted[1], /first_workout_started/);
+    assert.equal(calls.length, 1);
+  });
+});
+
+test("ongoing volume still gets an event, under an honest name", async () => {
+  const { trackFunnel } = await import("../analytics.js");
+  withBrowser((calls) => {
+    for (let i = 0; i < 3; i++) trackFunnel("workout_completed", { source: "dashboard" });
+    assert.equal(calls.length, 3, "workout_completed is not an activation event; it fires every time");
+    assert.equal(calls[0][1].path, "/funnel/workout_completed/dashboard");
+  });
+});
+
+test("trackFunnelOnce refuses unregistered names like trackFunnel does", async () => {
+  const { trackFunnelOnce } = await import("../analytics.js");
+  withBrowser((calls) => {
+    assert.equal(trackFunnelOnce("not_a_real_event", {}), false);
+    assert.equal(calls.length, 0);
+  });
+});
+
+test("a storage failure over-reports rather than losing the activation", async () => {
+  const { trackFunnelOnce } = await import("../analytics.js");
+  const calls = [];
+  globalThis.window = { va: (...args) => calls.push(args) };
+  globalThis.localStorage = {
+    getItem: () => { throw new Error("disabled"); },
+    setItem: () => { throw new Error("disabled"); },
+    removeItem: () => {},
+  };
+  try {
+    assert.equal(trackFunnelOnce("first_workout_completed", { source: "plan" }), true);
+    assert.equal(calls.length, 1, "a blocked storage must not silently swallow the event");
+  } finally {
+    delete globalThis.window;
+    delete globalThis.localStorage;
+  }
+});

@@ -17,7 +17,7 @@ import { classifyExercise } from "./ai.js";
 import { epley1RM } from "./progression.js";
 import { store } from "./store.js";
 import { buildWorkoutSummary } from "./workout-summary.js";
-import { trackFunnel } from "./analytics.js";
+import { trackFunnel, trackFunnelOnce } from "./analytics.js";
 import { notifyRestComplete } from "./workout-alerts.js";
 
 const $ = (id) => document.getElementById(id);
@@ -324,7 +324,10 @@ function startSession(preset) {
   if (!session.startedAt) session.startedAt = Date.now();
   session.source = session.source || "dashboard";
   if (!session.editingId && !session.funnelStarted) {
-    trackFunnel("first_workout_started", { source: session.source });
+    // Activation only. trackFunnelOnce persists a per-profile marker, so this
+    // fires for a person's genuine first session and never again — previously
+    // it re-fired once per browser session forever, including for the owner.
+    trackFunnelOnce("first_workout_started", { source: session.source });
     session.funnelStarted = true;
   }
   // Re-attach "previous" references (not stored in routines/plans).
@@ -383,7 +386,13 @@ function finishSession() {
   const priorPRs = deriveStats().prs || {}; // capture BEFORE the workout is added
   const { workout, newAchievements } = addWorkout({ name: el.name.value.trim() || session.name, exercises, durationSec, difficulty: session.difficulty });
   if (workout) {
-    trackFunnel("first_workout_completed", { source });
+    // Two different questions, two different events. `workout_completed` is
+    // ongoing volume and fires every time. `first_workout_completed` is the
+    // activation metric and fires once per profile, ever — it used to fire on
+    // every addWorkout, so the owner's own training kept it lit in every
+    // window and it could never show whether a stranger got going.
+    trackFunnel("workout_completed", { source });
+    trackFunnelOnce("first_workout_completed", { source });
   }
   for (const a of newAchievements) toast(`Achievement · <strong>${esc(a.name)}</strong> · +${a.xp} XP`);
   session = null;
