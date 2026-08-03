@@ -23,6 +23,13 @@ test("mapped injuries only include evaluator-recognised areas; the rest go to no
   assert.match(i.injuryNotes, /overhead pressing/i);
 });
 
+test("choosing no current pain does not tell the generator that pain exists", () => {
+  const noPain = mapOnboardingToInputs({ currentPain: "no" });
+  const hasPain = mapOnboardingToInputs({ currentPain: "yes" });
+  assert.doesNotMatch(noPain.injuryNotes, /current discomfort/i);
+  assert.match(hasPain.injuryNotes, /current discomfort/i);
+});
+
 test("'return to consistency' adds a conservative note and a general goal", () => {
   const i = mapOnboardingToInputs({ goal: "consistency", trainingAge: "some" });
   assert.equal(i.goal, "General");
@@ -32,10 +39,64 @@ test("'return to consistency' adds a conservative note and a general goal", () =
 test("sensible defaults when fields are skipped (never blocks generation)", () => {
   const i = mapOnboardingToInputs({});
   assert.equal(i.goal, "General");
-  assert.equal(i.experience, "Beginner");
   assert.ok(i.daysPerWeek >= 2);
-  assert.deepEqual(i.equipment, ["Bodyweight"]);
+  assert.ok(i.sessionLength >= 20);
   assert.equal(i.injuryNotes, "");
+});
+
+// ============================================================================
+// Skipped questions must stay blank, not become invented answers.
+//
+// Found by /qa on 2026-08-03: walking onboarding and skipping the two optional
+// steps produced an audit reading "14 exercises exceed RPE 8, which is
+// aggressive for a beginner" and "21 exercises need equipment you didn't list".
+// Neither was true of the user. mapOnboardingToInputs filled experience
+// "Beginner" and equipment ["Bodyweight"], and the evaluator reported those
+// invented answers as assessed findings.
+//
+// The generator still gets a conservative default: api/generate.js buildPrompt
+// already does `inputs.experience || "Beginner"` and falls back to
+// "bodyweight only" for empty equipment, so nothing downstream needs the lie.
+// ============================================================================
+
+test("REGRESSION: skipping the experience question leaves it blank, not 'Beginner'", () => {
+  assert.equal(mapOnboardingToInputs({ goal: "muscle" }).experience, "");
+  assert.equal(mapOnboardingToInputs({ goal: "muscle", trainingAge: "new" }).experience, "Beginner");
+});
+
+test("REGRESSION: skipping the equipment question leaves it empty, not ['Bodyweight']", () => {
+  assert.deepEqual(mapOnboardingToInputs({ goal: "muscle" }).equipment, []);
+  assert.deepEqual(mapOnboardingToInputs({ goal: "muscle", equipment: ["Bodyweight"] }).equipment, ["Bodyweight"]);
+});
+
+test("REGRESSION: a skipped step is audited as not-assessed, never as a flag", async () => {
+  const { evaluatePlan } = await import("../evaluator.js");
+  const ex = (name, sets, reps, rpe) => ({ name, sets, reps, rpe, notes: "" });
+  const plan = {
+    program_name: "P",
+    goal: "Hypertrophy",
+    days_per_week: 3,
+    progression: "Add 2.5kg to the main lift when you hit the top of the rep range on every set.",
+    general_notes: "",
+    days: [
+      { day: "Day", focus: "Push", exercises: [ex("Barbell Bench Press", 4, "6-8", 9), ex("Overhead Press", 3, "8-10", 9)] },
+      { day: "Day", focus: "Pull", exercises: [ex("Barbell Row", 4, "6-8", 9), ex("Lat Pulldown", 3, "10-12", 9)] },
+      { day: "Day", focus: "Legs", exercises: [ex("Back Squat", 4, "6-8", 9), ex("Romanian Deadlift", 3, "8-10", 9)] },
+      { day: "Rest", focus: "Rest", exercises: [] },
+    ],
+  };
+
+  // RPE 9 throughout: this WOULD trip beginner_load if we claimed beginner.
+  const skipped = evaluatePlan(plan, mapOnboardingToInputs({ goal: "muscle" }));
+  const bl = skipped.checks.find((c) => c.id === "beginner_load");
+  const ef = skipped.checks.find((c) => c.id === "equipment_fit");
+  assert.equal(bl.tier, "not_assessed", "never said we were a beginner, so do not judge us as one");
+  assert.equal(ef.tier, "not_assessed", "never listed equipment, so do not judge the plan against a guess");
+  assert.ok(skipped.summary.not_assessed >= 2);
+
+  // Answering the question turns the gap into a real finding.
+  const declared = evaluatePlan(plan, mapOnboardingToInputs({ goal: "muscle", trainingAge: "new" }));
+  assert.equal(declared.checks.find((c) => c.id === "beginner_load").status, "warn");
 });
 
 test("internal measurement correction state never enters mapped plan inputs", () => {

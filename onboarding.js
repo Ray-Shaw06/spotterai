@@ -53,16 +53,35 @@ export function mapOnboardingToInputs(d = {}) {
   if ((d.avoid || "").trim()) notes.push(d.avoid.trim());
   const unmapped = (d.safetyAreas || []).filter((a) => !INJURY_KEYS.has(a));
   if (unmapped.length) notes.push(`Take care of: ${unmapped.join(", ")}.`);
-  if (d.currentPain) notes.push("Has current discomfort; keep intensity conservative.");
+  if (d.currentPain === "yes") notes.push("Has current discomfort; keep intensity conservative.");
   if (d.goal === "consistency") notes.push("Returning to consistency; start conservative and build the habit.");
   if ((d.dislikes || "").trim()) notes.push(`Dislikes: ${d.dislikes.trim()}.`);
 
+  // Two classes of field here, and the difference matters.
+  //
+  // `goal`, `daysPerWeek` and `sessionLength` shape the GENERATOR only; no
+  // evaluator check reads them, so a default costs nothing and keeps generation
+  // unblocked.
+  //
+  // `experience` and `equipment` are read by the AUDIT (checkBeginnerLoad,
+  // checkEquipmentFit). Defaulting those turns a question the user skipped into
+  // an answer we assert back at them: before this, skipping the intake produced
+  // "14 exercises exceed RPE 8, which is aggressive for a beginner" for someone
+  // who never said they were a beginner. They stay blank so the evaluator can
+  // report them as not-assessed, which is the honest answer and the whole point
+  // of that tier (v1.3.0).
+  //
+  // The generator loses nothing: api/generate.js buildPrompt already applies
+  // `inputs.experience || "Beginner"` and falls back to "bodyweight only" when
+  // equipment is empty. The conservative default lives where it belongs, at the
+  // point of use, instead of being baked in upstream where it destroys the
+  // distinction between "bodyweight" and "we never asked".
   return {
     goal: goalOpt ? goalOpt.goal : "General",
-    experience: ageOpt ? ageOpt.experience : "Beginner",
+    experience: ageOpt ? ageOpt.experience : "",
     daysPerWeek: Number(d.days) || 3,
     sessionLength: Number(d.sessionLength) || 45,
-    equipment: d.equipment && d.equipment.length ? d.equipment : ["Bodyweight"],
+    equipment: d.equipment && d.equipment.length ? d.equipment : [],
     injuries,
     injuryNotes: notes.join(" ").trim(),
   };

@@ -129,14 +129,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed. Use POST." });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    // Misconfiguration — tell the client clearly so it can fall back.
-    return res.status(500).json({
-      error: "Server is missing GEMINI_API_KEY. Add it as an environment variable.",
-    });
-  }
-
   // Vercel parses JSON bodies automatically, but guard for raw strings too.
   let inputs = req.body;
   if (typeof inputs === "string") {
@@ -146,7 +138,38 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Invalid request body." });
     }
   }
-  inputs = inputs || {};
+
+  // A request carrying no profile is not a plan request. Without this gate
+  // `curl -X POST .../api/generate -d '{}'` returned 200 and a full plan:
+  // buildPrompt defaults every field, so an empty body still reached Gemini.
+  // This is the most expensive of the four functions (60s budget, 4096 output
+  // tokens, up to MAX_RETRIES+1 model calls per request), and the free-tier key
+  // is shared with /api/chat, /api/estimate and /api/parse — so exhausting it
+  // here takes plan generation down for real users. The other three functions
+  // already refuse an empty payload; this one did not.
+  //
+  // Ordered before the key lookup on purpose, so junk traffic gets a plain 400
+  // instead of a 500 naming the environment variable we are missing.
+  const PROFILE_FIELDS = ["goal", "experience", "daysPerWeek", "sessionLength", "equipment", "injuries", "injuryNotes"];
+  const hasProfile =
+    !!inputs &&
+    typeof inputs === "object" &&
+    !Array.isArray(inputs) &&
+    PROFILE_FIELDS.some((f) => {
+      const v = inputs[f];
+      return Array.isArray(v) ? v.length > 0 : v != null && v !== "";
+    });
+  if (!hasProfile) {
+    return res.status(400).json({ error: "Missing training profile. Send at least a goal." });
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    // Misconfiguration — tell the client clearly so it can fall back.
+    return res.status(500).json({
+      error: "Server is missing GEMINI_API_KEY. Add it as an environment variable.",
+    });
+  }
 
   const prompt = buildPrompt(inputs);
 

@@ -11,7 +11,7 @@
  * and in CI — no mock numbers where a real one is available.
  */
 
-import { CASES, runEvalSuite } from "./eval-suite.js";
+import { CASES, runEvalSuite, isRiskyCase } from "./eval-suite.js";
 import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
 import { RULE_EXPLANATIONS, TRAINING_PRINCIPLES, PRINCIPLES_NOTE } from "./rule-explanations.js";
 
@@ -24,7 +24,9 @@ function esc(t) {
 }
 
 // A case is "risky" if it expects the evaluator to flag something.
-const isRisky = (c) => c.expect.some((e) => (e.status && e.status !== "pass") || "scoreAtMost" in e);
+// Shared with eval.mjs and the benchmark test, so the public number and the
+// CLI number are the same number.
+const isRisky = isRiskyCase;
 
 /** Real benchmark numbers from the suite + a measured average audit time. */
 function benchmark() {
@@ -34,7 +36,10 @@ function benchmark() {
   const safe = paired.filter((x) => !isRisky(x.c));
 
   const riskyCaught = risky.filter((x) => x.r.passed).length;
-  const falsePositives = safe.filter((x) => !x.r.passed).length;
+  // A safe plan raising a flag nobody sanctioned. Counts FLAGS, not expectation
+  // failures — the old formula never looked at `flagged`, so this public number
+  // could read 0 while known-good fixtures lit up.
+  const falsePositives = safe.filter((x) => x.r.unexpectedFlags.length > 0).length;
   const casesPass = results.filter((r) => r.passed).length;
   const expPass = results.reduce((n, r) => n + r.expectations.filter((e) => e.ok).length, 0);
   const expTotal = results.reduce((n, r) => n + r.expectations.length, 0);
@@ -97,9 +102,21 @@ const BAD_PLANS = [
 ];
 
 const PRIVACY = {
-  local: ["Workout logs", "Meal logs", "Progress data", "Profiles", "Webcam video (form check)"],
-  sent: ["Workout-generation inputs", "Plan context", "Coach chat messages", "Adaptation context"],
-  never: ["Raw webcam video (form check runs on-device)", "Local-only profile data, unless you include it in a generation request"],
+  local: [
+    "Workout, meal, progress, pain, and profile data are stored in this browser by default",
+    "Raw webcam video stays on-device during form check",
+    "Plan adaptation runs locally, without an AI request",
+  ],
+  sent: [
+    "Plan-generation intake",
+    "Coach messages plus the current plan and a recent tracker summary",
+    "Food descriptions, meal photos, new exercise names, and quick-log text",
+  ],
+  services: [
+    "Google Gemini processes AI requests; Groq may process text requests when Gemini is unavailable",
+    "Vercel hosts the app and APIs; Vercel Web Analytics receives allow-listed funnel pageviews, never workout, meal, or message content",
+    "Firebase stores tracker data plus Google account name and email only after you choose Cloud sync",
+  ],
 };
 
 const ARCH = [
@@ -207,11 +224,11 @@ function render() {
       <h3 class="lab-block__title">Privacy &amp; data</h3>
       <p class="lab-block__sub">Fitness data is personal, so SpotterAI is explicit about what stays on your device and what is used for AI features.</p>
       <div class="privacy-grid">
-        ${privacyCol("Stays on your device", PRIVACY.local, "local")}
-        ${privacyCol("May be sent to AI", PRIVACY.sent, "sent")}
-        ${privacyCol("Never sent", PRIVACY.never, "never")}
+        ${privacyCol("Stored locally by default", PRIVACY.local, "local")}
+        ${privacyCol("Sent for AI features", PRIVACY.sent, "sent")}
+        ${privacyCol("Service providers", PRIVACY.services, "never")}
       </div>
-      <p class="privacy-controls">You're in control: <strong>export</strong>, <strong>import</strong>, <strong>delete local data</strong>, or <strong>reset the demo profile</strong> from the account menu (bottom-left). No account is required and there are no third-party trackers.</p>
+      <p class="privacy-controls">No account is required. The Account menu can export or import <strong>tracker data</strong>, clear local data, and control optional Cloud sync. Current limitation: tracker backups and Cloud sync do not include your generated plan or local profile shell yet.</p>
     </div>`;
 
   const tech = `

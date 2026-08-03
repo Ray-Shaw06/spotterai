@@ -45,6 +45,14 @@ export const THRESHOLDS = {
   BALANCE_RATIO_FAIL: 3.0, // one side > 3× the other → strong imbalance (fail)
   BALANCE_MIN_SETS_TO_JUDGE: 4, // need at least this much upper volume to assess
 
+  // --- Goal fit (general / fat-loss bucket) ---------------------------------
+  GENERAL_MIN_LIFTS_TO_JUDGE: 4, // need this many numeric-rep lifts before judging shape
+  GENERAL_MAX_AVG_REPS: 15, // whole-week average above this is endurance-biased
+  GENERAL_UNIFORM_MIN_REPS: 8, // below this, one uniform rep target is a strength template, not a defect
+
+  // --- Progressive overload -------------------------------------------------
+  PROGRESSION_MIN_SIGNALS: 2, // distinct progression words needed to count as a scheme
+
   // --- Beginner load sanity -------------------------------------------------
   BEGINNER_MAX_RPE: 8, // beginners should rarely exceed RPE 8
   BEGINNER_MAXOUT_RPE: 10, // prescribing RPE 10 to a beginner is a hard flag
@@ -88,6 +96,10 @@ export const PENALTY = {
   // Equipment fit is a usability note, not a safety flag; zero-weight so it
   // surfaces without penalizing the score.
   equipment_fit: { warn: 0, fail: 0 },
+  // Progressive overload is a programming-quality note. Zero-weight on
+  // introduction (v1.3.0) so adding the check cannot regress any existing
+  // case's score — same discipline used for muscle_frequency and equipment_fit.
+  progressive_overload: { warn: 0, fail: 0 },
 };
 
 // ============================================================================
@@ -149,6 +161,28 @@ export const MUSCLE_KEYWORDS = {
 // Which groups count as "push" vs "pull" for the upper-body balance check.
 export const PUSH_GROUPS = ["chest", "shoulders", "triceps"];
 export const PULL_GROUPS = ["back", "biceps"];
+
+/**
+ * Words that indicate a real progression instruction rather than encouragement.
+ *
+ * Matched at a WORD BOUNDARY, never as a bare substring. That distinction is
+ * load-bearing: as plain substrings, "prepare" counts as "rep" and — worse —
+ * "progress" contains "pr", so a note reading only "Progress over time." scored
+ * two signals off one concept and passed as a concrete rule. "pr" is gone for
+ * that reason; a personal record is a result, not an instruction.
+ */
+export const PROGRESSION_SIGNALS = [
+  "add", "increase", "heavier", "more weight", "rep", "set", "rpe",
+  "week", "progress", "load", "deload", "top of the range", "double progression",
+  "amrap", "microload", "personal record",
+];
+
+/**
+ * A load written as a number plus a unit: "2.5kg", "5 lbs", "10%". The leading
+ * digit is required, so "elbow" cannot be read as "lb" — a plausible word in a
+ * training note and otherwise a free second signal.
+ */
+const PROGRESSION_LOAD_RE = /\d\s*(?:kgs?|lbs?|pounds?|kilos?|%)/;
 
 // Prime movers we expect to see trained for muscle-building goals.
 const PRIME_MOVERS = ["chest", "back", "quads", "hamstrings", "shoulders"];
@@ -489,7 +523,21 @@ function checkInjuries(plan, userInputs) {
 function checkBeginnerLoad(plan, volume, userInputs) {
   const id = "beginner_load";
   const label = "Beginner load sanity";
-  const isBeginner = norm(userInputs.experience).includes("beginner");
+  const experience = norm(userInputs.experience);
+  const isBeginner = experience.includes("beginner");
+
+  // Unknown experience is NOT a pass. Before v1.3.0 this returned a reassuring
+  // "advanced intensity is appropriate" for anyone whose experience we had never
+  // asked for — inventing a safety judgement from no information, in a product
+  // whose whole claim is that it does not do that.
+  if (!experience) {
+    return finalize(
+      id,
+      label,
+      "not_assessed",
+      "We do not know your training experience, so beginner-intensity limits were not checked. Tell us your experience level and this check will run."
+    );
+  }
 
   if (!isBeginner) {
     return finalize(id, label, "pass", "Not a beginner, advanced intensity is appropriate when well managed.");
@@ -537,8 +585,90 @@ function checkGoalFit(plan, userInputs, goal) {
     return finalize(id, label, "pass", "Rep ranges sit in a sensible hypertrophy zone.");
   }
 
-  // Fat loss / general: structure is flexible, so this stays light.
+  // Fat loss / general: there is no single "correct" rep range, so this used to
+  // pass unconditionally. That made the check vacuous for exactly the plans that
+  // need it most: `lib/plan.js` defaults a goal-less plan (a pasted or imported
+  // one) into this bucket. Judge the SHAPE instead of the number — a week where
+  // every exercise sits at the identical rep target is a list, not a program.
+  //
+  // Gated on the rep target itself: a whole week at 5s is a novice linear
+  // progression (5x5, Starting Strength) where uniformity IS the design and the
+  // load is what moves. Telling that user to "vary the main lifts from the
+  // accessories" would break a program that works. A whole week at 12s is the
+  // chatbot signature. Only the second one is a finding.
+  const distinctTargets = new Set(reps.map((r) => r.avg));
+  if (
+    reps.length >= THRESHOLDS.GENERAL_MIN_LIFTS_TO_JUDGE &&
+    distinctTargets.size === 1 &&
+    avgReps >= THRESHOLDS.GENERAL_UNIFORM_MIN_REPS
+  ) {
+    return finalize(
+      id,
+      label,
+      "warn",
+      `Every exercise is prescribed at the same rep target (~${round(avgReps)}). A week with no variation in rep range trains one quality only, and it gives you nothing to progress toward. Vary the main lifts from the accessories.`
+    );
+  }
+  if (avgReps != null && avgReps > THRESHOLDS.GENERAL_MAX_AVG_REPS) {
+    return finalize(
+      id,
+      label,
+      "warn",
+      `Average rep target is ~${round(avgReps)} across the whole week, which is high for general training. Very high reps build endurance more than strength or size, so pull the main lifts down toward 6-12.`
+    );
+  }
   return finalize(id, label, "pass", `Program structure is reasonable for a ${goal.replace("_", " ")} goal.`);
+}
+
+/**
+ * Progressive overload — is a progression scheme actually stated?
+ *
+ * The plan model is a single WEEK, so this cannot verify that load goes up over
+ * time; there is no week 2 to compare against. What it can do is check that the
+ * plan says how to progress at all, and that the answer is concrete rather than
+ * encouragement. That distinction is the single most common failure in a plan
+ * pasted out of a chatbot: it prescribes a week and never tells you what to do
+ * with it next week.
+ *
+ * The detail string states this limitation explicitly rather than implying a
+ * stronger guarantee than the check can make.
+ *
+ * Suggestion-tier, zero-weight on introduction (see PENALTY).
+ */
+function checkProgressiveOverload(plan) {
+  const id = "progressive_overload";
+  const label = "Progressive overload";
+  const text = norm(plan && plan.progression);
+
+  if (!text) {
+    return finalize(
+      id,
+      label,
+      "warn",
+      "This plan does not say how to progress. Without a rule for adding weight or reps, you repeat the same week indefinitely and stop adapting after a few weeks."
+    );
+  }
+
+  // Count DISTINCT progression signals. One stray word ("work hard every week")
+  // is not a scheme; two or more is a real instruction. Word-boundary matching,
+  // so "prepare" is not a rep scheme and "progress" is one signal, not two.
+  const matched = PROGRESSION_SIGNALS.filter((sig) => new RegExp(`\\b${sig}`).test(text));
+  if (PROGRESSION_LOAD_RE.test(text)) matched.push("numeric load");
+  if (matched.length < THRESHOLDS.PROGRESSION_MIN_SIGNALS) {
+    return finalize(
+      id,
+      label,
+      "warn",
+      `The progression note ("${String(plan.progression).slice(0, 80)}") does not describe a concrete rule. Say what goes up and when, for example add 2.5kg to the main lift when you hit the top of the rep range on every set.`
+    );
+  }
+
+  return finalize(
+    id,
+    label,
+    "pass",
+    "The plan states a concrete progression rule. Note this checks that a scheme exists and is specific, not that the rate of progression suits you."
+  );
 }
 
 /** Quad / hamstring balance — antagonist check that supports knee health. */
@@ -608,7 +738,7 @@ function checkEquipmentFit(plan, userInputs) {
   const caps = equipmentCapabilities(userInputs.equipment);
 
   if (!caps) {
-    return finalize(id, label, "pass", "No equipment was specified, so exercise availability wasn't assessed.");
+    return finalize(id, label, "not_assessed", "No equipment was specified, so exercise availability wasn't assessed. Tell us what you have access to and this check will run.");
   }
 
   const missing = [];
@@ -674,7 +804,7 @@ function checkCoverage(plan) {
 // ============================================================================
 
 /** A stable version string surfaced in the Trust Report. Bump on rubric change. */
-export const EVALUATOR_VERSION = "v1.2.0";
+export const EVALUATOR_VERSION = "v1.3.0";
 
 /** Suggested fixes for the non-injury checks, keyed by check id. */
 const REMEDIES = {
@@ -692,6 +822,21 @@ const REMEDIES = {
   goal_fit: { fix: "Shift rep ranges toward your goal, lower reps (≈3–6) for strength, ≈6–15 for hypertrophy." },
   muscle_frequency: { fix: "Split that muscle's weekly sets across two sessions (for example, half on one day and half on another) rather than one big session." },
   equipment_fit: { fix: "Swap exercises that need unavailable equipment for ones your gear supports, or update the equipment in your profile." },
+  // Added v1.3.0. These three checks could flag with no advice attached, because
+  // remedyFor returned {} for any id missing from this table.
+  leg_balance: {
+    fix: "Add direct hamstring work, or trim quad volume, until the two are closer to even.",
+    alternatives: ["Romanian deadlift", "Lying leg curl", "Seated leg curl", "Good morning", "Nordic curl"],
+  },
+  session_load: {
+    fix: "Move some of that session's work to another day. Quality per set drops late in a very long workout.",
+  },
+  coverage: {
+    fix: "Rename the unrecognized lifts to their standard names (for example \"DB bench\" to \"Dumbbell Bench Press\") so the volume and injury checks run on them properly.",
+  },
+  progressive_overload: {
+    fix: "State one concrete rule, for example: add 2.5kg to the main lift when you hit the top of the rep range on every set, then drop back to the bottom.",
+  },
 };
 
 /**
@@ -702,10 +847,17 @@ const REMEDIES = {
  *   pass      — no concern
  */
 function tierFor(check) {
+  // "Not assessed" is its own tier, checked FIRST. Without this it falls all the
+  // way through to the default `return "warning"` below and renders as a warning
+  // about the user's plan, when it is really a statement about our own inputs.
+  if (check.status === "not_assessed") return "not_assessed";
   if (check.status === "pass") return "pass";
   if (check.id === "invalid_plan") return "critical";
   // Quality / optimization / transparency notes, not safety flags.
-  if (check.id === "goal_fit" || check.id === "leg_balance" || check.id === "coverage" || check.id === "muscle_frequency" || check.id === "equipment_fit") return "suggestion";
+  // `progressive_overload` belongs here with the other zero-weight quality
+  // notes: at "warning" it reads as a safety concern, and trust.js drops the
+  // Trust Report from High to Medium on a plan with nothing unsafe about it.
+  if (check.id === "goal_fit" || check.id === "leg_balance" || check.id === "coverage" || check.id === "muscle_frequency" || check.id === "equipment_fit" || check.id === "progressive_overload") return "suggestion";
   if (check.id.startsWith("injury_")) return check.status === "fail" ? "critical" : "warning";
   const CRITICAL_ON_FAIL = new Set(["rest_days", "weekly_volume", "beginner_load", "session_load"]);
   if (check.status === "fail" && CRITICAL_ON_FAIL.has(check.id)) return "critical";
@@ -725,9 +877,11 @@ function remedyFor(check) {
 
 /** Roll the checks up into the counts the flags-first UI leads with. */
 function summarize(checks) {
-  const s = { critical: 0, warning: 0, suggestion: 0, pass: 0, total: checks.length };
+  const s = { critical: 0, warning: 0, suggestion: 0, pass: 0, not_assessed: 0, total: checks.length };
   for (const c of checks) s[c.tier] = (s[c.tier] || 0) + 1;
   s.passed = s.pass;
+  // Unassessed checks are deliberately excluded from BOTH passed and flags: they
+  // are neither a clean bill of health nor a problem with the plan.
   s.flags = s.critical + s.warning + s.suggestion;
   return s;
 }
@@ -774,6 +928,7 @@ export function evaluatePlan(plan, userInputs = {}) {
     checkMuscleFrequency(plan, volume, frequency, goal),
     checkEquipmentFit(plan, userInputs),
     checkSessionLoad(plan),
+    checkProgressiveOverload(plan),
     ...checkInjuries(plan, userInputs),
     checkBeginnerLoad(plan, volume, userInputs),
     checkGoalFit(plan, userInputs, goal),

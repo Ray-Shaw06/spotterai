@@ -46,10 +46,15 @@ test("equipment_fit flags gym lifts for a bodyweight user (suggestion, zero scor
   assert.doesNotMatch(c.detail, /Push-up/, "the bodyweight move is fine");
 });
 
-test("equipment_fit passes when equipment is unspecified", () => {
+test("equipment_fit reports not-assessed when equipment is unspecified", () => {
+  // v1.3.0: unspecified equipment used to return a PASS, which told the user
+  // their plan was fine on a dimension we had never checked. It is now reported
+  // as not assessed, so an unanswered question can never read as a clean result.
   const p = plan([day("Full body", [ex("Leg Press"), ex("Barbell Bench Press")]), day("Rest", [])]);
   const audit = evaluatePlan(p, { goal: "Hypertrophy" });
-  assert.equal(check(audit, "equipment_fit").status, "pass");
+  const c = check(audit, "equipment_fit");
+  assert.equal(c.status, "not_assessed");
+  assert.equal(c.tier, "not_assessed");
 });
 
 test("equipment_fit passes for a full-gym user", () => {

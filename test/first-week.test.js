@@ -16,6 +16,11 @@ test("there are 7 days, each with a title, checklist, and CTA", () => {
   }
 });
 
+test("first-week welcome never says every generated plan passed its audit", () => {
+  assert.doesNotMatch(`${FIRST_WEEK_DAYS[0].title} ${FIRST_WEEK_DAYS[0].line}`, /plan passed|passed a code-based/i);
+  assert.match(`${FIRST_WEEK_DAYS[0].title} ${FIRST_WEEK_DAYS[0].line}`, /audit|check/i);
+});
+
 test("dayContent clamps out-of-range indices (no crash)", () => {
   assert.equal(dayContent(-3), FIRST_WEEK_DAYS[0]);
   assert.equal(dayContent(99), FIRST_WEEK_DAYS[6]);

@@ -27,7 +27,7 @@ test("risky plans are caught and good/guard plans are not over-flagged", () => {
   const risky = paired.filter((x) => isRisky(x.c));
   const safe = paired.filter((x) => !isRisky(x.c));
   assert.equal(risky.filter((x) => x.r.passed).length, risky.length, "all risky plans caught");
-  assert.equal(safe.filter((x) => !x.r.passed).length, 0, "no false positives");
+  assert.equal(safe.filter((x) => x.r.unexpectedFlags.length > 0).length, 0, "no false positives");
 });
 
 test("false-positive guard cases exist and pass", () => {
@@ -41,4 +41,43 @@ test("each result carries a scenario type and the flags it triggered", () => {
     assert.ok(["good", "risky", "edge", "guard"].includes(r.type));
     assert.ok(Array.isArray(r.flagged));
   }
+});
+
+// ============================================================================
+// The false-positive counter has to be able to reach a non-zero value.
+//
+// Found during /qa on 2026-08-03: eval.mjs, safety-lab.js and this file all
+// computed "Safe plans incorrectly flagged" as `safe.filter(x => !x.r.passed)`
+// — the number of safe cases whose own `expect` list failed. It never looked at
+// `flagged`, so a known-good fixture could light up and the public number on the
+// landing page still read 0. Two fixtures were doing exactly that.
+// ============================================================================
+
+test("REGRESSION: an unsanctioned flag on a safe plan is actually counted", async () => {
+  const { unexpectedFlags } = await import("../eval-suite.js");
+  const cse = { allowedFlags: ["Push / pull balance"] };
+
+  assert.deepEqual(unexpectedFlags(cse, { flagged: ["Push / pull balance"] }), [], "sanctioned flags are not false positives");
+  assert.deepEqual(
+    unexpectedFlags(cse, { flagged: ["Push / pull balance", "Rest days"] }),
+    ["Rest days"],
+    "an unsanctioned flag must surface, or the counter can never leave zero"
+  );
+  assert.deepEqual(unexpectedFlags({}, { flagged: ["Rest days"] }), ["Rest days"], "no allowlist means every flag counts");
+});
+
+test("every sanctioned flag is one the fixture really raises", async () => {
+  // Stops an allowlist from quietly growing into a blindfold: an entry that no
+  // longer fires is either a fixed bug or a typo, and either way it would let a
+  // future real false positive through under the same label.
+  const { CASES, runEvalSuite } = await import("../eval-suite.js");
+  const results = runEvalSuite();
+  CASES.forEach((cse, i) => {
+    for (const label of cse.allowedFlags || []) {
+      assert.ok(
+        results[i].flagged.includes(label),
+        `"${cse.name}" allows "${label}" but no longer raises it — drop it from allowedFlags`
+      );
+    }
+  });
 });

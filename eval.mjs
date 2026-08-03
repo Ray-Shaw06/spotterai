@@ -4,10 +4,12 @@
  * Runs the same red-team suite the Safety Lab and CI use, and prints the
  * benchmark to the terminal. Pure, zero-dependency — no browser needed.
  */
-import { runEvalSuite, CASES, caseType } from "./eval-suite.js";
+import { runEvalSuite, CASES, caseType, isRiskyCase } from "./eval-suite.js";
 import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
 
-const isRisky = (c) => c.expect.some((e) => (e.status && e.status !== "pass") || "scoreAtMost" in e);
+// "risky" and "false positive" are defined once in eval-suite.js so the CLI,
+// the public Safety Lab page and the benchmark test cannot drift apart.
+const isRisky = isRiskyCase;
 
 const results = runEvalSuite();
 const paired = CASES.map((c, i) => ({ c, r: results[i] }));
@@ -33,7 +35,7 @@ console.log(pad("Test cases run", 32), results.length);
 console.log(pad("Expectations passed", 32), `${expPass}/${expTotal}`);
 console.log(pad("Expectations failed", 32), expTotal - expPass);
 console.log(pad("Risky plans caught", 32), `${risky.filter((x) => x.r.passed).length}/${risky.length}`);
-console.log(pad("Safe plans incorrectly flagged", 32), safe.filter((x) => !x.r.passed).length);
+console.log(pad("Safe plans incorrectly flagged", 32), safe.filter((x) => x.r.unexpectedFlags.length > 0).length);
 console.log(pad("Average audit time", 32), `${avgMs < 1 ? avgMs.toFixed(3) : Math.round(avgMs)} ms`);
 console.log(pad("Evaluator version", 32), EVALUATOR_VERSION);
 console.log(pad("Regression status", 32), ok ? "Passing" : "Needs review");

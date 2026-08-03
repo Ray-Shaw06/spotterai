@@ -17,6 +17,7 @@ const META_KEY = "spotterai.profiles.v1";
 const TRACKER_BASE = "spotterai.tracker.v1";
 const PLAN_BASE = "spotterai.plan.v1";
 const AUDIT_HISTORY_BASE = "spotterai.audit.v1";
+const FUNNEL_BASE = "spotterai.funnel.v1";
 
 function loadMeta() {
   try {
@@ -87,6 +88,15 @@ export function planKey(id = getActiveId()) {
 /** Storage key for the active profile's plan-audit history (score over versions). */
 export function auditHistoryKey(id = getActiveId()) {
   return `${AUDIT_HISTORY_BASE}::${id}`;
+}
+
+/**
+ * Storage key for the active profile's one-shot funnel markers.
+ * Profile-scoped on purpose: a new profile is a new person, and their first
+ * workout is a real activation even on a device that has seen one before.
+ */
+export function funnelKey(id = getActiveId()) {
+  return `${FUNNEL_BASE}::${id}`;
 }
 
 export function listProfiles() {

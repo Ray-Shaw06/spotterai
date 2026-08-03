@@ -33,6 +33,8 @@ test("an active injury produces a limitation-aware coach note", () => {
   assert.equal(n.tone, "warn");
   assert.match(n.text, /knee/i);
   assert.match(n.text, /check in if anything hurts/i);
+  assert.doesNotMatch(n.text, /caps related volume|automatically swaps/i);
+  assert.match(n.text, /audit|flag|limitation/i);
 });
 
 test("hitting the weekly target is celebrated; being behind is encouraged without shame", () => {

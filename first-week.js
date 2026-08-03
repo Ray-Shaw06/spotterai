@@ -8,7 +8,7 @@
 
 // Day 0 → Day 6, then a review. `items` keys map to stat-derived booleans in the UI.
 export const FIRST_WEEK_DAYS = [
-  { title: "Welcome! Your plan is audited", line: "Your plan passed a code-based safety audit. Take a look, then preview your first workout.", items: [{ text: "Review your plan + its safety audit", key: "hasPlan" }], cta: { label: "See today's workout", act: "today" } },
+  { title: "Welcome! Your plan has been audited", line: "SpotterAI checked your plan with code. Review any flags and limitations, then preview your first workout.", items: [{ text: "Review your plan + its safety audit", key: "hasPlan" }], cta: { label: "See today's workout", act: "today" } },
   { title: "Your first workout", line: "Keep it a touch conservative today: leave a rep or two in reserve and focus on clean form.", items: [{ text: "Complete workout 1", key: "workoutToday" }, { text: "Rate how it felt afterwards", key: "ratedToday" }], cta: { label: "Start workout", act: "workout" } },
   { title: "Recovery day", line: "Rest is part of the plan. A little easy movement, good food, and sleep are doing real work.", items: [{ text: "Log a meal or your bodyweight", key: "loggedToday" }], cta: { label: "Log nutrition", act: "nutrition" } },
   { title: "Workout 2", line: "Going well? Note your RPE, and report any niggles instead of pushing through them.", items: [{ text: "Complete workout 2", key: "workoutToday" }], cta: { label: "Start workout", act: "workout" } },
