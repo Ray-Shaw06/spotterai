@@ -116,6 +116,10 @@ export const CASES = [
     // which would break a program that works.
     name: "Novice 5x5 linear progression (rep-shape guard)",
     desc: "Every lift at 5 reps by design, with a concrete load progression. The rep-shape and progression checks must stay quiet here. The push/pull and quad/hamstring flags it does raise are real, long-standing criticisms of 5x5, not false positives.",
+    // Sanctioned: a real 5x5 runs two squat days against one deadlift, and two
+    // presses against one row. Both are fair criticisms of the program, so they
+    // are not counted against the false-positive rate. Any OTHER flag here is.
+    allowedFlags: ["Push / pull balance", "Quad / hamstring balance"],
     inputs: {},
     plan: plan(
       [
@@ -193,6 +197,9 @@ export const CASES = [
   {
     name: "Knee-aware plan (false-positive guard)",
     desc: "Knee injury declared, but every lift is knee-friendly, the injury check must NOT fire.",
+    // Sanctioned: this fixture is two days and 12 working sets, built only to
+    // exercise the knee check, so the low-volume flag is correct about it.
+    allowedFlags: ["Weekly volume sanity"],
     inputs: { goal: "Hypertrophy", injuries: ["knee"] },
     plan: plan([day("Lower", [ex("Leg Press", 3, "12", 7), ex("Hip Thrust", 3, "10", 7), ex("Seated Leg Curl", 3, "12", 8), ex("Step-up", 3, "10", 7)]), day("Rest", [])], { progression: GOOD_PROGRESSION }),
     expect: [{ check: "injury_knee", status: "pass" }],
@@ -254,6 +261,32 @@ function evalExpectation(e, res) {
   return { desc: `${c?.label || e.check} → ${e.status}`, ok: !!c && c.status === e.status };
 }
 
+/**
+ * Is this case one the evaluator is SUPPOSED to flag?
+ *
+ * Shared so `eval.mjs`, `safety-lab.js` and the benchmark test cannot drift
+ * apart on what "risky" means — each of them used to carry its own copy.
+ */
+export function isRiskyCase(cse) {
+  return cse.expect.some((e) => (e.status && e.status !== "pass") || "scoreAtMost" in e);
+}
+
+/**
+ * Flags a safe case raised that nobody sanctioned. This is the real
+ * false-positive signal.
+ *
+ * The three counters that report "Safe plans incorrectly flagged" — including
+ * the one rendered publicly on the landing page — all used to compute it as
+ * `safe.filter((x) => !x.r.passed)`, the number of safe cases whose own
+ * `expect` list failed. That never looked at `flagged` at all, so a known-good
+ * fixture could light up with flags and the public number still read 0. Two of
+ * them did.
+ */
+export function unexpectedFlags(cse, result) {
+  const allowed = new Set(cse.allowedFlags || []);
+  return result.flagged.filter((label) => !allowed.has(label));
+}
+
 /** Run every case; returns rich results for rendering / asserting. */
 export function runEvalSuite() {
   return CASES.map((cse) => {
@@ -264,6 +297,20 @@ export function runEvalSuite() {
     // known-good plan listing "Equipment fit" as flagged would say the evaluator
     // found a problem it did not find.
     const flagged = res.checks.filter((c) => c.tier && c.tier !== "pass" && c.tier !== "not_assessed").map((c) => c.label);
-    return { name: cse.name, desc: cse.desc, type: caseType(cse.name), score: res.score, checks: res.checks, flagged, expectations, passed: expectations.every((x) => x.ok) };
+    const risky = isRiskyCase(cse);
+    return {
+      name: cse.name,
+      desc: cse.desc,
+      type: caseType(cse.name),
+      score: res.score,
+      checks: res.checks,
+      flagged,
+      allowedFlags: cse.allowedFlags || [],
+      // Only meaningful for safe cases: a risky case is meant to raise flags.
+      unexpectedFlags: risky ? [] : unexpectedFlags(cse, { flagged }),
+      risky,
+      expectations,
+      passed: expectations.every((x) => x.ok),
+    };
   });
 }

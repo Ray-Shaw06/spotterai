@@ -11,7 +11,7 @@
  * and in CI — no mock numbers where a real one is available.
  */
 
-import { CASES, runEvalSuite } from "./eval-suite.js";
+import { CASES, runEvalSuite, isRiskyCase } from "./eval-suite.js";
 import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
 import { RULE_EXPLANATIONS, TRAINING_PRINCIPLES, PRINCIPLES_NOTE } from "./rule-explanations.js";
 
@@ -24,7 +24,9 @@ function esc(t) {
 }
 
 // A case is "risky" if it expects the evaluator to flag something.
-const isRisky = (c) => c.expect.some((e) => (e.status && e.status !== "pass") || "scoreAtMost" in e);
+// Shared with eval.mjs and the benchmark test, so the public number and the
+// CLI number are the same number.
+const isRisky = isRiskyCase;
 
 /** Real benchmark numbers from the suite + a measured average audit time. */
 function benchmark() {
@@ -34,7 +36,10 @@ function benchmark() {
   const safe = paired.filter((x) => !isRisky(x.c));
 
   const riskyCaught = risky.filter((x) => x.r.passed).length;
-  const falsePositives = safe.filter((x) => !x.r.passed).length;
+  // A safe plan raising a flag nobody sanctioned. Counts FLAGS, not expectation
+  // failures — the old formula never looked at `flagged`, so this public number
+  // could read 0 while known-good fixtures lit up.
+  const falsePositives = safe.filter((x) => x.r.unexpectedFlags.length > 0).length;
   const casesPass = results.filter((r) => r.passed).length;
   const expPass = results.reduce((n, r) => n + r.expectations.filter((e) => e.ok).length, 0);
   const expTotal = results.reduce((n, r) => n + r.expectations.length, 0);
