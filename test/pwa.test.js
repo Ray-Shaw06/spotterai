@@ -117,3 +117,40 @@ test("production UI never points users back to the legacy red icons", () => {
     assert.doesNotMatch(contents, legacyIcon, `${name} must use the branded icon set`);
   }
 });
+
+// ============================================================================
+// Security headers. /qa found only strict-transport-security set on production
+// (2026-08-03): no nosniff, no framing policy, no referrer policy.
+// ============================================================================
+
+test("the platform config sets the baseline security headers on every route", () => {
+  const cfg = JSON.parse(readFileSync(join(root, "vercel.json"), "utf8"));
+  const rule = (cfg.headers || []).find((h) => h.source === "/(.*)");
+  assert.ok(rule, "expected a catch-all header rule");
+  const set = Object.fromEntries(rule.headers.map((h) => [h.key, h.value]));
+
+  assert.equal(set["X-Content-Type-Options"], "nosniff");
+  assert.equal(set["X-Frame-Options"], "DENY", "nothing in the app is iframed, so deny framing outright");
+  assert.match(set["Referrer-Policy"], /strict-origin/);
+
+  // Form check runs MediaPipe on-device, so the camera must stay available to
+  // the app itself while everything else is denied.
+  assert.match(set["Permissions-Policy"], /camera=\(self\)/);
+  assert.match(set["Permissions-Policy"], /microphone=\(\)/);
+  assert.match(set["Permissions-Policy"], /geolocation=\(\)/);
+});
+
+test("CSP ships report-only until the lazy auth and form-check paths are verified", () => {
+  const cfg = JSON.parse(readFileSync(join(root, "vercel.json"), "utf8"));
+  const set = Object.fromEntries(cfg.headers[0].headers.map((h) => [h.key, h.value]));
+  const csp = set["Content-Security-Policy-Report-Only"];
+  assert.ok(csp, "expected a report-only CSP");
+  assert.equal(set["Content-Security-Policy"], undefined, "do not enforce until violations have been observed");
+
+  // The directives that would silently break the app if the origin were missing.
+  for (const origin of ["https://cdn.jsdelivr.net", "https://www.gstatic.com", "https://fonts.gstatic.com"]) {
+    assert.ok(csp.includes(origin), `${origin} is loaded by the app and must be allowed`);
+  }
+  assert.match(csp, /object-src 'none'/);
+  assert.match(csp, /frame-ancestors 'none'/);
+});
