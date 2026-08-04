@@ -29,6 +29,15 @@ export const FUNNEL_EVENTS = deepFreeze({
   // Ongoing volume. Fires every time, so the data first_workout_completed used
   // to carry (accidentally) is still collected, just under an honest name.
   workout_completed: { source: ["plan", "today", "dashboard", "unknown"] },
+  // Plan import. `plan_imported` is the activation event for the no-account
+  // entry point: someone pasted a plan from elsewhere and got a verdict without
+  // ever seeing onboarding. failure_class mirrors the enum the endpoint returns
+  // so the drop-off has a cause attached rather than one flat number.
+  plan_imported: { has_progression: ["true", "false"] },
+  plan_import_failed: {
+    failure_class: ["empty", "too_short", "rate_limited", "timeout", "unavailable", "invalid_response", "not_a_plan", "offline", "unknown"],
+  },
+  import_flags_opened: {},
   meal_photo_succeeded: {},
   meal_photo_failed: { failure_class: ["offline", "timeout", "rate_limited", "unavailable", "invalid_response", "unknown"] },
   calendar_export_opened: {},

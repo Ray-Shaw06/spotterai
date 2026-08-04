@@ -23,6 +23,9 @@
     "api/generate.js": {
       "maxDuration": 60
     },
+    "api/import.js": {
+      "maxDuration": 60
+    },
     "api/chat.js": {
       "maxDuration": 30
     },
