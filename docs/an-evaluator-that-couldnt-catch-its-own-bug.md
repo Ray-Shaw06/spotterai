@@ -8,12 +8,12 @@ grades it against a fixed rubric and shows you the flags before you train. No AI
 in the grader. 11 checks. A published red-team suite you can run in your own
 browser.
 
-Then I watched my cousin build a plan out of ChatGPT and Instagram reels, and he
-told me about it. I could see two things wrong immediately: there was no
-progressive overload, and the rep ranges were way too high. The whole week looked
-directionless.
+Then someone showed me a training plan they had put together from ChatGPT and
+Instagram reels. I could see two things wrong within about ten seconds: there was
+no progressive overload, and the rep ranges were far too high. The whole week
+looked directionless.
 
-So I ran his plan through my evaluator.
+So I ran it through my evaluator.
 
 It said the plan was fine.
 
@@ -41,7 +41,7 @@ to `"General fitness"`, which routes to exactly that bucket. So for any plan
 where the user hadn't declared a goal, which is every plan pasted in from
 somewhere else, the rep-range flag could never fire. Not "rarely." Never.
 
-The product would have told my cousin his broken plan was reasonable, in a
+The product would have told that person their broken plan was reasonable, in a
 confident flags-first UI, with a quality score, next to a page bragging about the
 red-team suite.
 

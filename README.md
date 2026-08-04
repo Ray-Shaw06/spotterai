@@ -109,11 +109,12 @@ never distinguish me from a stranger, so both traffic snapshots were misread
 until I found it. It now fires once per profile, and `workout_completed` carries
 the ongoing volume it was accidentally collecting.
 
-**The one real user signal I have points against my thesis.** The person whose
-plan motivated this project was shown that his plan was broken, and kept using
-it anyway. If correcting people is a push rather than a pull, the premise needs
-rethinking. That is the open question, and I would rather write it down than
-decorate around it.
+**The one real usage signal I have points against my thesis.** In the only case
+I have watched end to end, someone was shown that their plan had real problems
+and carried on with it unchanged. If being corrected is a push rather than a
+pull, the premise needs rethinking. One observation is not evidence, but it is
+the only observation I have, and I would rather write it down than decorate
+around it.
 
 [`/import`](https://spotterai.xyz/#/import) is the current experiment: no
 account, no onboarding, paste a plan and get a verdict. It is the cheapest
