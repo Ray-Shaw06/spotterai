@@ -16,7 +16,7 @@
 import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
 import { repairPlan } from "./repair.js";
 import { screenRequest, GENERATOR_BOUNDARY } from "./safety-boundaries.js";
-import { ruleForCheck } from "./rule-explanations.js";
+import { TIER_LABEL, TIER_ORDER, allClearText, auditVerdictText, flaggedChecks, renderFlagCard } from "./audit-view.js";
 import { planConfidence } from "./trust.js";
 import { buildAuditEntry, recordAudit, getAuditHistory, auditTrend } from "./trust-history.js";
 import { lineChart } from "./charts.js";
@@ -110,8 +110,6 @@ function hideGenerator() {
 }
 
 /** Plain-English label per severity tier. */
-const TIER_LABEL = { critical: "Critical", warning: "Warning", suggestion: "Suggestion" };
-const TIER_ORDER = { critical: 0, warning: 1, suggestion: 2, pass: 3 };
 
 // ----------------------------------------------------------------------------
 // Loading state: cycle friendly step messages
@@ -300,20 +298,6 @@ function renderResults(plan, inputs, usedFallback, { focus = true, failureClass 
 // Audit — flags first. The numeric score is demoted to an optional footnote.
 // ----------------------------------------------------------------------------
 
-/** Plain-English verdict, led by severity (never "safe"). */
-function auditVerdictText(summary) {
-  const { critical, warning, suggestion } = summary;
-  const unassessed = summary.not_assessed || 0;
-  // v1.3.0: never report a clean verdict without saying how much we could not
-  // judge. "No issues flagged" on a plan where four checks never ran is the same
-  // false reassurance the not-assessed tier exists to remove.
-  const caveat = unassessed > 0 ? `, ${unassessed} not assessed` : "";
-  if (critical > 0) return { tone: "critical", text: `${critical} critical issue${critical > 1 ? "s" : ""} to resolve before training${caveat}` };
-  if (warning > 0) return { tone: "warning", text: `${warning} issue${warning > 1 ? "s" : ""} to review before training${caveat}` };
-  if (suggestion > 0) return { tone: "suggestion", text: `No safety flags: ${suggestion} optional suggestion${suggestion > 1 ? "s" : ""}${caveat}` };
-  if (unassessed > 0) return { tone: "suggestion", text: `Nothing flagged, but ${unassessed} check${unassessed > 1 ? "s" : ""} could not be assessed` };
-  return { tone: "ok", text: "No issues flagged by the audit" };
-}
 
 function renderAudit(audit) {
   const s = audit.summary;
@@ -339,13 +323,11 @@ function renderAudit(audit) {
   // `not_assessed` is excluded from BOTH lists (v1.3.0). It is not a problem with
   // the plan, so it must not appear as a flag; and it is not a clean result, so
   // it must not appear as a pass. It gets its own quiet section instead.
-  const flagged = audit.checks
-    .filter((c) => c.tier !== "pass" && c.tier !== "not_assessed")
-    .sort((a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier]);
+  const flagged = flaggedChecks(audit);
 
   checksList.innerHTML = flagged.length
     ? flagged.map(renderFlagCard).join("")
-    : `<p class="audit__clear">Every automated check passed. Still your call: the evaluator catches common mistakes, not everything.</p>`;
+    : `<p class="audit__clear">${esc(allClearText(s))}</p>`;
 
   // Passed checks (collapsed).
   const passed = audit.checks.filter((c) => c.tier === "pass");
@@ -373,27 +355,6 @@ function renderAudit(audit) {
 }
 
 /** One flag card: what / why it matters / suggested fix / safer alternatives. */
-function renderFlagCard(c, i) {
-  const alts = Array.isArray(c.alternatives) && c.alternatives.length
-    ? `<p class="flag__row"><span class="flag__row-label">Safer alternatives</span> ${esc(c.alternatives.join(" · "))}</p>`
-    : "";
-  const fix = c.fix ? `<p class="flag__row"><span class="flag__row-label">Suggested fix</span> ${esc(c.fix)}</p>` : "";
-  const rule = ruleForCheck(c.id);
-  const why = rule
-    ? `<details class="flag__rule"><summary>Why this rule exists</summary><p class="flag__rule-body">${esc(rule.why)} <span class="flag__rule-lim">Limitation: ${esc(rule.limitations)}</span></p></details>`
-    : "";
-  return `
-    <article class="flag flag--${c.tier}" style="--i:${i}">
-      <header class="flag__head">
-        <span class="flag__sev">${TIER_LABEL[c.tier] || c.tier}</span>
-        <span class="flag__label">${esc(c.label)}</span>
-      </header>
-      <p class="flag__why">${esc(c.detail)}</p>
-      ${fix}
-      ${alts}
-      ${why}
-    </article>`;
-}
 
 function animateCount(el, target, duration) {
   const start = performance.now();

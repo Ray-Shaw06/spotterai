@@ -6267,3 +6267,47 @@ h1, h2, h3, h4, h5,
   text-transform: none;
   letter-spacing: 0.005em;
 }
+
+/* ---------------------------------------------------------------------------
+   /import — paste any plan, get the audit
+   Reuses .audit, .flag and .audit__* wholesale so an imported verdict is
+   visually identical to a generated one. Only the paste and confirm steps are
+   new surface.
+--------------------------------------------------------------------------- */
+.container--narrow { max-width: 52rem; }
+.import-step { display: flex; flex-direction: column; gap: var(--space-3); }
+.import-label { font-weight: 600; font-size: var(--fs-small); }
+.import-textarea {
+  width: 100%;
+  min-height: 18rem;
+  padding: var(--space-3);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  resize: vertical;
+}
+.import-textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.import-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+}
+.import-count { font-variant-numeric: tabular-nums; }
+.import-count.is-over { color: var(--danger); font-weight: 600; }
+.import-hint { flex: 1 1 20rem; }
+.import-privacy, .import-confirm-note { font-size: var(--fs-small); color: var(--text-muted); }
+.import-loading-text { color: var(--text-muted); }
+.import-error-text { color: var(--danger); font-weight: 500; }
+.import-confirm-h { font-size: var(--fs-h3, 1.25rem); margin: 0; }
+.import-confirm-text { font-size: var(--fs-body); }
+.import-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.import-step .btn { align-self: flex-start; }
+.import-actions .btn { align-self: auto; }

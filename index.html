@@ -90,6 +90,9 @@
         <a href="#/library" data-nav="library" class="nav-link nav-link--sec">
           <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h6v18H6a2 2 0 0 1-2-2z" /><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2h-6" /></svg><span>Library</span>
         </a>
+        <a href="#/import" data-nav="import" class="nav-link nav-link--sec">
+          <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg><span>Audit a plan</span>
+        </a>
         <a href="#/evals" data-nav="evals" class="nav-link nav-link--sec">
           <svg class="nav-link__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.6v5.4c0 4.4-3 7.6-7 8.9-4-1.3-7-4.5-7-8.9V5.6L12 3z" /><path d="M9.2 12l2 2 3.6-4" /></svg><span>Safety Lab</span>
         </a>
@@ -131,7 +134,7 @@
           </p>
           <div class="hero__actions">
             <a href="#generator" class="btn btn--primary" data-onboard>Build my plan</a>
-            <a href="#/evals" data-nav="evals" class="btn btn--ghost">See how safety checks work</a>
+            <a href="#/import" data-nav="import" class="btn btn--ghost">Audit a plan you already have</a>
           </div>
           <p class="hero__trust">
             <span>✓ $0 to run</span><span>✓ no signup</span><span>✓ runs on your device</span><span>✓ <button type="button" id="hero-demo" class="hero__trust-link">try the live demo</button></span>
@@ -821,6 +824,87 @@
     </section>
 
     <!-- ============================ SAFETY LAB PAGE ============================ -->
+    <!-- ===================== IMPORT: audit any plan ===================== -->
+    <section id="import" class="view section" data-view="import" hidden>
+      <div class="container container--narrow">
+        <header class="section-head section-head--start">
+          <h1 class="section-title section-title--lg">Audit a plan you already have</h1>
+          <p class="section-subtitle">
+            Paste a plan from anywhere, a chatbot, a PDF, a coach's email, and get the same
+            code-based audit SpotterAI runs on its own plans. No account, no signup, and the
+            audit itself runs in your browser.
+          </p>
+        </header>
+
+        <!-- 1. Paste -->
+        <div id="import-paste" class="import-step">
+          <label class="import-label" for="import-text">Your training plan</label>
+          <textarea id="import-text" class="import-textarea" rows="14" spellcheck="false"
+            placeholder="Day 1 — Upper Body&#10;Bench Press 4 x 6-8 @ RPE 8&#10;Barbell Row 4 x 6-8&#10;Overhead Press 3 x 8-10&#10;&#10;Day 2 — Rest&#10;&#10;Day 3 — Lower Body&#10;Back Squat 4 x 5&#10;Romanian Deadlift 3 x 8-10"></textarea>
+          <div class="import-meta">
+            <span id="import-count" class="import-count">0 / 8,000</span>
+            <span class="import-hint">Include the days, exercises, sets and reps. Paste the progression note too if it has one.</span>
+          </div>
+          <button type="button" id="import-submit" class="btn btn--primary" disabled>Audit this plan</button>
+          <p class="import-privacy">
+            The pasted text is sent once to read it into a structured plan, then the audit runs
+            on your device. It is not stored on a server and not added to your profile.
+          </p>
+        </div>
+
+        <!-- 2. Reading -->
+        <div id="import-loading" class="import-step" hidden>
+          <p class="import-loading-text">Reading your plan…</p>
+        </div>
+
+        <!-- 3. Failure, with a cause attached -->
+        <div id="import-error" class="import-step" hidden>
+          <p id="import-error-text" class="import-error-text"></p>
+          <button type="button" id="import-error-retry" class="btn btn--ghost">Back to the plan</button>
+        </div>
+
+        <!-- 4. Confirm what we read, BEFORE auditing it -->
+        <div id="import-confirm" class="import-step" hidden>
+          <h2 class="import-confirm-h">Does this look right?</h2>
+          <p id="import-confirm-text" class="import-confirm-text"></p>
+          <p class="import-confirm-note">
+            We only audit what we read correctly. If this does not match your plan, go back and
+            add the missing parts rather than trusting the verdict.
+          </p>
+          <div class="import-actions">
+            <button type="button" id="import-confirm-go" class="btn btn--primary">Yes, audit it</button>
+            <button type="button" id="import-confirm-back" class="btn btn--ghost">Let me fix the text</button>
+          </div>
+        </div>
+
+        <!-- 5. Verdict, flags first -->
+        <div id="import-result" class="import-step" hidden>
+          <div class="audit">
+            <p id="import-verdict" class="audit__verdict"></p>
+            <ul id="import-counts" class="audit__counts"></ul>
+            <div id="import-flags" class="audit__flags"></div>
+            <details class="audit__passed" id="import-passed" hidden>
+              <summary><span id="import-passed-count">0</span> checks passed</summary>
+              <ul class="audit__passed-list" id="import-passed-list"></ul>
+            </details>
+            <details class="audit__passed audit__not-assessed" id="import-unassessed" hidden>
+              <summary><span id="import-unassessed-count">0</span> checks not assessed</summary>
+              <ul class="audit__passed-list" id="import-unassessed-list"></ul>
+            </details>
+            <p class="audit__foot">
+              A code-based evaluator (no AI) checked this plan against a fixed rubric
+              (<span id="import-version"></span>). It <strong>flags potential concerns</strong>;
+              it does not certify the plan as safe.
+            </p>
+          </div>
+          <div class="import-actions">
+            <button type="button" id="import-again" class="btn btn--ghost">Audit another plan</button>
+            <a href="#generator" class="btn btn--primary" data-onboard>Build me a plan instead</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="evals" class="view section section--alt" data-view="evals" hidden>
       <div class="container">
         <header class="section-head section-head--start">
@@ -1266,6 +1350,7 @@
   <script type="module" src="auth-ui.js"></script>
   <script type="module" src="app.js"></script>
   <script type="module" src="onboarding-ui.js"></script>
+  <script type="module" src="import-ui.js"></script>
   <script type="module" src="chat.js"></script>
   <script type="module" src="form-coach.js"></script>
   <script type="module" src="tracker-ui.js"></script>

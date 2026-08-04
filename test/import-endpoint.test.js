@@ -266,3 +266,36 @@ test("days_per_week counts training days, not rest days", () => {
   });
   assert.equal(b.days_per_week, 1);
 });
+
+// --- Failure classification (T11) -------------------------------------------
+
+test("every failure the endpoint can return has its own message and a registered event", async () => {
+  // Three lists have to agree or a real failure shows the wrong copy, or vanishes
+  // from analytics entirely: the classes api/import.js returns, the copy in
+  // import-ui.js, and the enum in FUNNEL_EVENTS. trackFunnel silently drops an
+  // unregistered property value while returning true, so a mismatch here is
+  // invisible at runtime.
+  const { readFileSync } = await import("node:fs");
+  const { dirname, join } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+  const endpoint = readFileSync(join(root, "api/import.js"), "utf8");
+  const returned = new Set([...endpoint.matchAll(/failure_class:\s*"([a-z_]+)"/g)].map((m) => m[1]));
+  // The endpoint also computes classes in a ternary rather than a literal field.
+  for (const m of endpoint.matchAll(/\?\s*"([a-z_]+)"\s*:\s*(?:\/|")/g)) returned.add(m[1]);
+  assert.ok(returned.size >= 4, "expected the endpoint to classify several causes");
+
+  const { FAILURE_COPY } = await import("../import-ui.js");
+  const { FUNNEL_EVENTS } = await import("../analytics.js");
+  const registered = new Set(FUNNEL_EVENTS.plan_import_failed.failure_class);
+
+  for (const cls of returned) {
+    assert.ok(FAILURE_COPY[cls], `api/import.js can return "${cls}" but import-ui.js has no message for it`);
+    assert.ok(registered.has(cls), `"${cls}" is not registered in FUNNEL_EVENTS, so the event would silently drop it`);
+  }
+  // And the UI must never show a class analytics cannot record.
+  for (const cls of Object.keys(FAILURE_COPY)) {
+    assert.ok(registered.has(cls), `import-ui.js shows "${cls}" but FUNNEL_EVENTS does not allow it`);
+  }
+});
