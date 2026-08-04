@@ -3,25 +3,62 @@
 [![CI](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml/badge.svg)](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml)
 &nbsp;[![License: MIT](https://img.shields.io/badge/License-MIT-3b8ef5.svg)](LICENSE)
 
-**Your AI fitness copilot: plan, track, adapt, and audit your training.** &nbsp;·&nbsp; **[▶ Live demo](https://spotterai.xyz)**
+**A deterministic verifier for LLM output, in a domain where users can't check the answer themselves.** &nbsp;·&nbsp; **[▶ Live demo](https://spotterai.xyz)** &nbsp;·&nbsp; **[▶ Audit a plan you already have](https://spotterai.xyz/#/import)**
 
-> **At a glance:** solo-built by a CS student. Vanilla JavaScript (ES modules, no build step), Node serverless functions on Vercel, Google Gemini, and on-device MediaPipe pose estimation. A pure-code layer audits every AI-generated plan against 11 checks; 340+ automated tests and a red-team eval suite run in CI. Try the [live demo](https://spotterai.xyz), then open the Profile menu and choose "Load demo data" to see it fully populated.
+> **At a glance:** an LLM writes a training plan, then a separate **pure-code
+> evaluator** (no AI, fixed rubric, 11 checks) grades that plan and shows the
+> flags before you train. The red-team suite that tests the evaluator is
+> [published and runs live in your browser](https://spotterai.xyz/#/evals).
+> **409 tests, 21 adversarial eval cases, one runtime dependency, no build step.**
+> Solo-built by a CS student. Vanilla ES modules, Node serverless functions on
+> Vercel, Gemini, on-device MediaPipe.
 
 <p align="center">
-  <img src="og-home.png" alt="SpotterAI, your AI fitness copilot. A flags-first plan safety audit: issues to review, severity tiers, and a demoted quality score." width="700" />
+  <img src="og-home.png" alt="A flags-first plan safety audit: issues to review, severity tiers, and a demoted quality score." width="700" />
 </p>
 
-SpotterAI is an AI fitness copilot built around one idea: **don't blindly trust
-the AI.** It generates a personalized weekly training program with a large
-language model, then runs that plan through a separate, **pure-code safety &
-quality evaluator** that surfaces issues *flags-first*: critical problems,
-warnings, and suggestions, each with a plain-English why-it-matters, a suggested
-fix, and a safer alternative, all *before* you train. A numeric quality score
-still exists, but it's demoted to a footnote; the **flags and explanations** are
-the point. The interesting engineering isn't the model writing a workout. Anyone
-can prompt for that. It's the second, deterministic system that checks the first
-one's work, which is exactly the evaluation and AI-safety thinking that matters
-when you ship LLM features to real users.
+## The idea
+
+Anyone can prompt a model for a workout. The interesting engineering is the
+**second system that checks the first one's work.**
+
+A beginner cannot tell a good training plan from a bad one. That is the whole
+reason they asked an AI. So an LLM fitness app has a structural problem: it
+ships confident output to exactly the person least able to catch it when it is
+wrong. Being a language model, it is fluent about being wrong.
+
+SpotterAI's answer is to not trust its own model. Every generated plan goes
+through `evaluator.js`, which contains **no AI at all**. It is pure code against
+a fixed rubric: rest days, weekly volume, push/pull balance, quad/hamstring
+balance, per-muscle frequency, session load, progressive overload, goal fit,
+equipment fit, exercise recognition, and injury conflicts. It returns flags
+first, each with a plain-English reason, a suggested fix, and a safer
+alternative. The numeric score exists but is deliberately demoted to a footnote.
+
+Three properties matter more than the check list:
+
+- **It says "not assessed" instead of "pass."** If you never told us your
+  training experience, the beginner-intensity check reports that it could not
+  run. It does not quietly call it a pass. A verifier that invents reassurance
+  is worse than no verifier.
+- **It is testable, and the tests are public.** The [Safety Lab](https://spotterai.xyz/#/evals)
+  runs 21 adversarial cases against the evaluator live in your browser, including
+  the known-good plans it must *not* flag.
+- **It works on plans it did not write.** [`/import`](https://spotterai.xyz/#/import)
+  takes a plan pasted from a chatbot, a PDF or a coach's email and runs the same
+  audit, with no account. A test asserts an imported plan and a generated plan
+  produce byte-identical verdicts.
+
+**The evaluator has caught its own author.** In August 2026 it turned out the
+evaluator could not detect either failure that motivated the entire project:
+there was no progressive-overload check, and the rep-range check passed
+unconditionally for any plan without a declared goal, which is every pasted
+plan. Write-up: [an evaluator that couldn't catch its own bug](docs/an-evaluator-that-couldnt-catch-its-own-bug.md).
+
+Fitness is the demo. The pattern is a deterministic verifier for LLM output in
+any domain where the consumer cannot evaluate correctness themselves.
+
+## The fitness product
 
 The copilot closes the loop (**Plan → Train → Log → Adapt → Re-audit**), and
 the same transparent, safety-first philosophy runs through every feature: a
@@ -45,6 +82,43 @@ zero-cost: an in-browser calendar export plus local on-device rest-timer alerts,
 with no remote push.
 
 ---
+
+## What happened when I shipped it
+
+Six weeks in, honest numbers, because a project page with no numbers on it is
+usually hiding the same ones.
+
+| | 7 days ending 2026-08-02 |
+|---|---|
+| Visitors | 82 |
+| Clicked "Build my plan" | 5 |
+| Finished onboarding | 3 |
+| Real AI plan generated | 4 |
+| Completed a workout | 1 (me) |
+
+**Zero external users have completed a workout.** The prior window had 36
+visitors and produced the same absolute counts at every step, so 46 extra
+visitors converted at roughly zero. That is not a funnel leaking, it is a funnel
+not filling.
+
+Two things I got from measuring rather than guessing:
+
+**My primary success metric was broken.** `first_workout_completed` fired on
+every logged workout instead of the first ever, and I train in the app. It could
+never distinguish me from a stranger, so both traffic snapshots were misread
+until I found it. It now fires once per profile, and `workout_completed` carries
+the ongoing volume it was accidentally collecting.
+
+**The one real usage signal I have points against my thesis.** In the only case
+I have watched end to end, someone was shown that their plan had real problems
+and carried on with it unchanged. If being corrected is a push rather than a
+pull, the premise needs rethinking. One observation is not evidence, but it is
+the only observation I have, and I would rather write it down than decorate
+around it.
+
+[`/import`](https://spotterai.xyz/#/import) is the current experiment: no
+account, no onboarding, paste a plan and get a verdict. It is the cheapest
+version of the question "does anyone actually want this."
 
 ## Screenshots
 
@@ -255,7 +329,7 @@ explanations are the product.
 
 ### Tested + CI, and a live "red-team" proof page
 
-The trust logic is covered by **340+ automated tests** across the evaluator (tiers, the
+The trust logic is covered by **409 automated tests** across the evaluator (tiers, the
 fractional volume model, structured-data injury matching), the plan-repair
 engine, safety boundaries, nutrition guardrails, rule explanations, plan/nutrition
 **Trust Report confidence**, **form-check confidence** thresholds, the benchmark
