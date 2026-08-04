@@ -50,7 +50,7 @@ test("every api function gets an explicit maxDuration", () => {
   // budget too, or the platform can kill the invocation mid-flight and the
   // browser sees a dropped connection rather than a clean JSON error.
   const configured = Object.keys(vercelConfig.functions || {}).sort();
-  assert.deepEqual(configured, ["api/chat.js", "api/estimate.js", "api/generate.js", "api/parse.js"]);
+  assert.deepEqual(configured, ["api/chat.js", "api/estimate.js", "api/generate.js", "api/import.js", "api/parse.js"]);
   for (const [route, settings] of Object.entries(vercelConfig.functions)) {
     assert.equal(typeof settings.maxDuration, "number", `${route} has a maxDuration`);
     assert.ok(settings.maxDuration >= 30, `${route} allows the model ladder to finish`);
