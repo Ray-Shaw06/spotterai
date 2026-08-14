@@ -63,3 +63,44 @@ test("every non-user collection is denied, even for a signed-in user", async () 
   await assertFails(getDoc(doc(alice, "notificationDevices/whatever")));
   await assertFails(setDoc(doc(alice, "arbitrary/thing"), { x: 1 }));
 });
+
+// ---------------------------------------------------------------------------
+// Per-record sync: users/<uid>/<collection>/<id>
+//
+// `match /users/{uid}` does NOT cascade into subcollections. Before the nested
+// recursive wildcard was added, every one of these writes fell through to the
+// catch-all deny and the app came back permission-denied on its first sync.
+// The suite above stayed green the whole time, because it only ever touched the
+// parent document.
+// ---------------------------------------------------------------------------
+const RECORD_COLLECTIONS = ["workouts", "nutrition", "bodyweight", "routines", "customExercises"];
+
+test("a signed-in user owns every per-record subcollection under their own uid", async () => {
+  const alice = testEnv.authenticatedContext("alice").firestore();
+  for (const collection of RECORD_COLLECTIONS) {
+    const ref = doc(alice, `users/alice/${collection}/rec-1`);
+    await assertSucceeds(setDoc(ref, { id: "rec-1", updatedAt: 1 }));
+    await assertSucceeds(getDoc(ref));
+  }
+});
+
+test("a signed-in user cannot touch another user's per-record subcollections", async () => {
+  const alice = testEnv.authenticatedContext("alice").firestore();
+  for (const collection of RECORD_COLLECTIONS) {
+    const ref = doc(alice, `users/bob/${collection}/rec-1`);
+    await assertFails(getDoc(ref));
+    await assertFails(setDoc(ref, { id: "rec-1", updatedAt: 1 }));
+  }
+});
+
+test("an unauthenticated request cannot reach a per-record subcollection", async () => {
+  const anon = testEnv.unauthenticatedContext().firestore();
+  await assertFails(getDoc(doc(anon, "users/alice/workouts/rec-1")));
+  await assertFails(setDoc(doc(anon, "users/alice/workouts/rec-1"), { id: "rec-1" }));
+});
+
+test("ownership holds arbitrarily deep, not just one level down", async () => {
+  const alice = testEnv.authenticatedContext("alice").firestore();
+  await assertSucceeds(setDoc(doc(alice, "users/alice/workouts/rec-1/sets/set-1"), { reps: 5 }));
+  await assertFails(setDoc(doc(alice, "users/bob/workouts/rec-1/sets/set-1"), { reps: 5 }));
+});
