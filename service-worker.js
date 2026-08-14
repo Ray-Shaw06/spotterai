@@ -5,8 +5,10 @@
  *   - Precaches the complete local app shell on install.
  *   - Navigations: network-first, falling back to the cached shell (so the SPA
  *     still loads with no connection).
- *   - Same-origin static assets (CSS, the ES modules, icons): network-first with
- *     a cached fallback, so deploys stay fresh and the app still works offline.
+ *   - Same-origin static assets (CSS, the ES modules, icons): stale-while-
+ *     revalidate, so the cache paints immediately and the refresh lands in the
+ *     background for the next load. Bumping CACHE is what forces a clean
+ *     re-fetch on a release.
  *   - /api/* is never cached (the AI features degrade gracefully when offline).
  *   - Cross-origin requests (fonts, MediaPipe/Firebase CDNs) go straight to the
  *     network.
@@ -14,7 +16,7 @@
  * Bump CACHE when shipping changes so old caches are cleaned on activate.
  */
 
-const CACHE = "spotterai-v50";
+const CACHE = "spotterai-v51";
 // Explicit local module graph rooted at every <script type="module"> in index.html.
 // test/service-worker-behavior.test.js derives the graph independently so a new
 // boot import cannot be shipped without being added here.
@@ -139,22 +141,38 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Same-origin assets → NETWORK-FIRST (so deploys always show up), with the
-  // cache as an offline fallback. Avoids the classic PWA "I don't see my changes"
-  // staleness from cache-first on CSS/JS.
+  // Same-origin assets → STALE-WHILE-REVALIDATE.
+  //
+  // This used to be network-first, which meant every CSS file and every one of
+  // the ~70 ES modules waited on a network round trip before the app could
+  // paint. On a phone on gym wifi that is the lag you feel on every cold start,
+  // and it happened even though a perfectly good copy was already cached.
+  //
+  // Now the cache answers immediately and the network refresh lands in the
+  // background for the next load. The tradeoff is honest: a deploy shows up one
+  // load later than it used to. That is acceptable because `activate` deletes
+  // every cache that is not the current CACHE, so bumping CACHE on a release
+  // still forces a clean re-fetch — which is exactly why the constant must be
+  // bumped on every ship.
   if (sameOrigin) {
     event.respondWith(
       (async () => {
-        try {
-          const res = await fetch(request);
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(request, copy));
-          }
-          return res;
-        } catch {
-          return (await caches.match(request)) || Response.error();
+        const cache = await caches.open(CACHE);
+        const cached = await cache.match(request);
+
+        const refresh = fetch(request)
+          .then((res) => {
+            if (res && res.ok) cache.put(request, res.clone());
+            return res;
+          })
+          .catch(() => null);
+
+        if (cached) {
+          // Do not await the refresh: serving the cached copy is the whole point.
+          event.waitUntil(refresh);
+          return cached;
         }
+        return (await refresh) || Response.error();
       })()
     );
   }
