@@ -198,6 +198,20 @@ test("EXERCISE_DATA keeps the array-shaped equipment its consumers expect", () =
   }
 });
 
+test("every equipment label maps to real tags, never a silent bodyweight fallback", () => {
+  // A label missing from TAGS_FOR_LABEL falls back to ["bodyweight"], which
+  // would tell a user with no equipment that they can do a banded or sled
+  // exercise. Caught exactly that way when "Band" lifts were added.
+  const suspicious = CATALOG.filter(
+    (e) => e.equipment && e.equipment !== "Bodyweight" && !e.hasSafetyData && e.equipmentTags.join() === "bodyweight"
+  );
+  assert.deepEqual(
+    suspicious.map((e) => `${e.name} (${e.equipment})`),
+    [],
+    "add the equipment label to TAGS_FOR_LABEL in exercise-catalog.js"
+  );
+});
+
 test("isCardio still classifies from the catalog", () => {
   assert.equal(isCardio("Treadmill Run"), true);
   assert.equal(isCardio("Back Squat"), false);
