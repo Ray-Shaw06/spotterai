@@ -124,6 +124,166 @@ export function importData(obj) {
 }
 
 // ----------------------------------------------------------------------------
+// Cloud sync surface (per-record)
+// ============================================================================
+// Sync used to write this entire object to one Firestore document with
+// last-write-wins on a single top-level `updatedAt`, so two devices active in
+// the same window silently erased each other's sessions.
+//
+// It is now per-record. These helpers are the ONLY way remote data enters local
+// state, and they exist specifically so that `importData` is never used for it:
+// importData REPLACES the whole state, which is correct for restoring a backup
+// file and catastrophic for applying a partial batch. Feeding a bounded sync
+// window through importData would delete every record older than the window.
+//
+//   importData(obj)              whole-state replace   <- backup restore only
+//   mergeRemoteRecords(kind, r)  upsert by id          <- sync
+//   removeRemoteRecords(kind, i) delete by id          <- sync
+//   mergeRemoteMeta(patch)       scalar/singleton keys <- sync
+// ----------------------------------------------------------------------------
+
+/** Array collections that sync as one document per record. */
+export const SYNCED_RECORD_KINDS = Object.freeze([
+  "workouts",
+  "nutrition",
+  "bodyweight",
+  "painReports",
+  "routines",
+  "mealTemplates",
+  "customExercises",
+  "customFoods",
+]);
+
+/** Kinds carrying a 'YYYY-MM-DD' date, so the live listener can bound a window. */
+export const DATED_RECORD_KINDS = Object.freeze(["workouts", "nutrition", "bodyweight", "painReports"]);
+
+/** Scalar / singleton keys that live in the parent users/<uid> document. */
+export const SYNCED_META_KEYS = Object.freeze(["targets", "water", "achievements", "exercisePrefs", "unit"]);
+
+/**
+ * Stable document id for a record. Most kinds carry their own `id`; the
+ * user-authored name lists do not, so they key off the normalized name. A
+ * record with neither is not syncable and is skipped rather than given a random
+ * id, which would duplicate it on every push.
+ */
+export function recordId(record) {
+  if (!record || typeof record !== "object") return null;
+  if (record.id) return String(record.id);
+  if (record.name) return `name:${String(record.name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+  return null;
+}
+
+/**
+ * Remote records are untrusted input: they come from another device that may be
+ * running an older build, a half-migrated schema, or a partially written
+ * document. Give the array-shaped fields their expected type before they reach
+ * local state, so a malformed record degrades into an empty one instead of
+ * crashing stats on the next render.
+ */
+function normalizeSyncedRecord(kind, record) {
+  if (!record || typeof record !== "object") return null;
+  if (kind === "workouts") {
+    return { ...record, exercises: Array.isArray(record.exercises) ? record.exercises : [] };
+  }
+  if (kind === "routines") {
+    return { ...record, exercises: Array.isArray(record.exercises) ? record.exercises : [] };
+  }
+  if (kind === "mealTemplates") {
+    return { ...record, entries: Array.isArray(record.entries) ? record.entries : [] };
+  }
+  return record;
+}
+
+/** True while remote data is being applied, so callers can suppress echo pushes. */
+let applyingRemote = false;
+export function isApplyingRemote() {
+  return applyingRemote;
+}
+
+function withRemoteApply(fn) {
+  applyingRemote = true;
+  try {
+    return fn();
+  } finally {
+    applyingRemote = false;
+  }
+}
+
+/**
+ * Upsert remote records into one collection, by id. Records already present are
+ * replaced; records absent from the batch are LEFT ALONE. That last part is the
+ * whole point: a bounded window only ever carries recent records, so anything
+ * that removed the rest would be silent data loss.
+ * Returns the number of records that actually changed.
+ */
+export function mergeRemoteRecords(kind, records) {
+  if (!SYNCED_RECORD_KINDS.includes(kind) || !Array.isArray(records) || !records.length) return 0;
+  return withRemoteApply(() => {
+    const list = Array.isArray(state[kind]) ? state[kind].slice() : [];
+    const indexById = new Map(list.map((r, i) => [recordId(r), i]));
+    let changed = 0;
+    for (const raw of records) {
+      const incoming = normalizeSyncedRecord(kind, raw);
+      if (!incoming) continue;
+      const id = recordId(incoming);
+      if (!id) continue;
+      const at = indexById.get(id);
+      if (at === undefined) {
+        list.push(incoming);
+        indexById.set(id, list.length - 1);
+        changed++;
+      } else if (JSON.stringify(list[at]) !== JSON.stringify(incoming)) {
+        list[at] = incoming;
+        changed++;
+      }
+    }
+    if (!changed) return 0;
+    state[kind] = list;
+    persist(false); // preserve the incoming timestamp; this is not a local edit
+    return changed;
+  });
+}
+
+/** Remove records another device deleted. No-op for ids we do not hold. */
+export function removeRemoteRecords(kind, ids) {
+  if (!SYNCED_RECORD_KINDS.includes(kind) || !Array.isArray(ids) || !ids.length) return 0;
+  return withRemoteApply(() => {
+    const drop = new Set(ids.map(String));
+    const before = Array.isArray(state[kind]) ? state[kind] : [];
+    const after = before.filter((r) => !drop.has(recordId(r)));
+    if (after.length === before.length) return 0;
+    state[kind] = after;
+    persist(false);
+    return before.length - after.length;
+  });
+}
+
+/** Apply the scalar/singleton half of remote state. Unknown keys are ignored. */
+export function mergeRemoteMeta(patch) {
+  if (!patch || typeof patch !== "object") return false;
+  return withRemoteApply(() => {
+    let changed = false;
+    for (const key of SYNCED_META_KEYS) {
+      if (!(key in patch)) continue;
+      const incoming = patch[key];
+      if (incoming === undefined) continue;
+      if (JSON.stringify(state[key]) === JSON.stringify(incoming)) continue;
+      state[key] = key === "targets" ? { ...DEFAULTS.targets, ...incoming } : incoming;
+      changed = true;
+    }
+    if (changed) persist(false);
+    return changed;
+  });
+}
+
+/** The scalar/singleton half of local state, for pushing. */
+export function metaSnapshot() {
+  const out = {};
+  for (const key of SYNCED_META_KEYS) out[key] = state[key];
+  return out;
+}
+
+// ----------------------------------------------------------------------------
 // Date helpers (local time)
 // ----------------------------------------------------------------------------
 /**
@@ -897,7 +1057,7 @@ function baseStats() {
 
   // PRs (best weight per exercise)
   const prs = {};
-  for (const w of workouts) for (const e of w.exercises) for (const s of setsOf(e)) if (s.weight > 0) prs[e.name] = Math.max(prs[e.name] || 0, s.weight);
+  for (const w of workouts) for (const e of w.exercises || []) for (const s of setsOf(e)) if (s.weight > 0) prs[e.name] = Math.max(prs[e.name] || 0, s.weight);
 
   // Healthy-habit signals (recovery + honest logging + hydration).
   const painReportsCount = (state.painReports || []).length;
@@ -1012,7 +1172,7 @@ export function getContext() {
       name: w.name,
       focus: w.focus,
       volume: w.volume,
-      exercises: w.exercises.map((e) => exerciseSummary(e)),
+      exercises: (w.exercises || []).map((e) => exerciseSummary(e)),
     })),
     nutritionToday: {
       kcal: d.nutritionToday.kcal,

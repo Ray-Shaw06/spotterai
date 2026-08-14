@@ -2,9 +2,26 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // A signed-in user owns their own document AND everything beneath it.
+    //
+    // The nested recursive wildcard is load-bearing. `match /users/{uid}` on its
+    // own does NOT cascade into subcollections, so once sync moved from a single
+    // whole-state document to per-record documents at
+    // users/<uid>/workouts/<id>, every write fell through to the catch-all deny
+    // below and came back permission-denied.
+    //
+    // Written as a nested match rather than `match /users/{uid}/{document=**}`
+    // so it reads the same regardless of how the recursive wildcard treats a
+    // zero-segment match across rules versions: the parent document and its
+    // descendants are each granted explicitly.
     match /users/{uid} {
       allow read, write: if request.auth != null
         && request.auth.uid == uid;
+
+      match /{document=**} {
+        allow read, write: if request.auth != null
+          && request.auth.uid == uid;
+      }
     }
 
     match /{document=**} {
