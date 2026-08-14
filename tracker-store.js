@@ -126,22 +126,41 @@ export function importData(obj) {
 // ----------------------------------------------------------------------------
 // Date helpers (local time)
 // ----------------------------------------------------------------------------
+/**
+ * Parse a stored day into a LOCAL Date.
+ *
+ * `new Date("2026-08-10")` is parsed as UTC midnight, which at any negative UTC
+ * offset is the previous day locally. Every date in this store is a local
+ * 'YYYY-MM-DD' string, so feeding one straight to `new Date` shifted the whole
+ * week: in America/Los_Angeles a Monday workout was attributed to the PREVIOUS
+ * week, which silently undercounted `thisWeek.sessions` and misplaced points on
+ * the weekly volume chart. It never showed up at UTC or at positive offsets.
+ *
+ * `ymdOffset` below already used the `+ "T12:00:00"` trick; the rest of the date
+ * helpers had drifted away from it. Noon also sidesteps DST edges.
+ */
+function parseDay(value) {
+  if (value instanceof Date) return new Date(value);
+  const s = String(value ?? "");
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(`${s}T12:00:00`) : new Date(s);
+}
+
 function ymd(d) {
-  const x = new Date(d);
+  const x = parseDay(d);
   return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
 }
 function today() {
   return ymd(new Date());
 }
 function mondayOf(d) {
-  const x = new Date(d);
+  const x = parseDay(d);
   const dow = (x.getDay() + 6) % 7; // Mon=0
   x.setDate(x.getDate() - dow);
   x.setHours(0, 0, 0, 0);
   return x;
 }
 function shortDate(d) {
-  const x = new Date(d);
+  const x = parseDay(d);
   return `${x.getMonth() + 1}/${x.getDate()}`;
 }
 function uid() {
@@ -698,6 +717,135 @@ export function resetAll() {
 }
 
 // ----------------------------------------------------------------------------
+// Consistency calendar
+// ============================================================================
+// A month grid of "did I train" and "did I hit my nutrition goals", built from
+// data the store already holds. Pure functions: no DOM, no storage.
+//
+// WHY THE WEEKLY STREAK EXISTS
+// ----------------------------
+// `computeStreak` below counts consecutive CALENDAR days containing a workout,
+// so a rest day breaks it. That is fine as a "days in a row" novelty and the
+// achievements are built on it, but it is the wrong headline for a calendar: a
+// correct 4-day split has rest days by design, so the grid would render good
+// training as a broken streak and read as failure. `weeklyStreak` counts
+// consecutive weeks that met the weekly session target instead, which is the
+// unit lifting actually happens in.
+// ----------------------------------------------------------------------------
+
+/**
+ * Did this day's nutrition hit target? Protein at or above target AND calories
+ * within 10% either way.
+ *
+ * Water is deliberately NOT required. Most days have no water logged at all, so
+ * requiring it would make "goals met" unreachable and the calendar dead on
+ * arrival. It is reported separately so the UI can show it without gating.
+ */
+export function nutritionGoalsMet(totals, targets) {
+  if (!totals || !targets) return false;
+  const proteinTarget = Number(targets.protein) || 0;
+  const kcalTarget = Number(targets.kcal) || 0;
+  if (proteinTarget <= 0 || kcalTarget <= 0) return false;
+  const proteinOk = (totals.protein || 0) >= proteinTarget;
+  const kcalOk = (totals.kcal || 0) >= kcalTarget * 0.9 && (totals.kcal || 0) <= kcalTarget * 1.1;
+  return proteinOk && kcalOk;
+}
+
+/** Everything the calendar needs about one day. Pure. */
+export function dayStatus(dateKey) {
+  const sessions = state.workouts.filter((w) => w.date === dateKey);
+  const totals = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+  let logged = false;
+  for (const e of state.nutrition) {
+    if (e.date !== dateKey) continue;
+    logged = true;
+    totals.kcal += e.kcal || 0;
+    totals.protein += e.protein || 0;
+    totals.carbs += e.carbs || 0;
+    totals.fat += e.fat || 0;
+  }
+  const waterMl = (state.water || {})[dateKey] || 0;
+  return {
+    date: dateKey,
+    trained: sessions.length > 0,
+    sessions: sessions.length,
+    volume: sessions.reduce((v, w) => v + (w.volume || 0), 0),
+    loggedNutrition: logged,
+    totals,
+    nutritionMet: logged && nutritionGoalsMet(totals, state.targets),
+    waterMl,
+    waterMet: waterMl >= (state.targets.waterMl || 0) && waterMl > 0,
+  };
+}
+
+/**
+ * One month as a grid of weeks, Monday-first, padded with the neighbouring
+ * days so every row has seven cells. `inMonth` marks the padding.
+ */
+export function calendarMonth(year, monthIndex) {
+  const first = new Date(year, monthIndex, 1);
+  const start = mondayOf(first);
+  const last = new Date(year, monthIndex + 1, 0);
+  const end = mondayOf(last);
+  end.setDate(end.getDate() + 6);
+
+  const todayKey = today();
+  const weeks = [];
+  let cursor = new Date(start);
+  while (cursor <= end) {
+    const week = [];
+    for (let i = 0; i < 7; i++) {
+      const key = ymd(cursor);
+      week.push({
+        ...dayStatus(key),
+        day: cursor.getDate(),
+        inMonth: cursor.getMonth() === monthIndex,
+        isToday: key === todayKey,
+        isFuture: key > todayKey,
+      });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    weeks.push(week);
+  }
+  return { year, month: monthIndex, weeks };
+}
+
+/** Sessions per week, keyed by that week's Monday. */
+function sessionsByWeek(workouts) {
+  const counts = new Map();
+  for (const w of workouts) {
+    const key = mondayOf(w.date).getTime();
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  return counts;
+}
+
+/**
+ * Consecutive weeks that met the weekly session target.
+ *
+ * The current week is in progress, so falling short of target this week does
+ * NOT break the streak — it just is not counted yet. Without that grace the
+ * number would collapse to zero every Monday morning, which is exactly the kind
+ * of dishonest discouragement the daily streak already produces.
+ */
+export function computeWeeklyStreak(workouts, weeklyTarget) {
+  const target = Math.max(1, Number(weeklyTarget) || 1);
+  const counts = sessionsByWeek(workouts);
+  const cursor = mondayOf(new Date());
+
+  let streak = 0;
+  // Current week counts only if it has already hit target.
+  if ((counts.get(cursor.getTime()) || 0) >= target) streak++;
+  cursor.setDate(cursor.getDate() - 7);
+
+  while ((counts.get(cursor.getTime()) || 0) >= target) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 7);
+  }
+  return streak;
+}
+
+// ----------------------------------------------------------------------------
 // Derived stats
 // ----------------------------------------------------------------------------
 function computeStreak(workouts) {
@@ -733,6 +881,10 @@ function baseStats() {
   }
   const nutritionDays = Object.keys(byDay).length;
   const proteinTargetDays = Object.values(byDay).filter((d) => d.protein >= state.targets.protein).length;
+  // Days that met BOTH protein and calories, which is what the calendar marks.
+  // proteinTargetDays above only checks protein and is kept for the existing
+  // achievements and first-week review that are built on it.
+  const nutritionGoalDays = Object.values(byDay).filter((d) => nutritionGoalsMet(d, state.targets)).length;
 
   // This week
   const weekStart = mondayOf(new Date()).getTime();
@@ -751,7 +903,9 @@ function baseStats() {
   const painReportsCount = (state.painReports || []).length;
   const waterTargetDays = Object.values(state.water || {}).filter((ml) => ml >= (state.targets.waterMl || 2500)).length;
 
-  return { workoutCount, maxSessionVolume, streakDays, nutritionDays, proteinTargetDays, bodyweightCount: state.bodyweight.length, painReportsCount, waterTargetDays, thisWeek, byDay, prs };
+  const weeklyStreak = computeWeeklyStreak(workouts, state.targets.weeklyWorkouts);
+
+  return { workoutCount, maxSessionVolume, streakDays, weeklyStreak, nutritionDays, proteinTargetDays, nutritionGoalDays, bodyweightCount: state.bodyweight.length, painReportsCount, waterTargetDays, thisWeek, byDay, prs };
 }
 
 function unlockAchievements() {

@@ -6318,3 +6318,68 @@ h1, h2, h3, h4, h5,
 .import-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 .import-step .btn { align-self: flex-start; }
 .import-actions .btn { align-self: auto; }
+
+/* ============================================================================
+   Consistency calendar
+   ----------------------------------------------------------------------------
+   Two independent marks per day: trained, and nutrition on target. A day can
+   carry both, because "trained but ate badly" and "rest day, ate well" are both
+   real and both worth seeing. Colour is never the only signal — every cell
+   carries an aria-label spelling out what happened.
+   ========================================================================== */
+.cal-card { display: flex; flex-direction: column; gap: 12px; }
+.cal-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.cal-nav { display: flex; align-items: center; gap: 6px; }
+.cal-label { font-weight: 600; min-width: 9ch; text-align: center; }
+.cal-nav .btn[disabled] { opacity: 0.35; pointer-events: none; }
+
+.cal-grid { display: flex; flex-direction: column; gap: 4px; }
+.cal-dow,
+.cal-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-dow span {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding-bottom: 2px;
+}
+
+.cal-day {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface, transparent);
+  font-variant-numeric: tabular-nums;
+}
+.cal-day__num { font-size: 12px; color: var(--text-muted); line-height: 1; }
+.cal-day--muted { opacity: 0.35; }
+.cal-day--future { opacity: 0.45; border-style: dashed; }
+.cal-day--today { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cal-day--trained { background: color-mix(in srgb, var(--accent) 12%, transparent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.cal-day--trained .cal-day__num { color: var(--text); font-weight: 600; }
+.cal-day--fuelled { border-color: color-mix(in srgb, var(--ok, var(--accent)) 45%, var(--border)); }
+.cal-day--trained.cal-day--fuelled { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+
+.cal-day__marks { display: flex; gap: 3px; height: 6px; align-items: center; }
+.cal-mark { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.cal-mark--train { background: var(--accent); }
+.cal-mark--fuel { background: var(--ok, var(--accent)); opacity: 0.75; }
+.cal-mark--both { background: linear-gradient(90deg, var(--accent) 50%, var(--ok, var(--accent)) 50%); }
+
+.cal-summary { display: flex; flex-direction: column; gap: 8px; }
+.cal-streak { margin: 0; color: var(--text); }
+.cal-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.cal-legend li { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); }
+.cal-legend strong { color: var(--text); }
+
+@media (max-width: 480px) {
+  .cal-day__num { font-size: 11px; }
+  .cal-legend { gap: 4px 10px; }
+}
