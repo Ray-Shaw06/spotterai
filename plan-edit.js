@@ -2,9 +2,10 @@
  * SpotterAI — plan editing primitives (pure)
  * ============================================================================
  * Small, deterministic operations on a plan object: swap, remove, add and
- * retune exercises. Used by BOTH the plan-page editor and the coach's action
- * layer, so every edit funnels through the same code — and the caller always
- * re-audits afterwards (setPlan → evaluator), so safety can't be edited away.
+ * retune exercises, plus re-focus a whole day. Used by BOTH the plan-page editor
+ * and the coach's action layer, so every edit funnels through the same code —
+ * and the caller always re-audits afterwards (setPlan → evaluator), so safety
+ * can't be edited away.
  *
  * All functions deep-clone and return { plan, changed }. `day` may be an index,
  * a day label ("Day 2"), or a focus ("Upper Body"); null/omitted = all days.
@@ -13,6 +14,10 @@
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const norm = (s) => String(s == null ? "" : s).trim().toLowerCase();
 const appendNote = (existing, note) => (existing ? `${existing} · ${note}` : note);
+
+/** Mirrors repair.js's rest-day test. A focus label reading as rest is not
+ *  cosmetic: repair.js and the evaluator count training days from this text. */
+const READS_AS_REST = /\b(rest|recovery|off day|day off)\b/;
 
 export function findDayIndex(plan, day) {
   const days = (plan && plan.days) || [];
@@ -86,11 +91,55 @@ export function retuneExercise(plan, { name, day = null, sets, reps, rpe } = {})
   return { plan: p, changed };
 }
 
+/**
+ * Re-focus a whole day: change its label, its exercise list, or both in one
+ * atomic edit. This is the "I don't want a full body day, give me upper"
+ * primitive — the exercise-level ops above can rewrite every movement in a day
+ * but can't touch `focus`, which is the heading the plan, workout picker and
+ * Today card all render, so the day kept reading "Full Body" after the swap.
+ *
+ * Unlike the other primitives this always targets exactly one day (a plan-wide
+ * relabel is never what the user means), and it refuses to relabel a day that
+ * still has work in it as rest — see READS_AS_REST.
+ */
+export function replaceDay(plan, { day = null, focus, exercises } = {}) {
+  const p = clone(plan);
+  const di = findDayIndex(p, day);
+  if (di < 0 || !p.days || !p.days[di]) return { plan: p, changed: 0 };
+  const target = p.days[di];
+
+  const nextFocus = focus == null ? "" : String(focus).trim();
+  const list = Array.isArray(exercises)
+    ? exercises.filter((e) => e && String(e.name || "").trim())
+    : null;
+  const wantsExercises = Array.isArray(exercises) && list.length > 0;
+  if (!nextFocus && !wantsExercises) return { plan: p, changed: 0 };
+
+  // Guardrail: a day that still holds working sets must not be labelled rest.
+  const keptWork = wantsExercises ? list.length : (target.exercises || []).length;
+  if (nextFocus && READS_AS_REST.test(norm(nextFocus)) && keptWork > 0) {
+    return { plan: p, changed: 0 };
+  }
+
+  if (nextFocus) target.focus = nextFocus;
+  if (wantsExercises) {
+    target.exercises = list.map((e) => ({
+      name: String(e.name).trim(),
+      sets: Number(e.sets) > 0 ? Number(e.sets) : 3,
+      reps: e.reps == null || e.reps === "" ? "8-12" : String(e.reps),
+      rpe: Number(e.rpe) > 0 ? Number(e.rpe) : 8,
+      notes: e.notes ? String(e.notes) : "edited",
+    }));
+  }
+  return { plan: p, changed: 1 };
+}
+
 const HANDLERS = {
   swap_exercise: (p, a) => swapExercise(p, { from: a.from, to: a.to, day: a.day }),
   remove_exercise: (p, a) => removeExercise(p, { name: a.name, day: a.day }),
   add_exercise: (p, a) => addExercise(p, { name: a.name, day: a.day, sets: a.sets, reps: a.reps, rpe: a.rpe }),
   retune_exercise: (p, a) => retuneExercise(p, { name: a.name, day: a.day, sets: a.sets, reps: a.reps, rpe: a.rpe }),
+  replace_day: (p, a) => replaceDay(p, { day: a.day, focus: a.focus, exercises: a.exercises }),
 };
 
 /** Apply one structured plan action (from the coach). Returns { plan, changed }. */
