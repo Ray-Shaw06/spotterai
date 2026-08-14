@@ -9,6 +9,7 @@
  */
 
 import { EXERCISE_DATA, lookupExercise, suggestAlternatives } from "./exercise-data.js";
+import { CATALOG, searchCatalog, normalizeExerciseName } from "./exercise-catalog.js";
 import { cuesFor, PATTERN_LABEL } from "./movement-cues.js";
 import { patternAnimation } from "./exercise-anim.js";
 import { getExercisePrefs, toggleExercisePref, getActiveLimitations } from "./tracker-store.js";
@@ -37,10 +38,19 @@ let query = "";
 let currentName = null;
 let mode = "detail"; // "detail" | "swap"
 
+/**
+ * Muscle-chip filter only. Text search is handled by the catalog's matcher in
+ * renderGrid, so this page no longer carries its own name-matching rules.
+ *
+ * A lift with no curated metadata has empty primary/secondary muscle arrays, so
+ * fall back to its display muscle group. Without that fallback the chips hide
+ * the 125 catalog lifts that nobody has written safety data for yet.
+ */
 function matches(e) {
-  if (activeMuscle !== "all" && !(e.primaryMuscles || []).includes(activeMuscle) && !(e.secondaryMuscles || []).includes(activeMuscle)) return false;
-  if (query && !e.name.toLowerCase().includes(query)) return false;
-  return true;
+  if (activeMuscle === "all") return true;
+  if ((e.primaryMuscles || []).includes(activeMuscle)) return true;
+  if ((e.secondaryMuscles || []).includes(activeMuscle)) return true;
+  return normalizeExerciseName(e.muscle) === activeMuscle;
 }
 
 function renderFilters() {
@@ -48,18 +58,34 @@ function renderFilters() {
   filtersEl.innerHTML = MUSCLES.map((m) => `<button type="button" class="lib-chip${activeMuscle === m ? " is-active" : ""}" data-muscle="${m}">${m === "all" ? "All" : cap(m)}</button>`).join("");
 }
 
+/**
+ * Card subtitle. Curated lifts show movement pattern + the muscles they work;
+ * lifts with no safety data yet fall back to their equipment and muscle group,
+ * so a browsable card never renders as "undefined · ".
+ */
+function cardMeta(e) {
+  const pattern = PATTERN_LABEL[e.movementPattern] || e.movementPattern;
+  const muscles = (e.primaryMuscles || []).map(cap).join(", ");
+  if (pattern && muscles) return `${pattern} · ${muscles}`;
+  return [e.equipment, e.muscle].filter(Boolean).join(" · ");
+}
+
 function renderGrid() {
   if (!grid) return;
   const prefs = getExercisePrefs();
   const fav = new Set(prefs.favorites);
   const dis = new Set(prefs.disliked);
-  const list = EXERCISE_DATA.filter(matches);
+  // Browse the whole catalog, and let the shared matcher rank a typed query so
+  // "rdl", "bss", and "pushup" work here exactly as they do in the log-a-set
+  // picker. This page used to substring-match over the 84 curated lifts only,
+  // which hid 125 loggable exercises and was a fourth set of matching rules.
+  const list = (query ? searchCatalog(query, CATALOG.length) : CATALOG).filter(matches);
   grid.innerHTML = list.length
     ? list
         .map(
           (e) => `<button type="button" class="lib-card" data-name="${esc(e.name)}">
             <span class="lib-card__name">${esc(e.name)}${fav.has(e.name) ? ' <span class="lib-tag lib-tag--fav" title="Favorite">★</span>' : ""}${dis.has(e.name) ? ' <span class="lib-tag lib-tag--dis" title="Disliked">✕</span>' : ""}</span>
-            <span class="lib-card__meta">${esc(PATTERN_LABEL[e.movementPattern] || e.movementPattern)} · ${esc((e.primaryMuscles || []).map(cap).join(", "))}</span>
+            <span class="lib-card__meta">${esc(cardMeta(e))}</span>
             ${e.difficulty ? `<span class="lib-card__diff">${esc(cap(e.difficulty))}</span>` : ""}
           </button>`
         )
