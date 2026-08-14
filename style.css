@@ -3189,6 +3189,13 @@ table {
 .chat-applied strong { color: var(--text); }
 .chat-applied ul { margin: 4px 0 4px; padding-left: 1.1em; color: var(--text-muted); }
 .chat-applied__link { display: inline-block; margin-top: 2px; color: var(--accent); font-weight: 600; }
+/* ...and the honest counterpart when an edit was refused */
+.chat-applied--miss {
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+}
+.chat-applied--miss .chat-applied__tick { color: var(--warn); }
+.chat-applied--miss p { margin: 4px 0 0; color: var(--text-muted); }
 .chat-guard--warn {
   border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
   background: color-mix(in srgb, var(--danger) 10%, transparent);

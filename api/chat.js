@@ -42,8 +42,10 @@ Guidelines:
 [{"type":"swap_exercise","from":"<exact plan exercise>","to":"<new exercise>"}]
 \`\`\`
 Action rules:
-- Allowed types only: swap_exercise {from,to,day?}, remove_exercise {name,day?}, add_exercise {name,day?,sets?,reps?}, retune_exercise {name,sets?,reps?,rpe?,day?}.
-- "day" is optional — a day label ("Day 2") or focus ("Upper Body"); omit to apply across the plan.
+- Allowed types only: swap_exercise {from,to,day?}, remove_exercise {name,day?}, add_exercise {name,day?,sets?,reps?}, retune_exercise {name,sets?,reps?,rpe?,day?}, replace_day {day,focus?,exercises?}.
+- "day" is optional on the exercise actions — a day label ("Day 2") or focus ("Upper Body"); omit to apply across the plan. On replace_day it is REQUIRED.
+- When the user wants a whole session to become a DIFFERENT KIND of session ("make Day 1 upper instead of full body", "turn Wednesday into a push day", "rename this to Legs"), use replace_day — NOT a pile of swaps. Send the new "focus" label and, unless they only asked for a rename, the full new "exercises" array [{name,sets,reps,rpe}] for that day. Changing the exercises without changing the label leaves the day still titled "Full Body", which is wrong.
+- Do not label a day that still has exercises as rest or recovery; that edit is rejected.
 - Use EXACT exercise names from the plan JSON above for "from"/"name".
 - Briefly explain the change in your normal reply text BEFORE the block; put the block ONLY at the end.
 - The app applies the edit and AUTO-RE-AUDITS the plan (showing any safety flags), so keep edits sensible: balanced push/pull and volume, safe substitutions, never anything that trains through pain. If the user is just asking a question, do NOT include a block.`;

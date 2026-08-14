@@ -57,6 +57,22 @@ test("every api function gets an explicit maxDuration", () => {
   }
 });
 
+// --- day-level edits --------------------------------------------------------
+// A real session: "I don't want a full body day, I want upper." The coach
+// rewrote some exercises but the day still read "Full Body", because no action
+// could reach day.focus and any action type it invented was dropped in silence.
+
+test("the coach is told it can re-focus a whole day", () => {
+  const apiChat = readFileSync(join(root, "api", "chat.js"), "utf8");
+  assert.match(apiChat, /replace_day/, "replace_day is in the allowed action list");
+  assert.match(apiChat, /instead of full body|different kind of session/i, "the prompt names the retitle case");
+});
+
+test("the coach never silently swallows an edit it claimed to make", () => {
+  assert.match(chat, /dropped/, "chat reads the parser's dropped count");
+  assert.match(chat, /renderNotApplied\(/, "chat renders a contradiction when an edit didn't land");
+});
+
 test("AI failure copy has no leftover dash-sweep artefacts", () => {
   const aiErrors = readFileSync(join(root, "ai-errors.js"), "utf8");
   assert.doesNotMatch(aiErrors, /still here-try/, "'here-try' hyphen artefact is gone");

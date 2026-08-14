@@ -38,3 +38,24 @@ test("describeAction summarises each type", () => {
   assert.match(describeAction({ type: "swap_exercise", from: "A", to: "B" }), /Swapped A → B/);
   assert.match(describeAction({ type: "add_exercise", name: "Plank", day: "Day 2" }), /Added Plank · Day 2/);
 });
+
+test("describeAction names the day edit", () => {
+  assert.match(describeAction({ type: "replace_day", day: "Day 1", focus: "Upper Body" }), /Upper Body/);
+});
+
+test("a day retitle survives the parser instead of being dropped", () => {
+  const reply = 'Making Day 1 upper.\n```spotter-action\n[{"type":"replace_day","day":"Day 1","focus":"Upper Body"}]\n```';
+  const { actions } = parseCoachActions(reply);
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0].focus, "Upper Body");
+});
+
+test("dropped actions are reported, not silently swallowed", () => {
+  // The coach claiming a change the app quietly discarded is the worst failure
+  // mode here: the reply reads as if the plan changed when it did not.
+  const reply = 'Done.\n```spotter-action\n[{"type":"remove_exercise","name":"Curl"},{"type":"rename_program"}]\n```';
+  const { actions, dropped } = parseCoachActions(reply);
+  assert.equal(actions.length, 1);
+  assert.equal(dropped, 1);
+  assert.equal(parseCoachActions("no block here").dropped, 0);
+});

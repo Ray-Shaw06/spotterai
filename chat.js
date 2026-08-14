@@ -132,6 +132,18 @@ function renderApplied(summaries) {
   return div;
 }
 
+// The coach's prose has already told the user it changed something. When an
+// action was rejected (unknown type, or a primitive that refused the edit),
+// saying nothing leaves that claim standing — so contradict it in the UI.
+function renderNotApplied(missed, appliedCount) {
+  const div = document.createElement("div");
+  div.className = "chat-applied chat-applied--miss";
+  const what = missed === 1 ? "One change" : `${missed} changes`;
+  const rest = appliedCount ? " The rest went through." : "";
+  div.innerHTML = `<span class="chat-applied__tick" aria-hidden="true">!</span><div><strong>${what} didn't apply</strong><p>I couldn't make that edit safely, so your plan is unchanged there. Try naming the day and what you want it to be, like "make Day 1 upper body instead".${escapeHtml(rest)}</p></div>`;
+  return div;
+}
+
 function renderGuard(flags) {
   const box = document.createElement("div");
   const worst = flags.some((f) => f.severity === "warn") ? "warn" : "caution";
@@ -266,16 +278,18 @@ async function send() {
       const data = await res.json();
       const reply = data.reply || "Sorry, I didn't catch that. Could you rephrase?";
       // The coach may append a plan-edit action block; pull it out + apply it.
-      const { actions, text: cleanReply } = parseCoachActions(reply);
+      const { actions, text: cleanReply, dropped } = parseCoachActions(reply);
       const shown = cleanReply || reply;
       messages.push({ role: "assistant", content: shown });
       const bubble = addBubble("assistant", formatReply(shown), { raw: true });
       // Audit the coach's OWN reply with pure code — flag any unsafe advice.
       const flags = auditReply(shown);
       if (flags.length) bubble.appendChild(renderGuard(flags));
-      if (actions.length) {
-        const applied = applyCoachActions(actions);
+      if (actions.length || dropped) {
+        const applied = actions.length ? applyCoachActions(actions) : [];
         if (applied.length) bubble.appendChild(renderApplied(applied));
+        const missed = dropped + (actions.length - applied.length);
+        if (missed) bubble.appendChild(renderNotApplied(missed, applied.length));
       }
     }
   } catch (err) {
