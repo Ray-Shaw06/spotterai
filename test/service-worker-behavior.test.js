@@ -32,7 +32,7 @@ function bootModuleGraph() {
   return graph;
 }
 
-function harness({ windows = [], precacheFailure = null, existingCaches = {}, offline = false } = {}) {
+function harness({ windows = [], precacheFailure = null, existingCaches = {}, offline = false, hangingNetwork = false } = {}) {
   const handlers = new Map();
   const shown = [];
   const opened = [];
@@ -70,6 +70,10 @@ function harness({ windows = [], precacheFailure = null, existingCaches = {}, of
     Response,
     fetch: async () => {
       if (offline) throw new Error("offline");
+      // A network that never answers. This is what a phone on bad gym wifi
+      // actually looks like: not offline, just slow enough that waiting on it
+      // is the whole problem stale-while-revalidate exists to avoid.
+      if (hangingNetwork) return new Promise(() => {});
       return new Response("ok");
     },
     caches: {
@@ -86,6 +90,13 @@ function harness({ windows = [], precacheFailure = null, existingCaches = {}, of
             for (const url of urls) assets.add(url);
           },
           put: async (request) => { assets.add(cacheKey(request)); },
+          // Stale-while-revalidate reads from the opened cache, not just the
+          // top-level caches.match, so the stub has to model that half of the
+          // real Cache API too.
+          match: async (request) => {
+            const key = cacheKey(request);
+            return assets.has(key) ? new Response(`cached:${key}`) : undefined;
+          },
         };
       },
       keys: async () => [...cacheStorage.keys()],
@@ -117,8 +128,20 @@ async function dispatch(handler, event) {
 
 function dispatchFetch(handler, request) {
   let response;
-  handler({ request, respondWith: (promise) => { response = Promise.resolve(promise); } });
-  return response;
+  // A real FetchEvent has waitUntil, and stale-while-revalidate uses it to keep
+  // the background refresh alive after the cached response is returned. The
+  // pending work is collected so a test can await it when it needs to assert on
+  // what the refresh wrote.
+  const pending = [];
+  handler({
+    request,
+    respondWith: (promise) => { response = Promise.resolve(promise); },
+    waitUntil: (promise) => { pending.push(Promise.resolve(promise).catch(() => {})); },
+  });
+  // Pass-through requests (cross-origin) never call respondWith, and callers
+  // rely on that staying undefined rather than becoming a resolved promise.
+  if (!response) return undefined;
+  return Object.assign(response, { settled: () => Promise.all(pending) });
 }
 
 test("a failed v36 boot precache leaves the active v35 cache available and cannot activate", async () => {
@@ -134,6 +157,50 @@ test("a failed v36 boot precache leaves the active v35 cache available and canno
   assert.deepEqual([...cacheAssets("spotterai-v35")].sort(), [...workingAssets].sort());
   assert.deepEqual([...cacheAssets(currentCache)], []);
   assert.deepEqual(cacheNames(), ["spotterai-v35", currentCache]);
+});
+
+test("a cached asset is served without waiting for the network", async () => {
+  // The point of stale-while-revalidate. Under the old network-first strategy
+  // this request would have hung with the network, even though a perfectly good
+  // copy was already cached — which is the lag felt on every cold start.
+  const { handlers } = harness({
+    existingCaches: { [currentCache]: ["style.css"] },
+    hangingNetwork: true,
+  });
+
+  const pending = dispatchFetch(handlers.get("fetch"), {
+    method: "GET",
+    mode: "no-cors",
+    url: "https://spotter.example/style.css",
+  });
+
+  const settled = await Promise.race([
+    pending.then((res) => res.text()),
+    new Promise((resolve) => setTimeout(() => resolve("TIMED OUT ON NETWORK"), 60)),
+  ]);
+  assert.equal(settled, "cached:style.css", "the cached copy must answer while the network is still hanging");
+});
+
+test("an asset that is not cached still falls through to the network", async () => {
+  const { handlers } = harness({ existingCaches: { [currentCache]: [] } });
+  const response = await dispatchFetch(handlers.get("fetch"), {
+    method: "GET",
+    mode: "no-cors",
+    url: "https://spotter.example/brand-new.js",
+  });
+  assert.equal(await response.text(), "ok", "a first-ever request must reach the network");
+});
+
+test("serving from cache still refreshes it in the background", async () => {
+  const { handlers, cacheAssets } = harness({ existingCaches: { [currentCache]: ["app.js"] } });
+  const pending = dispatchFetch(handlers.get("fetch"), {
+    method: "GET",
+    mode: "no-cors",
+    url: "https://spotter.example/app.js",
+  });
+  assert.equal(await (await pending).text(), "cached:app.js");
+  await pending.settled();
+  assert.ok(cacheAssets(currentCache).has("app.js"), "the revalidation must write back to the current cache");
 });
 
 test("activation supports an offline relaunch for the complete local boot module graph", async () => {

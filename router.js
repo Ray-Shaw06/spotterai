@@ -21,14 +21,57 @@ const TITLES = {
   evals: "Safety Lab · SpotterAI",
 };
 
-const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// Route changes used to animate a smooth scroll back to the top, which meant
+// every tap on the bottom bar spent a few hundred milliseconds visibly gliding
+// before the new page settled. Switching pages is a jump, not a journey: the
+// content is already different, so animating the scroll only delays it. Now it
+// is instant, which also makes the prefers-reduced-motion branch unnecessary.
 
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, "").trim();
   return ROUTES.includes(h) ? h : "home";
 }
 
+// ----------------------------------------------------------------------------
+// Route-gated modules
+// ============================================================================
+// The app booted ~70 ES modules and 693KB of JavaScript before it was usable,
+// and a good chunk of that is UI you only reach by deliberately navigating to
+// it. The camera form-check alone pulls about 71KB of pose-analysis code that
+// nobody logging a set needs parsed.
+//
+// These are loaded on first visit to their route instead. Paths are literal
+// strings on purpose: test/service-worker-behavior.test.js walks dynamic
+// imports when it derives the boot graph, so keeping them literal means these
+// modules stay PRECACHED and the app still works offline on every route. The
+// win here is deferred parse and execute, not fewer bytes downloaded.
+//
+// A module may only be listed here if it touches nothing outside its own route.
+// safety-lab.js deliberately is NOT listed: it wires `home-safety-teaser` on the
+// landing page, so deferring it would quietly break the home page.
+const ROUTE_MODULES = {
+  "form-check": () => import("./form-coach.js"),
+  import: () => import("./import-ui.js"),
+  split: () => import("./split-ui.js"),
+  evals: () => import("./eval-ui.js"),
+};
+
+const requested = new Set();
+
+function ensureRouteModules(route) {
+  const load = ROUTE_MODULES[route];
+  if (!load || requested.has(route)) return;
+  requested.add(route);
+  load().catch((error) => {
+    // Let a failed load be retried on the next visit rather than leaving the
+    // route permanently inert.
+    requested.delete(route);
+    console.error(`Failed to load the ${route} view`, error);
+  });
+}
+
 function show(route) {
+  ensureRouteModules(route);
   document.querySelectorAll("[data-view]").forEach((v) => {
     v.hidden = v.dataset.view !== route;
   });
@@ -40,7 +83,7 @@ function show(route) {
   });
   document.title = TITLES[route] || TITLES.home;
   closeMenu();
-  window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+  window.scrollTo(0, 0);
   window.dispatchEvent(new CustomEvent("spotter:route", { detail: { route } }));
 }
 
