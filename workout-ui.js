@@ -11,8 +11,8 @@
  * re-rendering, so inputs never lose focus; structural changes re-render.
  */
 
-import { addCustomExercise, addRoutine, addWorkout, deriveStats, getCustomExercises, getLoggedExerciseNames, getPainReports, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setsOf, setUnit, subscribe, suggestProgression, updateCustomExercise, updateWorkout } from "./tracker-store.js";
-import { findExercise, isCardio, searchExercises } from "./exercises.js";
+import { addCustomExercise, addRoutine, addWorkout, deriveStats, getCustomExercises, getLoggedExerciseNames, getPainReports, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setHasWork, setsOf, setUnit, subscribe, suggestProgression, updateCustomExercise, updateWorkout } from "./tracker-store.js";
+import { findExercise, isCardio, isTimeBased, searchExercises } from "./exercises.js";
 import { classifyExercise } from "./ai.js";
 import { epley1RM } from "./progression.js";
 import { store } from "./store.js";
@@ -360,7 +360,7 @@ function discardSession() {
   showIdle();
 }
 
-const setHasWork = (s) => Number(s.weight) > 0 || Number(s.reps) > 0 || Number(s.durationMin) > 0 || Number(s.distance) > 0;
+
 
 function finishSession() {
   if (!session) return;
@@ -368,7 +368,7 @@ function finishSession() {
     .map((ex) => ({ name: ex.name, muscle: ex.muscle, sets: ex.sets.filter(setHasWork) }))
     .filter((ex) => ex.sets.length);
   if (!exercises.length) {
-    toast("<strong>Log a set first</strong>: add weight &amp; reps to at least one set.");
+    toast("<strong>Log a set first</strong>: fill in at least one set.");
     return;
   }
   // Editing an already-logged workout → update it in place (keeps its date +
@@ -458,6 +458,7 @@ function exerciseExtras() {
 // we fall back to the built-in cardio check.
 function addExercise(name, muscle, cardioOverride) {
   const cardio = typeof cardioOverride === "boolean" ? cardioOverride : isCardio(name);
+  const timed = !cardio && isTimeBased(name);
   // Persist anything not in the built-in library so it's searchable next time.
   if (!findExercise(name)) addCustomExercise({ name, muscle, cardio });
   const prev = lastSetFor(name);
@@ -470,7 +471,17 @@ function addExercise(name, muscle, cardioOverride) {
     cardio,
     prev,
     suggest,
-    sets: [cardio ? { durationMin: "", distance: "", done: false } : { weight: "", reps: "", done: false }],
+    timed,
+    // Three logging shapes, not two. Cardio is minutes + distance; an isometric
+    // hold or loaded carry is weight + SECONDS; everything else is weight x reps.
+    // Without the third, a plank and a farmer's carry asked for reps in kg.
+    sets: [
+      cardio
+        ? { durationMin: "", distance: "", done: false }
+        : timed
+          ? { weight: "", durationSec: "", done: false }
+          : { weight: "", reps: "", done: false },
+    ],
   });
   renderSession();
   saveDraft();
@@ -516,10 +527,15 @@ function renderSession() {
   el.exercises.innerHTML = session.exercises
     .map((ex, ei) => {
       const cardio = ex.cardio || isCardio(ex.name);
+      const timed = !cardio && (ex.timed ?? isTimeBased(ex.name));
       const prevText = ex.prev ? `Previous: ${ex.prev.top.weight ? ex.prev.top.weight + u + " × " : ""}${ex.prev.top.reps || ex.prev.sets.length + " sets"}` : "No history yet";
       const sug = !cardio && ex.suggest && ex.suggest.weight ? ex.suggest : null;
       const targetTag = sug ? `<span class="ex-target" title="Auto-progression from your last session">▲ Target ${sug.weight}${u}${sug.increment > 0 ? ` (+${sug.increment})` : ""}</span>` : "";
-      const head = `${cardio ? "<th>Min</th><th>Dist</th>" : `<th>${u}</th><th>Reps</th>`}`;
+      const head = cardio
+        ? "<th>Min</th><th>Dist</th>"
+        : timed
+          ? `<th>${u}</th><th>Sec</th>`
+          : `<th>${u}</th><th>Reps</th>`;
       const rows = ex.sets
         .map((s, si) => {
           const prevSet = ex.prev?.sets?.[si];
@@ -527,6 +543,9 @@ function renderSession() {
           const cells = cardio
             ? `<td><input class="input set-in" data-f="durationMin" type="number" inputmode="decimal" value="${esc(s.durationMin ?? "")}" placeholder="min" aria-label="Set ${si + 1} duration in minutes" /></td>
                <td><input class="input set-in" data-f="distance" type="number" inputmode="decimal" value="${esc(s.distance ?? "")}" placeholder="${unit() === "lb" ? "mi" : "km"}" aria-label="Set ${si + 1} distance" /></td>`
+            : timed
+            ? `<td><input class="input set-in" data-f="weight" type="number" inputmode="decimal" value="${esc(s.weight ?? "")}" placeholder="${esc(prevSet?.weight ?? "")}" aria-label="Set ${si + 1} added weight in ${u}, leave blank for bodyweight" /></td>
+               <td><input class="input set-in" data-f="durationSec" type="number" inputmode="numeric" value="${esc(s.durationSec ?? "")}" placeholder="${esc(prevSet?.durationSec ?? "30")}" aria-label="Set ${si + 1} hold in seconds" /></td>`
             : `<td><input class="input set-in" data-f="weight" type="number" inputmode="decimal" value="${esc(s.weight ?? "")}" placeholder="${esc(sug?.weight ?? prevSet?.weight ?? "")}" aria-label="Set ${si + 1} weight in ${u}" /></td>
                <td><input class="input set-in" data-f="reps" type="number" inputmode="numeric" value="${esc(s.reps ?? "")}" placeholder="${esc(prevSet?.reps ?? "")}" aria-label="Set ${si + 1} reps" /></td>`;
           return `<tr class="set-row ${s.done ? "is-done" : ""}" data-set="${si}">
@@ -852,7 +871,14 @@ function init() {
       saveDraft();
     } else if (act === "add-set") {
       const last = ex.sets[ex.sets.length - 1] || {};
-      ex.sets.push(ex.cardio ? { durationMin: "", distance: "", done: false } : { weight: last.weight || "", reps: last.reps || "", done: false });
+      // A new set copies the SHAPE of the exercise. Assuming weight x reps here
+      // gave a plank a reps field the moment you added a second set.
+      const nextSet = ex.cardio
+        ? { durationMin: "", distance: "", done: false }
+        : (ex.timed ?? isTimeBased(ex.name))
+          ? { weight: last.weight || "", durationSec: last.durationSec || "", done: false }
+          : { weight: last.weight || "", reps: last.reps || "", done: false };
+      ex.sets.push(nextSet);
       renderSession();
       saveDraft();
     } else if (act === "del-set") {

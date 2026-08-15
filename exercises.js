@@ -23,6 +23,7 @@ import {
   resolveExercise,
   searchCatalog,
   isCardioExercise,
+  isTimeBasedExercise,
 } from "./exercise-catalog.js";
 
 export const MUSCLES = CATALOG_MUSCLES;
@@ -48,6 +49,14 @@ export function findExercise(name) {
 /** Cardio/time-based exercises log time + distance rather than weight × reps. */
 export function isCardio(name) {
   return isCardioExercise(name);
+}
+
+/**
+ * Isometric holds and loaded carries are logged in SECONDS, not reps. Distinct
+ * from cardio, which logs minutes + distance: a plank is neither reps nor a run.
+ */
+export function isTimeBased(name) {
+  return isTimeBasedExercise(name);
 }
 
 /**
