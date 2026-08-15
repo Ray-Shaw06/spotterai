@@ -616,28 +616,10 @@
                 <span id="session-timer" class="session-timer" aria-label="Duration">0:00</span>
               </div>
 
-              <!-- Rest timer, pick a duration, start manually, or it auto-starts
-                   when you mark a set done -->
-              <div id="rest-timer" class="rest-timer">
-                <div class="rest-timer__row">
-                  <span class="rest-timer__label">Rest</span>
-                  <span id="rest-time" class="rest-timer__time">2:00</span>
-                  <div class="rest-presets" id="rest-presets" role="group" aria-label="Rest duration">
-                    <button type="button" class="rest-preset" data-rest-set="60">1:00</button>
-                    <button type="button" class="rest-preset" data-rest-set="90">1:30</button>
-                    <button type="button" class="rest-preset" data-rest-set="120">2:00</button>
-                    <button type="button" class="rest-preset" data-rest-set="180">3:00</button>
-                    <input id="rest-custom" class="rest-custom" type="text" inputmode="numeric" placeholder="m:ss" aria-label="Custom rest time" maxlength="5" />
-                  </div>
-                  <div class="rest-timer__btns">
-                    <button type="button" class="btn btn--primary btn--sm" data-rest="start">Start</button>
-                    <button type="button" class="btn btn--ghost btn--sm" data-rest="add">+15s</button>
-                    <button type="button" class="btn btn--ghost btn--sm" data-rest="skip">Skip</button>
-                  </div>
-                </div>
-                <div class="rest-timer__bar"><span class="rest-timer__fill" id="rest-fill"></span></div>
-              </div>
-
+              <!-- The rest timer used to sit here, between the session head and
+                   the first exercise, pushing the set inputs further down the
+                   page. It now lives in the fixed #session-bar at the bottom of
+                   the screen, along with Finish. -->
               <div id="session-exercises" class="session-exercises"></div>
               <button type="button" id="session-add-exercise" class="btn btn--ghost btn--sm session-add">+ Add exercise</button>
               <button type="button" id="session-tools-toggle" class="btn btn--ghost btn--sm session-add">Tools · plate &amp; 1RM</button>
@@ -670,11 +652,12 @@
                 </div>
                 <button type="button" id="session-pain" class="btn-link session-pain">Report pain</button>
               </div>
+              <!-- End-of-session actions. Finish is NOT here: it lives in the
+                   fixed #session-bar so it never needs a scroll to reach. -->
               <div class="session-actions">
                 <button type="button" id="session-discard" class="btn-link-danger">Discard</button>
                 <div class="session-actions__right">
                   <button type="button" id="session-save-routine" class="btn btn--ghost btn--sm">Save this workout</button>
-                  <button type="button" id="session-finish" class="btn btn--primary btn--sm">Finish</button>
                 </div>
               </div>
             </div>
@@ -1144,6 +1127,45 @@
   </footer>
     </div><!-- /.app-main -->
   </div><!-- /.app-shell -->
+
+  <!-- ===================== MID-WORKOUT ACTION BAR =====================
+       Rest timer + Finish, fixed just above the bottom nav while a session is
+       live. Both used to live inside the session card: the rest timer sat
+       between the session head and the first exercise (pushing the set inputs
+       further down a 3.3-screen page), and Finish sat at the very bottom of it.
+       Neither is something you should have to scroll to find between sets.
+
+       Deliberately a sibling of .app-shell rather than a child of
+       #workout-session, gated purely on `body.session-live` (workout-ui.js owns
+       that class, set in startSession / cleared in showIdle). That way the timer
+       and Finish follow you if you step over to Nutrition mid-workout instead of
+       disappearing with the Dashboard view. -->
+  <div id="session-bar" class="session-bar" aria-label="Workout controls">
+    <div id="rest-timer" class="rest-timer">
+      <div class="rest-timer__bar"><span class="rest-timer__fill" id="rest-fill"></span></div>
+      <div class="rest-timer__row">
+        <!-- Tapping the time opens the duration presets. They are a set-once
+             choice, so they do not earn permanent space in the bar. -->
+        <button type="button" class="rest-timer__pick" data-rest-open aria-expanded="false" aria-controls="rest-presets" aria-label="Rest length, choose a duration">
+          <span class="rest-timer__label">Rest</span>
+          <span id="rest-time" class="rest-timer__time">2:00</span>
+        </button>
+        <div class="rest-timer__btns">
+          <button type="button" class="btn btn--ghost btn--sm" data-rest="start">Start</button>
+          <button type="button" class="btn btn--ghost btn--sm" data-rest="add">+15s</button>
+          <button type="button" class="btn btn--ghost btn--sm" data-rest="skip">Skip</button>
+        </div>
+        <button type="button" id="session-finish" class="btn btn--primary btn--sm session-bar__finish">Finish</button>
+      </div>
+      <div class="rest-presets" id="rest-presets" role="group" aria-label="Rest duration">
+        <button type="button" class="rest-preset" data-rest-set="60">1:00</button>
+        <button type="button" class="rest-preset" data-rest-set="90">1:30</button>
+        <button type="button" class="rest-preset" data-rest-set="120">2:00</button>
+        <button type="button" class="rest-preset" data-rest-set="180">3:00</button>
+        <input id="rest-custom" class="rest-custom" type="text" inputmode="numeric" placeholder="m:ss" aria-label="Custom rest time" maxlength="5" />
+      </div>
+    </div>
+  </div>
 
   <!-- ===================== EXERCISE PICKER ===================== -->
   <div id="exercise-picker" class="picker-modal" role="dialog" aria-modal="true" aria-label="Add exercise" aria-hidden="true">

@@ -40,7 +40,8 @@ const el = {
   summaryContent: $("summary-content"),
   summaryClose: $("summary-close"),
   history: $("workout-history"),
-  // rest timer + tools
+  // fixed action bar + rest timer + tools
+  bar: $("session-bar"),
   restTimer: $("rest-timer"),
   restTime: $("rest-time"),
   restPresets: $("rest-presets"),
@@ -204,6 +205,15 @@ function renderRestIdle() {
   if (el.restTime) el.restTime.textContent = fmtTime(restDefault);
   if (el.restFill) el.restFill.style.transform = "scaleX(0)";
   renderRestPresets();
+  syncBarGeometry(); // idle swaps +15s/Skip for Start, which can change the wrap
+}
+
+// The duration presets are a popover over the action bar, not a permanent row.
+// You pick a rest length once and then never touch it again for the rest of the
+// session, so it does not earn standing space next to Start / +15s / Finish.
+function setRestPicking(open) {
+  el.restTimer?.classList.toggle("is-picking", open);
+  el.restTimer?.querySelector("[data-rest-open]")?.setAttribute("aria-expanded", String(open));
 }
 
 function startRest(sec = restDefault) {
@@ -213,6 +223,7 @@ function startRest(sec = restDefault) {
   restRemaining = restTotal;
   el.restTimer.classList.add("is-running");
   tickRest();
+  syncBarGeometry(); // running swaps Start for +15s/Skip, which is the wider set
   restId = setInterval(() => {
     restRemaining -= 1;
     if (restRemaining <= 0) return restDone();
@@ -319,6 +330,36 @@ function defaultName() {
   return h < 12 ? "Morning Workout" : h < 17 ? "Afternoon Workout" : "Evening Workout";
 }
 
+// A live session takes over the screen. Measured on a 375px viewport with three
+// exercises logged, the dashboard put 43 of its 79 controls OUTSIDE the session
+// (page header, first-run welcome, the Train/Stats/History tabs, Quick log) and
+// pushed the first weight input 1185px down — a screen and a half below the
+// fold, on the one page you use with a barbell waiting. `session-live` collapses
+// all of that (style.css owns the rules); this function owns the class.
+function setSessionChrome(live) {
+  document.body.classList.toggle("session-live", live);
+  if (live) syncBarGeometry();
+  else setRestPicking(false);
+}
+
+// Publish the bar's REAL height so the things stacking on top of it (the coach
+// FAB, the page's bottom clearance) read a measurement rather than a guess.
+//
+// The bar is one 66px row in every state I measured, and style.css defaults to
+// that so the layout is correct with this function never running. But the row is
+// allowed to wrap rather than overflow, and it does wrap at 320px once Finish
+// becomes "Save changes" (editing a logged workout) alongside +15s and Skip. A
+// hard-coded height would drop the FAB straight back on top of Finish in exactly
+// that case, which is the bug this whole bar exists to fix.
+//
+// Deliberately NOT publishing a left offset: the shell is a 96px icon rail at
+// every width above 961px and a full-width top bar below it, so CSS already
+// knows where the content column starts.
+function syncBarGeometry() {
+  const h = el.bar?.offsetHeight;
+  if (h) document.body.style.setProperty("--session-bar-h", `${h}px`);
+}
+
 function startSession(preset) {
   session = preset || { name: defaultName(), startedAt: Date.now(), exercises: [], source: "dashboard" };
   if (!session.startedAt) session.startedAt = Date.now();
@@ -332,15 +373,26 @@ function startSession(preset) {
   }
   // Re-attach "previous" references (not stored in routines/plans).
   session.exercises.forEach((ex) => (ex.prev = ex.prev || lastSetFor(ex.name)));
+  // The session renders inside the Train panel. Started from Today or Split Lab
+  // while the Stats or History tab was selected, that panel is hidden and the
+  // session is invisible — so bring Train forward before revealing it.
+  document.getElementById("dash-tab-train")?.click();
   el.idle.hidden = true;
   el.session.hidden = false;
   el.name.value = session.name;
+  // Set the Finish label BEFORE revealing the bar: "Save changes" is wider than
+  // "Finish" and is what makes the bar wrap on a narrow screen, so measuring
+  // first would measure the wrong bar.
   if (el.finish) el.finish.textContent = session.editingId ? "Save changes" : "Finish";
+  setSessionChrome(true);
   renderUnitBtn();
   // Reflect any saved difficulty rating on the chips.
   el.diff?.querySelectorAll(".session-diff__chip").forEach((c) => c.classList.toggle("is-active", session.difficulty === c.dataset.diff));
   renderSession();
   startTimer();
+  // With the dashboard chrome collapsed the session starts at the top of the
+  // page, so land there rather than wherever the previous view was scrolled to.
+  window.scrollTo(0, 0);
   saveDraft();
 }
 
@@ -349,6 +401,7 @@ function showIdle() {
   skipRest();
   el.session.hidden = true;
   el.idle.hidden = false;
+  setSessionChrome(false);
   renderIdle();
 }
 
@@ -802,11 +855,16 @@ function init() {
 
   // Rest timer controls: duration presets + start / +15s / skip
   el.restTimer?.addEventListener("click", (e) => {
+    if (e.target.closest("[data-rest-open]")) {
+      setRestPicking(!el.restTimer.classList.contains("is-picking"));
+      return;
+    }
     const preset = e.target.closest("[data-rest-set]");
     if (preset) {
       const sec = Number(preset.dataset.restSet);
       const wasRunning = el.restTimer.classList.contains("is-running");
       setRestDefault(sec);
+      setRestPicking(false);
       if (wasRunning) startRest(sec); // retarget a running timer
       return;
     }
@@ -819,13 +877,19 @@ function init() {
   el.restCustom?.addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
     const sec = parseRestInput(el.restCustom.value);
-    if (sec) { setRestDefault(sec); el.restCustom.value = ""; startRest(sec); }
+    if (sec) { setRestDefault(sec); el.restCustom.value = ""; setRestPicking(false); startRest(sec); }
   });
   el.restCustom?.addEventListener("change", () => {
     const sec = parseRestInput(el.restCustom.value);
     if (sec) { setRestDefault(sec); el.restCustom.value = ""; }
   });
   renderRestIdle();
+  // The sidebar collapses 244px -> 96px rail -> mobile top bar as the window
+  // narrows, which moves the content column the bar lines up with, and the bar
+  // itself can wrap to two rows at 320px. Both are driven by viewport width, so
+  // a plain resize listener catches every case a ResizeObserver would here.
+  window.addEventListener("resize", syncBarGeometry);
+  window.addEventListener("orientationchange", syncBarGeometry);
 
   // Tools: plate calculator + 1RM estimate
   el.toolsToggle?.addEventListener("click", () => {
@@ -920,7 +984,9 @@ function init() {
     if (isNewCustom) enrichExercise(name);
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && el.picker.classList.contains("is-open")) closePicker();
+    if (e.key !== "Escape") return;
+    if (el.picker.classList.contains("is-open")) closePicker();
+    else if (el.restTimer?.classList.contains("is-picking")) setRestPicking(false);
   });
 
   // History (delegated)
@@ -944,8 +1010,7 @@ function init() {
       }
       const w = getState().workouts.find((x) => x.id === li.dataset.id);
       if (w) {
-        startSession(sessionFromWorkout(w));
-        el.session?.scrollIntoView({ behavior: "smooth", block: "start" });
+        startSession(sessionFromWorkout(w)); // already scrolls to the top of the session
         toast(`<strong>Editing “${esc(w.name)}”</strong>: Finish saves your changes to the original entry.`);
       }
     }

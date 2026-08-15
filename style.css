@@ -2997,15 +2997,28 @@ table {
 /* ----------------------------------------------------------------------------
    13e. Session tools — rest timer + plate/1RM calculators
 ---------------------------------------------------------------------------- */
-.rest-timer {
-  margin: var(--space-3) 0;
-  padding: var(--space-2) var(--space-3) 0;
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
-  background: color-mix(in srgb, var(--accent) 9%, transparent);
+/* The rest timer is the content of the fixed #session-bar (placement lives in
+   the MID-WORKOUT ACTION BAR section near the end of this file). It used to be
+   a boxed card wedged between the session head and the first exercise, which is
+   the worst place for it: permanently in the way, and only relevant for the 90
+   seconds you are not touching the phone. */
+.rest-timer { position: relative; }
+.rest-timer__row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+/* The whole "REST 2:00" reading is the control that opens the presets. */
+.rest-timer__pick {
+  flex: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  background: none;
+  border: 1px solid transparent;
   border-radius: var(--r-md);
-  overflow: hidden;
+  cursor: pointer;
 }
-.rest-timer__row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; padding-bottom: var(--space-2); }
+.rest-timer__pick:hover { border-color: var(--border); background: var(--surface-2); }
+.rest-timer.is-picking .rest-timer__pick { border-color: var(--accent-ring); background: var(--accent-soft); }
 .rest-timer__label {
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -3020,7 +3033,23 @@ table {
   font-variant-numeric: tabular-nums;
   min-width: 3.2ch;
 }
-.rest-presets { display: flex; gap: 4px; }
+/* Presets are a popover above the bar, not a standing row. You choose a rest
+   length once per session; four chips plus a text field do not earn permanent
+   space next to Start and Finish. */
+.rest-presets {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: var(--space-2);
+  background: var(--surface-solid);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+}
 .rest-preset {
   padding: 0.3rem 0.55rem; font-size: 0.74rem; font-weight: 600; color: var(--text-muted);
   background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition);
@@ -3034,8 +3063,10 @@ table {
 .rest-custom:focus { outline: none; border-style: solid; border-color: var(--accent); }
 .rest-custom::placeholder { color: var(--text-faint); font-weight: 500; }
 .rest-timer__btns { margin-left: auto; display: flex; gap: var(--space-2); }
-/* Toggle controls by state: idle shows presets + Start, running shows +15s/Skip. */
-.rest-timer.is-running .rest-presets,
+/* Toggle controls by state: idle shows Start, running shows +15s/Skip. Presets
+   are gated on the popover being open, not on the timer being idle — you can
+   retarget a running timer, and that has always been supported. */
+.rest-timer:not(.is-picking) .rest-presets,
 .rest-timer.is-running [data-rest="start"],
 .rest-timer:not(.is-running) [data-rest="add"],
 .rest-timer:not(.is-running) [data-rest="skip"] { display: none; }
@@ -6382,4 +6413,142 @@ h1, h2, h3, h4, h5,
 @media (max-width: 480px) {
   .cal-day__num { font-size: 11px; }
   .cal-legend { gap: 4px 10px; }
+}
+
+/* ============================================================================
+   E. MID-WORKOUT LAYOUT
+   ----------------------------------------------------------------------------
+   Measured on a 375x812 viewport with three exercises added, the Dashboard put
+   79 interactive controls on the page while a workout was live. Only 36 of them
+   belonged to the session. The rest were page furniture: a 136px section header
+   with no controls at all, a 322px first-run welcome card, the Train/Stats/
+   History tab strip, and the Quick log box — 608px of it stacked ABOVE the
+   session. The first weight input landed 1185px down, a screen and a half below
+   the fold, on the one screen you use standing over a loaded barbell.
+
+   Three moves, in order of how much they buy:
+
+     1. `body.session-live` collapses the page furniture for the duration of the
+        session. workout-ui.js owns the class (startSession / showIdle).
+     2. The rest timer and Finish move into #session-bar, fixed above the bottom
+        nav, so neither costs vertical space or a scroll to reach.
+     3. Touch targets in the set table and the session controls go to 44px.
+
+   The app frame — top bar and bottom nav — deliberately stays. The complaint
+   was the workout page, not the app, and taking someone's navigation away
+   mid-session to save 59px is a worse trade than it looks.
+   ============================================================================ */
+
+body.session-live {
+  /* Height of #session-bar. Anything else pinned to the bottom of the screen
+     (the chat FAB) stacks off this, so the bar and the FAB cannot end up in the
+     same corner fighting over the same thumb. */
+  --session-bar-h: 66px;
+}
+
+/* --- 1. Collapse the page furniture while a session is live ---------------- */
+body.session-live #dashboard > .container > .section-head,
+body.session-live #dash-welcome,
+body.session-live .dash-tabs,
+body.session-live #quicklog { display: none; }
+
+/* With the header gone, the section's own 7vw block padding is just a hole at
+   the top of the screen. */
+body.session-live #dashboard.section { padding-block: var(--space-3) var(--space-5); }
+
+/* The workout card is the whole page now, so it should not read as one card
+   floating in a column of nothing. */
+body.session-live .dash-workout-card {
+  padding: var(--space-3) 0 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+/* --- 2. The fixed action bar ---------------------------------------------- */
+/* Hidden unless a session is live: the bar is a sibling of .app-shell (so it
+   survives navigating to another view mid-workout), which means the class is
+   the ONLY thing gating it. */
+.session-bar { display: none; }
+body.session-live .session-bar {
+  display: block;
+  position: fixed;
+  /* Mobile default: the shell is display:block, so the content column starts at
+     0. The desktop icon rail is handled by the 961px query below. (The 244px in
+     `.app-shell`'s base rule is dead — F1 overrides it at every width where the
+     grid is live.) */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 55;
+  padding: 0 var(--space-4) var(--space-2);
+  background: var(--surface-solid);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -8px 28px color-mix(in srgb, var(--text) 10%, transparent);
+}
+/* The rest progress bar sits flush across the top edge of the bar. */
+body.session-live .session-bar .rest-timer__bar {
+  margin: 0 calc(-1 * var(--space-4)) var(--space-2);
+  border-radius: 0;
+}
+.session-bar__finish { flex: none; }
+/* Desktop: same collision, same fix (the mobile offsets override below). */
+body.session-live #chat-fab { bottom: calc(max(var(--space-5), env(safe-area-inset-bottom, 0px)) + var(--session-bar-h)); }
+
+/* Clear the desktop icon rail. Matches F1's own breakpoint and column width, so
+   the two cannot drift apart. */
+@media (min-width: 961px) {
+  body.session-live .session-bar { left: 96px; }
+}
+
+@media (max-width: 960px) {
+  /* Stack above the fixed bottom tab bar rather than under it. 64px is that
+     bar's content height; its own safe-area padding is added on top. */
+  body.session-live .session-bar {
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding: 0 var(--space-3) var(--space-2);
+  }
+  body.session-live .session-bar .rest-timer__bar { margin: 0 calc(-1 * var(--space-3)) var(--space-2); }
+  /* Clear the bar's own height so the last thing in the session is reachable. */
+  body.session-live .app-main { padding-bottom: calc(140px + var(--session-bar-h) + env(safe-area-inset-bottom, 0px)); }
+  /* Lift the chat FAB over the bar. It sat exactly on top of Finish otherwise:
+     two round-ish controls in the same corner, the destructive-feeling one
+     drawn on top of the one you actually need. */
+  body.session-live #chat-fab { bottom: calc(78px + var(--session-bar-h) + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* At 320px the running state (+15s, Skip, Finish) wrapped Finish onto a second
+   line, so the word "REST" goes. Measured, not guessed: at 375px the bar with
+   the label, the running controls and Finish uses 283px of 351px, so 375 keeps
+   its label. The one combination that still wraps there is editing a logged
+   workout — "Save changes" instead of "Finish" — while the rest timer runs, and
+   that wrap is handled (workout-ui.js republishes the real height, so nothing
+   lands on top of the button). The button keeps its accessible name via
+   aria-label either way. */
+@media (max-width: 360px) {
+  .rest-timer__label { display: none; }
+  .session-bar .btn--sm { padding-inline: var(--space-3); }
+  .rest-timer__btns { gap: 6px; }
+}
+
+/* --- 3. Touch targets ------------------------------------------------------ */
+@media (pointer: coarse) {
+  /* The done tick is tapped once per set, so it gets a real 44x44 box. The
+     delete cross deliberately does NOT: it is destructive and it sits one
+     thumb-width away, and two overlapping 44px zones side by side means a
+     mis-tap deletes the set you just logged. It gets full height and a clear
+     gap instead, and the phantom ::after zones (which used to overlap by a
+     pixel) are dropped in favour of real boxes. */
+  .set-ctl { width: 5.4rem; }
+  .set-done { width: 44px; height: 44px; }
+  .set-del { width: 30px; height: 44px; margin-left: 4px; }
+  .set-done::after, .set-del::after { content: none; }
+
+  .ex-block__del { width: 44px; height: 44px; }
+  .add-set { min-height: 44px; }
+  .session-diff__chip { min-height: 44px; display: inline-flex; align-items: center; }
+  /* Segments inside a 2px-padded pill: 40px each makes the pill itself 44px. */
+  .session-unit__opt { min-height: 40px; display: inline-flex; align-items: center; }
+  .rest-preset { min-height: 44px; display: inline-flex; align-items: center; }
+  .rest-custom { min-height: 44px; }
 }
