@@ -339,6 +339,9 @@ export function setsOf(ex) {
       reps: Number(s.reps) || 0,
       ...(s.durationMin != null ? { durationMin: Number(s.durationMin) || 0 } : {}),
       ...(s.distance != null ? { distance: Number(s.distance) || 0 } : {}),
+      // Isometric holds and loaded carries are logged in seconds. Kept separate
+      // from cardio's durationMin so a 45s plank never reads as a 45-minute one.
+      ...(s.durationSec != null ? { durationSec: Number(s.durationSec) || 0 } : {}),
     }));
   }
   // Legacy: sets = count, with single reps/weight.
@@ -348,7 +351,16 @@ export function setsOf(ex) {
   return Array.from({ length: count }, () => ({ weight, reps }));
 }
 
-const setHasWork = (s) => s.weight > 0 || s.reps > 0 || s.durationMin > 0 || s.distance > 0;
+/**
+ * Does this set record any actual work? The ONE definition.
+ *
+ * workout-ui.js used to keep its own copy, which drifted: when timed holds and
+ * carries gained `durationSec`, only this copy learned about it, so a
+ * plank-only session filtered down to zero exercises and refusing to save with
+ * "add weight & reps to at least one set". Import it, never restate it.
+ */
+export const setHasWork = (s) =>
+  Number(s.weight) > 0 || Number(s.reps) > 0 || Number(s.durationMin) > 0 || Number(s.distance) > 0 || Number(s.durationSec) > 0;
 
 /** Total volume (Σ weight × reps) of a workout, across either model. */
 export function workoutVolume(w) {
@@ -378,6 +390,7 @@ function cleanExercises(exercises) {
           reps: Number(s.reps) || 0,
           ...(s.durationMin ? { durationMin: Number(s.durationMin) || 0 } : {}),
           ...(s.distance ? { distance: Number(s.distance) || 0 } : {}),
+          ...(s.durationSec ? { durationSec: Number(s.durationSec) || 0 } : {}),
         }))
         .filter(setHasWork); // only keep completed sets
       return { name: String(e.name || "Exercise"), muscle: e.muscle || "", notes: String(e.notes || ""), sets };
