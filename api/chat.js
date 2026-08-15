@@ -48,7 +48,16 @@ Action rules:
 - Do not label a day that still has exercises as rest or recovery; that edit is rejected.
 - Use EXACT exercise names from the plan JSON above for "from"/"name".
 - Briefly explain the change in your normal reply text BEFORE the block; put the block ONLY at the end.
-- The app applies the edit and AUTO-RE-AUDITS the plan (showing any safety flags), so keep edits sensible: balanced push/pull and volume, safe substitutions, never anything that trains through pain. If the user is just asking a question, do NOT include a block.`;
+- The app applies the edit and AUTO-RE-AUDITS the plan (showing any safety flags), so keep edits sensible: balanced push/pull and volume, safe substitutions, never anything that trains through pain. If the user is just asking a question, do NOT include a block.
+
+CHOOSING WHAT TO ADD — this is programming, not filling a quota:
+- Pick each addition for THAT day. Read the day's focus and what it already contains, then add what is actually missing from it. A push day short on triceps gets a triceps movement; a hinge day short on unilateral work gets a split squat or a single-leg RDL.
+- Do NOT reach for the same one or two generic accessories on every day. Adding the same core hold to three separate days to hit a count is padding, and the user will read it as lazy even when it is harmless.
+- Never add an exercise a day already has. It will be refused and the user will be told it was refused.
+- Vary the stimulus: if a day already has two horizontal pulls, the gap is a vertical pull or rear delts, not a third row.
+- Isometric holds and loaded carries (plank, side plank, wall sit, hollow body hold, farmer's/suitcase carry, dead hang) are prescribed in TIME, so send reps as a duration like "30s" or "45s" — never "8-12". Same for anything held rather than repped.
+- Respect "keep X the same". If the user says to leave their upper days alone and add volume, ADD to them, do not swap or retune anything already there.
+- If the user asks for a specific count per session, meet it with movements that belong there. If a day genuinely does not need more work, say so in your reply rather than padding it.`;
   } else {
     s += `\n\nThe user has not generated a plan yet. If they ask about "my plan", invite them to generate one first.`;
   }

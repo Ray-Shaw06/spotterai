@@ -112,15 +112,20 @@ function scrollToBottom() {
 // Apply the coach's plan edits through the shared primitives, then setPlan once
 // → the app re-audits + re-renders the plan (so safety flags always update).
 function applyCoachActions(actions) {
-  if (!store.plan) return [];
+  if (!store.plan) return { summaries: [], reasons: [] };
   let plan = store.plan;
   const summaries = [];
+  const reasons = [];
   for (const a of actions) {
-    const { plan: next, changed } = applyPlanAction(plan, a);
+    const { plan: next, changed, reason } = applyPlanAction(plan, a);
     if (changed) { plan = next; summaries.push(describeAction(a)); }
+    // A primitive that refused for a KNOWN reason ("already on Day 1") can say
+    // so, instead of the generic "couldn't do that safely" which sends the user
+    // off to rephrase a request that was never the problem.
+    else if (reason) reasons.push(reason);
   }
   if (summaries.length) setPlan(plan, store.inputs);
-  return summaries;
+  return { summaries, reasons };
 }
 
 function renderApplied(summaries) {
@@ -135,12 +140,18 @@ function renderApplied(summaries) {
 // The coach's prose has already told the user it changed something. When an
 // action was rejected (unknown type, or a primitive that refused the edit),
 // saying nothing leaves that claim standing — so contradict it in the UI.
-function renderNotApplied(missed, appliedCount) {
+function renderNotApplied(missed, appliedCount, reasons = []) {
   const div = document.createElement("div");
   div.className = "chat-applied chat-applied--miss";
   const what = missed === 1 ? "One change" : `${missed} changes`;
   const rest = appliedCount ? " The rest went through." : "";
-  div.innerHTML = `<span class="chat-applied__tick" aria-hidden="true">!</span><div><strong>${what} didn't apply</strong><p>I couldn't make that edit safely, so your plan is unchanged there. Try naming the day and what you want it to be, like "make Day 1 upper body instead".${escapeHtml(rest)}</p></div>`;
+  // Prefer the specific reason a primitive gave. The generic fallback tells the
+  // user to rephrase, which is unhelpful advice when the edit was refused
+  // because it was a duplicate rather than because it was misunderstood.
+  const body = reasons.length
+    ? `${reasons.map(escapeHtml).join(". ")}, so your plan is unchanged there.${escapeHtml(rest)}`
+    : `I couldn't make that edit safely, so your plan is unchanged there. Try naming the day and what you want it to be, like "make Day 1 upper body instead".${escapeHtml(rest)}`;
+  div.innerHTML = `<span class="chat-applied__tick" aria-hidden="true">!</span><div><strong>${what} didn't apply</strong><p>${body}</p></div>`;
   return div;
 }
 
@@ -286,10 +297,10 @@ async function send() {
       const flags = auditReply(shown);
       if (flags.length) bubble.appendChild(renderGuard(flags));
       if (actions.length || dropped) {
-        const applied = actions.length ? applyCoachActions(actions) : [];
+        const { summaries: applied, reasons } = actions.length ? applyCoachActions(actions) : { summaries: [], reasons: [] };
         if (applied.length) bubble.appendChild(renderApplied(applied));
         const missed = dropped + (actions.length - applied.length);
-        if (missed) bubble.appendChild(renderNotApplied(missed, applied.length));
+        if (missed) bubble.appendChild(renderNotApplied(missed, applied.length, reasons));
       }
     }
   } catch (err) {

@@ -11,9 +11,24 @@
  * a day label ("Day 2"), or a focus ("Upper Body"); null/omitted = all days.
  */
 
+import { resolveExercise, isTimeBasedExercise } from "./exercise-catalog.js";
+
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const norm = (s) => String(s == null ? "" : s).trim().toLowerCase();
 const appendNote = (existing, note) => (existing ? `${existing} · ${note}` : note);
+
+/**
+ * Are these two names the same exercise? Goes through the catalog resolver, so
+ * "Face Pull" and "face pulls" match. Falls back to a normalized string compare
+ * for custom exercises the catalog has never heard of.
+ */
+function isSameExercise(a, b) {
+  if (!a || !b) return false;
+  if (norm(a) === norm(b)) return true;
+  const ra = resolveExercise(a);
+  const rb = resolveExercise(b);
+  return Boolean(ra && rb && ra.name === rb.name);
+}
 
 /** Mirrors repair.js's rest-day test. A focus label reading as rest is not
  *  cosmetic: repair.js and the evaluator count training days from this text. */
@@ -61,14 +76,29 @@ export function removeExercise(plan, { name, day = null } = {}) {
   return { plan: p, changed };
 }
 
-export function addExercise(plan, { name, day = null, sets = 3, reps = "8-12", rpe = 8 } = {}) {
+export function addExercise(plan, { name, day = null, sets, reps, rpe = 8 } = {}) {
   const p = clone(plan);
   if (!name) return { plan: p, changed: 0 };
   let di = findDayIndex(p, day);
   if (di < 0) di = 0; // default to the first day
   if (!p.days || !p.days[di]) return { plan: p, changed: 0 };
   p.days[di].exercises = p.days[di].exercises || [];
-  p.days[di].exercises.push({ name: String(name), sets, reps: String(reps), rpe, notes: "added" });
+
+  // Refuse a lift the day already has. The coach asked to add Plank to a day
+  // that already had one and nothing stopped it, so the plan ended up listing
+  // the same movement twice. Matching goes through the catalog resolver, so
+  // "Face Pull" and "face pulls" are recognised as the same exercise.
+  const already = p.days[di].exercises.some((ex) => isSameExercise(ex?.name, name));
+  if (already) return { plan: p, changed: 0, reason: `${String(name)} is already on ${p.days[di].label || "that day"}` };
+
+  // Isometric holds and loaded carries are prescribed in SECONDS. Defaulting
+  // everything to "8-12" produced prescriptions like "Plank 3 x 8-12 @ RPE 8".
+  // The plan schema already allows "30s" and the evaluator already parses it.
+  const timed = isTimeBasedExercise(name);
+  const finalSets = sets ?? (timed ? 3 : 3);
+  const finalReps = reps ?? (timed ? "30s" : "8-12");
+
+  p.days[di].exercises.push({ name: String(name), sets: finalSets, reps: String(finalReps), rpe, notes: "added" });
   return { plan: p, changed: 1 };
 }
 
