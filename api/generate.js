@@ -23,6 +23,7 @@
 import { callGemini as callLLM } from "../lib/gemini.js";
 // The plan schema + parse/validate/normalize helpers are shared with the client-side adapt engine.
 import { SCHEMA_HINT, clampNumber, extractJson, isValidPlan, normalizePlan } from "../lib/plan.js";
+import { equipmentCapabilities, exercisesForEquipment } from "../exercise-data.js";
 
 // How many extra times we re-ask Gemini if it returns unparseable JSON.
 const MAX_RETRIES = 2;
@@ -50,7 +51,27 @@ const OVERALL_BUDGET_MS = 50000; // stop retrying once this much time is used
  * We give the model a human-readable client profile plus the exact JSON shape
  * (SCHEMA_HINT) it must return, and request JSON output mode in the request.
  */
-function buildPrompt(inputs) {
+/**
+ * The catalog names available for a constrained equipment set, grouped by
+ * muscle so the model can see the coverage it has to work with rather than a
+ * flat wall of names. Cardio is dropped: this list is for prescribing lifts,
+ * and a treadmill is not what a band-only client is short of.
+ */
+function renderVocabulary(byMuscle) {
+  if (!byMuscle || !byMuscle.size) return "";
+  const lines = [];
+  for (const [muscle, names] of byMuscle) {
+    if (muscle === "Cardio" || !names.length) continue;
+    lines.push(`- ${muscle}: ${names.join(", ")}`);
+  }
+  if (!lines.length) return "";
+  return `\nEXERCISES AVAILABLE WITH THIS EQUIPMENT (use these names verbatim)\n${lines.join("\n")}\n`;
+}
+
+// Exported for tests only — Vercel routes on the default export. Worth the
+// extra surface: the equipment vocabulary is assembled here, and asserting on
+// the real string beats grepping the source for the code that builds it.
+export function buildPrompt(inputs) {
   const goal = inputs.goal || "General fitness";
   const experience = inputs.experience || "Beginner";
   const days = clampNumber(inputs.daysPerWeek, 2, 6, 3);
@@ -59,6 +80,22 @@ function buildPrompt(inputs) {
       ? inputs.equipment.join(", ")
       : "bodyweight only";
   const sessionLength = clampNumber(inputs.sessionLength, 20, 120, 60);
+
+  // Home training gets an EXACT vocabulary rather than a rule it has to invent
+  // against. "Only prescribe exercises possible with the available equipment"
+  // is fine advice and useless as a constraint: asked for a band program the
+  // model returns plausible names like "Band Chest Press" and "Banded Row",
+  // and whether those resolve to a real catalog entry decides whether the
+  // equipment check, the injury check, the Library and the previous-set
+  // reference work at all or silently skip the exercise.
+  //
+  // Only for constrained equipment. That is where the model is weakest (its
+  // default vocabulary is barbells and machines) and where the list is cheap:
+  // ~550 tokens for bands, against ~1,550 to enumerate a full gym it already
+  // programs well.
+  const caps = equipmentCapabilities(inputs.equipment);
+  const constrained = caps && !caps.has("barbell") && !caps.has("machine");
+  const vocabulary = constrained ? renderVocabulary(exercisesForEquipment(caps)) : "";
 
   const injuryList = Array.isArray(inputs.injuries) ? inputs.injuries.filter((i) => i && i !== "none") : [];
   const injuryNote = inputs.injuryNotes ? String(inputs.injuryNotes).slice(0, 400) : "";
@@ -77,9 +114,15 @@ CLIENT PROFILE
 - Time per session: ${sessionLength} minutes
 - Injuries / limitations: ${injuriesSummary}
 
-REQUIREMENTS
+${vocabulary}REQUIREMENTS
 - Design exactly ${days} training days. Use clear focus labels (e.g. "Upper Body", "Push", "Lower Body", "Full Body").
-- Only prescribe exercises possible with the available equipment.
+- Only prescribe exercises possible with the available equipment.${
+    vocabulary
+      ? `
+- Use the EXACT exercise names from the list above. Do not invent names or rephrase them; the app matches what you return against that list.
+- Cover the major muscle groups across the week using that list. It is deliberately complete for this equipment, so there is no need to reach outside it.`
+      : ""
+  }
 - Respect the client's experience level: beginners get foundational compound lifts, simple progressions, and conservative RPE (target RPE 6-8); never prescribe maximal or RPE 10 work to a beginner.
 - If injuries are reported, AVOID contraindicated movements and choose safe regressions instead. Add a short safety cue in the exercise "notes".
 - Balance pushing and pulling volume; include adequate recovery for the chosen frequency.
