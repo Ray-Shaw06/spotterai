@@ -81,11 +81,18 @@ export function isContraindicated(name, injuryKey) {
 // "Bodyweight", "Bands"). Each unlocks a set of the DB's fine-grained equipment
 // tags. Bodyweight is always available. Kept here so both the evaluator's
 // equipment-fit check and the substitution filter share one source of truth.
+// Must cover EVERY tag the catalog uses, or a selection silently under-claims.
+// "Full gym" listed nine of the twelve, which was invisible while the check only
+// looked at curated lifts and became nine false warnings the moment it started
+// reading the whole catalog: a full-gym user being told Sled Push and Medicine
+// Ball Slam "need equipment you didn't list". A gym with barbells has plates by
+// definition; commercial gyms have sleds and med balls.
 const EQUIPMENT_MAP = {
-  "full gym": ["barbell", "rack", "bench", "dumbbell", "machine", "cable", "band", "kettlebell", "bodyweight"],
+  "full gym": ["barbell", "rack", "bench", "dumbbell", "machine", "cable", "band", "kettlebell", "plate", "sled", "medicine ball", "bodyweight"],
   dumbbells: ["dumbbell", "bench", "bodyweight"],
   dumbbell: ["dumbbell", "bench", "bodyweight"],
-  barbell: ["barbell", "rack", "bench", "bodyweight"],
+  // A barbell you cannot load is not a barbell.
+  barbell: ["barbell", "rack", "bench", "plate", "bodyweight"],
   bands: ["band", "bodyweight"],
   band: ["band", "bodyweight"],
   bodyweight: ["bodyweight"],
@@ -117,9 +124,32 @@ export function equipmentCapabilities(userEquipment) {
  */
 export function canPerform(name, caps) {
   if (!caps) return true;
-  const e = lookupExercise(name);
-  if (!e || !e.equipment || !e.equipment.length) return true;
-  return e.equipment.some((tag) => caps.has(String(tag).toLowerCase()));
+  const tags = equipmentTagsFor(name);
+  if (!tags) return true; // genuinely unknown lift: assume performable, never invent a constraint
+  return tags.some((tag) => caps.has(String(tag).toLowerCase()));
+}
+
+/**
+ * The equipment tags for a lift, or null if we do not recognize it at all.
+ *
+ * Reads the CATALOG, not the curated-metadata slice, and that distinction was a
+ * real hole: `equipmentTags` is populated for every catalog entry (from curated
+ * metadata when there is any, otherwise derived from the display label), but
+ * this used to go through `lookupExercise`, which returns null for the 168 of
+ * 362 lifts with no curated entry. So a plan could prescribe a Stiff-Leg
+ * Deadlift to someone training with resistance bands at home, and the
+ * equipment-fit check waved it through — while the catalog sitting right there
+ * said "Barbell".
+ */
+export function equipmentTagsFor(name) {
+  const entry = resolveExercise(name);
+  const tags = entry?.equipmentTags;
+  return tags && tags.length ? tags : null;
+}
+
+/** Whether the equipment-fit check can say anything at all about this lift. */
+export function hasKnownEquipment(name) {
+  return equipmentTagsFor(name) !== null;
 }
 
 /**
