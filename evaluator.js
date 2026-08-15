@@ -20,7 +20,7 @@
  * Runs in the browser as an ES module.
  */
 
-import { lookupExercise, isContraindicated, volumeContribution, equipmentCapabilities, canPerform } from "./exercise-data.js";
+import { lookupExercise, isContraindicated, volumeContribution, equipmentCapabilities, canPerform, hasKnownEquipment } from "./exercise-data.js";
 
 // ============================================================================
 // 1. TUNABLE CONSTANTS  (the rubric)
@@ -741,11 +741,25 @@ function checkEquipmentFit(plan, userInputs) {
     return finalize(id, label, "not_assessed", "No equipment was specified, so exercise availability wasn't assessed. Tell us what you have access to and this check will run.");
   }
 
+  // Two separate populations, and conflating them is what made this check lie:
+  // lifts we can judge, and lifts we cannot recognize at all. The old code
+  // gated on `lookupExercise`, the CURATED slice, so 168 of 362 catalog entries
+  // whose equipment the catalog knew perfectly well were treated as unknown and
+  // skipped — and then the pass said "Every prescribed exercise fits".
   const missing = [];
+  const unrecognized = [];
   for (const ex of allExercises(plan)) {
-    if (lookupExercise(ex.name) && !canPerform(ex.name, caps)) missing.push(ex.name);
+    if (!hasKnownEquipment(ex.name)) unrecognized.push(ex.name);
+    else if (!canPerform(ex.name, caps)) missing.push(ex.name);
   }
   const unique = [...new Set(missing)];
+  const unknown = [...new Set(unrecognized)];
+  const total = allExercises(plan).length;
+
+  // What we could not read is stated in every branch, never implied away.
+  const caveat = unknown.length
+    ? ` ${unknown.length} exercise${unknown.length === 1 ? "" : "s"} (${unknown.slice(0, 3).join(", ")}${unknown.length > 3 ? ", …" : ""}) ${unknown.length === 1 ? "wasn't" : "weren't"} recognized, so ${unknown.length === 1 ? "it was" : "they were"} not checked. Use standard exercise names for a sharper audit.`
+    : "";
 
   if (unique.length) {
     const shown = unique.slice(0, 4).join(", ");
@@ -755,8 +769,13 @@ function checkEquipmentFit(plan, userInputs) {
       id,
       label,
       "warn",
-      `${unique.length} exercise${one ? "" : "s"} need${one ? "s" : ""} equipment you didn't list (${shown}${more}). Swap ${one ? "it" : "them"} for a movement your available equipment supports, or add the equipment to your profile.`
+      `${unique.length} exercise${one ? "" : "s"} need${one ? "s" : ""} equipment you didn't list (${shown}${more}). Swap ${one ? "it" : "them"} for a movement your available equipment supports, or add the equipment to your profile.${caveat}`
     );
+  }
+  // A pass that could only read part of the plan says so rather than claiming
+  // the whole plan is clear.
+  if (unknown.length) {
+    return finalize(id, label, "pass", `The ${total - unknown.length} of ${total} exercises we recognized all fit your available equipment.${caveat}`);
   }
   return finalize(id, label, "pass", "Every prescribed exercise fits the equipment you have available.");
 }
