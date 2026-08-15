@@ -122,6 +122,31 @@ export function canPerform(name, caps) {
   return e.equipment.some((tag) => caps.has(String(tag).toLowerCase()));
 }
 
+/**
+ * Every catalog lift performable with `caps`, grouped by muscle group.
+ *
+ * Unlike `canPerform` this reads the WHOLE catalog, not just the curated slice:
+ * it answers "what could this person be prescribed", where canPerform answers
+ * "should I flag this one". Returns null for no constraint.
+ *
+ * Exists so the plan generator can be handed an exact vocabulary instead of
+ * being told "only prescribe exercises possible with the available equipment"
+ * and left to invent names. A name the model invents resolves to nothing, and
+ * an exercise that resolves to nothing is one the equipment check, the injury
+ * check and the Library all silently skip.
+ */
+export function exercisesForEquipment(caps) {
+  if (!caps) return null;
+  const byMuscle = new Map();
+  for (const e of CATALOG) {
+    const tags = e.equipmentTags || [];
+    if (tags.length && !tags.some((t) => caps.has(String(t).toLowerCase()))) continue;
+    if (!byMuscle.has(e.muscle)) byMuscle.set(e.muscle, []);
+    byMuscle.get(e.muscle).push(e.name);
+  }
+  return byMuscle;
+}
+
 // The ten muscle groups the evaluator scores volume against.
 const VOLUME_GROUPS = new Set(["chest", "back", "shoulders", "biceps", "triceps", "quads", "hamstrings", "glutes", "calves", "core"]);
 

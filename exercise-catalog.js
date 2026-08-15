@@ -43,7 +43,23 @@ export const MUSCLES = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quad
 // ---------------------------------------------------------------------------
 /** Lowercase, punctuation to spaces, collapse runs, trim. */
 export function normalizeExerciseName(value) {
-  return String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+  return (
+    String(value ?? "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      // Band naming is a free-for-all: "Resistance Band Row", "Resistance Bands
+      // Row", "Banded Row" and "Band Row" are one exercise, and people type all
+      // four. Fold them HERE, before anything keys off the string, so exact
+      // match, alias lookup, metadata keying and the containment fallback all
+      // agree. Doing it later would mean only the fuzziest path got there.
+      .replace(/\bresistance bands?\b/g, "band")
+      .replace(/\bbanded\b/g, "band")
+      .replace(/\bbands\b/g, "band")
+      .replace(/\s+/g, " ")
+      .trim()
+  );
 }
 
 /** Normalized with spaces removed, so "pushup" and "push-up" compare equal. */
@@ -115,6 +131,25 @@ const ALIASES = {
   "tricep kickback": "Dumbbell Kickback",
   "dumbbell shoulder press": "Seated Dumbbell Shoulder Press",
   "db shoulder press": "Seated Dumbbell Shoulder Press",
+
+  // Band shorthand. Normalization already folds "banded"/"resistance band"
+  // into "band", so these only need to disambiguate: "band row" sits between
+  // the bent-over and seated versions and would otherwise tie to null, which is
+  // the single most likely thing a band user types.
+  "band row": "Band Bent-Over Row",
+  "band curl": "Band Biceps Curl",
+  "band fly": "Band Chest Fly",
+  "band pulldown": "Band Lat Pulldown",
+  "band pull down": "Band Lat Pulldown",
+  "band shoulder press": "Band Overhead Press",
+  "band press": "Band Chest Press",
+  "band crunch": "Band Kneeling Crunch",
+  "band pushdown": "Band Triceps Pushdown",
+  "band kickback": "Band Glute Kickback",
+  "band walk": "Band Lateral Walk",
+  "band pull through": "Band Deadlift",
+  "band woodchopper": "Band Woodchop",
+  "band wood chop": "Band Woodchop",
 
   // Phrasings the safety layer emits in its substitution lists
   dip: "Dips",
@@ -409,7 +444,7 @@ const BASE = [
   ["Half-Kneeling Lat Pulldown", "Back", "Cable"],
   ["Rack Chin", "Back", "Bodyweight"],
   ["Snatch-Grip Row", "Back", "Barbell"],
-  ["Banded Pull-Apart", "Back", "Band"],
+  ["Band Pull-Apart", "Back", "Band"],
   // Shoulders
   ["Z Press", "Shoulders", "Barbell"],
   ["Bradford Press", "Shoulders", "Barbell"],
@@ -464,7 +499,7 @@ const BASE = [
   ["Barbell Glute Bridge", "Glutes", "Barbell"],
   ["Single-Leg Hip Thrust", "Glutes", "Bodyweight"],
   ["Cable Hip Abduction", "Glutes", "Cable"],
-  ["Banded Hip Thrust", "Glutes", "Band"],
+  ["Band Hip Thrust", "Glutes", "Band"],
   ["Kas Glute Bridge", "Glutes", "Barbell"],
   ["Machine Hip Thrust", "Glutes", "Machine"],
   ["Standing Cable Kickback", "Glutes", "Cable"],
@@ -486,7 +521,7 @@ const BASE = [
   ["GHD Sit-up", "Core", "Machine"],
   ["Bird Dog", "Core", "Bodyweight"],
   ["Stir the Pot", "Core", "Bodyweight"],
-  ["Banded Anti-Rotation Hold", "Core", "Band"],
+  ["Band Anti-Rotation Hold", "Core", "Band"],
   // Cardio
   ["Ski Erg", "Cardio", "Machine"],
   ["Sled Drag", "Cardio", "Sled"],
@@ -505,6 +540,60 @@ const BASE = [
   ["Clean Pull", "Full body", "Barbell"],
   ["Medicine Ball Slam", "Full body", "Medicine ball"],
   ["Dead Hang", "Back", "Bodyweight"],
+
+  // --- Resistance-band home training -------------------------------------
+  // Kept as one block rather than scattered through the muscle groups above,
+  // because this IS the whole palette for a band-only user and it has to be
+  // auditable at a glance. Before this, "Bands" was an equipment option that
+  // unlocked three exercises — none of them for shoulders, arms or calves — so
+  // a band home plan could not be built from the catalog at all, and every
+  // exercise the model invented for it resolved to nothing.
+  ["Band Chest Press", "Chest", "Band"],
+  ["Band Incline Chest Press", "Chest", "Band"],
+  ["Band Chest Fly", "Chest", "Band"],
+  ["Band Low-to-High Fly", "Chest", "Band"],
+  ["Band Push-up", "Chest", "Band"],
+  ["Band Bent-Over Row", "Back", "Band"],
+  ["Band Seated Row", "Back", "Band"],
+  ["Band Single-Arm Row", "Back", "Band"],
+  ["Band Lat Pulldown", "Back", "Band"],
+  ["Band Straight-Arm Pulldown", "Back", "Band"],
+  ["Band Face Pull", "Back", "Band"],
+  ["Band Reverse Fly", "Back", "Band"],
+  ["Band Overhead Press", "Shoulders", "Band"],
+  ["Band Lateral Raise", "Shoulders", "Band"],
+  ["Band Front Raise", "Shoulders", "Band"],
+  ["Band Upright Row", "Shoulders", "Band"],
+  ["Band External Rotation", "Shoulders", "Band"],
+  ["Band Internal Rotation", "Shoulders", "Band"],
+  ["Band Biceps Curl", "Biceps", "Band"],
+  ["Band Hammer Curl", "Biceps", "Band"],
+  ["Band Concentration Curl", "Biceps", "Band"],
+  ["Band Triceps Pushdown", "Triceps", "Band"],
+  ["Band Overhead Triceps Extension", "Triceps", "Band"],
+  ["Band Triceps Kickback", "Triceps", "Band"],
+  ["Band Squat", "Quads", "Band"],
+  ["Band Front Squat", "Quads", "Band"],
+  ["Band Split Squat", "Quads", "Band"],
+  ["Band Leg Extension", "Quads", "Band"],
+  ["Band Leg Curl", "Hamstrings", "Band"],
+  ["Band Romanian Deadlift", "Hamstrings", "Band"],
+  ["Band Good Morning", "Hamstrings", "Band"],
+  ["Band Glute Bridge", "Glutes", "Band"],
+  ["Band Glute Kickback", "Glutes", "Band"],
+  ["Band Lateral Walk", "Glutes", "Band"],
+  ["Band Monster Walk", "Glutes", "Band"],
+  ["Band Clamshell", "Glutes", "Band"],
+  ["Band Fire Hydrant", "Glutes", "Band"],
+  ["Band Calf Raise", "Calves", "Band"],
+  ["Band Seated Calf Raise", "Calves", "Band"],
+  ["Band Pallof Press", "Core", "Band"],
+  ["Band Woodchop", "Core", "Band"],
+  ["Band Dead Bug", "Core", "Band"],
+  ["Band Kneeling Crunch", "Core", "Band"],
+  ["Band Deadlift", "Full body", "Band"],
+  ["Band Thruster", "Full body", "Band"],
+  ["Band Clean and Press", "Full body", "Band"],
 ];
 
 // ---------------------------------------------------------------------------
@@ -654,11 +743,25 @@ export function resolveExercise(name) {
   // expanded first, so "incline db press" reaches "Incline Dumbbell Press"
   // rather than failing on the literal token "db".
   const queryTokens = new Set(expandAbbrev(singularTokens(norm)));
+
+  // An implement named in the query is a HARD constraint, not a hint. Without
+  // this, "band overhead press" fell through to "Overhead Press" — a BARBELL
+  // lift — and the evaluator's equipment-fit check then told a band-only user
+  // that their band press "needs equipment you didn't list". A wrong answer
+  // presented as a safety warning. Same fault for "band face pull" (cable) and
+  // "band triceps pushdown" (cable).
+  //
+  // Returning null when nothing matches the named implement is the right
+  // failure: callers treat an unknown lift as unassessed rather than inventing
+  // a constraint the user does not have.
+  const queryEquip = [...queryTokens].filter((t) => EQUIPMENT_WORDS.has(t));
+
   let best = null;
   let bestSize = 0;
   let tied = false;
   for (const { entry, tokens } of SUBSET_CANDIDATES) {
     if (tokens.size < 2 || tokens.size <= bestSize - 1) continue;
+    if (queryEquip.length && !queryEquip.some((w) => equipmentWordsOf(entry).has(w))) continue;
     let contained = true;
     for (const token of tokens) {
       if (!queryTokens.has(token)) { contained = false; break; }
@@ -668,6 +771,26 @@ export function resolveExercise(name) {
     else if (tokens.size === bestSize && entry !== best) tied = true;
   }
   return tied ? null : best;
+}
+
+// Implements that change what an exercise IS, not just how it is loaded. A
+// query naming one of these must resolve to an entry that uses it.
+const EQUIPMENT_WORDS = new Set(["band", "barbell", "dumbbell", "cable", "machine", "kettlebell", "smith", "sled"]);
+
+/** Which implements an entry uses: its equipment label plus any in its name. */
+const EQUIP_WORDS_CACHE = new WeakMap();
+function equipmentWordsOf(entry) {
+  let set = EQUIP_WORDS_CACHE.get(entry);
+  if (set) return set;
+  set = new Set();
+  for (const token of tokensOf(entry.equipment || "")) {
+    if (EQUIPMENT_WORDS.has(token)) set.add(token);
+  }
+  for (const token of tokensOf(entry.name)) {
+    if (EQUIPMENT_WORDS.has(token)) set.add(token);
+  }
+  EQUIP_WORDS_CACHE.set(entry, set);
+  return set;
 }
 
 // ---------------------------------------------------------------------------
@@ -770,7 +893,7 @@ const TIME_BASED = new Set([
   "Hollow Body Hold",
   "L-Sit",
   "Wall Sit",
-  "Banded Anti-Rotation Hold",
+  "Band Anti-Rotation Hold",
   "Stir the Pot",
   "Farmer's Carry",
   "Suitcase Carry",
