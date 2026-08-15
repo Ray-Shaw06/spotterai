@@ -32,6 +32,8 @@ import {
   resolveExercise,
   searchCatalog,
   normalizeExerciseName,
+  isTimeBasedExercise,
+  TIME_BASED_NOT_IN_CATALOG as CATALOG_TIME_BASED_ORPHANS,
 } from "../exercise-catalog.js";
 import { EXERCISES, findExercise, isCardio, searchExercises } from "../exercises.js";
 import { EXERCISE_DATA, lookupExercise, isContraindicated, suggestAlternatives } from "../exercise-data.js";
@@ -210,6 +212,20 @@ test("every equipment label maps to real tags, never a silent bodyweight fallbac
     [],
     "add the equipment label to TAGS_FOR_LABEL in exercise-catalog.js"
   );
+});
+
+test("every time-based lift exists in the catalog", () => {
+  // A TIME_BASED entry naming a lift the catalog does not have is dead weight:
+  // isTimeBasedExercise resolves through the catalog, so it could never fire.
+  assert.deepEqual(CATALOG_TIME_BASED_ORPHANS, []);
+});
+
+test("time-based classification survives aliases and casing", () => {
+  assert.equal(isTimeBasedExercise("plank"), true);
+  assert.equal(isTimeBasedExercise("Side Plank"), true);
+  assert.equal(isTimeBasedExercise("bench press"), false);
+  assert.equal(isTimeBasedExercise("Hanging Leg Raise"), false, "repped, despite the name");
+  assert.equal(isTimeBasedExercise("nonsense lift"), false);
 });
 
 test("isCardio still classifies from the catalog", () => {

@@ -504,6 +504,7 @@ const BASE = [
   ["Dumbbell Snatch", "Full body", "Dumbbell"],
   ["Clean Pull", "Full body", "Barbell"],
   ["Medicine Ball Slam", "Full body", "Medicine ball"],
+  ["Dead Hang", "Back", "Bodyweight"],
 ];
 
 // ---------------------------------------------------------------------------
@@ -746,6 +747,52 @@ function dedupeByName(list) {
     out.push(entry);
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Time-based work
+// ---------------------------------------------------------------------------
+// Isometric holds and loaded carries are prescribed in SECONDS, not reps. The
+// plan schema already allows it (`reps` accepts "30s", and the evaluator parses
+// time holds), but anything generating a prescription had been defaulting every
+// exercise to "8-12" — so the coach could add a Plank as "3 x 8-12 @ RPE 8",
+// which is not a thing.
+//
+// This is an explicit list rather than a name pattern on purpose: matching
+// /hold|sit|hang/ sweeps up Hanging Leg Raise, GHD Sit-up and Hang Clean, which
+// are all rep-based.
+const TIME_BASED = new Set([
+  "Plank",
+  "Side Plank",
+  "Knee Plank",
+  "Weighted Plank",
+  "Copenhagen Plank",
+  "Hollow Body Hold",
+  "L-Sit",
+  "Wall Sit",
+  "Banded Anti-Rotation Hold",
+  "Stir the Pot",
+  "Farmer's Carry",
+  "Suitcase Carry",
+  "Sandbag Carry",
+  "Bear Crawl",
+  "Sled Push",
+  "Sled Drag",
+  "Battle Ropes",
+  "Dead Hang",
+].map((n) => normalizeExerciseName(n)));
+
+/**
+ * True when this exercise is prescribed and logged in time rather than reps.
+ * Cardio is separate: it carries its own time + distance handling.
+ */
+export const TIME_BASED_NOT_IN_CATALOG = [...TIME_BASED].filter(
+  (key) => !CATALOG.some((e) => normalizeExerciseName(e.name) === key)
+);
+
+export function isTimeBasedExercise(name) {
+  const entry = resolveExercise(name);
+  return entry ? TIME_BASED.has(normalizeExerciseName(entry.name)) : false;
 }
 
 /** Cardio lifts log time + distance rather than weight x reps. */

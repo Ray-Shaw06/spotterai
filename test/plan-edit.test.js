@@ -109,3 +109,74 @@ test("applyPlanAction routes replace_day", () => {
   assert.equal(changed, 1);
   assert.equal(plan.days[0].focus, "Push");
 });
+
+// ---------------------------------------------------------------------------
+// Coach edit quality
+//
+// From a real transcript: asked to bring every session up to 5 exercises, the
+// coach added Plank to three separate days. Two things were wrong underneath
+// the padding, and both were invisible in the chat summary (which only said
+// "Added Plank"):
+//   1. addExercise defaulted every exercise to 3 x "8-12" @ RPE 8, so the plan
+//      literally prescribed a plank for 8-12 reps.
+//   2. nothing stopped it adding a lift a day already had.
+// ---------------------------------------------------------------------------
+
+test("an isometric hold is prescribed in time, not reps", () => {
+  const { plan, changed } = addExercise(base(), { name: "Plank", day: "Day 1" });
+  assert.equal(changed, 1);
+  const added = plan.days[0].exercises.at(-1);
+  assert.equal(added.name, "Plank");
+  assert.equal(added.reps, "30s", "a plank prescribed for 8-12 reps is not a thing");
+});
+
+test("a loaded carry is time-based too", () => {
+  const { plan } = addExercise(base(), { name: "Farmer's Carry", day: "Day 2" });
+  assert.equal(plan.days[1].exercises.at(-1).reps, "30s");
+});
+
+test("a rep-based lift keeps a rep range", () => {
+  const { plan } = addExercise(base(), { name: "Face Pull", day: "Day 1" });
+  assert.equal(plan.days[0].exercises.at(-1).reps, "8-12");
+});
+
+test("names that only LOOK like holds stay rep-based", () => {
+  // The tempting shortcut is a /hold|sit|hang/ regex, which sweeps up all three
+  // of these. They are all repped.
+  for (const name of ["Hanging Leg Raise", "GHD Sit-up", "Hang Clean"]) {
+    const { plan } = addExercise(base(), { name, day: "Day 2" });
+    assert.equal(plan.days[1].exercises.at(-1).reps, "8-12", `${name} must stay rep-based`);
+  }
+});
+
+test("an explicit prescription still wins over the default", () => {
+  const { plan } = addExercise(base(), { name: "Plank", day: "Day 1", sets: 2, reps: "45s" });
+  const added = plan.days[0].exercises.at(-1);
+  assert.equal(added.sets, 2);
+  assert.equal(added.reps, "45s");
+});
+
+test("a lift the day already has is refused, not duplicated", () => {
+  const { plan, changed } = addExercise(base(), { name: "Bench Press", day: "Day 1" });
+  assert.equal(changed, 0);
+  assert.equal(plan.days[0].exercises.length, 2, "the day must be left alone");
+});
+
+test("the duplicate check resolves aliases, not just exact strings", () => {
+  const withFacePull = addExercise(base(), { name: "Face Pull", day: "Day 1" }).plan;
+  const { changed } = addExercise(withFacePull, { name: "face pulls", day: "Day 1" });
+  assert.equal(changed, 0, "'face pulls' is the same exercise as 'Face Pull'");
+});
+
+test("a refusal explains itself so the UI need not guess", () => {
+  const { reason } = addExercise(base(), { name: "Bench Press", day: "Day 1" });
+  assert.match(String(reason), /already/i);
+});
+
+test("the same lift may still be added to a DIFFERENT day", () => {
+  // Core work or face pulls several times a week is legitimate programming.
+  // The guard is about duplicates within one session, not across the week.
+  const day1 = addExercise(base(), { name: "Plank", day: "Day 1" }).plan;
+  const { changed } = addExercise(day1, { name: "Plank", day: "Day 2" });
+  assert.equal(changed, 1, "this is normal programming and must not be blocked");
+});
