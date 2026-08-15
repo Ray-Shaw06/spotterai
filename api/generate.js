@@ -57,6 +57,8 @@ const OVERALL_BUDGET_MS = 50000; // stop retrying once this much time is used
  * flat wall of names. Cardio is dropped: this list is for prescribing lifts,
  * and a treadmill is not what a band-only client is short of.
  */
+const TRAINABLE_GROUPS = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core"];
+
 function renderVocabulary(byMuscle) {
   if (!byMuscle || !byMuscle.size) return "";
   const lines = [];
@@ -65,7 +67,19 @@ function renderVocabulary(byMuscle) {
     lines.push(`- ${muscle}: ${names.join(", ")}`);
   }
   if (!lines.length) return "";
-  return `\nEXERCISES AVAILABLE WITH THIS EQUIPMENT (use these names verbatim)\n${lines.join("\n")}\n`;
+
+  // Name the gaps instead of letting the model discover them. The list used to
+  // be introduced as "deliberately complete for this equipment", which stopped
+  // being true the moment a pull-up bar counted as equipment: floor-only
+  // training has no direct biceps exercise, because there isn't one. Told the
+  // list is complete and finding nothing under Biceps, a model invents a name —
+  // and an invented name is one the equipment and injury checks cannot read.
+  const empty = TRAINABLE_GROUPS.filter((g) => !(byMuscle.get(g) || []).length);
+  const gaps = empty.length
+    ? `\nNo direct option for: ${empty.join(", ")}. That equipment genuinely cannot isolate ${empty.length === 1 ? "it" : "them"}, so cover ${empty.length === 1 ? "it" : "them"} through the compound movements above rather than inventing an exercise.\n`
+    : "";
+
+  return `\nEXERCISES AVAILABLE WITH THIS EQUIPMENT (use these names verbatim)\n${lines.join("\n")}\n${gaps}`;
 }
 
 // Exported for tests only — Vercel routes on the default export. Worth the
@@ -120,7 +134,7 @@ ${vocabulary}REQUIREMENTS
     vocabulary
       ? `
 - Use the EXACT exercise names from the list above. Do not invent names or rephrase them; the app matches what you return against that list.
-- Cover the major muscle groups across the week using that list. It is deliberately complete for this equipment, so there is no need to reach outside it.`
+- Cover the major muscle groups across the week using that list, honouring any gaps it declares.`
       : ""
   }
 - Respect the client's experience level: beginners get foundational compound lifts, simple progressions, and conservative RPE (target RPE 6-8); never prescribe maximal or RPE 10 work to a beginner.

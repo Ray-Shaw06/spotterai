@@ -21,7 +21,27 @@ export const TRAINING_AGE_OPTIONS = [
   { value: "experienced", label: "3+ years", experience: "Advanced" },
 ];
 
-export const EQUIPMENT_OPTIONS = ["Full gym", "Dumbbells", "Barbell", "Bodyweight", "Bands"];
+// Multi-select. Each label must have a key in EQUIPMENT_MAP (exercise-data.js);
+// a label with no mapping is treated as "unrecognized", and a selection made
+// entirely of unrecognized labels drops to no constraint at all — so the
+// equipment check would silently stop running. There is a test pinning it.
+//
+// Deliberately NOT offered: plate, sled and medicine ball (9 lifts between them,
+// all already covered by Full gym), and Bench. Bench is the interesting
+// omission: every bench-tagged lift also carries dumbbell or barbell, and
+// canPerform is OR over tags, so a Bench chip would change nothing whether you
+// ticked it or not. A control that does nothing is worse than a missing one.
+export const EQUIPMENT_OPTIONS = [
+  "Full gym",
+  "Barbell",
+  "Dumbbells",
+  "Kettlebells",
+  "Bands",
+  "Pull-up bar",
+  "Cable machine",
+  "Gym machines",
+  "Bodyweight",
+];
 export const AGE_RANGES = ["Under 18", "18–29", "30–44", "45–59", "60+"];
 export const SESSION_LENGTHS = [30, 45, 60, 90];
 export const DAYS_OPTIONS = [2, 3, 4, 5, 6];

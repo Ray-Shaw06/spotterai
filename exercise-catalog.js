@@ -178,14 +178,14 @@ const BASE = [
   ["Cable Fly", "Chest", "Cable"],
   ["Dumbbell Fly", "Chest", "Dumbbell"],
   ["Push-up", "Chest", "Bodyweight"],
-  ["Dips", "Chest", "Bodyweight"],
+  ["Dips", "Chest", "Pull-up bar"],
 
   // Back
   ["Deadlift", "Back", "Barbell"],
   ["Conventional Deadlift", "Back", "Barbell"],
   ["Trap-Bar Deadlift", "Back", "Barbell"],
-  ["Pull-up", "Back", "Bodyweight"],
-  ["Chin-up", "Back", "Bodyweight"],
+  ["Pull-up", "Back", "Pull-up bar"],
+  ["Chin-up", "Back", "Pull-up bar"],
   ["Lat Pulldown", "Back", "Cable"],
   ["Barbell Row", "Back", "Barbell"],
   ["Pendlay Row", "Back", "Barbell"],
@@ -265,8 +265,8 @@ const BASE = [
 
   // Core
   ["Plank", "Core", "Bodyweight"],
-  ["Hanging Knee Raise", "Core", "Bodyweight"],
-  ["Hanging Leg Raise", "Core", "Bodyweight"],
+  ["Hanging Knee Raise", "Core", "Pull-up bar"],
+  ["Hanging Leg Raise", "Core", "Pull-up bar"],
   ["Cable Crunch", "Core", "Cable"],
   ["Crunch", "Core", "Bodyweight"],
   ["Russian Twist", "Core", "Bodyweight"],
@@ -298,15 +298,15 @@ const BASE = [
   ["Floor Press", "Chest", "Barbell"],
   ["Svend Press", "Chest", "Plate"],
   ["Smith Machine Bench Press", "Chest", "Machine"],
-  ["Weighted Dip", "Chest", "Bodyweight"],
+  ["Weighted Dip", "Chest", "Pull-up bar"],
   ["Push-up (Deficit)", "Chest", "Bodyweight"],
   // Back
   ["Single-Arm Lat Pulldown", "Back", "Cable"],
   ["Meadows Row", "Back", "Barbell"],
   ["Kroc Row", "Back", "Dumbbell"],
-  ["Inverted Row", "Back", "Bodyweight"],
+  ["Inverted Row", "Back", "Pull-up bar"],
   ["Machine Row", "Back", "Machine"],
-  ["Wide-Grip Pull-up", "Back", "Bodyweight"],
+  ["Wide-Grip Pull-up", "Back", "Pull-up bar"],
   ["Neutral-Grip Pulldown", "Back", "Cable"],
   ["Cable Pullover", "Back", "Cable"],
   ["Snatch-Grip Deadlift", "Back", "Barbell"],
@@ -363,9 +363,9 @@ const BASE = [
   ["V-up", "Core", "Bodyweight"],
   ["Decline Sit-up", "Core", "Bodyweight"],
   ["Flutter Kick", "Core", "Bodyweight"],
-  ["Toes-to-Bar", "Core", "Bodyweight"],
+  ["Toes-to-Bar", "Core", "Pull-up bar"],
   ["Reverse Crunch", "Core", "Bodyweight"],
-  ["Hanging Windshield Wiper", "Core", "Bodyweight"],
+  ["Hanging Windshield Wiper", "Core", "Pull-up bar"],
   // Cardio
   ["Jog", "Cardio", "Bodyweight"],
   ["Sprint", "Cardio", "Bodyweight"],
@@ -414,8 +414,8 @@ const BASE = [
   ["Paused Squat", "Quads", "Barbell"],
   ["Paused Front Squat", "Quads", "Barbell"],
   ["Paused Bench Press", "Chest", "Barbell"],
-  ["Weighted Pull-up", "Back", "Bodyweight"],
-  ["Weighted Chin-up", "Back", "Bodyweight"],
+  ["Weighted Pull-up", "Back", "Pull-up bar"],
+  ["Weighted Chin-up", "Back", "Pull-up bar"],
   ["Weighted Push-up", "Chest", "Bodyweight"],
 
   // --- Coverage expansion --------------------------------------------------
@@ -442,7 +442,7 @@ const BASE = [
   ["Seated Machine Row", "Back", "Machine"],
   ["Deadstop Row", "Back", "Barbell"],
   ["Half-Kneeling Lat Pulldown", "Back", "Cable"],
-  ["Rack Chin", "Back", "Bodyweight"],
+  ["Rack Chin", "Back", "Pull-up bar"],
   ["Snatch-Grip Row", "Back", "Barbell"],
   ["Band Pull-Apart", "Back", "Band"],
   // Shoulders
@@ -539,7 +539,7 @@ const BASE = [
   ["Dumbbell Snatch", "Full body", "Dumbbell"],
   ["Clean Pull", "Full body", "Barbell"],
   ["Medicine Ball Slam", "Full body", "Medicine ball"],
-  ["Dead Hang", "Back", "Bodyweight"],
+  ["Dead Hang", "Back", "Pull-up bar"],
 
   // --- Resistance-band home training -------------------------------------
   // Kept as one block rather than scattered through the muscle groups above,
@@ -594,6 +594,34 @@ const BASE = [
   ["Band Deadlift", "Full body", "Band"],
   ["Band Thruster", "Full body", "Band"],
   ["Band Clean and Press", "Full body", "Band"],
+
+  // --- Closing the gaps the equipment options exposed ----------------------
+  // Once a pull-up bar stopped counting as "bodyweight", floor-only training had
+  // ZERO back and ZERO shoulder exercises in the catalog — while the generator
+  // was being handed that list and told it was complete for the equipment. These
+  // are the standard floor answers, not filler. Kettlebells were nearly as thin:
+  // six entries, no press, no curl, one row.
+  ["Pike Push-up", "Shoulders", "Bodyweight"],
+  ["Elevated Pike Push-up", "Shoulders", "Bodyweight"],
+  ["Wall Handstand Hold", "Shoulders", "Bodyweight"],
+  ["Handstand Push-up", "Shoulders", "Bodyweight"],
+  ["Wall Walk", "Shoulders", "Bodyweight"],
+  ["Superman", "Back", "Bodyweight"],
+  ["Prone Y Raise", "Back", "Bodyweight"],
+  ["Prone T Raise", "Back", "Bodyweight"],
+  ["Reverse Snow Angel", "Back", "Bodyweight"],
+  ["Towel Row", "Back", "Bodyweight"],
+  ["Kettlebell Overhead Press", "Shoulders", "Kettlebell"],
+  ["Kettlebell Push Press", "Shoulders", "Kettlebell"],
+  ["Kettlebell Halo", "Shoulders", "Kettlebell"],
+  ["Kettlebell Upright Row", "Shoulders", "Kettlebell"],
+  ["Kettlebell Curl", "Biceps", "Kettlebell"],
+  ["Kettlebell Bent-Over Row", "Back", "Kettlebell"],
+  ["Kettlebell High Pull", "Back", "Kettlebell"],
+  ["Kettlebell Goblet Squat", "Quads", "Kettlebell"],
+  ["Kettlebell Front Rack Squat", "Quads", "Kettlebell"],
+  ["Kettlebell Floor Press", "Chest", "Kettlebell"],
+  ["Kettlebell Suitcase Carry", "Core", "Kettlebell"],
 ];
 
 // ---------------------------------------------------------------------------
@@ -608,6 +636,10 @@ const TAGS_FOR_LABEL = {
   Machine: ["machine"],
   Cable: ["cable"],
   Bodyweight: ["bodyweight"],
+  // A bar (or a dip station) is equipment. Filing pull-ups, dips and every
+  // hanging core movement under "bodyweight" meant a home trainee with a mat
+  // and no bar was told a plan full of pull-ups fit their equipment.
+  "Pull-up bar": ["pullup bar"],
   Band: ["band"],
   Kettlebell: ["kettlebell"],
   Plate: ["plate"],
@@ -893,6 +925,7 @@ const TIME_BASED = new Set([
   "Hollow Body Hold",
   "L-Sit",
   "Wall Sit",
+  "Wall Handstand Hold",
   "Band Anti-Rotation Hold",
   "Stir the Pot",
   "Farmer's Carry",
