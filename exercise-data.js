@@ -87,14 +87,33 @@ export function isContraindicated(name, injuryKey) {
 // reading the whole catalog: a full-gym user being told Sled Push and Medicine
 // Ball Slam "need equipment you didn't list". A gym with barbells has plates by
 // definition; commercial gyms have sleds and med balls.
+// Keys are matched AFTER normalizeExerciseName, which lowercases and turns
+// punctuation into spaces (and folds "bands" to "band"). Aliases are listed so
+// a label can be reworded in onboarding without silently becoming unrecognized,
+// which would drop the whole selection back to "no constraint".
 const EQUIPMENT_MAP = {
-  "full gym": ["barbell", "rack", "bench", "dumbbell", "machine", "cable", "band", "kettlebell", "plate", "sled", "medicine ball", "bodyweight"],
+  "full gym": ["barbell", "rack", "bench", "dumbbell", "machine", "cable", "band", "kettlebell", "plate", "sled", "medicine ball", "pullup bar", "bodyweight"],
   dumbbells: ["dumbbell", "bench", "bodyweight"],
   dumbbell: ["dumbbell", "bench", "bodyweight"],
   // A barbell you cannot load is not a barbell.
   barbell: ["barbell", "rack", "bench", "plate", "bodyweight"],
   bands: ["band", "bodyweight"],
   band: ["band", "bodyweight"],
+  kettlebells: ["kettlebell", "bodyweight"],
+  kettlebell: ["kettlebell", "bodyweight"],
+  // The single most common home-training constraint, and until now it could not
+  // be expressed at all: pull-ups, dips and every hanging core movement were
+  // filed under "bodyweight", so a mat-and-floor trainee was told a plan full of
+  // pull-ups fit their equipment.
+  "pull up bar": ["pullup bar", "bodyweight"],
+  "pullup bar": ["pullup bar", "bodyweight"],
+  "chin up bar": ["pullup bar", "bodyweight"],
+  "cable machine": ["cable", "bodyweight"],
+  cables: ["cable", "bodyweight"],
+  cable: ["cable", "bodyweight"],
+  "gym machines": ["machine", "cable", "bodyweight"],
+  machines: ["machine", "cable", "bodyweight"],
+  machine: ["machine", "cable", "bodyweight"],
   bodyweight: ["bodyweight"],
 };
 
