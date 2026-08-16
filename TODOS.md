@@ -183,28 +183,49 @@ candidate set.
 **Priority:** P3
 **Depends on:** a reason. Do not do this because it is easy.
 
-## Audit the weight of style.css
+## CLOSED 2026-08-16. The style.css audit is not worth doing
 
-**What:** Reduce `style.css`, currently ~315KB, which parses in full on every
-cold boot.
+The `/benchmark` baseline this was gated on now exists
+(`.gstack/benchmark-reports/2026-08-16-benchmark.md`) and it says no.
 
-**Why:** Real contributor to how heavy the PWA feels, though probably not the
-largest one, which is the point of the gate below.
+    style.css                  ends 245ms
+    fonts.googleapis.com/css2  ends 325ms   <- last render blocker
+    FCP                            432ms
 
-**Cons:** A CSS audit has no natural finish line and expands to fill whatever
-time it is given. That is exactly why the 2026-08-13 review cut it.
+`style.css` is 51KB on the wire, ~42ms, and finishes 80ms BEFORE the
+cross-origin Google Fonts stylesheet. Trimming it cannot move FCP because it is
+not what FCP waits on. 255KB of parsed CSS is real weight sitting off the
+critical path, and the audit would be tidying sold as optimization. The
+2026-08-13 review was right to cut it.
 
-**Gate: do not start until a `/benchmark` cold-boot baseline exists.** The
-baseline names the actual bottleneck, which may still be parse-blocking
-JavaScript rather than CSS even after the route-gating work. Without it this is
-tidying, not optimization. The light-forest identity must not change; this is
-strictly about weight.
-
-**Effort:** M (human) / S (with CC)
-**Priority:** P3
-**Depends on:** a `/benchmark` cold-boot baseline. Soft blocker, but real.
+Cold boot is FCP 432ms / full load 802ms. Warm boot is 172ms / 382ms with zero
+bytes transferred. Neither is a problem.
 
 ---
+
+## Take Google Fonts off the critical path
+
+**What:** Self-host Inter, Literata and JetBrains Mono, or inline the
+`@font-face` rules with `font-display: swap`, so `index.html` stops
+render-blocking on `fonts.googleapis.com`.
+
+**Why:** It is the LAST render-blocking resource on cold boot, ending ~325ms
+against an FCP of 432ms. It costs a cross-origin DNS lookup, TLS handshake and
+fetch that a self-hosted file does not. Best available first-paint win, and it
+has a natural finish line, which the CSS audit never did.
+
+**Also worth doing while in there:** the Firebase SDK (3 files from gstatic,
+tail ends ~768ms, ~100KB) loads on the landing page, where nobody is signed in.
+Defer it until auth is actually needed.
+
+**Honest sizing of the prize:** maybe 100-150ms off a 432ms cold FCP, and
+nothing at all on warm boot, which is already 172ms. Worth doing when the
+critical path is what you are working on. Not worth doing instead of the
+plan -> first workout gap.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** nothing.
 
 ## Retrospective audit: judge logged history, not prescribed plans
 
