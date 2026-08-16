@@ -18,28 +18,78 @@ the check-count claim.
 
 ---
 
-## Pull the funnel numbers. Nothing else is decidable without them
+## PULLED 2026-08-16. The wall is plan -> first workout
 
-**What:** Read the last 7 to 14 days of Vercel Analytics and decide what the
-funnel is actually doing.
+30-day window, Jul 17 to Aug 16, read off Vercel Web Analytics.
 
-**Why:** This is the highest-value open item in the project and it is not code.
-Every number the 2026-08-02 session reasoned from was recorded under the broken
-`first_workout_*` events. That bug was fixed 2026-08-03, so as of 2026-08-14
-there are eleven days of readable data that nobody has looked at.
+| stage | visitors | of previous |
+|---|---|---|
+| landed on `/` | 170 | |
+| clicked a CTA | 18 | 11% |
+| started onboarding | 18 | 100% |
+| **completed onboarding** | **14** | **78%** |
+| got a plan | 15 | (14 real + 1 fallback) |
+| **started a first workout** | **3** | **21%** |
+| completed it | 3 | **100%** |
 
-**What it decides:** whether the plan-import wedge is working; whether the
-nutrition-photo signal (4 `meal_photo_succeeded` against 3
-`onboarding_completed`, the only positive conversion signal ever recorded) holds
-at higher n; and whether any of the 2026-08-14 daily-use work moved anything.
+Also: `meal_photo_succeeded` 8 visitors / 16 views. `plan_imported` 3 total
+(2 without progression, 1 with). Referrers: linkedin 5, instagram 3, facebook 2.
+Countries: US 59%, Thailand 22%, India 6%.
 
-**Context:** 82 visitors/week as of 2026-08-02 with **zero strangers who have
-ever completed a workout**. That number has not moved since June and no feature
-shipped since then was aimed at it. Read before building.
+**`first_workout_completed` is 3.** It was zero from June through 2026-08-02.
+The activation metric the whole project was stuck on is no longer zero.
 
-**Effort:** S (human) / not a CC task
+**What this decides.** Onboarding is NOT the wall: 78% of starters finish it,
+which is a good rate for five steps. Logging is not the wall either: everyone
+who starts a workout finishes it, 3 of 3. The wall is the 79% drop between
+holding a plan and training once. Fourteen people accepted a program and eleven
+never did a session.
+
+**The nutrition signal held and grew.** 8 visitors against 3 who started a
+workout, and 16 views on 8 visitors means people come back to it. It needs no
+onboarding, no plan and no profile, and it out-converts the entire path the
+product is organized around. At 2026-08-02 it was 4 against 3; the ratio got
+better, not worse, at 2x the sample.
+
+**Caveats, stated plainly.** n is small; 3 against 8 is a direction, not a
+proof. Thailand at 22% of 170 is ~37 visitors and is plausibly friends and
+family rather than cold traffic, so the real stranger funnel is narrower than
+the top line.
+
+**What it does NOT support:** more work on onboarding, the logging UI, or the
+exercise library. None of those sit where the drop is.
+
+**How to re-pull:** `browse` cannot use the Vercel CLI token for analytics (no
+working REST route). Import cookies instead:
+`browse cookie-import-browser chrome --domain vercel.com`, approve the macOS
+Keychain prompt for "Chrome Safe Storage" (the first attempt returns only 6
+anonymous cookies; after approval it returns 11 with auth), then open
+`https://vercel.com/rshaw06/spotterai/analytics`, set the range, and click
+**View All** on the Pages panel. Funnel events are virtual pageviews at
+`/funnel/<event>/<segments>`.
+
+**Priority:** DONE. The follow-on question is below.
+
+---
+
+## Close the plan -> first workout gap. This is where the users are lost
+
+**What:** Work out why 11 of 14 people who got a plan never trained once, and
+fix it.
+
+**Why:** It is the only large drop in the funnel as of 2026-08-16. Everything
+above it converts (78% through onboarding), everything below it converts
+perfectly (3 of 3 finish what they start).
+
+**Unknown, and worth answering first:** whether they bounced at the plan itself
+(did not trust it, did not like it, could not tell what to do on day one) or
+between the plan and the gym (came back later and the app did not bring them
+back). Those want opposite fixes. The `notification_offer_shown` events
+(3 unsupported, 1 ios_pwa) suggest the re-engagement path barely reaches anyone.
+
+**Effort:** M
 **Priority:** P1
-**Depends on:** nothing. Unblocked since 2026-08-03.
+**Depends on:** nothing.
 
 ---
 
@@ -68,93 +118,70 @@ snapshot resurrects it. There is a test for it; there is no human confirmation.
 **What:** Work out whether zero-setup photo food logging is a better entry point
 than the plan funnel, and if so, what the smallest version of that looks like.
 
-**Why:** In the 7-day window ending 2026-08-02, `meal_photo_succeeded` ran at 4
-visitors against `onboarding_completed` at 3. Photo food logging
-(`nutrition-ui.js:498`) requires no plan, no onboarding, and no profile, and it
-out-converted the flow the entire product is organized around.
+**Why:** It held and grew on the 2026-08-16 re-pull. 30 days:
+`meal_photo_succeeded` 8 visitors / 16 views, against 3 who started a workout
+and 3 who imported a plan. Photo food logging (`nutrition-ui.js:498`) needs no
+plan, no onboarding and no profile, and it out-converts the entire path the
+product is organized around. 16 views on 8 visitors means people come BACK to
+it, which nothing else in the funnel does.
 
-**Pros:** Already built. Sidesteps the five-step onboarding wall entirely. The
-only thing in the funnel that behaves differently from everything else.
+At 2026-08-02 it was 4 against 3. At 2x the sample the ratio got better, not
+worse. That is the opposite of what noise does.
 
-**Cons:** n=4, an unknown fraction of it the owner's own traffic. Photo
-estimation is also the most expensive path per use (image tokens through
-Gemini), so a wedge built on it costs more per user than any other entry point.
+**Pros:** Already built. Sidesteps onboarding entirely. The only thing in the
+funnel with repeat use.
+
+**Cons:** n=8, some fraction the owner's own traffic. Photo estimation is the
+most expensive path per use (image tokens through Gemini), so a wedge built on
+it costs more per user than any other entry point.
 
 **Context:** The 2026-08-02 session concluded the wedge was a verdict-first plan
-importer, before this funnel data was pulled. The nutrition signal is not strong
-enough to overturn that but is the best candidate to. Every number above came
-from the broken events, so re-pull first (see the funnel item above).
+importer. Plan import has since measured 3 visitors in 30 days against photo's
+8. That conclusion was reached without data and the data does not support it.
 
 **Effort:** M (human) / S (with CC)
-**Priority:** P2
-**Depends on:** the funnel re-pull. No longer blocked on time.
-
----
-
-## Close the safety-metadata gap — now a review job, not a writing job
-
-**What:** Run `npm run draft-metadata`, read the drafts, move the good ones into
-`exercise-metadata.js`.
-
-**Why:** 229 of 383 catalog lifts have no curated entry. The evaluator falls
-back to keyword matching for those, which is deliberate and load-bearing, but
-weaker than curated data. The gap grew with every library expansion: 209 to 316
-on 2026-08-14, then to 383 on 2026-08-15 with bands, kettlebells and the
-floor-only additions.
-
-**Context:** `scripts/draft-exercise-metadata.mjs` (added 2026-08-15) drafts
-entries with an LLM **offline** and writes them to `scripts/out/` for review. It
-is NOT part of the app and nothing imports it — the evaluator stays pure code,
-because an auditor whose data came from a model would depend on that model not
-hallucinating in order to catch a model hallucinating. There is a test asserting
-no runtime module imports it.
-
-Every structural invariant is enforced in code, so review is about judgement
-rather than typos: enums are derived from the existing metadata, equipment comes
-from the catalog (never the model), and substitutions that resolve to nothing are
-dropped and reported. The run prints every proposed contraindication grouped by
-key — that is the field to actually read, because a wrong one either scares
-someone off a movement that would have helped or fails to warn them off one that
-hurts.
-
-Proven on the Calves group: 8/8 accepted, 7 hallucinated substitution names
-dropped, 1 contraindication proposed (Donkey Calf Raise / lower_back, which is
-correct — it is the only hip-hinged loaded position in the group).
-
-Two things the run surfaces for free: dropped substitution names are often real
-lifts worth ADDING to the catalog ("Pogo Jumps", "Double Unders"), and forced
-enum choices expose vocabulary gaps (Tibialis Raise has to claim "calves"
-because there is no shins group).
-
-~208 non-cardio lifts remain, about 26 model calls at the default batch size.
-Cardio is excluded by default: the metadata shape describes lifting.
-
-**Effort:** M (human review) / S (with CC)
-**Priority:** P2
-**Depends on:** nothing. `GEMINI_API_KEY` in `.env`.
-
----
-
-## Grow the exercise table past 316
-
-**What:** Continue toward 800+ with muscle, equipment, and where possible safety
-metadata.
-
-**Why:** 209 to 316 on 2026-08-14 filled the thinnest groups (glutes 9 to 17,
-calves 5 to 10), but it is still well short of what a lifter expects from a
-library, and short of the 800+ originally asked for.
-
-**Context:** Unblocked. The matcher unification landed first on purpose, because
-growing the table while three matchers disagreed would have multiplied near-miss
-collisions rather than improving recognition. Additions are BASE tuples in
-`exercise-catalog.js`; a test fails on any equipment label that silently falls
-back to bodyweight tags.
-
-**Effort:** L (human) / S (with CC)
-**Priority:** P3
+**Priority:** P1. Promoted 2026-08-16 — it is now the best-evidenced signal in
+the product, and it sidesteps the exact wall the funnel identified.
 **Depends on:** nothing.
 
 ---
+
+## CLOSED 2026-08-16. Safety metadata is done
+
+362 of 383 catalog lifts are curated. The remaining 21 are cardio, excluded
+because the metadata shape describes lifting.
+
+Drafted with `npm run draft-metadata` (offline, nothing imports it) and
+adjudicated before import: checked against an already-curated twin, the drafts
+disagreed on contraindications 19 times out of 28, so where a twin exists the
+twin wins. See the 2026-08-15 brain note.
+
+The evaluator now sees every liftable exercise. A plan of Meadows Row / Cuban
+Press / Lu Raise / Behind-the-Neck Press reports 4/4 recognized and warns a
+shoulder-injured user about all three; it recognized none of them before.
+
+---
+
+## Grow the exercise table past 383
+
+**What:** Continue toward 800+ with muscle, equipment and safety metadata.
+
+**Why:** 383 covers every muscle group for every equipment option and is enough
+to program any of them. It is still short of what a big library looks like.
+
+**Deprioritized 2026-08-16, deliberately.** The funnel says nobody is lost for
+want of exercises: 3 of 3 people who start a workout finish it. Depth beat
+breadth and depth is now done. Growing the NAME list again without metadata
+would reopen the gap that was just closed.
+
+**Free input when it is time:** the 2026-08-15 drafting run dropped 156
+substitution names that resolve to nothing. Many are real lifts ("Pogo Jumps",
+"Double Unders", "Bodyweight Calf Raise") and that list is a ready-made
+candidate set.
+
+**Effort:** L (human) / S (with CC)
+**Priority:** P3
+**Depends on:** a reason. Do not do this because it is easy.
 
 ## Audit the weight of style.css
 
