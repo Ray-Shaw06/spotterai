@@ -327,6 +327,42 @@ function closePicker() {
   stopBarcodeScan();
 }
 
+/** Whichever meal it is most likely to be right now, so the door needs no choice first. */
+function mealForNow(hour = new Date().getHours()) {
+  if (hour < 11) return "breakfast";
+  if (hour < 16) return "lunch";
+  if (hour < 21) return "dinner";
+  return "snacks";
+}
+
+/**
+ * Open the camera straight into a meal photo.
+ *
+ * The one thing that must stay true here: `.click()` on the file input runs
+ * inside the same user gesture as the button press, or the browser drops it.
+ * The picker is a top-level sibling of the views, so it opens from the landing
+ * page without waiting for the route switch — the hash change below is for
+ * where the person lands AFTER saving, not a precondition.
+ */
+function openSnap(source) {
+  // init() owns the picker and the file input. Without them there is no camera
+  // to open, and a landing-page click must not throw on the way to finding out.
+  if (!el.picker || !el.photoInput) return;
+  trackFunnel("meal_photo_started", { source });
+  openPicker(mealForNow());
+  el.photoInput.click();
+  if (location.hash !== "#/nutrition") location.hash = "#/nutrition";
+}
+
+// Delegated at the document, because the landing page's door lives outside the
+// nutrition view entirely.
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-snap-meal]");
+  if (!btn) return;
+  const source = btn.dataset.snapMeal;
+  openSnap(source === "landing" || source === "nutrition" ? source : "nutrition");
+});
+
 // ----------------------------------------------------------------------------
 // Barcode scanner (built-in BarcodeDetector + Open Food Facts — $0, no deps)
 // ----------------------------------------------------------------------------
@@ -716,7 +752,10 @@ function init() {
   });
   el.search?.addEventListener("input", () => renderResults(el.search.value));
   el.results?.addEventListener("click", (e) => {
-    if (e.target.closest('[data-act="snap-meal"]')) return el.photoInput?.click();
+    if (e.target.closest('[data-act="snap-meal"]')) {
+      trackFunnel("meal_photo_started", { source: "picker" });
+      return el.photoInput?.click();
+    }
     if (e.target.closest('[data-act="scan-barcode"]')) return startBarcodeScan();
     if (e.target.closest('[data-act="ai-estimate"]')) return aiEstimate(el.search.value.trim());
     if (e.target.closest('[data-act="quick-add"]')) return showDetail(null, true);

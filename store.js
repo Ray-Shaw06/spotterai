@@ -24,6 +24,22 @@ function loadPlan() {
   return { plan: null, inputs: null };
 }
 
+/**
+ * When this profile's plan was last written, or 0 if there is none.
+ *
+ * Read straight from storage rather than kept on `store`, because the only
+ * caller wants the value from BEFORE this page load: it is how the funnel tells
+ * "came back on a later day" apart from "still in the session that made it".
+ */
+export function planUpdatedAt() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(planKey()) || "null");
+    return Number(raw?.updatedAt) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 const restored = loadPlan();
 
 export const store = {

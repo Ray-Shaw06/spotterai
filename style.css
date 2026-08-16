@@ -6552,3 +6552,111 @@ body.session-live #chat-fab { bottom: calc(max(var(--space-5), env(safe-area-ins
   .rest-preset { min-height: 44px; display: inline-flex; align-items: center; }
   .rest-custom { min-height: 44px; }
 }
+
+/* ============================================================================
+   F. THE TWO DOORS THE FUNNEL ASKED FOR
+   ----------------------------------------------------------------------------
+   The 30-day pull to 2026-08-16 found one wall and one surprise.
+
+   The wall: 14 people completed onboarding, 14 got a plan, 3 started a workout.
+   Nothing above that converts badly (78% finish onboarding) and nothing below it
+   converts badly at all (3 of 3 finish what they start). The plan screen puts
+   the audit, the repair, the trust report and every training day between the
+   person and the one button the screen is for: measured at 375x812 with a
+   four-day plan, that button lands 4499px down, 5.5 screens. `.plan-bar`
+   un-buries it without reordering anything, so flags stay first.
+
+   The surprise: photo food logging drew 8 visitors and 16 views over the same
+   window, against 3 for the whole plan-import path, from four clicks down a nav
+   menu with no landing-page presence whatsoever. `.nut-snap` gives the one
+   feature people came back to an actual door.
+   ============================================================================ */
+
+/* --- The plan action bar ---------------------------------------------------- */
+/* Hidden unless app.js says so, same contract as .session-bar: the element is a
+   sibling of .app-shell, so the body class is the only thing gating it. */
+.plan-bar { display: none; }
+body.plan-ready {
+  /* Height of .plan-bar, measured: 69px at 375px wide (where this is used) and
+     59px at 1280px (where it is not). 72px carries the mobile figure plus the
+     rounding. Anything else pinned to the bottom, the chat FAB and the page's
+     own scroll floor, stacks off it.
+
+     One row that never wraps: the label is dropped under 400px rather than
+     allowed to push a second line. That is why, unlike --session-bar-h, this
+     stays honest as a constant and needs no JS to republish it. */
+  --plan-bar-h: 72px;
+}
+body.plan-ready .plan-bar {
+  display: block;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 54; /* under .session-bar's 55: if both ever race, training wins */
+  padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  background: var(--surface-solid);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -8px 28px color-mix(in srgb, var(--text) 10%, transparent);
+}
+/* A live session owns the bottom of the screen. Navigating to Home mid-workout
+   must not stack a second fixed bar on the first. */
+body.session-live .plan-bar { display: none; }
+
+.plan-bar__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  max-width: var(--container);
+  margin: 0 auto;
+}
+.plan-bar__label {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.plan-bar__start { flex: none; }
+/* Clear the desktop icon rail, matching F1's breakpoint and column width so the
+   two cannot drift apart. Same rule the session bar uses. */
+@media (min-width: 961px) {
+  body.plan-ready .plan-bar { left: 96px; }
+}
+/* Above the mobile bottom tab bar, using that bar's own 64px content height —
+   the same figure and the same breakpoint the session bar clears it with. */
+@media (max-width: 960px) {
+  body.plan-ready .plan-bar {
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding: var(--space-3);
+  }
+  /* Clear the bar's height so the end of the plan is still reachable. */
+  body.plan-ready .app-main { padding-bottom: calc(140px + var(--plan-bar-h)); }
+  body.plan-ready #chat-fab { bottom: calc(78px + var(--plan-bar-h) + env(safe-area-inset-bottom, 0px)); }
+}
+/* At 360px the label and the button share a row that will not fit both. The
+   label is the disposable half: the button carries its own meaning. */
+@media (max-width: 400px) {
+  .plan-bar__label { display: none; }
+  .plan-bar__start { flex: 1; }
+}
+
+/* --- The nutrition front door ---------------------------------------------- */
+.nut-snap {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--accent-ring);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+}
+.nut-snap__btn { width: 100%; }
+.nut-snap__note {
+  margin: var(--space-3) 0 0;
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+}
+@media (min-width: 700px) {
+  .nut-snap { display: flex; align-items: center; gap: var(--space-4); }
+  .nut-snap__btn { width: auto; flex: none; }
+  .nut-snap__note { margin: 0; }
+}
