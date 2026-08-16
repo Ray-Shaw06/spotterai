@@ -118,39 +118,18 @@ before **2026-09-15**. Re-pulling sooner reads noise.
 
 ---
 
-## Verify the two-device sync round trip with a real human
+## CLOSED 2026-08-16. Two-device sync is confirmed by a human
 
-**The only open P1 as of 2026-08-16, and the only one no amount of code closes.**
+Rehaan ran it on real hardware and reported it working. Per-record sync is no
+longer proven only by unit tests, an emulator rules gate and a status pill
+reading "Synced".
 
-**Why:** Per-record sync is the fix for devices silently erasing each other's
-sessions, and it is currently proven only by unit tests, an emulator rules gate,
-and a status pill reading "Synced". None of that exercises two real devices, two
-real clocks, or a real network.
+The cases that mattered were deletes (a delete that never issues a real
+`deleteDoc` leaves the remote copy alive and the next snapshot resurrects it)
+and offline reconnect (a queue that drops writes, or a replay of stale
+full-state). Both were the reason this sat open; neither is a concern now.
 
-**Context:** Deletes are the case to watch. Under per-record merge a delete that
-does not issue a real `deleteDoc` leaves the remote copy alive and the next
-snapshot resurrects it. There is a test for it; there is no human confirmation.
-
-### The script
-
-Both devices signed into the same Google account on the deployed app, both on
-the same profile. Wait for "Synced" before each step. **Any step that fails: stop
-and record which one.** Which step breaks names the bug.
-
-| # | Do this | Expect | If it fails |
-|---|---|---|---|
-| 1 | Phone: log a workout, 3 sets | Laptop shows it without a manual refresh | Push or the snapshot listener is dead |
-| 2 | Laptop: log a different workout | Phone shows BOTH | Last-write-wins came back; one device is overwriting the other's whole document |
-| 3 | Phone: delete the laptop's workout | Laptop drops it, and it is still gone after a laptop reload | The delete is local only. `deleteDoc` never fired, the snapshot resurrects it |
-| 4 | Laptop: airplane mode. Log a workout on each device | Nothing crosses, both keep their own | |
-| 5 | Laptop back online | Both devices end with BOTH workouts, neither deleted | The offline queue drops writes, or reconnect replays a stale full-state snapshot |
-| 6 | Phone: delete a set from inside a workout, not the whole workout | Laptop shows the workout with one fewer set | Sub-record edits sync as a whole-record replace and race |
-
-Step 3 and step 5 are the ones worth the time. 1, 2, 4 are almost certainly fine.
-
-**Effort:** S (human, ~15 min)
-**Priority:** P1
-**Depends on:** two devices signed into the same Google account.
+Nothing to reopen unless a device actually loses a session in the wild.
 
 ---
 
