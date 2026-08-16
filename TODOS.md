@@ -74,40 +74,81 @@ anonymous cookies; after approval it returns 11 with auth), then open
 
 ## Close the plan -> first workout gap. This is where the users are lost
 
-**What:** Work out why 11 of 14 people who got a plan never trained once, and
-fix it.
+**Shipped 2026-08-16 (PR #22). Now waiting on data, not on work.**
 
-**Why:** It is the only large drop in the funnel as of 2026-08-16. Everything
-above it converts (78% through onboarding), everything below it converts
-perfectly (3 of 3 finish what they start).
+Two halves went out. One needed no sample, one needs 30 days.
 
-**Unknown, and worth answering first:** whether they bounced at the plan itself
-(did not trust it, did not like it, could not tell what to do on day one) or
-between the plan and the gym (came back later and the app did not bring them
-back). Those want opposite fixes. The `notification_offer_shown` events
-(3 unsupported, 1 ios_pwa) suggest the re-engagement path barely reaches anyone.
+**The half that needed no sample.** The primary action was measured at 375x812
+with a four-day, six-lift plan: the audit runs 1450px, the plan runs 3048px, and
+"Start my first workout" lands **4499px down, 5.5 screens**. `.plan-bar` fixes
+the button to the bottom of the screen instead of reordering anything, so the
+flags-first ordering survives. That is a defect you find with a ruler, and it is
+fixed.
 
-**Effort:** M
-**Priority:** P1
-**Depends on:** nothing.
+**The half that needs 30 days.** The funnel had NO event between "got a plan"
+and "started training", so bouncing at the plan screen and bouncing three days
+later were the same data. Two events split them:
+
+| event | fires | answers |
+|---|---|---|
+| `plan_scrolled_to_end` | once/profile, inline CTA on screen | did they read past the audit |
+| `returned_with_plan` `{trained}` | once/profile, on a LATER day still holding a plan | did they come back, had they trained |
+
+**How to read it on the next pull, written down now so the answer is not
+invented afterwards:**
+
+- **low `plan_scrolled_to_end`** -> the audit wall lost them before the plan.
+  Fix is the plan screen: shorten it, or lead with day one.
+- **`plan_scrolled_to_end` high, `returned_with_plan` near zero** -> they read
+  the whole thing and never came back. Fix is re-engagement, and note the
+  `notification_offer_shown` events (3 unsupported, 1 ios_pwa) say that path
+  barely reaches anyone today.
+- **`returned_with_plan/false` material** -> they came back holding a plan and
+  still did not start. Fix is day-one friction, not the plan and not reminders.
+
+**Caveat that will apply:** the sample that produced the question was 14 people.
+Splitting the next one three ways gives numbers too small to be conclusive on
+their own. Treat the branches as direction, and prefer the branch that agrees
+with `first_workout_started` moving.
+
+**Effort:** S (re-pull), then M (whichever branch it names)
+**Priority:** P2 until the next pull has 30 days of the new events, i.e. not
+before **2026-09-15**. Re-pulling sooner reads noise.
+**Depends on:** time.
 
 ---
 
 ## Verify the two-device sync round trip with a real human
 
-**What:** Log a set on the phone, confirm it appears on the laptop, log on the
-laptop, confirm the phone still holds both. Then delete on one device and
-confirm it stays deleted. Then repeat with one device in airplane mode.
+**The only open P1 as of 2026-08-16, and the only one no amount of code closes.**
 
 **Why:** Per-record sync is the fix for devices silently erasing each other's
 sessions, and it is currently proven only by unit tests, an emulator rules gate,
-and a status pill reading "Synced". None of that exercises two real devices.
+and a status pill reading "Synced". None of that exercises two real devices, two
+real clocks, or a real network.
 
 **Context:** Deletes are the case to watch. Under per-record merge a delete that
 does not issue a real `deleteDoc` leaves the remote copy alive and the next
 snapshot resurrects it. There is a test for it; there is no human confirmation.
 
-**Effort:** S (human)
+### The script
+
+Both devices signed into the same Google account on the deployed app, both on
+the same profile. Wait for "Synced" before each step. **Any step that fails: stop
+and record which one.** Which step breaks names the bug.
+
+| # | Do this | Expect | If it fails |
+|---|---|---|---|
+| 1 | Phone: log a workout, 3 sets | Laptop shows it without a manual refresh | Push or the snapshot listener is dead |
+| 2 | Laptop: log a different workout | Phone shows BOTH | Last-write-wins came back; one device is overwriting the other's whole document |
+| 3 | Phone: delete the laptop's workout | Laptop drops it, and it is still gone after a laptop reload | The delete is local only. `deleteDoc` never fired, the snapshot resurrects it |
+| 4 | Laptop: airplane mode. Log a workout on each device | Nothing crosses, both keep their own | |
+| 5 | Laptop back online | Both devices end with BOTH workouts, neither deleted | The offline queue drops writes, or reconnect replays a stale full-state snapshot |
+| 6 | Phone: delete a set from inside a workout, not the whole workout | Laptop shows the workout with one fewer set | Sub-record edits sync as a whole-record replace and race |
+
+Step 3 and step 5 are the ones worth the time. 1, 2, 4 are almost certainly fine.
+
+**Effort:** S (human, ~15 min)
 **Priority:** P1
 **Depends on:** two devices signed into the same Google account.
 
@@ -115,34 +156,47 @@ snapshot resurrects it. There is a test for it; there is no human confirmation.
 
 ## Investigate the nutrition-photo signal
 
-**What:** Work out whether zero-setup photo food logging is a better entry point
-than the plan funnel, and if so, what the smallest version of that looks like.
+**Answered and shipped 2026-08-16 (PR #22). Waiting on data.**
 
-**Why:** It held and grew on the 2026-08-16 re-pull. 30 days:
-`meal_photo_succeeded` 8 visitors / 16 views, against 3 who started a workout
-and 3 who imported a plan. Photo food logging (`nutrition-ui.js:498`) needs no
-plan, no onboarding and no profile, and it out-converts the entire path the
-product is organized around. 16 views on 8 visitors means people come BACK to
-it, which nothing else in the funnel does.
+**What the investigation found.** Photo logging drew 8 visitors / 16 views over
+30 days against 3 for plan import and 3 who started a workout, and it did that
+**from four clicks down a nav menu with no landing-page presence whatsoever**:
+open Nutrition, pick a meal, open that meal's food picker, then find "Snap a
+meal" among the search results. The landing page had exactly two CTAs and both
+were plan-shaped. The best-converting thing in the product had no front door.
 
-At 2026-08-02 it was 4 against 3. At 2x the sample the ratio got better, not
-worse. That is the opposite of what noise does.
+That reframes the question. It was never "is photo logging a better entry
+point?" It has been outperforming the plan funnel from a standing start. The
+open question is how much of the 8 was the feature and how much was the four
+people determined enough to find it.
 
-**Pros:** Already built. Sidesteps onboarding entirely. The only thing in the
-funnel with repeat use.
+**What shipped:** a hero door and a visible button on the Food diary, plus
+`meal_photo_started` carrying `source` (landing / nutrition / picker). `started`
+also makes abandonment visible for the first time. Before it, a photo opened and
+given up on was indistinguishable from one never opened, so 8 was a floor with
+no ceiling attached.
 
-**Cons:** n=8, some fraction the owner's own traffic. Photo estimation is the
-most expensive path per use (image tokens through Gemini), so a wedge built on
-it costs more per user than any other entry point.
+**How to read the next pull:**
+
+- **`landing` a large share of `meal_photo_started`** -> the door was the
+  constraint. That is a real wedge and worth building around.
+- **`landing` small, total flat** -> discovery was not the constraint, and the 8
+  was 8 motivated people. Do not build a product on it.
+- **`started` well above `succeeded`** -> the estimate quality or the wait is
+  losing people after they commit, which is a different fix from either.
+
+**Cons that survive whatever the data says:** photo estimation is the most
+expensive path per use (image tokens through Gemini), so a wedge built on it
+costs more per user than any other entry point.
 
 **Context:** The 2026-08-02 session concluded the wedge was a verdict-first plan
 importer. Plan import has since measured 3 visitors in 30 days against photo's
 8. That conclusion was reached without data and the data does not support it.
 
-**Effort:** M (human) / S (with CC)
-**Priority:** P1. Promoted 2026-08-16 — it is now the best-evidenced signal in
-the product, and it sidesteps the exact wall the funnel identified.
-**Depends on:** nothing.
+**Effort:** S (re-pull)
+**Priority:** P2 until ~**2026-09-15**, same 30-day clock as the plan gap. Both
+re-pull in the same sitting.
+**Depends on:** time.
 
 ---
 
