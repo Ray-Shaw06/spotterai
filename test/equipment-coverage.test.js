@@ -39,18 +39,26 @@ const fit = (p, equipment) =>
 // The bug
 // ---------------------------------------------------------------------------
 test("CRITICAL: a lift the catalog knows is checked, curated metadata or not", () => {
-  // These three are in the catalog with real equipment labels and NO curated
-  // metadata entry. Before the fix, all three sailed past a band-only user.
-  for (const name of ["Stiff-Leg Deadlift", "Triceps Rope Pushdown", "Dumbbell Shrug"]) {
-    assert.equal(lookupExercise(name), null, `${name} is now curated; pick a still-uncurated lift for this test`);
+  // This originally used Stiff-Leg Deadlift, Triceps Rope Pushdown and Dumbbell
+  // Shrug — all uncurated at the time — and carried a note to pick fresh ones if
+  // they ever gained metadata. They all did, in the 2026-08-15 drafting pass.
+  //
+  // Cardio is the durable case: those 21 lifts are excluded from curation BY
+  // DESIGN (the metadata shape describes lifting, not running), so they will
+  // stay uncurated while still having equipment the catalog knows perfectly
+  // well. A treadmill needs a treadmill.
+  const uncurated = CATALOG.filter((e) => !lookupExercise(e.name) && hasKnownEquipment(e.name));
+  assert.ok(uncurated.length >= 5, "no uncurated-but-placeable lifts left; this guard needs a new subject");
+
+  const machineCardio = ["Treadmill Run", "Rowing Machine", "Stationary Bike"];
+  for (const name of machineCardio) {
+    assert.equal(lookupExercise(name), null, `${name} gained curated metadata; pick another uncurated lift`);
     assert.ok(hasKnownEquipment(name), `${name} has no equipment tags`);
     assert.equal(canPerform(name, equipmentCapabilities(["Bands"])), false, `${name} was waved through for a band-only user`);
   }
-  const c = fit(plan("Stiff-Leg Deadlift", "Triceps Rope Pushdown", "Dumbbell Shrug"), ["Bands"]);
+  const c = fit(plan(...machineCardio), ["Bands"]);
   assert.equal(c.status, "warn");
-  for (const name of ["Stiff-Leg Deadlift", "Triceps Rope Pushdown", "Dumbbell Shrug"]) {
-    assert.match(c.detail, new RegExp(name));
-  }
+  for (const name of machineCardio) assert.match(c.detail, new RegExp(name));
 });
 
 test("every catalog lift is now checkable", () => {
