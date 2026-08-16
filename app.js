@@ -20,13 +20,13 @@ import { TIER_LABEL, TIER_ORDER, allClearText, auditVerdictText, flaggedChecks, 
 import { planConfidence } from "./trust.js";
 import { buildAuditEntry, recordAudit, getAuditHistory, auditTrend } from "./trust-history.js";
 import { lineChart } from "./charts.js";
-import { setPlan, store } from "./store.js";
-import { getContext as getTrackerContext, buildAdaptContext } from "./tracker-store.js";
+import { setPlan, store, planUpdatedAt } from "./store.js";
+import { getContext as getTrackerContext, buildAdaptContext, getState as getTrackerState } from "./tracker-store.js";
 import { adaptPlan } from "./adapt-engine.js";
 import { swapExercise, removeExercise, addExercise } from "./plan-edit.js";
 import { suggestAlternatives } from "./exercise-data.js";
 import { searchExercises } from "./exercises.js";
-import { trackFunnel } from "./analytics.js";
+import { trackFunnel, trackFunnelOnce } from "./analytics.js";
 import { aiFailureMessage, assertPlanShape, classifyAiFailure, fetchWithTimeout } from "./ai-errors.js";
 
 // ----------------------------------------------------------------------------
@@ -64,6 +64,8 @@ const trustReportEl = document.getElementById("trust-report");
 const repairMount = document.getElementById("repair-mount");
 const planOutput = document.getElementById("plan-output");
 const startFirstWorkoutBtn = document.getElementById("start-first-workout");
+const firstWorkoutCta = document.querySelector(".first-workout-cta");
+const planBarStart = document.getElementById("plan-bar-start");
 
 // Adaptive coach loop (re-tune the plan from logged training, then re-audit).
 const adaptCard = document.getElementById("adapt-card");
@@ -93,6 +95,71 @@ function showState(name) {
   for (const [key, el] of Object.entries(states)) {
     el.hidden = key !== name;
   }
+  resultsShowing = name === "results";
+  syncPlanChrome();
+}
+
+// ----------------------------------------------------------------------------
+// The plan action bar
+// ============================================================================
+// See the markup comment in index.html: the primary action used to sit about
+// seven mobile screens below the top of the results. The bar is fixed, so the
+// audit keeps its place at the top of the page and the button is still one tap
+// away from anywhere in it.
+//
+// Two conditions gate it, and both have to hold:
+//   - the results state is showing (not empty / loading / error)
+//   - the home route is active, because the bar is a sibling of .app-shell and
+//     would otherwise follow you to Nutrition
+//
+// `ctaOnScreen` is a refinement, not a condition: when the inline CTA at the
+// bottom of the plan is visible there is no reason to float a second copy of
+// the same button over it. It defaults to false, so the bar shows if
+// IntersectionObserver never reports — the safe direction to fail.
+//
+// It also stops once the person has logged anything. The bar exists to close
+// the plan -> first workout gap; after that first session the Today screen is
+// the right home, and a permanent "Start my first workout" would be a lie.
+let resultsShowing = false;
+let ctaOnScreen = false;
+const isHomeRoute = () => location.hash === "" || location.hash === "#/" || !location.hash.startsWith("#/");
+const hasTrained = () => (getTrackerState().workouts || []).length > 0;
+
+function syncPlanChrome() {
+  const show = resultsShowing && isHomeRoute() && !ctaOnScreen && !hasTrained();
+  document.body.classList.toggle("plan-ready", show);
+}
+
+window.addEventListener("spotter:route", (e) => {
+  // The router reports "home" for bare hashes too, which is what the bar wants.
+  if (e.detail?.route !== "home") {
+    document.body.classList.remove("plan-ready");
+  } else {
+    syncPlanChrome();
+  }
+});
+
+if (firstWorkoutCta && typeof IntersectionObserver === "function") {
+  new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        ctaOnScreen = entry.isIntersecting;
+        // Reaching the inline CTA means they scrolled past the audit, the
+        // repair, the trust report and every training day. That is the
+        // difference between "the plan lost them" and "the plan did not".
+        if (entry.isIntersecting && resultsShowing) trackFunnelOnce("plan_scrolled_to_end");
+      }
+      syncPlanChrome();
+    },
+    {
+      threshold: 0.4,
+      // The bar and the mobile tab bar cover the bottom ~133px of the viewport.
+      // Without this margin the bar would hide itself the moment the inline CTA
+      // crossed into that strip, i.e. while it was still behind them, and the
+      // button would blink out of existence for the length of a scroll.
+      rootMargin: "0px 0px -140px 0px",
+    }
+  ).observe(firstWorkoutCta);
 }
 
 function revealGenerator({ scroll = false } = {}) {
@@ -721,9 +788,15 @@ regenerateBtn.addEventListener("click", () => {
 
 adaptBtn?.addEventListener("click", adapt);
 
-startFirstWorkoutBtn?.addEventListener("click", () => {
+function startFirstWorkout() {
   window.dispatchEvent(new CustomEvent("spotter:start-plan-day", { detail: { index: 0, source: "plan" } }));
-});
+}
+startFirstWorkoutBtn?.addEventListener("click", startFirstWorkout);
+planBarStart?.addEventListener("click", startFirstWorkout);
+
+// The bar has to get out of the way the moment a session begins: it and the
+// mid-workout bar both want the bottom of the screen.
+window.addEventListener("spotter:tracker", syncPlanChrome);
 
 // External plan changes (e.g. switching profile) — render that plan, or the
 // empty state if the new profile has none. Self-updates are suppressed above.
@@ -826,4 +899,21 @@ planOutput.addEventListener("input", (e) => {
 
 // Restore a saved plan for this profile (survives refresh) without yanking
 // scroll/focus, so the adaptive loop works across sessions.
+//
+// Read planUpdatedAt() BEFORE renderResults: the restore path does not write,
+// but adapt does, and the value we want is the one from the last visit.
+const planWrittenAt = planUpdatedAt();
 if (store.plan) renderResults(store.plan, store.inputs, false, { focus: false });
+
+// Someone holding a plan opened the app again on a later calendar day. Fired
+// once per profile, with `trained` saying whether they had ever logged a
+// session by then. This is the half of the plan -> first workout fork that
+// `plan_scrolled_to_end` cannot see: a person who never comes back leaves no
+// trace at all, so the absence of this event is itself the answer.
+if (store.plan && planWrittenAt) {
+  const midnight = new Date();
+  midnight.setHours(0, 0, 0, 0);
+  if (planWrittenAt < midnight.getTime()) {
+    trackFunnelOnce("returned_with_plan", { trained: String(hasTrained()) });
+  }
+}

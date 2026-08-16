@@ -26,6 +26,21 @@ export const FUNNEL_EVENTS = deepFreeze({
   // snapshots unreadable before 2026-08-03.
   first_workout_started: { source: ["plan", "today", "dashboard"] },
   first_workout_completed: { source: ["plan", "today", "dashboard", "unknown"] },
+  // The plan -> first workout fork. 11 of the 14 people who got a plan in the
+  // 30 days to 2026-08-16 never trained once, and the funnel could not say
+  // whether they bounced AT the plan or somewhere between the plan and the gym.
+  // Those want opposite fixes, so these two events split them:
+  //
+  //   plan_scrolled_to_end  they read the plan to the bottom (activation-once)
+  //   returned_with_plan    they opened the app again on a LATER day, with
+  //                         `trained` saying whether they had ever logged one
+  //
+  // Read against first_workout_started, the three branches separate:
+  //   no scroll                  -> the audit wall lost them before the plan
+  //   scroll, no return          -> the plan itself did not bring them back
+  //   return with trained=false  -> they came back and still did not start
+  plan_scrolled_to_end: {},
+  returned_with_plan: { trained: ["true", "false"] },
   // Ongoing volume. Fires every time, so the data first_workout_completed used
   // to carry (accidentally) is still collected, just under an honest name.
   workout_completed: { source: ["plan", "today", "dashboard", "unknown"] },
@@ -38,6 +53,13 @@ export const FUNNEL_EVENTS = deepFreeze({
     failure_class: ["empty", "too_short", "rate_limited", "timeout", "unavailable", "invalid_response", "not_a_plan", "offline", "unknown"],
   },
   import_flags_opened: {},
+  // Photo food logging. `succeeded` and `failed` were the only two events, so a
+  // photo the user opened and abandoned looked exactly like one they never
+  // opened, and there was no way to tell which DOOR they came in by. `source`
+  // is the whole point of the 2026-08-16 front-door work: photo logging
+  // out-converted the entire plan funnel from four clicks down a nav menu, and
+  // "landing" vs "picker" says whether a real entry point changes that.
+  meal_photo_started: { source: ["landing", "nutrition", "picker"] },
   meal_photo_succeeded: {},
   meal_photo_failed: { failure_class: ["offline", "timeout", "rate_limited", "unavailable", "invalid_response", "unknown"] },
   calendar_export_opened: {},

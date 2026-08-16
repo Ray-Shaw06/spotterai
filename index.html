@@ -132,9 +132,18 @@
             Generate a personalized workout plan, check it for common programming mistakes,
             log your workouts and meals, track progress, and adapt your plan as you improve.
           </p>
+          <!-- Three doors, deliberately. The first two are plan-shaped and were
+               the only two the landing page had. Photo food logging had none at
+               all — it lived four clicks down the Nutrition nav, inside the food
+               picker's results list — and still out-converted both of them in
+               the 30 days to 2026-08-16 (8 visitors and 16 views against 3 who
+               started a workout and 3 who imported a plan). It is the only thing
+               in the funnel people came BACK to. Giving the best-converting
+               feature a front door is the smallest honest test of that. -->
           <div class="hero__actions">
             <a href="#generator" class="btn btn--primary" data-onboard>Build my plan</a>
             <a href="#/import" data-nav="import" class="btn btn--ghost">Audit a plan you already have</a>
+            <button type="button" class="btn btn--ghost" data-snap-meal="landing">Snap a meal, get the macros</button>
           </div>
           <p class="hero__trust">
             <span>✓ $0 to run</span><span>✓ no signup</span><span>✓ runs on your device</span><span>✓ <button type="button" id="hero-demo" class="hero__trust-link">try the live demo</button></span>
@@ -718,6 +727,13 @@
         <header class="section-head section-head--start">
           <h1 class="section-title section-title--lg">Food diary</h1>
           <p class="section-subtitle">Log meals and hit your calorie and macro targets. Search foods or scan your own numbers.</p>
+          <!-- The photo path was reachable only by opening a meal's picker and
+               finding "Snap a meal" among the search results. That is three taps
+               of hunting for the feature people actually came back for. -->
+          <div class="nut-snap">
+            <button type="button" class="btn btn--primary nut-snap__btn" data-snap-meal="nutrition">Snap a meal, get the macros</button>
+            <p class="nut-snap__note">Photograph what you're eating and the AI estimates calories and macros. No plan, no profile, no signup.</p>
+          </div>
         </header>
 
         <div class="nut-datenav">
@@ -1127,6 +1143,33 @@
   </footer>
     </div><!-- /.app-main -->
   </div><!-- /.app-shell -->
+
+  <!-- ===================== PLAN ACTION BAR =====================
+       "Start my first workout" is the one thing a fresh plan is for, and it sat
+       at the bottom of the results: fallback notice, safety boundary, the audit
+       card with every flag expanded, the repair before/after, the trust report,
+       and then the whole plan, before the button appeared.
+
+       Measured on a 375x812 viewport with a four-day, six-lift plan: the audit
+       runs 1450px, the plan runs 3048px, and the button lands 4499px below the
+       top of the results. Five and a half screens of scrolling to reach the
+       primary action, on the screen whose entire job is to produce it.
+
+       Flags-first ordering is deliberate and stays: the audit must never sit
+       under the plan. A fixed bar keeps that order and still makes the action
+       reachable from any scroll position, which is the same trade the
+       mid-workout bar makes below.
+
+       Gated on `body.plan-ready`, which app.js sets only while the results
+       state is showing AND the home route is active, so it cannot follow you
+       onto another page. Hidden outright during a live session: that bar owns
+       the bottom of the screen and you are already training. -->
+  <div id="plan-bar" class="plan-bar" aria-label="Plan actions">
+    <div class="plan-bar__row">
+      <p class="plan-bar__label">Your plan is ready</p>
+      <button type="button" class="btn btn--primary btn--sm plan-bar__start" id="plan-bar-start">Start my first workout</button>
+    </div>
+  </div>
 
   <!-- ===================== MID-WORKOUT ACTION BAR =====================
        Rest timer + Finish, fixed just above the bottom nav while a session is
