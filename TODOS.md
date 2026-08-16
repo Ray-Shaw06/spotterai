@@ -91,27 +91,47 @@ from the broken events, so re-pull first (see the funnel item above).
 
 ---
 
-## Close the safety-metadata gap the library growth widened
+## Close the safety-metadata gap — now a review job, not a writing job
 
-**What:** Write curated safety metadata (movement pattern, joint stress,
-contraindications, substitutions) for the lifts that have none.
+**What:** Run `npm run draft-metadata`, read the drafts, move the good ones into
+`exercise-metadata.js`.
 
-**Why:** 125 of 316 catalog lifts have no curated entry. The evaluator falls
+**Why:** 229 of 383 catalog lifts have no curated entry. The evaluator falls
 back to keyword matching for those, which is deliberate and load-bearing, but
-keyword matching is weaker than the curated data and the gap grew when the
-library went 209 to 316 on 2026-08-14 with no metadata added.
+weaker than curated data. The gap grew with every library expansion: 209 to 316
+on 2026-08-14, then to 383 on 2026-08-15 with bands, kettlebells and the
+floor-only additions.
 
-**Context:** `hasSafetyData` on a catalog entry is what keeps the curated and
-uncurated sets apart, and a test pins that `lookupExercise` returns null for
-uncurated lifts so the fallback keeps firing. Adding metadata is purely additive:
-put an entry in `exercise-metadata.js` under the SAME canonical name and the
-catalog merges it. Tests already assert the two never drift.
+**Context:** `scripts/draft-exercise-metadata.mjs` (added 2026-08-15) drafts
+entries with an LLM **offline** and writes them to `scripts/out/` for review. It
+is NOT part of the app and nothing imports it — the evaluator stays pure code,
+because an auditor whose data came from a model would depend on that model not
+hallucinating in order to catch a model hallucinating. There is a test asserting
+no runtime module imports it.
 
-Prioritise by what people actually log rather than alphabetically.
+Every structural invariant is enforced in code, so review is about judgement
+rather than typos: enums are derived from the existing metadata, equipment comes
+from the catalog (never the model), and substitutions that resolve to nothing are
+dropped and reported. The run prints every proposed contraindication grouped by
+key — that is the field to actually read, because a wrong one either scares
+someone off a movement that would have helped or fails to warn them off one that
+hurts.
 
-**Effort:** L (human) / M (with CC)
+Proven on the Calves group: 8/8 accepted, 7 hallucinated substitution names
+dropped, 1 contraindication proposed (Donkey Calf Raise / lower_back, which is
+correct — it is the only hip-hinged loaded position in the group).
+
+Two things the run surfaces for free: dropped substitution names are often real
+lifts worth ADDING to the catalog ("Pogo Jumps", "Double Unders"), and forced
+enum choices expose vocabulary gaps (Tibialis Raise has to claim "calves"
+because there is no shins group).
+
+~208 non-cardio lifts remain, about 26 model calls at the default batch size.
+Cardio is excluded by default: the metadata shape describes lifting.
+
+**Effort:** M (human review) / S (with CC)
 **Priority:** P2
-**Depends on:** nothing.
+**Depends on:** nothing. `GEMINI_API_KEY` in `.env`.
 
 ---
 

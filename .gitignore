@@ -34,3 +34,7 @@ Thumbs.db
 # Local-only brain context. Currently protected by .git/info/exclude, which is
 # machine-local and not versioned; keep it here too so a fresh clone is safe.
 CLAUDE.local.md
+
+# Machine-drafted metadata awaiting review (scripts/draft-exercise-metadata.mjs).
+# Reviewed entries are hand-moved into exercise-metadata.js; the raw draft is scratch.
+scripts/out/

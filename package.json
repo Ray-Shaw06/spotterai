@@ -11,7 +11,8 @@
     "test:firebase-emulator": "node scripts/run-firebase-emulator-gate.mjs",
     "check": "node --test",
     "eval": "node eval.mjs",
-    "eval:nutrition": "node eval-nutrition.mjs"
+    "eval:nutrition": "node eval-nutrition.mjs",
+    "draft-metadata": "node --env-file=.env scripts/draft-exercise-metadata.mjs"
   },
   "license": "MIT",
   "engines": {
