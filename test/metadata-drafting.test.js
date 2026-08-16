@@ -54,9 +54,13 @@ test("CRITICAL: nothing in the app imports the drafting script", () => {
   // The moment a runtime module imports this, the evaluator has an LLM in its
   // dependency graph and the "pure code auditor" claim stops being true.
   const appFiles = ["evaluator.js", "exercise-data.js", "exercise-catalog.js", "exercise-metadata.js", "app.js", "api/generate.js", "api/chat.js"];
+  // An IMPORT, not a mention. exercise-metadata.js legitimately names the script
+  // in a comment explaining where its drafted entries came from, and a bare
+  // substring check failed on that — flagging prose as a dependency.
+  const importsIt = /(?:^|\n)\s*(?:import\b[^;\n]*|export\b[^;\n]*from\s*)['"][^'"]*draft-exercise-metadata|require\(\s*['"][^'"]*draft-exercise-metadata/;
   for (const f of appFiles) {
     const src = readFileSync(join(root, f), "utf8");
-    assert.ok(!src.includes("draft-exercise-metadata"), `${f} imports the drafting script`);
+    assert.ok(!importsIt.test(src), `${f} imports the drafting script`);
   }
 });
 
