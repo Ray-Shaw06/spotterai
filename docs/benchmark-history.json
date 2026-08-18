@@ -1,0 +1,122 @@
+[
+  {
+    "date": "2026-08-18",
+    "commit": "906437e",
+    "evaluatorVersion": "v1.3.0",
+    "cases": 21,
+    "casesPassed": 21,
+    "riskyTotal": 17,
+    "riskyCaught": 17,
+    "falsePositives": 0,
+    "expectationsPassed": 30,
+    "expectationsTotal": 30,
+    "avgAuditMsRunner": 0.096,
+    "perCase": [
+      {
+        "name": "Balanced hypertrophy week",
+        "passed": true,
+        "score": 100
+      },
+      {
+        "name": "No rest days",
+        "passed": true,
+        "score": 60
+      },
+      {
+        "name": "Beginner maxing out (RPE 10)",
+        "passed": true,
+        "score": 67
+      },
+      {
+        "name": "All push, no pull",
+        "passed": true,
+        "score": 82
+      },
+      {
+        "name": "Knee injury, risky movements",
+        "passed": true,
+        "score": 70
+      },
+      {
+        "name": "Junk volume",
+        "passed": true,
+        "score": 60
+      },
+      {
+        "name": "Strength goal, endurance reps",
+        "passed": true,
+        "score": 85
+      },
+      {
+        "name": "Directionless chatbot plan (no goal, uniform reps, no progression)",
+        "passed": true,
+        "score": 94
+      },
+      {
+        "name": "Novice 5x5 linear progression (rep-shape guard)",
+        "passed": true,
+        "score": 84
+      },
+      {
+        "name": "Progression note is encouragement, not a rule",
+        "passed": true,
+        "score": 100
+      },
+      {
+        "name": "Malformed plan",
+        "passed": true,
+        "score": 0
+      },
+      {
+        "name": "Quad-dominant, no hamstrings",
+        "passed": true,
+        "score": 85
+      },
+      {
+        "name": "Marathon session",
+        "passed": true,
+        "score": 88
+      },
+      {
+        "name": "Lower-back injury, heavy hinging",
+        "passed": true,
+        "score": 52
+      },
+      {
+        "name": "Shoulder injury, overhead pressing",
+        "passed": true,
+        "score": 49
+      },
+      {
+        "name": "Wrist injury, straight-bar work",
+        "passed": true,
+        "score": 67
+      },
+      {
+        "name": "Six training days",
+        "passed": true,
+        "score": 86
+      },
+      {
+        "name": "Knee-aware plan (false-positive guard)",
+        "passed": true,
+        "score": 91
+      },
+      {
+        "name": "Balanced full-body (false-positive guard)",
+        "passed": true,
+        "score": 100
+      },
+      {
+        "name": "High volume, trained once a week (frequency suggestion)",
+        "passed": true,
+        "score": 100
+      },
+      {
+        "name": "Bodyweight user, gym lifts prescribed (equipment mismatch)",
+        "passed": true,
+        "score": 91
+      }
+    ]
+  }
+]

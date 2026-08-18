@@ -12,6 +12,7 @@
     "check": "node --test",
     "eval": "node eval.mjs",
     "eval:nutrition": "node eval-nutrition.mjs",
+    "benchmark:history": "node scripts/append-benchmark-history.mjs",
     "draft-metadata": "node --env-file=.env scripts/draft-exercise-metadata.mjs"
   },
   "license": "MIT",
