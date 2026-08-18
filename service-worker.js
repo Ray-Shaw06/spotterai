@@ -75,6 +75,7 @@ const BOOT_MODULES = [
   "rule-explanations.js",
   "safety-boundaries.js",
   "safety-lab.js",
+  "safety-lab-history.js",
   "share-card.js",
   "split-analyzer.js",
   "split-ui.js",

@@ -14,6 +14,7 @@
 import { CASES, runEvalSuite, isRiskyCase } from "./eval-suite.js";
 import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
 import { RULE_EXPLANATIONS, TRAINING_PRINCIPLES, PRINCIPLES_NOTE } from "./rule-explanations.js";
+import { historyRows } from "./safety-lab-history.js";
 
 const mount = document.getElementById("safety-lab");
 
@@ -139,7 +140,7 @@ function render() {
     <div class="lab-block">
       <div class="lab-block__head">
         <div>
-          <h3 class="lab-block__title">Evaluator benchmark <span class="bench__tag">Bundled local benchmark</span></h3>
+          <h3 class="lab-block__title">Evaluator benchmark <span class="bench__tag">Bundled local benchmark, reproducible</span></h3>
           <p class="lab-block__sub">SpotterAI runs known-good and intentionally risky plans through the same evaluator used in the app. These tests help catch regressions and make the guardrails more transparent. Computed live in your browser from the bundled suite; the same suite is gated in CI.</p>
         </div>
         <span class="bench__status bench__status--${b.passing ? "pass" : "fail"}">${b.passing ? "Passing" : "Needs review"}</span>
@@ -242,7 +243,53 @@ function render() {
       </div>
     </div>`;
 
-  mount.innerHTML = bench + cols + rules + examples + privacy + principles + tech;
+  // History is fetched, so it lands after first paint. The anchor keeps its
+  // slot in document order without blocking anything.
+  const history = `<div class="lab-block" id="bench-history" hidden></div>`;
+  mount.innerHTML = bench + history + cols + rules + examples + privacy + principles + tech;
+}
+
+/**
+ * Fill the history block from the committed record. Fetched, not bundled, so
+ * it must never block or break the live benchmark above it: any failure leaves
+ * the block hidden and the page reads exactly as it did before this shipped.
+ */
+async function hydrateHistory() {
+  const el = document.getElementById("bench-history");
+  if (!el) return;
+  let rows = [];
+  try {
+    const res = await fetch("/docs/benchmark-history.json", { cache: "no-cache" });
+    if (!res.ok) return;
+    rows = historyRows(await res.json());
+  } catch {
+    return;
+  }
+  if (rows.length === 0) return;
+
+  const body = rows
+    .map(
+      (r) => `<tr class="${r.regressed ? "is-regression" : ""}">
+        <td>${esc(r.version)}</td>
+        <td>${esc(r.date)}</td>
+        <td>${r.riskyCaught}/${r.riskyTotal}${r.regressed ? " <span class=\"is-warn\">regression</span>" : ""}</td>
+        <td>${r.falsePositives}</td>
+      </tr>`
+    )
+    .join("");
+
+  el.innerHTML = `
+    <div class="lab-block__head">
+      <div>
+        <h3 class="lab-block__title">Benchmark history</h3>
+        <p class="lab-block__sub">One row per evaluator version, written by CI on every change since ${esc(rows[0].date)}. Nothing before that date is shown, because nothing before that date was recorded.</p>
+      </div>
+    </div>
+    <table class="bench-history">
+      <thead><tr><th>Version</th><th>First seen</th><th>Risky plans caught</th><th>False positives</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>`;
+  el.hidden = false;
 }
 
 // Compact live benchmark summary for the homepage teaser.
@@ -265,6 +312,7 @@ idle(() => {
   try {
     if (mount) render();
     renderTeaser();
+    hydrateHistory();
   } catch {
     if (mount) mount.innerHTML = `<div class="lab-block"><p class="eval-error">Safety Lab couldn't run the local benchmark just now. The app can still audit plans; only the benchmark proof is temporarily unavailable.</p></div>`;
   }
