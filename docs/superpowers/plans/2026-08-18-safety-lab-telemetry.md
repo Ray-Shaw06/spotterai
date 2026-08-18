@@ -21,6 +21,7 @@
 - Copy rule from the spec: the fixture benchmark is labelled **reproducible**, the production telemetry is labelled **unverified**, in those words.
 - Firestore Spark tier allows 20k writes/day and is shared with user sync. The endpoint must never be the thing that exhausts it.
 - Telemetry must be fire-and-forget. No telemetry failure may ever be visible to a user mid-audit.
+- **Every new top-level browser module must be added to the asset list in `service-worker.js`**, and `CACHE` must be bumped exactly once on this branch (Task 7 owns the bump, from `spotterai-v61` to `spotterai-v62`). Without the bump, installed PWAs never fetch anything this branch added.
 
 ---
 
@@ -774,15 +775,21 @@ Run the dev server and open the Safety Lab. Confirm three things: the live bench
 
 Then confirm the fail-safe: rename `docs/benchmark-history.json` temporarily, reload, and check the page renders normally with no history block and no console error beyond the failed fetch.
 
-- [ ] **Step 8: Run the whole suite**
+- [ ] **Step 8: Add the new module to the offline precache**
+
+`service-worker.js` carries an explicit asset list, currently including `"safety-lab.js"` around line 77. A browser module missing from that list is not available offline and is not fetched by an installed PWA.
+
+Add `"safety-lab-history.js",` to that list, directly after the `"safety-lab.js",` entry. Do NOT bump `CACHE` yet; Task 7 bumps it once for all of this branch's modules.
+
+- [ ] **Step 9: Run the whole suite**
 
 Run: `node --test`
-Expected: PASS
+Expected: PASS. `test/pwa.test.js` and `test/service-worker-behavior.test.js` must both stay green.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
-git add safety-lab.js safety-lab-history.js test/safety-lab-history.test.js
+git add safety-lab.js safety-lab-history.js service-worker.js test/safety-lab-history.test.js
 git commit -m "feat: show benchmark history on the Safety Lab"
 ```
 
@@ -1173,7 +1180,7 @@ Expected: FAIL with `Cannot find module .../api/audit-telemetry.js`
 Run:
 
 ```bash
-npm install firebase-admin@^13.0.0
+npm install firebase-admin@^14.0.0
 ```
 
 Confirm `package.json` now lists exactly two runtime dependencies, `@vercel/analytics` and `firebase-admin`.
@@ -1666,10 +1673,17 @@ Expected: PASS. `test/adapt-engine.test.js` and `test/import-endpoint.test.js` m
 
 Generate a plan locally with no `FIREBASE_SERVICE_ACCOUNT` set. Confirm the audit renders identically, and that the network panel shows one `POST /api/audit-telemetry` returning 204. Then block the endpoint in devtools and generate again: the audit must render identically.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 10: Add the new module to the offline precache**
+
+Add `"audit-telemetry-client.js",` to the asset list in `service-worker.js`, next to the other top-level browser modules. `CACHE` is bumped once in Task 7.
+
+Run: `node --test`
+Expected: PASS, including `test/pwa.test.js`.
+
+- [ ] **Step 11: Commit**
 
 ```bash
-git add audit-telemetry-client.js app.js import-ui.js adapt-engine.js test/audit-telemetry-client.test.js
+git add audit-telemetry-client.js app.js import-ui.js adapt-engine.js service-worker.js test/audit-telemetry-client.test.js
 git commit -m "feat: fire audit telemetry from the generate, import and adapt paths"
 ```
 
@@ -1891,15 +1905,32 @@ Expected: at least one line containing `reproducible` on the bundled benchmark, 
 
 With no `FIREBASE_SERVICE_ACCOUNT` set, open the Safety Lab. The production block must be absent entirely, and the rest of the page unchanged. This is the state real visitors see until the variable is configured in Vercel.
 
-- [ ] **Step 9: Run the whole suite**
+- [ ] **Step 9: Precache the last module and bump the cache version**
+
+Two edits in `service-worker.js`:
+
+1. Add `"safety-lab-production.js",` to the asset list, next to `"safety-lab-history.js",`.
+2. Bump the cache constant. It currently reads `const CACHE = "spotterai-v61";` — change it to `const CACHE = "spotterai-v62";`.
+
+The bump is not cosmetic and is not optional. `activate` deletes every cache that is not the current `CACHE`, so without a bump an already-installed PWA keeps serving the old bundle and never fetches any module this branch added. A previous release on this repo shipped with this step missed; it is called out here so it is not missed twice.
+
+Confirm all three of this branch's browser modules are now listed:
+
+```bash
+grep -n "safety-lab-history.js\|safety-lab-production.js\|audit-telemetry-client.js\|const CACHE" service-worker.js
+```
+
+Expected: four lines, with `CACHE` reading `spotterai-v62`.
+
+- [ ] **Step 10: Run the whole suite**
 
 Run: `node --test`
 Expected: PASS
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
-git add safety-lab.js safety-lab-production.js test/safety-lab-production.test.js
+git add safety-lab.js safety-lab-production.js service-worker.js test/safety-lab-production.test.js
 git commit -m "feat: show what the evaluator catches on real plans, labelled unverified"
 ```
 
@@ -1917,5 +1948,6 @@ Run each of these before opening the pull request. Each maps to a numbered crite
 6. **Both labels present.** `grep -n "reproducible\|unverified" safety-lab.js` returns both.
 7. **Dependency count.** `node -p "Object.keys(require('./package.json').dependencies).length"` returns `2`.
 8. **Safety files untouched.** `git diff --stat main -- evaluator.js safety-boundaries.js nutrition-safety.js` returns empty output.
+9. **Offline shell current.** `grep -c "safety-lab-history.js\|safety-lab-production.js\|audit-telemetry-client.js" service-worker.js` returns `3`, and `grep -n "const CACHE" service-worker.js` reads `spotterai-v62`.
 
 Criterion 8 is the standing-rule-6 gate. If it returns anything, stop and run the safety directive before merging.
