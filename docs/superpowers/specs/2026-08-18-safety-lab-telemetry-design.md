@@ -274,8 +274,10 @@ Node's built-in runner, matching the existing 60 files in `test/`.
 - every allow-listed field shape is accepted
 - an unknown `checks[].id` is rejected
 - an unknown `checks[].status` is rejected
-- extra top-level fields are stripped, not stored
-- a payload carrying an exercise name or any free-text field is rejected
+- extra top-level fields never reach the output, because it is built by
+  copying known keys onto a fresh object rather than by deleting unknown ones
+- a payload carrying an exercise name or any other free text is stored without
+  it, and a test asserts that no such string survives into what gets written
 - `injury_<key>` ids are accepted for every key in `INJURY_RULES`, proving the
   derived allow-list tracks the source
 - score bucketing is correct at every boundary (59/60, 74/75, 84/85)
