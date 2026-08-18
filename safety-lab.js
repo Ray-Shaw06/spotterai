@@ -15,6 +15,7 @@ import { CASES, runEvalSuite, isRiskyCase } from "./eval-suite.js";
 import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
 import { RULE_EXPLANATIONS, TRAINING_PRINCIPLES, PRINCIPLES_NOTE } from "./rule-explanations.js";
 import { historyRows } from "./safety-lab-history.js";
+import { onceRouteActive } from "./route-gate.js";
 
 const mount = document.getElementById("safety-lab");
 
@@ -272,8 +273,8 @@ async function hydrateHistory() {
       (r) => `<tr class="${r.regressed ? "is-regression" : ""}">
         <td>${esc(r.version)}</td>
         <td>${esc(r.date)}</td>
-        <td>${r.riskyCaught}/${r.riskyTotal}${r.regressed ? " <span class=\"is-warn\">regression</span>" : ""}</td>
-        <td>${r.falsePositives}</td>
+        <td>${Number(r.riskyCaught)}/${Number(r.riskyTotal)}${r.regressed ? " <span class=\"is-warn\">regression</span>" : ""}</td>
+        <td>${Number(r.falsePositives)}</td>
       </tr>`
     )
     .join("");
@@ -305,6 +306,22 @@ function renderTeaser() {
     stat(`${b.expPass}/${b.expTotal}`, "expectations passed", "is-ok");
 }
 
+// ----------------------------------------------------------------------------
+// Route gate — the Safety Lab (`evals`) route only
+// ============================================================================
+// The router (router.js `show()`) only toggles `hidden` on route sections; it
+// never removes `#evals` from the DOM. Without a gate, `#bench-history`'s
+// fetch would fire on every route of the whole app, not just on a visit to
+// the Safety Lab. `evalsActive`/`onEvalsRouteChange` are the shared plumbing:
+// any hydrator gated the same way (a future telemetry fetch, say) reuses
+// these two plus `onceRouteActive` instead of duplicating the guard.
+const evalsActive = () => document.getElementById("evals")?.hidden === false;
+const onEvalsRouteChange = (onChange) => {
+  window.addEventListener("spotter:route", (e) => {
+    if (e.detail?.route === "evals") onChange();
+  });
+};
+
 // Render off the critical path (the benchmark + timing loop shouldn't block first
 // paint) and never let a benchmark failure blank the page.
 const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1));
@@ -312,8 +329,12 @@ idle(() => {
   try {
     if (mount) render();
     renderTeaser();
-    hydrateHistory();
   } catch {
     if (mount) mount.innerHTML = `<div class="lab-block"><p class="eval-error">Safety Lab couldn't run the local benchmark just now. The app can still audit plans; only the benchmark proof is temporarily unavailable.</p></div>`;
   }
+  // Runs at most once, on first arrival at the Safety Lab — not on every page
+  // view of the app, and not again on a later revisit. render() above has
+  // already built the #bench-history anchor (or, on failure, replaced mount
+  // entirely), so hydrateHistory's own `if (!el) return` covers both cases.
+  onceRouteActive(evalsActive, onEvalsRouteChange, hydrateHistory);
 });

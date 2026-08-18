@@ -71,6 +71,7 @@ const BOOT_MODULES = [
   "quick-log.js",
   "reminders.js",
   "repair.js",
+  "route-gate.js",
   "router.js",
   "rule-explanations.js",
   "safety-boundaries.js",

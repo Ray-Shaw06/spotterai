@@ -21,6 +21,7 @@
 - Copy rule from the spec: the fixture benchmark is labelled **reproducible**, the production telemetry is labelled **unverified**, in those words.
 - Firestore Spark tier allows 20k writes/day and is shared with user sync. The endpoint must never be the thing that exhausts it.
 - Telemetry must be fire-and-forget. No telemetry failure may ever be visible to a user mid-audit.
+- **Nothing on the Safety Lab may fetch on page load.** `#safety-lab` sits inside `<section id="evals" data-view="evals" hidden>` (index.html:924, 941) and the router only toggles `hidden`, so the element is present on every route. Any fetch must be gated behind the `spotter:route` event (router.js:87) and run once, on first arrival at the `evals` route. An ungated fetch bills a serverless invocation and 30 Firestore reads to every page view of the entire app.
 - **Every new top-level browser module must be added to the asset list in `service-worker.js`**, and `CACHE` must be bumped exactly once on this branch (Task 7 owns the bump, from `spotterai-v61` to `spotterai-v62`). Without the bump, installed PWAs never fetch anything this branch added.
 
 ---
@@ -1877,14 +1878,9 @@ async function hydrateProduction() {
 
 `RULE_EXPLANATIONS` is already imported at the top of `safety-lab.js`. Injury ids (`injury_knee` and friends) are generated per user and have no entry, so they fall back to the raw id, which is correct and readable.
 
-Call it from the idle block:
+Do NOT call it eagerly from the idle block. `#safety-lab` lives inside `<section id="evals" data-view="evals" hidden>` (index.html:924, 941), and the router only toggles `hidden` — the element exists in the DOM on every route. An eager call would fire a serverless invocation, and 30 Firestore document reads, on every single page load of the app rather than on visits to the Safety Lab.
 
-```js
-    if (mount) render();
-    renderTeaser();
-    hydrateHistory();
-    hydrateProduction();
-```
+Task 3 introduced a route gate for exactly this reason. Reuse it: register `hydrateProduction` through the same gate that runs `hydrateHistory`, so both run once, on first arrival at the `evals` route. Read how Task 3 wired it in `safety-lab.js` and follow that shape rather than inventing a second mechanism.
 
 - [ ] **Step 6: Run the production tests again, now fully green**
 
@@ -1948,6 +1944,7 @@ Run each of these before opening the pull request. Each maps to a numbered crite
 6. **Both labels present.** `grep -n "reproducible\|unverified" safety-lab.js` returns both.
 7. **Dependency count.** `node -p "Object.keys(require('./package.json').dependencies).length"` returns `2`.
 8. **Safety files untouched.** `git diff --stat main -- evaluator.js safety-boundaries.js nutrition-safety.js` returns empty output.
-9. **Offline shell current.** `grep -c "safety-lab-history.js\|safety-lab-production.js\|audit-telemetry-client.js" service-worker.js` returns `3`, and `grep -n "const CACHE" service-worker.js` reads `spotterai-v62`.
+9. **No fetch on page load.** Load any route other than the Safety Lab and confirm the network panel shows no request to `docs/benchmark-history.json` and none to `/api/audit-telemetry`. Then navigate to the Safety Lab and confirm both fire exactly once, and do not fire again on a second visit.
+10. **Offline shell current.** `grep -c "safety-lab-history.js\|safety-lab-production.js\|audit-telemetry-client.js" service-worker.js` returns `3`, and `grep -n "const CACHE" service-worker.js` reads `spotterai-v62`.
 
 Criterion 8 is the standing-rule-6 gate. If it returns anything, stop and run the safety directive before merging.
