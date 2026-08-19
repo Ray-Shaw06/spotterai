@@ -1945,6 +1945,6 @@ Run each of these before opening the pull request. Each maps to a numbered crite
 7. **Dependency count.** `node -p "Object.keys(require('./package.json').dependencies).length"` returns `2`.
 8. **Safety files untouched.** `git diff --stat main -- evaluator.js safety-boundaries.js nutrition-safety.js` returns empty output.
 9. **No fetch on page load.** Load any route other than the Safety Lab and confirm the network panel shows no request to `docs/benchmark-history.json` and none to `/api/audit-telemetry`. Then navigate to the Safety Lab and confirm both fire exactly once, and do not fire again on a second visit.
-10. **Offline shell current.** `grep -c "safety-lab-history.js\|safety-lab-production.js\|audit-telemetry-client.js" service-worker.js` returns `3`, and `grep -n "const CACHE" service-worker.js` reads `spotterai-v62`.
+10. **Offline shell current.** `grep -c "safety-lab-history.js\|safety-lab-production.js\|audit-telemetry-client.js\|route-gate.js" service-worker.js` returns `4` (Task 3's fix round added `route-gate.js` as a fourth new browser module), and `grep -n "const CACHE" service-worker.js` reads `spotterai-v62`.
 
 Criterion 8 is the standing-rule-6 gate. If it returns anything, stop and run the safety directive before merging.
