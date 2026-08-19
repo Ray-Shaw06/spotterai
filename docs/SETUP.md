@@ -50,6 +50,10 @@ git push -u origin main
 3. Open **Project → Settings → Environment Variables** and add:
    - **Name:** `GEMINI_API_KEY`  **Value:** *your key from step 1*
    - Optional: `GROQ_API_KEY` and `GROQ_MODEL` for the text-model fallback.
+   - Optional: `FIREBASE_SERVICE_ACCOUNT` — a Firebase service account JSON
+     (pasted as one line) that lets `api/audit-telemetry.js` write aggregate
+     Safety Lab counters. Leave it unset and that endpoint just accepts
+     requests and writes nothing; see `.env.example` for how to generate one.
 4. Click **Deploy**. Your live URL is ready in seconds.
 
 ---

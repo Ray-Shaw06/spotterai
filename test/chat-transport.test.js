@@ -50,10 +50,20 @@ test("every api function gets an explicit maxDuration", () => {
   // budget too, or the platform can kill the invocation mid-flight and the
   // browser sees a dropped connection rather than a clean JSON error.
   const configured = Object.keys(vercelConfig.functions || {}).sort();
-  assert.deepEqual(configured, ["api/chat.js", "api/estimate.js", "api/generate.js", "api/import.js", "api/parse.js"]);
+  assert.deepEqual(configured, [
+    "api/audit-telemetry.js", "api/chat.js", "api/estimate.js", "api/generate.js", "api/import.js", "api/parse.js",
+  ]);
   for (const [route, settings] of Object.entries(vercelConfig.functions)) {
     assert.equal(typeof settings.maxDuration, "number", `${route} has a maxDuration`);
-    assert.ok(settings.maxDuration >= 30, `${route} allows the model ladder to finish`);
+  }
+
+  // The AI-model routes ride the shared Gemini/Groq ladder (up to ~25s per
+  // call) and must not be killed mid-flight, so they need the generous floor.
+  // api/audit-telemetry.js does a couple of bounded Firestore reads/writes and
+  // is deliberately budgeted lower (see vercel.json).
+  const modelLadderRoutes = ["api/chat.js", "api/estimate.js", "api/generate.js", "api/import.js", "api/parse.js"];
+  for (const route of modelLadderRoutes) {
+    assert.ok(vercelConfig.functions[route].maxDuration >= 30, `${route} allows the model ladder to finish`);
   }
 });
 
