@@ -16,6 +16,9 @@
  *   3. It cannot exhaust the free tier. Firestore Spark allows 20k writes/day
  *      and USER SYNC RUNS ON THE SAME QUOTA, so the cap below matters: losing
  *      the tail of an anomalous day is strictly better than breaking sync.
+ *      The SAME quota also caps reads at 50k/day project-wide, which is why
+ *      GET is edge-cached and the daily write cap is checked from a
+ *      same-instance cache rather than a Firestore read on every POST.
  *
  * It is public and unauthenticated, because the product has no account
  * requirement and telemetry must not introduce one. The counters can therefore
@@ -30,6 +33,7 @@ import { sanitizeTelemetry } from "../lib/telemetry-schema.js";
 export const DAILY_AUDIT_CAP = 5000;
 export const IP_HOURLY_CAP = 60;
 const HISTORY_DAYS = 30;
+const DAY_CACHE_TTL_MS = 60_000;
 
 /** UTC date key. Deliberately UTC so the bucket does not depend on the caller. */
 export function dayKey(date = new Date()) {
@@ -38,6 +42,24 @@ export function dayKey(date = new Date()) {
 
 function hourKey(date = new Date()) {
   return date.toISOString().slice(0, 13);
+}
+
+/**
+ * Normalize whatever the platform handed us as req.body into a plain object,
+ * or null if it cannot be read as one. Pure, and exported, because with
+ * Firestore unconfigured the handler answers 204 identically whether a body
+ * parsed or was silently dropped — the only way to prove a Buffer body
+ * (as navigator.sendBeacon(Blob) can arrive, unparsed by Vercel's body
+ * parser when the content type isn't recognized as JSON) is actually being
+ * read rather than dropped is to test this seam directly.
+ */
+export function parseBody(raw) {
+  let body = raw;
+  if (Buffer.isBuffer(body)) body = body.toString("utf8");
+  if (typeof body === "string") {
+    try { body = JSON.parse(body); } catch { return null; }
+  }
+  return body ?? null;
 }
 
 /**
@@ -58,6 +80,10 @@ export function counterUpdates(clean, FieldValue) {
   const byCheck = {};
   for (const check of clean.checks) {
     if (!byCheck[check.id]) byCheck[check.id] = {};
+    // A repeated (id, status) pair within one audit collapses to a single
+    // increment rather than stacking. Deliberate anti-inflation, not a bug:
+    // one audit is one occurrence of a check firing, however many times the
+    // evaluator happened to report the same (id, status) pair for it.
     byCheck[check.id][check.status] = FieldValue.increment(1);
   }
   return {
@@ -83,8 +109,11 @@ async function firestore() {
     if (!getApps().length) initializeApp({ credential: cert(JSON.parse(raw)) });
     cached = { store: getFirestore(), FieldValue };
     return cached;
-  } catch {
-    // A malformed service account must not take the endpoint down noisily.
+  } catch (err) {
+    // A malformed service account must not take the endpoint down noisily —
+    // but it must not be invisible either, or a bad credential looks
+    // identical to "telemetry is simply off" forever.
+    console.warn("[audit-telemetry] init failed", err?.code ?? err?.message);
     return null;
   }
 }
@@ -93,15 +122,31 @@ async function firestore() {
  * Hash the caller's IP with the service account as salt. The raw IP is never
  * written, and the hash is scoped to the hour so it is not a stable
  * pseudonym across a day.
+ *
+ * Prefers x-real-ip: Vercel sets it from the actual connecting peer and a
+ * caller cannot rewrite it. Falling back to x-forwarded-for, takes the
+ * RIGHTMOST entry, the hop the trusted proxy itself appended — a proxy that
+ * APPENDS to an existing XFF rather than replacing it passes through
+ * whatever the caller already sent as the leading entries, so trusting the
+ * leftmost entry would let a rotating forged header defeat IP_HOURLY_CAP.
  */
 function ipKey(req) {
-  const forwarded = req.headers?.["x-forwarded-for"];
-  const ip = String(Array.isArray(forwarded) ? forwarded[0] : forwarded || "unknown").split(",")[0].trim();
+  const pick = (h) => (Array.isArray(h) ? h[0] : h);
+  const realIp = pick(req.headers?.["x-real-ip"]);
+  const forwarded = pick(req.headers?.["x-forwarded-for"]);
+  const fromForwarded = forwarded ? String(forwarded).split(",").pop().trim() : "";
+  const ip = String(realIp || fromForwarded || "unknown").trim();
   const salt = (process.env.FIREBASE_SERVICE_ACCOUNT || "").slice(0, 64);
   return createHash("sha256").update(`${salt}:${ip}:${hourKey()}`).digest("hex").slice(0, 32);
 }
 
-async function readAggregate(store) {
+/**
+ * Sum the last HISTORY_DAYS day documents into one aggregate. Exported so
+ * the reader half of the writer/reader contract can be driven directly with
+ * a fake store — the seam the dotted-key/nested-object disagreement lived in
+ * undetected, because nothing exercised it.
+ */
+export async function readAggregate(store) {
   const days = [];
   const now = new Date();
   for (let i = 0; i < HISTORY_DAYS; i++) {
@@ -126,13 +171,83 @@ async function readAggregate(store) {
   return totals;
 }
 
+// Same-instance cache of today's audit count, keyed by the Firestore handle
+// itself so a fresh store (a cold instance, or a different store in tests)
+// never trusts a stale entry. Lets a saturated day cost close to zero reads
+// instead of one per POST — 25,000 POSTs against the naive read-then-decide
+// version would have cost 50,000 reads and endangered the SAME quota user
+// sync depends on.
+let dayCountCache = { store: null, day: null, audits: 0, checkedAt: 0 };
+
+/**
+ * Today's audit count, from the module-scope cache when it is fresh (same
+ * store, same day, read within the last DAY_CACHE_TTL_MS), else a real read.
+ *
+ * This can let DAILY_AUDIT_CAP overshoot by up to one instance-minute of
+ * traffic before a fresh read notices the day is saturated. Acceptable: the
+ * cap is a safety valve protecting the shared free-tier quota, not an
+ * accounting boundary that has to be exact.
+ */
+async function todaysAuditCount(store, today) {
+  const fresh = dayCountCache.store === store
+    && dayCountCache.day === today
+    && Date.now() - dayCountCache.checkedAt < DAY_CACHE_TTL_MS;
+  if (fresh) return dayCountCache.audits;
+  const snap = await store.collection("audit_telemetry").doc(today).get();
+  const audits = snap.data()?.audits || 0;
+  dayCountCache = { store, day: today, audits, checkedAt: Date.now() };
+  return audits;
+}
+
+/**
+ * Enforce both caps and write the aggregate counters for one audit. Exported
+ * so cap enforcement and the exact shape handed to Firestore can be driven
+ * with a fake store instead of only being checked by reading the source.
+ *
+ * The daily cap is checked FIRST, from the cache above, and a saturated day
+ * returns immediately without ever reading the IP-throttle document — a
+ * saturated day must cost close to zero reads, not two reads per rejected
+ * request. The IP read only happens on the path where the day is not
+ * saturated.
+ *
+ * @returns {Promise<boolean>} true if the write happened, false if a cap
+ *   dropped it. Never surfaced to the client — the caller always answers 204
+ *   either way, per the fire-and-forget contract.
+ */
+export async function recordAudit(store, FieldValue, clean, req) {
+  const today = dayKey();
+  if ((await todaysAuditCount(store, today)) >= DAILY_AUDIT_CAP) return false;
+
+  const ipRef = store.collection("audit_telemetry_throttle").doc(ipKey(req));
+  const ipSnap = await ipRef.get();
+  if ((ipSnap.data()?.hits || 0) >= IP_HOURLY_CAP) return false;
+
+  const dayRef = store.collection("audit_telemetry").doc(today);
+  await Promise.all([
+    dayRef.set(counterUpdates(clean, FieldValue), { merge: true }),
+    // expiresAt requires a Firestore TTL policy on
+    // audit_telemetry_throttle.expiresAt, provisioned outside this repo —
+    // see docs/SETUP.md. The field is written regardless so the policy can
+    // be turned on at any time without a backfill.
+    ipRef.set({ hits: FieldValue.increment(1), expiresAt: new Date(Date.now() + 3600000) }, { merge: true }),
+  ]);
+  return true;
+}
+
 export default async function handler(req, res) {
   if (req.method === "GET") {
+    // The aggregate is a 30-day rolling sum; five minutes of staleness is
+    // irrelevant to it, and letting Vercel's edge absorb repeat views is the
+    // difference between this fanning out to up to 30 Firestore reads on
+    // every Safety Lab page view (exhausting the 50k/day project-wide read
+    // quota at roughly 1,666 views) and effectively zero.
+    res.setHeader?.("Cache-Control", "s-maxage=300, stale-while-revalidate=3600");
     const fs = await firestore();
     if (!fs) return res.status(200).json({ audits: 0, byCheck: {}, since: null });
     try {
       return res.status(200).json(await readAggregate(fs.store));
-    } catch {
+    } catch (err) {
+      console.warn("[audit-telemetry] read failed", err?.code ?? err?.message);
       return res.status(200).json({ audits: 0, byCheck: {}, since: null });
     }
   }
@@ -144,33 +259,19 @@ export default async function handler(req, res) {
 
   // Every remaining path returns 204. The client is fire-and-forget and must
   // never learn whether its telemetry landed.
-  let body = req.body;
-  if (typeof body === "string") {
-    try { body = JSON.parse(body); } catch { return res.status(204).end(); }
-  }
-
-  const clean = sanitizeTelemetry(body);
+  const clean = sanitizeTelemetry(parseBody(req.body));
   if (!clean) return res.status(204).end();
 
   const fs = await firestore();
   if (!fs) return res.status(204).end();
 
   try {
-    const { store, FieldValue } = fs;
-    const dayRef = store.collection("audit_telemetry").doc(dayKey());
-    const ipRef = store.collection("audit_telemetry_throttle").doc(ipKey(req));
-
-    const [daySnap, ipSnap] = await Promise.all([dayRef.get(), ipRef.get()]);
-    if ((daySnap.data()?.audits || 0) >= DAILY_AUDIT_CAP) return res.status(204).end();
-    if ((ipSnap.data()?.hits || 0) >= IP_HOURLY_CAP) return res.status(204).end();
-
-    await Promise.all([
-      dayRef.set(counterUpdates(clean, FieldValue), { merge: true }),
-      ipRef.set({ hits: FieldValue.increment(1), expiresAt: new Date(Date.now() + 3600000) }, { merge: true }),
-    ]);
-  } catch {
+    await recordAudit(fs.store, fs.FieldValue, clean, req);
+  } catch (err) {
     // Quota exhaustion, a network fault, a permissions problem: all the same
-    // from here. Drop it.
+    // from the client's point of view (204 regardless) but worth a log line,
+    // or a bad credential looks identical to "telemetry is simply off".
+    console.warn("[audit-telemetry] write failed", err?.code ?? err?.message);
   }
   return res.status(204).end();
 }
