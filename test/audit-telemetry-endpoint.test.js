@@ -33,23 +33,39 @@ test("the caps are set to the values the spec commits to", () => {
   assert.equal(IP_HOURLY_CAP, 60);
 });
 
-test("counter updates increment exactly the documented paths", () => {
+test("counter updates increment exactly the documented paths, as nested objects", () => {
+  // Nested objects, not dotted-path keys: set(..., { merge: true }) only
+  // documents dot-path expansion for update(), so a dotted key would have
+  // written a literal field named "byCheck.rest_days.pass" instead of the
+  // nested shape readAggregate() reads back.
   const increment = (n) => ({ __increment: n });
   const updates = counterUpdates(validBody, { increment });
-  assert.deepEqual(updates["audits"], { __increment: 1 });
-  assert.deepEqual(updates["byCheck.rest_days.pass"], { __increment: 1 });
-  assert.deepEqual(updates["byCheck.muscle_balance.warn"], { __increment: 1 });
-  assert.deepEqual(updates["byScoreBucket.85-100"], { __increment: 1 });
-  assert.deepEqual(updates["byGoal.Hypertrophy"], { __increment: 1 });
-  assert.deepEqual(updates["byExperience.Intermediate"], { __increment: 1 });
-  assert.deepEqual(updates["byDaysCount.4"], { __increment: 1 });
+  assert.deepEqual(updates.audits, { __increment: 1 });
+  assert.deepEqual(updates.byCheck.rest_days.pass, { __increment: 1 });
+  assert.deepEqual(updates.byCheck.muscle_balance.warn, { __increment: 1 });
+  assert.deepEqual(updates.byScoreBucket["85-100"], { __increment: 1 });
+  assert.deepEqual(updates.byGoal.Hypertrophy, { __increment: 1 });
+  assert.deepEqual(updates.byExperience.Intermediate, { __increment: 1 });
+  assert.deepEqual(updates.byDaysCount["4"], { __increment: 1 });
+  assert.equal(Object.keys(updates).some((k) => k.includes(".")), false, "no key may contain a literal dot");
+});
+
+test("two different checks in one audit both survive into a single byCheck object", () => {
+  const updates = counterUpdates(validBody, { increment: (n) => n });
+  assert.deepEqual(Object.keys(updates.byCheck).sort(), ["muscle_balance", "rest_days"]);
+  assert.deepEqual(updates.byCheck.rest_days, { pass: 1 });
+  assert.deepEqual(updates.byCheck.muscle_balance, { warn: 1 });
 });
 
 test("counter updates never contain free text or a raw score", () => {
   const updates = counterUpdates(validBody, { increment: (n) => n });
-  const keys = JSON.stringify(Object.keys(updates));
-  assert.doesNotMatch(keys, /score"?:\s*\d|exerciseName|notes|programName/);
-  assert.equal(Object.keys(updates).some((k) => k.startsWith("byScore.")), false);
+  const serialized = JSON.stringify(updates);
+  assert.doesNotMatch(serialized, /exerciseName|notes|programName/);
+  assert.equal("byScore" in updates, false, "only the bucketed field may exist, never a raw score");
+  assert.deepEqual(
+    Object.keys(updates).sort(),
+    ["audits", "byCheck", "byDaysCount", "byExperience", "byGoal", "byScoreBucket"]
+  );
 });
 
 test("GET serves the aggregate, and serves an empty one when unconfigured", async () => {

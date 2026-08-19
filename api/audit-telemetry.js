@@ -43,19 +43,31 @@ function hourKey(date = new Date()) {
 /**
  * Build the increment map for one audit. Pure, so the shape of what gets
  * stored is testable without Firestore.
+ *
+ * Nested objects, NOT dotted-path keys. Dot-path field expansion
+ * ("a.b.c": value) is documented only for update() in the Admin SDK
+ * (@google-cloud/firestore's firestore.d.ts covers it on update() alone);
+ * set(..., { merge: true }) treats a key containing dots as one literal
+ * field name. A dotted key here would have written a field literally named
+ * "byCheck.rest_days.pass" while readAggregate() below reads a genuinely
+ * nested `byCheck[id][status]`, so the two would silently disagree forever.
+ * Nested objects merge deep and correctly under set(..., { merge: true }),
+ * so the writer and reader agree by construction.
  */
 export function counterUpdates(clean, FieldValue) {
-  const updates = {
-    audits: FieldValue.increment(1),
-    [`byScoreBucket.${clean.scoreBucket}`]: FieldValue.increment(1),
-    [`byGoal.${clean.goal}`]: FieldValue.increment(1),
-    [`byExperience.${clean.experience}`]: FieldValue.increment(1),
-    [`byDaysCount.${clean.daysCount}`]: FieldValue.increment(1),
-  };
+  const byCheck = {};
   for (const check of clean.checks) {
-    updates[`byCheck.${check.id}.${check.status}`] = FieldValue.increment(1);
+    if (!byCheck[check.id]) byCheck[check.id] = {};
+    byCheck[check.id][check.status] = FieldValue.increment(1);
   }
-  return updates;
+  return {
+    audits: FieldValue.increment(1),
+    byScoreBucket: { [clean.scoreBucket]: FieldValue.increment(1) },
+    byGoal: { [clean.goal]: FieldValue.increment(1) },
+    byExperience: { [clean.experience]: FieldValue.increment(1) },
+    byDaysCount: { [clean.daysCount]: FieldValue.increment(1) },
+    byCheck,
+  };
 }
 
 let cached = null;
