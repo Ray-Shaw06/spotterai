@@ -39,21 +39,36 @@ test("does not fire while inactive, then fires on the first change that leaves i
   assert.equal(calls, 1);
 });
 
-test("fires at most once even when further changes keep reporting active", () => {
+test("fires once through subscribe path and never again despite further active changes", () => {
+  let active = false;
   let calls = 0;
+  let subscribeCount = 0;
   let onChange;
   onceRouteActive(
-    () => true,
+    () => active,
     (fn) => {
+      subscribeCount++;
       onChange = fn;
     },
     () => {
       calls++;
     }
   );
-  // Already active, so it fired synchronously and never subscribed.
-  assert.equal(calls, 1);
-  assert.equal(onChange, undefined);
+  assert.equal(calls, 0, "must not fire before the route is active");
+  assert.equal(subscribeCount, 1, "must subscribe exactly once");
+
+  active = true;
+  onChange(); // first change reports active
+  assert.equal(calls, 1, "must fire when active is first detected");
+
+  active = false;
+  onChange(); // change reports inactive, should not fire
+  assert.equal(calls, 1, "must not fire when becoming inactive");
+
+  active = true;
+  onChange(); // change reports active again, but already fired so should not run
+  assert.equal(calls, 1, "must not fire again even when active is reported later");
+  assert.equal(subscribeCount, 1, "must have subscribed exactly once for lifetime");
 });
 
 test("never fires if the route never becomes active", () => {
