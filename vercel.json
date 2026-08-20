@@ -34,6 +34,9 @@
     },
     "api/parse.js": {
       "maxDuration": 30
+    },
+    "api/audit-telemetry.js": {
+      "maxDuration": 10
     }
   }
 }

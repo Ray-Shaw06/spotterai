@@ -50,6 +50,17 @@ git push -u origin main
 3. Open **Project → Settings → Environment Variables** and add:
    - **Name:** `GEMINI_API_KEY`  **Value:** *your key from step 1*
    - Optional: `GROQ_API_KEY` and `GROQ_MODEL` for the text-model fallback.
+   - Optional: `FIREBASE_SERVICE_ACCOUNT` — a Firebase service account JSON
+     (pasted as one line) that lets `api/audit-telemetry.js` write aggregate
+     Safety Lab counters. Leave it unset and that endpoint just accepts
+     requests and writes nothing; see `.env.example` for how to generate one.
+     **If you set this, also add a TTL policy**: Firestore console →
+     **Firestore Database → TTL** → create a policy on collection group
+     `audit_telemetry_throttle`, field `expiresAt`. That collection exists
+     only to rate-limit one IP for an hour; every document it writes already
+     carries an `expiresAt` a Firestore-managed TTL deletes, but the deletion
+     itself is a per-field policy configured outside this repo and is not on
+     by default. Skip it and the collection grows forever instead of expiring.
 4. Click **Deploy**. Your live URL is ready in seconds.
 
 ---

@@ -14,6 +14,9 @@
 import { CASES, runEvalSuite, isRiskyCase } from "./eval-suite.js";
 import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
 import { RULE_EXPLANATIONS, TRAINING_PRINCIPLES, PRINCIPLES_NOTE } from "./rule-explanations.js";
+import { historyRows } from "./safety-lab-history.js";
+import { productionRows } from "./safety-lab-production.js";
+import { onceRouteActive } from "./route-gate.js";
 
 const mount = document.getElementById("safety-lab");
 
@@ -111,11 +114,12 @@ const PRIVACY = {
     "Plan-generation intake",
     "Coach messages plus the current plan and a recent tracker summary",
     "Food descriptions, meal photos, new exercise names, and quick-log text",
+    "Anonymous audit counters, which evaluator checks fired, never plan content",
   ],
   services: [
     "Google Gemini processes AI requests; Groq may process text requests when Gemini is unavailable",
     "Vercel hosts the app and APIs; Vercel Web Analytics receives allow-listed funnel pageviews, never workout, meal, or message content",
-    "Firebase stores tracker data plus Google account name and email only after you choose Cloud sync",
+    "Firebase stores tracker data plus Google account name and email only after you choose Cloud sync; it also stores anonymous audit counters for everyone, with no opt-in and no Cloud sync required",
   ],
 };
 
@@ -139,7 +143,7 @@ function render() {
     <div class="lab-block">
       <div class="lab-block__head">
         <div>
-          <h3 class="lab-block__title">Evaluator benchmark <span class="bench__tag">Bundled local benchmark</span></h3>
+          <h3 class="lab-block__title">Evaluator benchmark <span class="bench__tag">Bundled local benchmark, reproducible</span></h3>
           <p class="lab-block__sub">SpotterAI runs known-good and intentionally risky plans through the same evaluator used in the app. These tests help catch regressions and make the guardrails more transparent. Computed live in your browser from the bundled suite; the same suite is gated in CI.</p>
         </div>
         <span class="bench__status bench__status--${b.passing ? "pass" : "fail"}">${b.passing ? "Passing" : "Needs review"}</span>
@@ -242,7 +246,96 @@ function render() {
       </div>
     </div>`;
 
-  mount.innerHTML = bench + cols + rules + examples + privacy + principles + tech;
+  // History is fetched, so it lands after first paint. The anchor keeps its
+  // slot in document order without blocking anything.
+  const history = `<div class="lab-block" id="bench-history" hidden></div>`;
+  const production = `<div class="lab-block" id="bench-production" hidden></div>`;
+  mount.innerHTML = bench + history + production + cols + rules + examples + privacy + principles + tech;
+}
+
+/**
+ * Fill the history block from the committed record. Fetched, not bundled, so
+ * it must never block or break the live benchmark above it: any failure leaves
+ * the block hidden and the page reads exactly as it did before this shipped.
+ */
+async function hydrateHistory() {
+  const el = document.getElementById("bench-history");
+  if (!el) return;
+  let rows = [];
+  try {
+    const res = await fetch("/docs/benchmark-history.json", { cache: "no-cache" });
+    if (!res.ok) return;
+    rows = historyRows(await res.json());
+  } catch {
+    return;
+  }
+  if (rows.length === 0) return;
+
+  const body = rows
+    .map(
+      (r) => `<tr class="${r.regressed ? "is-regression" : ""}">
+        <td>${esc(r.version)}</td>
+        <td>${esc(r.date)}</td>
+        <td>${Number(r.riskyCaught)}/${Number(r.riskyTotal)}${r.regressed ? " <span class=\"is-warn\">regression</span>" : ""}</td>
+        <td>${Number(r.falsePositives)}</td>
+      </tr>`
+    )
+    .join("");
+
+  el.innerHTML = `
+    <div class="lab-block__head">
+      <div>
+        <h3 class="lab-block__title">Benchmark history</h3>
+        <p class="lab-block__sub">One row per change in evaluator behaviour, appended by CI since ${esc(rows[0].date)}. Nothing before that date is shown, because nothing before that date was recorded.</p>
+      </div>
+    </div>
+    <table class="bench-history">
+      <thead><tr><th>Version</th><th>Date</th><th>Risky plans caught</th><th>False positives</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>`;
+  el.hidden = false;
+}
+
+/**
+ * Fill the production block from the telemetry aggregate.
+ *
+ * The block stays hidden when there is no data. A rendered zero would read as
+ * "this check never fires on real plans" when the truth is "nothing has been
+ * collected", and those are opposite claims.
+ */
+async function hydrateProduction() {
+  const el = document.getElementById("bench-production");
+  if (!el) return;
+  let shaped = null;
+  try {
+    const res = await fetch("/api/audit-telemetry", { cache: "no-cache" });
+    if (!res.ok) return;
+    shaped = productionRows(await res.json());
+  } catch {
+    return;
+  }
+  if (!shaped) return;
+
+  // RULE_EXPLANATIONS is an ARRAY of { id, name, ... }, not a map, and the
+  // human label lives on `name`. Built once here rather than scanned per row.
+  const labels = new Map(RULE_EXPLANATIONS.map((r) => [r.id, r.name]));
+  const labelFor = (id) => labels.get(id) || id;
+  const body = shaped.rows
+    .map((r) => `<tr><td>${esc(labelFor(r.id))}</td><td>${r.fired}</td><td>${r.rate}%</td></tr>`)
+    .join("");
+
+  el.innerHTML = `
+    <div class="lab-block__head">
+      <div>
+        <h3 class="lab-block__title">On real plans <span class="bench__tag">Production telemetry, unverified</span></h3>
+        <p class="lab-block__sub">How often each check flagged something across ${shaped.audits} audits${shaped.since ? `, since ${esc(shaped.since)}` : ""}. Anonymous counters only: no plan content, no accounts, nothing identifying anyone. Unlike the bundled benchmark above, which anyone can reproduce by running the suite from the repo, this endpoint is public and unauthenticated, so treat these numbers as a direction rather than a proof.</p>
+      </div>
+    </div>
+    <table class="bench-history">
+      <thead><tr><th>Check</th><th>Times flagged</th><th>Share of plans</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>`;
+  el.hidden = false;
 }
 
 // Compact live benchmark summary for the homepage teaser.
@@ -258,6 +351,22 @@ function renderTeaser() {
     stat(`${b.expPass}/${b.expTotal}`, "expectations passed", "is-ok");
 }
 
+// ----------------------------------------------------------------------------
+// Route gate — the Safety Lab (`evals`) route only
+// ============================================================================
+// The router (router.js `show()`) only toggles `hidden` on route sections; it
+// never removes `#evals` from the DOM. Without a gate, `#bench-history`'s
+// fetch would fire on every route of the whole app, not just on a visit to
+// the Safety Lab. `evalsActive`/`onEvalsRouteChange` are the shared plumbing:
+// any hydrator gated the same way (a future telemetry fetch, say) reuses
+// these two plus `onceRouteActive` instead of duplicating the guard.
+const evalsActive = () => document.getElementById("evals")?.hidden === false;
+const onEvalsRouteChange = (onChange) => {
+  window.addEventListener("spotter:route", (e) => {
+    if (e.detail?.route === "evals") onChange();
+  });
+};
+
 // Render off the critical path (the benchmark + timing loop shouldn't block first
 // paint) and never let a benchmark failure blank the page.
 const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1));
@@ -268,4 +377,11 @@ idle(() => {
   } catch {
     if (mount) mount.innerHTML = `<div class="lab-block"><p class="eval-error">Safety Lab couldn't run the local benchmark just now. The app can still audit plans; only the benchmark proof is temporarily unavailable.</p></div>`;
   }
+  // Runs at most once, on first arrival at the Safety Lab — not on every page
+  // view of the app, and not again on a later revisit. render() above has
+  // already built the #bench-history and #bench-production anchors (or, on
+  // failure, replaced mount entirely), so each hydrator's own
+  // `if (!el) return` covers both cases.
+  onceRouteActive(evalsActive, onEvalsRouteChange, hydrateHistory);
+  onceRouteActive(evalsActive, onEvalsRouteChange, hydrateProduction);
 });

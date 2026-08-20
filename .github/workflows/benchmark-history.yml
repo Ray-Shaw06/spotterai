@@ -1,0 +1,41 @@
+name: Benchmark history
+
+# Only main, and never in response to its own commit: the append below writes
+# docs/benchmark-history.json, and without paths-ignore that push would
+# retrigger this job forever. [skip ci] on the commit is the second guard.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/benchmark-history.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: benchmark-history
+  cancel-in-progress: false
+
+jobs:
+  append:
+    name: Append benchmark record
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Zero dependencies — nothing to install.
+      - name: Build and append the record
+        id: append
+        run: node scripts/append-benchmark-history.mjs
+
+      - name: Commit the new record
+        if: steps.append.outputs.appended == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/benchmark-history.json
+          git commit -m "chore: benchmark history ${{ steps.append.outputs.version }} ${{ steps.append.outputs.commit }} [skip ci]"
+          git push

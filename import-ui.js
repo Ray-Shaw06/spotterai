@@ -18,6 +18,7 @@
 import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
 import { allClearText, auditVerdictText, esc, flaggedChecks, renderFlagCard } from "./audit-view.js";
 import { fetchWithTimeout } from "./ai-errors.js";
+import { sendAuditTelemetry } from "./audit-telemetry-client.js";
 import { trackFunnel } from "./analytics.js";
 
 const MAX_TEXT_CHARS = 8000;
@@ -146,6 +147,7 @@ function renderAudit() {
   // No profile on purpose: this person never onboarded. The unassessed checks
   // are the honest consequence, and the not_assessed tier exists to show them.
   const audit = evaluatePlan(parsedPlan, {});
+  sendAuditTelemetry(audit, parsedPlan, {}, "import");
   const s = audit.summary;
   const verdict = auditVerdictText(s);
 

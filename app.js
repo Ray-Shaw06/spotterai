@@ -19,6 +19,7 @@ import { screenRequest, GENERATOR_BOUNDARY } from "./safety-boundaries.js";
 import { TIER_LABEL, TIER_ORDER, allClearText, auditVerdictText, flaggedChecks, renderFlagCard } from "./audit-view.js";
 import { planConfidence } from "./trust.js";
 import { buildAuditEntry, recordAudit, getAuditHistory, auditTrend } from "./trust-history.js";
+import { sendAuditTelemetry } from "./audit-telemetry-client.js";
 import { lineChart } from "./charts.js";
 import { setPlan, store, planUpdatedAt } from "./store.js";
 import { getContext as getTrackerContext, buildAdaptContext, getState as getTrackerState } from "./tracker-store.js";
@@ -289,7 +290,14 @@ async function generate(inputsOverride) {
 
   stopLoadingSteps();
   publishPlan(plan, inputs);
-  renderResults(plan, inputs, usedFallback, { failureClass: fallbackFailureClass });
+  const audit = renderResults(plan, inputs, usedFallback, { failureClass: fallbackFailureClass });
+  // Same guard as the history snapshot inside renderResults: the saved
+  // fallback example is not a real plan, and counting it would put a fixture
+  // into the production number. Fired only here, at the true generation call
+  // site, not from renderResults itself, because that function is also the
+  // shared re-render path for repair/adapt/profile-switch/reload, none of
+  // which are a "generate" event.
+  if (!usedFallback) sendAuditTelemetry(audit, plan, inputs, "generate");
   // Only a real generated plan counts as success. The fallback is a failure the
   // user can still train on, and `plan_fallback_shown` already records it —
   // firing "succeeded" there gave us an event whose name said success and whose
@@ -359,6 +367,12 @@ function renderResults(plan, inputs, usedFallback, { focus = true, failureClass 
     states.results.focus({ preventScroll: true });
     states.results.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "start" });
   }
+
+  // Handed back so the true-generation caller (and only that caller) can fire
+  // "generate" telemetry. renderResults itself is shared by five other
+  // re-render paths (repair, adapt, profile switch, saved-plan reload) that
+  // are not generation events, so the call must not live in here.
+  return audit;
 }
 
 // ----------------------------------------------------------------------------

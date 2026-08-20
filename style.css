@@ -1113,6 +1113,18 @@ table {
 .bench__item dd.is-ok { color: var(--success); }
 .bench__item dd.is-warn { color: var(--warn); }
 
+/* Benchmark history — fetched after first paint, so it renders unstyled-free
+   from the moment it appears; one row per evaluator version. */
+.bench-history { margin-top: var(--space-4); font-size: var(--fs-small); }
+.bench-history th,
+.bench-history td { padding: var(--space-2) var(--space-3); text-align: left; border-bottom: 1px solid var(--border-soft); }
+.bench-history th { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); font-weight: 600; }
+.bench-history td { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.bench-history td:first-child { font-family: var(--font-mono); color: var(--text); font-weight: 600; }
+.bench-history tr.is-regression { background: var(--warn-soft); }
+.bench-history tr.is-regression td { color: var(--warn); }
+.bench-history .is-warn { font-weight: 600; text-transform: uppercase; font-size: 0.66rem; letter-spacing: 0.04em; }
+
 .lab-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); }
 .lab-col { padding: var(--space-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-md); }
 .lab-col h4 { font-size: 1rem; font-weight: 600; margin-bottom: var(--space-3); }

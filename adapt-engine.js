@@ -1,5 +1,7 @@
 /**
- * SpotterAI — deterministic adapt engine (pure, no LLM, no DOM, no network)
+ * SpotterAI — deterministic adapt engine (pure, no LLM, no DOM; the one
+ * exception is a fire-and-forget audit-telemetry beacon, which never throws
+ * and never affects the returned plan)
  * ============================================================================
  * Re-tunes an existing plan from what the user has ACTUALLY logged, using only
  * transparent rules and the same safety machinery the rest of the app trusts.
@@ -32,6 +34,7 @@
 import { suggestNextWeight, deloadFromWeeklyVolume } from "./progression.js";
 import { repairPlan } from "./repair.js";
 import { evaluatePlan, computeWeeklyVolume, MUSCLE_KEYWORDS, THRESHOLDS } from "./evaluator.js";
+import { sendAuditTelemetry } from "./audit-telemetry-client.js";
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const norm = (t) => String(t || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -155,7 +158,9 @@ export function adaptPlan(plan, context, inputs = {}) {
   const effInputs = { ...inputs, injuries };
 
   // Baseline flag counts we must not exceed.
-  const baseline = evaluatePlan(plan, effInputs).summary;
+  const baselineAudit = evaluatePlan(plan, effInputs);
+  sendAuditTelemetry(baselineAudit, plan, effInputs, "adapt");
+  const baseline = baselineAudit.summary;
 
   const work = clone(plan);
   const changes = [];
