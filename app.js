@@ -19,6 +19,7 @@ import { screenRequest, GENERATOR_BOUNDARY } from "./safety-boundaries.js";
 import { TIER_LABEL, TIER_ORDER, allClearText, auditVerdictText, flaggedChecks, renderFlagCard } from "./audit-view.js";
 import { planConfidence } from "./trust.js";
 import { buildAuditEntry, recordAudit, getAuditHistory, auditTrend } from "./trust-history.js";
+import { sendAuditTelemetry } from "./audit-telemetry-client.js";
 import { lineChart } from "./charts.js";
 import { setPlan, store, planUpdatedAt } from "./store.js";
 import { getContext as getTrackerContext, buildAdaptContext, getState as getTrackerState } from "./tracker-store.js";
@@ -337,6 +338,9 @@ function renderResults(plan, inputs, usedFallback, { focus = true, failureClass 
     const injuries = (inputs?.injuries || []).filter((v) => v && v !== "none");
     const hasInjuries = injuries.length > 0 || !!(inputs?.injuryNotes || "").trim();
     recordAudit(buildAuditEntry(plan, audit, { hasInjuries, note }));
+    // Same guard as the history snapshot: the saved fallback example is not a
+    // real plan, and counting it would put a fixture into the production number.
+    sendAuditTelemetry(audit, plan, inputs, "generate");
   }
 
   renderAudit(audit);

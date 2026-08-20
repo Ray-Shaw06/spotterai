@@ -32,6 +32,7 @@
 import { suggestNextWeight, deloadFromWeeklyVolume } from "./progression.js";
 import { repairPlan } from "./repair.js";
 import { evaluatePlan, computeWeeklyVolume, MUSCLE_KEYWORDS, THRESHOLDS } from "./evaluator.js";
+import { sendAuditTelemetry } from "./audit-telemetry-client.js";
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const norm = (t) => String(t || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -155,7 +156,9 @@ export function adaptPlan(plan, context, inputs = {}) {
   const effInputs = { ...inputs, injuries };
 
   // Baseline flag counts we must not exceed.
-  const baseline = evaluatePlan(plan, effInputs).summary;
+  const baselineAudit = evaluatePlan(plan, effInputs);
+  sendAuditTelemetry(baselineAudit, plan, effInputs, "adapt");
+  const baseline = baselineAudit.summary;
 
   const work = clone(plan);
   const changes = [];
