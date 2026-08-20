@@ -92,11 +92,25 @@ export function counterUpdates(clean, FieldValue) {
     byGoal: { [clean.goal]: FieldValue.increment(1) },
     byExperience: { [clean.experience]: FieldValue.increment(1) },
     byDaysCount: { [clean.daysCount]: FieldValue.increment(1) },
+    bySource: { [clean.source]: FieldValue.increment(1) },
     byCheck,
   };
 }
 
 let cached = null;
+
+/**
+ * Test-only seam: install a Firestore handle (real or a fake store) directly,
+ * bypassing FIREBASE_SERVICE_ACCOUNT and the real firebase-admin SDK. Without
+ * this, the only way to drive handler() through a GET that actually reaches
+ * Firestore is a live project with real credentials, which is exactly why the
+ * cache-header test used to pin the header on the free unconfigured fallback
+ * instead of the configured response that actually gets cached. Pass `null`
+ * to restore the lazy, env-var-driven lookup.
+ */
+export function __setFirestoreForTests(handle) {
+  cached = handle;
+}
 
 /** Lazy Firestore handle. Returns null when the project is not configured. */
 async function firestore() {
@@ -113,7 +127,7 @@ async function firestore() {
     // A malformed service account must not take the endpoint down noisily —
     // but it must not be invisible either, or a bad credential looks
     // identical to "telemetry is simply off" forever.
-    console.warn("[audit-telemetry] init failed", err?.code ?? err?.message);
+    console.warn("[audit-telemetry] init failed", err?.code ?? err?.message ?? String(err));
     return null;
   }
 }
@@ -231,6 +245,11 @@ export async function recordAudit(store, FieldValue, clean, req) {
     // be turned on at any time without a backfill.
     ipRef.set({ hits: FieldValue.increment(1), expiresAt: new Date(Date.now() + 3600000) }, { merge: true }),
   ]);
+  // Keep the same-instance cache in sync with the write it just issued, or an
+  // instance that read a stale count (say, 4,990) keeps writing against that
+  // stale figure for up to DAY_CACHE_TTL_MS instead of noticing it crossed
+  // DAILY_AUDIT_CAP mid-window.
+  if (dayCountCache.store === store && dayCountCache.day === today) dayCountCache.audits += 1;
   return true;
 }
 
@@ -241,13 +260,26 @@ export default async function handler(req, res) {
     // difference between this fanning out to up to 30 Firestore reads on
     // every Safety Lab page view (exhausting the 50k/day project-wide read
     // quota at roughly 1,666 views) and effectively zero.
-    res.setHeader?.("Cache-Control", "s-maxage=300, stale-while-revalidate=3600");
     const fs = await firestore();
-    if (!fs) return res.status(200).json({ audits: 0, byCheck: {}, since: null });
+    if (!fs) {
+      // Nothing was actually read, so there is nothing worth 5 minutes of
+      // edge caching: caching this fallback would pin a misleading zero at
+      // the edge for anyone hitting an unconfigured deploy.
+      res.setHeader?.("Cache-Control", "no-store");
+      return res.status(200).json({ audits: 0, byCheck: {}, since: null });
+    }
     try {
-      return res.status(200).json(await readAggregate(fs.store));
+      const aggregate = await readAggregate(fs.store);
+      // Only set the shared cache header once a real aggregate is in hand,
+      // right before the success response. Setting it earlier (as this used
+      // to) meant a transient Firestore failure below would cache the
+      // fallback {audits: 0} for 5 minutes at the edge — a misleading zero,
+      // pinned, right after the block that hides on audits <= 0.
+      res.setHeader?.("Cache-Control", "s-maxage=300, stale-while-revalidate=3600");
+      return res.status(200).json(aggregate);
     } catch (err) {
-      console.warn("[audit-telemetry] read failed", err?.code ?? err?.message);
+      console.warn("[audit-telemetry] read failed", err?.code ?? err?.message ?? String(err));
+      res.setHeader?.("Cache-Control", "no-store");
       return res.status(200).json({ audits: 0, byCheck: {}, since: null });
     }
   }
@@ -271,7 +303,7 @@ export default async function handler(req, res) {
     // Quota exhaustion, a network fault, a permissions problem: all the same
     // from the client's point of view (204 regardless) but worth a log line,
     // or a bad credential looks identical to "telemetry is simply off".
-    console.warn("[audit-telemetry] write failed", err?.code ?? err?.message);
+    console.warn("[audit-telemetry] write failed", err?.code ?? err?.message ?? String(err));
   }
   return res.status(204).end();
 }

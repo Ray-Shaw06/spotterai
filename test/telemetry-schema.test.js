@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { INJURY_RULES } from "../evaluator.js";
 import {
   sanitizeTelemetry, scoreBucket, CHECK_IDS, CHECK_STATUSES,
-  SOURCES, SCORE_BUCKETS, GOALS, EXPERIENCES, TELEMETRY_VERSION,
+  SOURCES, SCORE_BUCKETS, GOALS, EXPERIENCES, TELEMETRY_VERSION, MAX_CHECKS,
 } from "../lib/telemetry-schema.js";
 
 const valid = () => ({
@@ -80,6 +80,28 @@ test("out-of-range counts are rejected", () => {
   assert.equal(sanitizeTelemetry({ ...valid(), exerciseCount: -1 }), null);
   assert.equal(sanitizeTelemetry({ ...valid(), exerciseCount: 141 }), null);
   assert.equal(sanitizeTelemetry({ ...valid(), daysCount: 4.5 }), null);
+});
+
+test("boundary counts are ACCEPTED, not just rejected one past the boundary", () => {
+  // The test above only ever probes just past each edge (0, 8, -1, 141). A
+  // `>` vs `>=` slip in isCount's min/max comparison would silently drop
+  // every 1-day plan or every 7-day plan (the most common real shape) while
+  // that test stays green, because it never asserts the boundary value
+  // itself is let through.
+  assert.notEqual(sanitizeTelemetry({ ...valid(), daysCount: 1 }), null, "daysCount at the minimum (1) must be accepted");
+  assert.notEqual(sanitizeTelemetry({ ...valid(), daysCount: 7 }), null, "daysCount at the maximum (7) must be accepted");
+  assert.notEqual(sanitizeTelemetry({ ...valid(), exerciseCount: 0 }), null, "exerciseCount at the minimum (0) must be accepted");
+  assert.notEqual(sanitizeTelemetry({ ...valid(), exerciseCount: 140 }), null, "exerciseCount at the maximum (140) must be accepted");
+});
+
+test("MAX_CHECKS is accepted at the boundary and rejected one past it", () => {
+  const atMax = valid();
+  atMax.checks = Array.from({ length: MAX_CHECKS }, () => ({ id: "rest_days", status: "pass" }));
+  assert.notEqual(sanitizeTelemetry(atMax), null, `exactly MAX_CHECKS (${MAX_CHECKS}) checks should be accepted`);
+
+  const overMax = valid();
+  overMax.checks = Array.from({ length: MAX_CHECKS + 1 }, () => ({ id: "rest_days", status: "pass" }));
+  assert.equal(sanitizeTelemetry(overMax), null, `MAX_CHECKS + 1 (${MAX_CHECKS + 1}) checks should be rejected`);
 });
 
 test("bad enums and versions are rejected", () => {

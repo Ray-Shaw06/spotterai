@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import handler, {
   DAILY_AUDIT_CAP, IP_HOURLY_CAP, dayKey, counterUpdates, parseBody, readAggregate, recordAudit,
+  __setFirestoreForTests,
 } from "../api/audit-telemetry.js";
 
 /** Minimal res double matching what the handler uses. */
@@ -107,6 +108,7 @@ test("counter updates increment exactly the documented paths, as nested objects"
   assert.deepEqual(updates.byGoal.Hypertrophy, { __increment: 1 });
   assert.deepEqual(updates.byExperience.Intermediate, { __increment: 1 });
   assert.deepEqual(updates.byDaysCount["4"], { __increment: 1 });
+  assert.deepEqual(updates.bySource.generate, { __increment: 1 });
   assert.equal(Object.keys(updates).some((k) => k.includes(".")), false, "no key may contain a literal dot");
 });
 
@@ -133,7 +135,7 @@ test("counter updates never contain free text or a raw score", () => {
   assert.equal("byScore" in updates, false, "only the bucketed field may exist, never a raw score");
   assert.deepEqual(
     Object.keys(updates).sort(),
-    ["audits", "byCheck", "byDaysCount", "byExperience", "byGoal", "byScoreBucket"]
+    ["audits", "byCheck", "byDaysCount", "byExperience", "byGoal", "byScoreBucket", "bySource"]
   );
 });
 
@@ -166,16 +168,57 @@ test("GET serves the aggregate, and serves an empty one when unconfigured", asyn
   if (saved !== undefined) process.env.FIREBASE_SERVICE_ACCOUNT = saved;
 });
 
-test("GET sets an edge cache header so repeat Safety Lab views don't fan out to Firestore", async () => {
+test("GET sets an edge cache header on a configured response, so repeat Safety Lab views don't fan out to Firestore", async () => {
   // A 30-day rolling aggregate tolerates five minutes of staleness easily;
   // without this header, every page view fans out to up to 30 Firestore
   // reads, exhausting the 50k/day project-wide read quota at ~1,666 views.
+  //
+  // This must be driven through a CONFIGURED response, not the unconfigured
+  // fallback: the unconfigured path costs no Firestore reads at all, so
+  // pinning the header there (as this test used to) proved nothing about the
+  // response that actually needs caching, and let the header silently end up
+  // on the wrong branch when it moved in the fix for the stale-zero bug.
+  const store = makeFakeStore();
+  __setFirestoreForTests({ store, FieldValue: fakeFieldValue });
+  try {
+    const res = makeRes();
+    await handler({ method: "GET", body: null, headers: {}, query: {} }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.headers["Cache-Control"], "s-maxage=300, stale-while-revalidate=3600");
+  } finally {
+    __setFirestoreForTests(null);
+  }
+});
+
+test("GET sets no-store on the unconfigured fallback, so a misleading zero is never cached at the edge", async () => {
   const saved = process.env.FIREBASE_SERVICE_ACCOUNT;
   delete process.env.FIREBASE_SERVICE_ACCOUNT;
   const res = makeRes();
   await handler({ method: "GET", body: null, headers: {}, query: {} }, res);
-  assert.equal(res.headers["Cache-Control"], "s-maxage=300, stale-while-revalidate=3600");
+  assert.equal(res.headers["Cache-Control"], "no-store");
   if (saved !== undefined) process.env.FIREBASE_SERVICE_ACCOUNT = saved;
+});
+
+test("GET sets no-store when a configured read fails, so a transient outage is never cached at the edge", async () => {
+  // Before this fix, Cache-Control was set unconditionally at the top of the
+  // GET branch, so a Firestore read that throws still shipped with
+  // s-maxage=300 on the {audits: 0} fallback — pinning exactly the
+  // misleading zero the production block's hidden-below-audits-<=-0 design
+  // is supposed to prevent.
+  const throwingStore = {
+    collection: () => ({ doc: (id) => ({ id }) }),
+    getAll: async () => { throw new Error("boom"); },
+  };
+  __setFirestoreForTests({ store: throwingStore, FieldValue: fakeFieldValue });
+  try {
+    const res = makeRes();
+    await handler({ method: "GET", body: null, headers: {}, query: {} }, res);
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.body, { audits: 0, byCheck: {}, since: null });
+    assert.equal(res.headers["Cache-Control"], "no-store");
+  } finally {
+    __setFirestoreForTests(null);
+  }
 });
 
 test("a method that is neither GET nor POST is refused", async () => {
@@ -246,10 +289,11 @@ test("recordAudit writes a nested shape a real set({merge:true}) can merge, not 
   assert.ok(dayCall, "a set() must have been issued against audit_telemetry");
   assert.deepEqual(
     Object.keys(dayCall.data).sort(),
-    ["audits", "byCheck", "byDaysCount", "byExperience", "byGoal", "byScoreBucket"]
+    ["audits", "byCheck", "byDaysCount", "byExperience", "byGoal", "byScoreBucket", "bySource"]
   );
   assert.deepEqual(dayCall.data.byCheck.rest_days, { pass: { __increment: 1 } });
   assert.deepEqual(dayCall.data.byCheck.muscle_balance, { warn: { __increment: 1 } });
+  assert.deepEqual(dayCall.data.bySource, { generate: { __increment: 1 } });
   assert.equal(Object.keys(dayCall.data).some((k) => k.includes(".")), false, "no literal dot in any field name");
 
   // And the round trip actually works through the fake store's merge, which
@@ -274,6 +318,29 @@ test("recordAudit: a saturated day is dropped without ever reading the IP thrott
     "the IP throttle doc must never be read once the day is saturated"
   );
   assert.equal(store._calls.sets.length, 0, "nothing should be written once the day is saturated");
+});
+
+test("recordAudit: a successful write bumps the same-instance cap cache, so the cap trips without a fresh read", async () => {
+  // Regression: dayCountCache used to be set only from a read. An instance
+  // that read, say, 4,990 kept writing against that stale figure for a full
+  // DAY_CACHE_TTL_MS (60s), overshooting DAILY_AUDIT_CAP. Seeding the store
+  // at DAILY_AUDIT_CAP - 1 and writing once through recordAudit must be
+  // enough for the VERY NEXT call, made immediately after (well inside the
+  // 60s window, no clock manipulation needed), to see the cap tripped —
+  // and it must see that without a second read of the day document, proving
+  // the cache itself was bumped rather than happening to still be fresh.
+  const today = dayKey();
+  const store = makeFakeStore({ audit_telemetry: { [today]: { audits: DAILY_AUDIT_CAP - 1 } } });
+  const req = { headers: { "x-real-ip": "203.0.113.30" } };
+  const dayReads = () => store._calls.gets.filter((k) => k.startsWith("audit_telemetry/")).length;
+
+  const first = await recordAudit(store, fakeFieldValue, validBody, req);
+  assert.equal(first, true, "the last slot under the cap should still write");
+  const readsAfterFirst = dayReads();
+
+  const second = await recordAudit(store, fakeFieldValue, validBody, req);
+  assert.equal(second, false, "the cap must now be tripped, from the write-bumped cache");
+  assert.equal(dayReads(), readsAfterFirst, "no additional day-doc read should have been needed to see the cap tripped");
 });
 
 test("recordAudit: the per-IP hourly cap trips after IP_HOURLY_CAP writes from one caller", async () => {
