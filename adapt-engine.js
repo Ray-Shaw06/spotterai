@@ -1,5 +1,7 @@
 /**
- * SpotterAI — deterministic adapt engine (pure, no LLM, no DOM, no network)
+ * SpotterAI — deterministic adapt engine (pure, no LLM, no DOM; the one
+ * exception is a fire-and-forget audit-telemetry beacon, which never throws
+ * and never affects the returned plan)
  * ============================================================================
  * Re-tunes an existing plan from what the user has ACTUALLY logged, using only
  * transparent rules and the same safety machinery the rest of the app trusts.

@@ -66,6 +66,21 @@ test("a malformed audit yields null instead of throwing", () => {
   assert.equal(buildTelemetryPayload({ checks: [] }, plan, inputs, "generate"), null);
 });
 
+test("a malformed plan.days entry cannot throw out of sendAuditTelemetry", () => {
+  // buildTelemetryPayload itself is not defensive against this: it reads
+  // `day.exercises?.length` for every entry in plan.days, and the optional
+  // chaining there guards `.exercises`, not `day`. A null entry throws a
+  // TypeError building the payload, before sendAuditTelemetry ever reaches
+  // its own try/catch scope around the transport. The "cannot throw" contract
+  // has to come from sendAuditTelemetry wrapping the whole call, not from
+  // buildTelemetryPayload happening to never be handed something malformed.
+  const audit = evaluatePlan(plan, inputs);
+  const malformedPlan = { ...plan, days: [null, ...plan.days] };
+  assert.throws(() => buildTelemetryPayload(audit, malformedPlan, inputs, "generate"));
+  assert.doesNotThrow(() => sendAuditTelemetry(audit, malformedPlan, inputs, "generate"));
+  assert.equal(sendAuditTelemetry(audit, malformedPlan, inputs, "generate"), false);
+});
+
 test("sending uses sendBeacon and never throws when the transport fails", () => {
   const audit = evaluatePlan(plan, inputs);
 
@@ -89,6 +104,12 @@ test("sending uses sendBeacon and never throws when the transport fails", () => 
   assert.deepEqual(calls, ["/api/audit-telemetry"]);
 
   setNavigator({ sendBeacon: () => { throw new Error("blocked"); } });
+  assert.equal(sendAuditTelemetry(audit, plan, inputs, "generate"), false);
+
+  // Per the Beacon spec, sendBeacon signals "could not queue this" by
+  // returning false, not by throwing — this is how ad blockers commonly
+  // suppress it. The === true check must treat that the same as a throw.
+  setNavigator({ sendBeacon: () => false });
   assert.equal(sendAuditTelemetry(audit, plan, inputs, "generate"), false);
 
   // With the property now a normal configurable data property (set up by

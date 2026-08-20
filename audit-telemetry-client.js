@@ -50,9 +50,14 @@ export function buildTelemetryPayload(audit, plan, inputs, source) {
 }
 
 export function sendAuditTelemetry(audit, plan, inputs, source) {
-  const payload = buildTelemetryPayload(audit, plan, inputs, source);
-  if (!payload) return false;
+  // The whole body lives inside this try, buildTelemetryPayload included. That
+  // function's "cannot throw" behavior today is otherwise just a coincidence
+  // of what evaluatePlan happens to hand it — evaluator.js is off-limits to
+  // this branch and can change independently, so the guarantee has to be
+  // structural here, not borrowed from a file we don't control.
   try {
+    const payload = buildTelemetryPayload(audit, plan, inputs, source);
+    if (!payload) return false;
     const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
     return navigator.sendBeacon(ENDPOINT, blob) === true;
   } catch {
