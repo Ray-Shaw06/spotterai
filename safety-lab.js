@@ -15,6 +15,7 @@ import { CASES, runEvalSuite, isRiskyCase } from "./eval-suite.js";
 import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
 import { RULE_EXPLANATIONS, TRAINING_PRINCIPLES, PRINCIPLES_NOTE } from "./rule-explanations.js";
 import { historyRows } from "./safety-lab-history.js";
+import { productionRows } from "./safety-lab-production.js";
 import { onceRouteActive } from "./route-gate.js";
 
 const mount = document.getElementById("safety-lab");
@@ -247,7 +248,8 @@ function render() {
   // History is fetched, so it lands after first paint. The anchor keeps its
   // slot in document order without blocking anything.
   const history = `<div class="lab-block" id="bench-history" hidden></div>`;
-  mount.innerHTML = bench + history + cols + rules + examples + privacy + principles + tech;
+  const production = `<div class="lab-block" id="bench-production" hidden></div>`;
+  mount.innerHTML = bench + history + production + cols + rules + examples + privacy + principles + tech;
 }
 
 /**
@@ -288,6 +290,48 @@ async function hydrateHistory() {
     </div>
     <table class="bench-history">
       <thead><tr><th>Version</th><th>First seen</th><th>Risky plans caught</th><th>False positives</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>`;
+  el.hidden = false;
+}
+
+/**
+ * Fill the production block from the telemetry aggregate.
+ *
+ * The block stays hidden when there is no data. A rendered zero would read as
+ * "this check never fires on real plans" when the truth is "nothing has been
+ * collected", and those are opposite claims.
+ */
+async function hydrateProduction() {
+  const el = document.getElementById("bench-production");
+  if (!el) return;
+  let shaped = null;
+  try {
+    const res = await fetch("/api/audit-telemetry", { cache: "no-cache" });
+    if (!res.ok) return;
+    shaped = productionRows(await res.json());
+  } catch {
+    return;
+  }
+  if (!shaped) return;
+
+  // RULE_EXPLANATIONS is an ARRAY of { id, name, ... }, not a map, and the
+  // human label lives on `name`. Built once here rather than scanned per row.
+  const labels = new Map(RULE_EXPLANATIONS.map((r) => [r.id, r.name]));
+  const labelFor = (id) => labels.get(id) || id;
+  const body = shaped.rows
+    .map((r) => `<tr><td>${esc(labelFor(r.id))}</td><td>${r.fired}</td><td>${r.rate}%</td></tr>`)
+    .join("");
+
+  el.innerHTML = `
+    <div class="lab-block__head">
+      <div>
+        <h3 class="lab-block__title">On real plans <span class="bench__tag">Production telemetry, unverified</span></h3>
+        <p class="lab-block__sub">How often each check flagged something across ${shaped.audits} audited plans${shaped.since ? `, since ${esc(shaped.since)}` : ""}. Anonymous counters only: no plan content, no accounts, nothing identifying anyone. Unlike the bundled benchmark above, which anyone can reproduce by running the suite from the repo, this endpoint is public and unauthenticated, so treat these numbers as a direction rather than a proof.</p>
+      </div>
+    </div>
+    <table class="bench-history">
+      <thead><tr><th>Check</th><th>Times flagged</th><th>Share of plans</th></tr></thead>
       <tbody>${body}</tbody>
     </table>`;
   el.hidden = false;
@@ -334,7 +378,9 @@ idle(() => {
   }
   // Runs at most once, on first arrival at the Safety Lab — not on every page
   // view of the app, and not again on a later revisit. render() above has
-  // already built the #bench-history anchor (or, on failure, replaced mount
-  // entirely), so hydrateHistory's own `if (!el) return` covers both cases.
+  // already built the #bench-history and #bench-production anchors (or, on
+  // failure, replaced mount entirely), so each hydrator's own
+  // `if (!el) return` covers both cases.
   onceRouteActive(evalsActive, onEvalsRouteChange, hydrateHistory);
+  onceRouteActive(evalsActive, onEvalsRouteChange, hydrateProduction);
 });
