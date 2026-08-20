@@ -114,11 +114,12 @@ const PRIVACY = {
     "Plan-generation intake",
     "Coach messages plus the current plan and a recent tracker summary",
     "Food descriptions, meal photos, new exercise names, and quick-log text",
+    "Anonymous audit counters, which evaluator checks fired, never plan content",
   ],
   services: [
     "Google Gemini processes AI requests; Groq may process text requests when Gemini is unavailable",
     "Vercel hosts the app and APIs; Vercel Web Analytics receives allow-listed funnel pageviews, never workout, meal, or message content",
-    "Firebase stores tracker data plus Google account name and email only after you choose Cloud sync",
+    "Firebase stores tracker data plus Google account name and email only after you choose Cloud sync; it also stores anonymous audit counters for everyone, with no opt-in and no Cloud sync required",
   ],
 };
 
@@ -285,11 +286,11 @@ async function hydrateHistory() {
     <div class="lab-block__head">
       <div>
         <h3 class="lab-block__title">Benchmark history</h3>
-        <p class="lab-block__sub">One row per evaluator version, written by CI on every change since ${esc(rows[0].date)}. Nothing before that date is shown, because nothing before that date was recorded.</p>
+        <p class="lab-block__sub">One row per change in evaluator behaviour, appended by CI since ${esc(rows[0].date)}. Nothing before that date is shown, because nothing before that date was recorded.</p>
       </div>
     </div>
     <table class="bench-history">
-      <thead><tr><th>Version</th><th>First seen</th><th>Risky plans caught</th><th>False positives</th></tr></thead>
+      <thead><tr><th>Version</th><th>Date</th><th>Risky plans caught</th><th>False positives</th></tr></thead>
       <tbody>${body}</tbody>
     </table>`;
   el.hidden = false;
@@ -327,7 +328,7 @@ async function hydrateProduction() {
     <div class="lab-block__head">
       <div>
         <h3 class="lab-block__title">On real plans <span class="bench__tag">Production telemetry, unverified</span></h3>
-        <p class="lab-block__sub">How often each check flagged something across ${shaped.audits} audited plans${shaped.since ? `, since ${esc(shaped.since)}` : ""}. Anonymous counters only: no plan content, no accounts, nothing identifying anyone. Unlike the bundled benchmark above, which anyone can reproduce by running the suite from the repo, this endpoint is public and unauthenticated, so treat these numbers as a direction rather than a proof.</p>
+        <p class="lab-block__sub">How often each check flagged something across ${shaped.audits} audits${shaped.since ? `, since ${esc(shaped.since)}` : ""}. Anonymous counters only: no plan content, no accounts, nothing identifying anyone. Unlike the bundled benchmark above, which anyone can reproduce by running the suite from the repo, this endpoint is public and unauthenticated, so treat these numbers as a direction rather than a proof.</p>
       </div>
     </div>
     <table class="bench-history">
