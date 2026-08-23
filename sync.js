@@ -65,6 +65,7 @@ import {
   DATED_RECORD_KINDS,
 } from "./tracker-store.js";
 import { upsertProfile, signOut as profileSignOut } from "./profile-store.js";
+import { hasPersistedSession } from "./auth-session-probe.js";
 
 export { SYNC_CONFIGURED };
 
@@ -138,17 +139,48 @@ async function ensureFirebase() {
 // Public API
 // ----------------------------------------------------------------------------
 
-/** Initialize auth listener (restores an existing session). Safe to call once. */
+/**
+ * Attach the auth listener, loading the SDK on first call. Cached as a PROMISE
+ * so the two callers (session restore, and sign-in) cannot double-attach, and
+ * so a failed load is retried rather than latched.
+ */
+let listenerPromise = null;
+function attachAuthListener() {
+  if (!listenerPromise) {
+    listenerPromise = (async () => {
+      const { auth, A } = await ensureFirebase();
+      A.onAuthStateChanged(auth, (user) => (user ? onSignedIn(user) : onSignedOut()));
+      // Surface errors from a redirect-based sign-in (the popup fallback).
+      A.getRedirectResult?.(auth).catch((e) => emit("error", { error: friendlyAuthError(e) }));
+    })().catch((e) => {
+      listenerPromise = null;
+      throw e;
+    });
+  }
+  return listenerPromise;
+}
+
+/**
+ * Initialize auth listener (restores an existing session). Safe to call once.
+ *
+ * Runs at page load from auth-ui.js, which is why it must not pull the Firebase
+ * SDK down for a visitor who has never signed in. It answers "signed-out" from
+ * local evidence in that case and loads nothing; signInWithGoogle attaches the
+ * listener itself when someone actually signs in.
+ */
 export async function initSync() {
   if (!SYNC_CONFIGURED) {
     emit("unconfigured");
     return;
   }
   try {
-    const { auth, A } = await ensureFirebase();
-    A.onAuthStateChanged(auth, (user) => (user ? onSignedIn(user) : onSignedOut()));
-    // Surface errors from a redirect-based sign-in (the popup fallback).
-    A.getRedirectResult?.(auth).catch((e) => emit("error", { error: friendlyAuthError(e) }));
+    if (!(await hasPersistedSession())) {
+      // Exactly the state onSignedOut() would have reached, minus the teardown
+      // of listeners that were never attached.
+      emit("signed-out");
+      return;
+    }
+    await attachAuthListener();
   } catch (e) {
     emit("error", { error: e?.message || "Failed to init sync" });
   }
@@ -178,6 +210,10 @@ function friendlyAuthError(e) {
 export async function signInWithGoogle() {
   if (!SYNC_CONFIGURED) return;
   try {
+    // initSync may have skipped this for a visitor with no stored session, so
+    // the listener has to be attached HERE or a successful pop-up would sign the
+    // user in with nothing watching for it.
+    await attachAuthListener();
     const { auth, A } = await ensureFirebase();
     await A.signInWithPopup(auth, new A.GoogleAuthProvider());
   } catch (e) {
