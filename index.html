@@ -42,13 +42,18 @@
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231a5c42'/%3E%3Cpath d='M16 4l9 3.3v7.4c0 5.5-3.7 9.7-9 12-5.3-2.3-9-6.5-9-12V7.3L16 4z' fill='%23f5f8f6' fill-opacity='0.1' stroke='%23f5f8f6' stroke-width='1.9' stroke-linejoin='round'/%3E%3Cpath d='M12 18h8M12 16.1v3.8M20 16.1v3.8M10.4 16.8v2.4M21.6 16.8v2.4' fill='none' stroke='%23f5f8f6' stroke-width='1.7' stroke-linecap='round'/%3E%3Cpath d='M13.8 12.4c.1-2.4 2-4.2 4.5-4.2 0 2.5-1.8 4.3-4.2 4.4' fill='none' stroke='%23f5f8f6' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
   />
 
-  <!-- Fonts: Literata (display serif) + Inter (UI) + JetBrains Mono (data), free via Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Literata:opsz,wght@7..72,600;7..72,700&family=JetBrains+Mono:wght@500;600;700&display=swap"
-    rel="stylesheet"
-  />
+  <!-- Fonts: Literata (display serif) + Inter (UI) + JetBrains Mono (data),
+       self-hosted. The Google Fonts stylesheet used to be the last
+       render-blocking resource on cold boot, ending ~325ms against a 432ms FCP.
+       The @font-face rules live in style.css, which is already being fetched.
+
+       Only the two faces that paint immediately are preloaded: the hero
+       headline is Literata and body text is Inter. JetBrains Mono is data
+       styling further down the page and does not earn a preload slot.
+       crossorigin is required on font preloads even same-origin, or the
+       browser fetches the file twice. -->
+  <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="fonts/literata-latin.woff2" as="font" type="font/woff2" crossorigin />
 
   <link rel="stylesheet" href="style.css" />
 </head>
