@@ -221,10 +221,46 @@ test("GET sets no-store when a configured read fails, so a transient outage is n
   }
 });
 
-test("a method that is neither GET nor POST is refused", async () => {
+test("a method that is neither GET, HEAD nor POST is refused, and Allow names all three", async () => {
   const res = makeRes();
-  await handler({ method: "PUT", body: null, headers: {}, setHeader: () => {}, query: {} }, res);
+  await handler({ method: "PUT", body: null, headers: {}, query: {} }, res);
   assert.equal(res.statusCode, 405);
+  assert.equal(res.headers["Allow"], "GET, HEAD, POST");
+});
+
+test("HEAD is answered like GET, not refused", async () => {
+  // Found live: `curl -I https://spotterai.xyz/api/audit-telemetry` returned 405
+  // while the response advertised `Allow: GET, POST`. HEAD is GET without the
+  // body (RFC 9110) and it is what uptime monitors send, so refusing it while
+  // claiming to allow GET was a contradiction a monitor would read as an
+  // outage. Node discards the body on a HEAD response; the status and the
+  // cache headers are the part that has to be right.
+  const store = makeFakeStore();
+  __setFirestoreForTests({ store, FieldValue: fakeFieldValue });
+  try {
+    const res = makeRes();
+    await handler({ method: "HEAD", body: null, headers: {}, query: {} }, res);
+    assert.equal(res.statusCode, 200, "HEAD must not be refused");
+    assert.equal(res.headers["Cache-Control"], "s-maxage=300, stale-while-revalidate=3600");
+  } finally {
+    __setFirestoreForTests(null);
+  }
+});
+
+test("HEAD on an unconfigured deploy matches GET, including the no-store header", async () => {
+  const saved = process.env.FIREBASE_SERVICE_ACCOUNT;
+  delete process.env.FIREBASE_SERVICE_ACCOUNT;
+  try {
+    const get = makeRes();
+    const head = makeRes();
+    await handler({ method: "GET", body: null, headers: {}, query: {} }, get);
+    await handler({ method: "HEAD", body: null, headers: {}, query: {} }, head);
+    assert.equal(head.statusCode, get.statusCode);
+    assert.equal(head.headers["Cache-Control"], get.headers["Cache-Control"]);
+    assert.equal(head.headers["Cache-Control"], "no-store");
+  } finally {
+    if (saved !== undefined) process.env.FIREBASE_SERVICE_ACCOUNT = saved;
+  }
 });
 
 test("with no service account configured the handler accepts and writes nothing", async () => {
