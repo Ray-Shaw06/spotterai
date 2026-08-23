@@ -252,7 +252,11 @@ export async function recordAudit(store, FieldValue, clean, req) {
 }
 
 export default async function handler(req, res) {
-  if (req.method === "GET") {
+  // HEAD is GET without the body (RFC 9110), and it is what uptime monitors
+  // send. Answering it with 405 while advertising `Allow: GET, POST` was a
+  // contradiction. Node discards the body on a HEAD response, so the GET path
+  // serves both and the caller still gets the real status and cache headers.
+  if (req.method === "GET" || req.method === "HEAD") {
     // The aggregate is a 30-day rolling sum; five minutes of staleness is
     // irrelevant to it, and letting Vercel's edge absorb repeat views is the
     // difference between this fanning out to up to 30 Firestore reads on
@@ -283,7 +287,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== "POST") {
-    res.setHeader?.("Allow", "GET, POST");
+    res.setHeader?.("Allow", "GET, HEAD, POST");
     return res.status(405).json({ error: "Method not allowed. Use POST." });
   }
 

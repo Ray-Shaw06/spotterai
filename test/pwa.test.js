@@ -153,9 +153,64 @@ test("CSP ships report-only until the lazy auth and form-check paths are verifie
   assert.equal(set["Content-Security-Policy"], undefined, "do not enforce until violations have been observed");
 
   // The directives that would silently break the app if the origin were missing.
-  for (const origin of ["https://cdn.jsdelivr.net", "https://www.gstatic.com", "https://fonts.gstatic.com"]) {
+  // cdn.jsdelivr.net is the pose model; www.gstatic.com is the Firebase SDK,
+  // which still loads on demand for a signed-in user.
+  for (const origin of ["https://cdn.jsdelivr.net", "https://www.gstatic.com"]) {
     assert.ok(csp.includes(origin), `${origin} is loaded by the app and must be allowed`);
   }
   assert.match(csp, /object-src 'none'/);
   assert.match(csp, /frame-ancestors 'none'/);
+});
+
+test("the CSP no longer allows Google Fonts, because nothing loads from it", () => {
+  // Inverted on purpose. This assertion used to REQUIRE fonts.gstatic.com,
+  // correctly, because the app linked fonts.googleapis.com. The fonts are
+  // self-hosted now, and leaving the origins allow-listed would let a future
+  // edit quietly reintroduce the render-blocking third-party request that
+  // self-hosting existed to remove, with the CSP raising no objection.
+  const cfg = JSON.parse(readFileSync(join(root, "vercel.json"), "utf8"));
+  const set = Object.fromEntries(cfg.headers[0].headers.map((h) => [h.key, h.value]));
+  const csp = set["Content-Security-Policy-Report-Only"];
+  for (const origin of ["fonts.googleapis.com", "fonts.gstatic.com"]) {
+    assert.ok(!csp.includes(origin), `${origin} should not be allowed once fonts are self-hosted`);
+  }
+});
+
+test("nothing in the shipped HTML or CSS still points at Google Fonts", () => {
+  // The CSP check above only proves the policy is tight. This proves the app
+  // agrees with it, which is the half that would actually break a page.
+  //
+  // Comments are stripped first. Both files explain in prose WHY the fonts were
+  // brought in-house, and naming the origin there is documentation, not a
+  // request. A test that cannot tell those apart would push the next person to
+  // delete the explanation to get green.
+  const stripped = (text) => text.replace(/<!--[\s\S]*?-->/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  for (const file of ["index.html", "style.css"]) {
+    const text = stripped(readFileSync(join(root, file), "utf8"));
+    assert.ok(!text.includes("fonts.googleapis.com"), `${file} still links Google Fonts`);
+    assert.ok(!text.includes("fonts.gstatic.com"), `${file} still references gstatic fonts`);
+  }
+});
+
+test("every @font-face in style.css points at a font file that exists", () => {
+  // A renamed or missing woff2 degrades silently to a system fallback, which
+  // looks like a design regression rather than a missing file.
+  const css = readFileSync(join(root, "style.css"), "utf8");
+  const urls = [...css.matchAll(/src:\s*url\("([^"]+)"\)/g)].map((m) => m[1]);
+  assert.ok(urls.length >= 6, `expected at least 6 @font-face sources, found ${urls.length}`);
+  for (const url of urls) {
+    const buf = readFileSync(join(root, url));
+    assert.equal(buf.subarray(0, 4).toString("hex"), "774f4632", `${url} is not a woff2 file`);
+  }
+});
+
+test("every precached font is declared in style.css, and vice versa", () => {
+  // The two lists drift in opposite directions: a font added to the CSS but not
+  // the worker breaks the offline launch, and one precached but unreferenced
+  // wastes a download on every install.
+  const sw = readFileSync(join(root, "service-worker.js"), "utf8");
+  const precached = [...sw.matchAll(/"(fonts\/[^"]+\.woff2)"/g)].map((m) => m[1]).sort();
+  const css = readFileSync(join(root, "style.css"), "utf8");
+  const declared = [...css.matchAll(/src:\s*url\("(fonts\/[^"]+\.woff2)"\)/g)].map((m) => m[1]).sort();
+  assert.deepEqual(precached, declared, "service worker font list and style.css @font-face sources must match");
 });

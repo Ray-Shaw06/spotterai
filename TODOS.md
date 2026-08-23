@@ -310,29 +310,77 @@ bytes transferred. Neither is a problem.
 
 ---
 
-## Take Google Fonts off the critical path
+## CLOSED 2026-08-23. Google Fonts is off the critical path
 
-**What:** Self-host Inter, Literata and JetBrains Mono, or inline the
-`@font-face` rules with `font-display: swap`, so `index.html` stops
-render-blocking on `fonts.googleapis.com`.
+Self-hosted. `fonts/` holds six woff2 files, the `@font-face` rules sit at the
+top of `style.css`, and `index.html` preloads only the two faces that paint
+first: the hero headline is Literata and body text is Inter. JetBrains Mono is
+data styling further down and does not earn a preload slot.
 
-**Why:** It is the LAST render-blocking resource on cold boot, ending ~325ms
-against an FCP of 432ms. It costs a cross-origin DNS lookup, TLS handshake and
-fetch that a self-hosted file does not. Best available first-paint win, and it
-has a natural finish line, which the CSS audit never did.
+**Variable fonts, one file per family per subset.** The four Inter weights the
+UI uses are now one download instead of four. `latin-ext` is a separate file
+with its own `unicode-range`, so a browser only fetches it if the page actually
+renders Polish or Czech characters. Plain `latin` already covers the accented
+names the food log produces, since U+0000-00FF holds e-acute, n-tilde and
+c-cedilla.
 
-**Also worth doing while in there:** the Firebase SDK (3 files from gstatic,
-tail ends ~768ms, ~100KB) loads on the landing page, where nobody is signed in.
-Defer it until auth is actually needed.
+**Three things that came with it, none of which were the point:**
 
-**Honest sizing of the prize:** maybe 100-150ms off a 432ms cold FCP, and
-nothing at all on warm boot, which is already 172ms. Worth doing when the
-critical path is what you are working on. Not worth doing instead of the
-plan -> first workout gap.
+- The service worker never cached the Google fonts, so an offline launch had
+  always been silently dropping to system faces. All six are precached now, and
+  a test pins the worker's font list against the `@font-face` sources so the two
+  cannot drift.
+- The CSP no longer allows `fonts.googleapis.com` or `fonts.gstatic.com`. The
+  old test REQUIRED those origins, correctly, because the app linked them. That
+  assertion is inverted now, so a future edit cannot quietly reintroduce the
+  render-blocking third-party request.
+- `scripts/fetch-fonts.mjs` regenerates the files and prints the CSS
+  (`npm run fonts`, or `npm run fonts:check` to verify what is on disk). It
+  prints rather than splices, because `style.css` has three hand-maintained
+  layers that a machine edit should not touch.
 
-**Effort:** S
-**Priority:** P3
-**Depends on:** nothing.
+**Verified in a browser:** zero requests to Google, all six `@font-face` rules
+parsed, `document.fonts.size` is 6, and Literata measures 809.88px against 699.36
+for the generic serif and 835.3 for Georgia, so it is genuinely rendering rather
+than falling back. Screenshot is pixel-identical to before.
+
+**Read this before you measure fonts here.** The first reading said Literata was
+NOT rendering and no `@font-face` rules existed at all. Both were false: a stale
+`style.css` was being served from an earlier session's cache, while a
+cache-busting `fetch()` saw the new file, so the two disagreed. Inter and
+JetBrains Mono appeared to work only because they are installed on this Mac.
+Measure on a fresh origin (`spotterai-clean`, port 4188) rather than trusting an
+unregister-and-clear. This is the second time a stale worker has produced a wrong
+font/SDK reading; see the 2026-08-23 Firebase note.
+
+**Not done, deliberately:** the Firebase SDK deferral that was listed here as a
+while-you-are-in-there item shipped separately on 2026-08-23.
+
+---
+
+## CLOSED 2026-08-23. The evaluator benchmark gates PRs
+
+`ci.yml` ran `node --test` and nothing else. The evaluator benchmark ran only in
+the Benchmark history job, which is push-to-main only, so it was a post-merge
+report rather than a gate: a PR could regress a safety check, go green, and only
+be noticed after landing. The evaluator is the product's whole claim, it needs no
+key and no network, and `eval.mjs` already exits 1 on failure. There was no
+reason it was not a gate.
+
+Lint and typecheck are still absent. Neither is configured in this repo, and
+adding a linter is a different decision from closing a gate that already existed.
+
+---
+
+## CLOSED 2026-08-23. HEAD is answered on the telemetry endpoint
+
+`curl -I https://spotterai.xyz/api/audit-telemetry` returned 405 while the
+response advertised `Allow: GET, POST`. HEAD is GET without a body (RFC 9110) and
+it is what uptime monitors send, so refusing it while claiming to allow GET was a
+contradiction a monitor would read as an outage. The GET path serves both now and
+`Allow` names all three methods.
+
+---
 
 ## Retrospective audit: judge logged history, not prescribed plans
 

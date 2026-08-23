@@ -13,7 +13,9 @@
     "eval": "node eval.mjs",
     "eval:nutrition": "node eval-nutrition.mjs",
     "benchmark:history": "node scripts/append-benchmark-history.mjs",
-    "draft-metadata": "node --env-file=.env scripts/draft-exercise-metadata.mjs"
+    "draft-metadata": "node --env-file=.env scripts/draft-exercise-metadata.mjs",
+    "fonts": "node scripts/fetch-fonts.mjs",
+    "fonts:check": "node scripts/fetch-fonts.mjs --check"
   },
   "license": "MIT",
   "engines": {

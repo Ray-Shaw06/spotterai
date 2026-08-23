@@ -17,3 +17,19 @@ jobs:
       # Zero dependencies — nothing to install. Node's built-in test runner only.
       - name: Run tests
         run: node --test
+
+  evaluator:
+    name: Evaluator benchmark
+    runs-on: ubuntu-latest
+    # The safety evaluator is the product's whole claim, and until now the only
+    # job that ran it was Benchmark history, which is push-to-main only. That
+    # made the benchmark a post-merge report rather than a gate: a PR could
+    # regress a safety check, go green here, and only be noticed after landing.
+    # It needs no key and no network, so there is no reason it was not a gate.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run the evaluator benchmark
+        run: npm run eval

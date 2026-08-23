@@ -16,7 +16,7 @@
  * Bump CACHE when shipping changes so old caches are cleaned on activate.
  */
 
-const CACHE = "spotterai-v63";
+const CACHE = "spotterai-v64";
 // Explicit local module graph rooted at every <script type="module"> in index.html.
 // test/service-worker-behavior.test.js derives the graph independently so a new
 // boot import cannot be shipped without being added here.
@@ -96,12 +96,25 @@ const BOOT_MODULES = [
   "workout-summary.js",
   "workout-ui.js",
 ];
+// Self-hosted fonts. These MUST be precached: they used to come from
+// fonts.gstatic.com, which the worker never cached either, so an offline
+// launch silently fell back to system faces. Now that they are same-origin
+// there is no reason for that to still be true.
+const FONTS = [
+  "fonts/inter-latin.woff2",
+  "fonts/inter-latin-ext.woff2",
+  "fonts/literata-latin.woff2",
+  "fonts/literata-latin-ext.woff2",
+  "fonts/jetbrains-mono-latin.woff2",
+  "fonts/jetbrains-mono-latin-ext.woff2",
+];
 const CORE = [
   "./",
   "index.html",
   "style.css",
   "manifest.json",
   ...BOOT_MODULES,
+  ...FONTS,
   "icons/spotterai-apple-touch-180.png",
   "icons/spotterai-192.png",
   "icons/spotterai-512.png",
