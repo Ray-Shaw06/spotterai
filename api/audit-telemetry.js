@@ -29,6 +29,7 @@
 
 import { createHash } from "node:crypto";
 import { sanitizeTelemetry } from "../lib/telemetry-schema.js";
+import { clientIp } from "../lib/rate-limit.js";
 
 export const DAILY_AUDIT_CAP = 5000;
 export const IP_HOURLY_CAP = 60;
@@ -145,13 +146,10 @@ async function firestore() {
  * leftmost entry would let a rotating forged header defeat IP_HOURLY_CAP.
  */
 function ipKey(req) {
-  const pick = (h) => (Array.isArray(h) ? h[0] : h);
-  const realIp = pick(req.headers?.["x-real-ip"]);
-  const forwarded = pick(req.headers?.["x-forwarded-for"]);
-  const fromForwarded = forwarded ? String(forwarded).split(",").pop().trim() : "";
-  const ip = String(realIp || fromForwarded || "unknown").trim();
+  // IP extraction lives in lib/rate-limit.js, which needs the identical value
+  // for the AI routes. Same string, same hash as before this was shared.
   const salt = (process.env.FIREBASE_SERVICE_ACCOUNT || "").slice(0, 64);
-  return createHash("sha256").update(`${salt}:${ip}:${hourKey()}`).digest("hex").slice(0, 32);
+  return createHash("sha256").update(`${salt}:${clientIp(req)}:${hourKey()}`).digest("hex").slice(0, 32);
 }
 
 /**

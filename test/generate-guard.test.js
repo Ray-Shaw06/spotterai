@@ -14,9 +14,10 @@
  * before the GEMINI_API_KEY lookup, so nothing here touches the network.
  */
 
-import test from "node:test";
+import test, { beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import handler from "../api/generate.js";
+import { __resetRateLimitForTests } from "../lib/rate-limit.js";
 
 /** Minimal Vercel-style res double: records status + payload, never sends. */
 function fakeRes() {
@@ -37,9 +38,21 @@ function fakeRes() {
   };
 }
 
+// These tests are about the INPUT gate, and every one of them posts as the
+// same anonymous caller. Without this they trip the per-IP rate limit that now
+// sits in front of the gate, and a 429 would look like the gate rejecting a
+// body it actually accepts.
+beforeEach(() => __resetRateLimitForTests());
+
+// Each post() is a DISTINCT caller. The gate does not care who is asking, so
+// tying these cases to one IP would only couple them to the per-IP rate limit
+// that now runs first, and a 429 there would read as the gate rejecting a body
+// it actually accepts. That is precisely what happened when the limit landed.
+let caller = 0;
 async function post(body) {
   const res = fakeRes();
-  await handler({ method: "POST", body }, res);
+  const headers = { "x-forwarded-for": "203.0.113." + ((caller++ % 250) + 1) };
+  await handler({ method: "POST", body, headers }, res);
   return res.out;
 }
 

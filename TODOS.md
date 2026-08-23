@@ -18,6 +18,80 @@ the check-count claim.
 
 ---
 
+## CLOSED 2026-08-23. The AI routes are rate limited
+
+`test/generate-guard.test.js` recorded this threat on 2026-08-02 and closed only
+half of it: the gate stopped an EMPTY body from buying a Gemini call, but a
+VALID body could still be looped without limit against the one free-tier key
+that generate, import, chat, estimate and parse all share. Draining it takes
+plan generation down for every real user.
+
+`lib/rate-limit.js` now runs in front of all five, before the key lookup and
+before the body is read, so a refused call costs nothing. Two tiers per caller
+(a minute for bursts, an hour for pacing under it) plus a per-instance ceiling,
+which is the only tier an IP rotation cannot walk around. Caps are per route,
+sized to the route: chat is conversational and estimate is the photo path the
+2026-08-16 pull showed out-converting everything else, so neither is strangled
+to protect generate.
+
+**The limit it cannot enforce, on purpose:** counters are module scope, so they
+are per serverless INSTANCE, and N warm instances means N x the numbers. Same
+trade-off `api/audit-telemetry.js` already makes for its daily cap, for the same
+reason: a backend-free architecture has nowhere exact to keep a count, and the
+Firestore-backed version would spend the shared read quota user sync depends on,
+on every AI call. It stops a loop from one client dead and blunts a distributed
+one. It is not an accounting boundary.
+
+Landing it broke 5 existing gate tests, which is how it proved it works: they
+all posted as the same anonymous caller and blew the 5/min generate cap. They
+post as distinct callers now, since the gate does not care who is asking.
+
+Reverting `checkRateLimit` to `return null` fails 10 of the 13 new tests.
+
+**Free finding:** `ipKey` in `api/audit-telemetry.js` had its own copy of the IP
+extraction. Both now share `clientIp`, rather than this becoming the second
+place that logic lives.
+
+---
+
+## CLOSED 2026-08-23. Firebase no longer loads on the landing page
+
+`auth-ui.js` boots on every route and called `initSync()` straight into the
+Firebase SDK: three cross-origin modules from gstatic, ~100KB, tailing ~768ms on
+the 2026-08-16 benchmark, to ask "is anyone signed in?" on a page where nobody
+is and no sign-in has ever happened.
+
+The answer was already on disk. `auth-session-probe.js` reads Firebase's own
+`firebaseLocalStorageDb` for a `firebase:authUser:` key and skips the SDK when
+there is none.
+
+**FAIL-SAFE BY CONSTRUCTION,** the pattern the 2026-08-16 observer work landed
+on: every uncertain answer is `true` and loads the SDK exactly as before. The
+only path returning false is positive evidence Firebase never stored a user
+here, so a wrong guess costs the old behaviour, never a signed-in user rendered
+as signed out.
+
+Three traps that had to be handled: the database SURVIVES sign-out, so its
+existence is not the answer and the store has to be read; a redirect sign-in
+parks state in sessionStorage BEFORE any IndexedDB record exists, so that is
+checked first; and `initSync` no longer attaches the auth listener for a
+first-time signer-in, so `signInWithGoogle` attaches it itself or a successful
+popup would sign someone in with nothing watching.
+
+Verified in a real browser, both directions: no stored session gives zero
+gstatic requests and no IndexedDB created at all; a real Firebase-shaped user
+record gives all three SDK modules exactly as before; and the sign-in button
+still drives a live redirect to accounts.google.com. Reverting the probe to
+`return true` fails 5 of the 8 new tests.
+
+**Note for whoever measures this:** the first reading was wrong. A stale service
+worker was serving the old `sync.js`, so the SDK appeared to load anyway.
+Unregister the worker and clear caches before trusting a number here.
+
+Cache v62 -> v63. Tests 690 -> 711.
+
+---
+
 ## PULLED 2026-08-16. The wall is plan -> first workout
 
 30-day window, Jul 17 to Aug 16, read off Vercel Web Analytics.

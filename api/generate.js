@@ -24,6 +24,7 @@ import { callGemini as callLLM } from "../lib/gemini.js";
 // The plan schema + parse/validate/normalize helpers are shared with the client-side adapt engine.
 import { SCHEMA_HINT, clampNumber, extractJson, isValidPlan, normalizePlan } from "../lib/plan.js";
 import { equipmentCapabilities, exercisesForEquipment } from "../exercise-data.js";
+import { enforceRateLimit } from "../lib/rate-limit.js";
 
 // How many extra times we re-ask Gemini if it returns unparseable JSON.
 const MAX_RETRIES = 2;
@@ -185,6 +186,10 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed. Use POST." });
   }
+
+  // Before the key lookup and before the body is read: a denied request must
+  // cost nothing. See lib/rate-limit.js for what these numbers can and cannot do.
+  if (enforceRateLimit("generate", req, res)) return;
 
   // Vercel parses JSON bodies automatically, but guard for raw strings too.
   let inputs = req.body;

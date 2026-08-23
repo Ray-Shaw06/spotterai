@@ -14,6 +14,7 @@
  */
 
 import { callGemini } from "../lib/gemini.js";
+import { enforceRateLimit } from "../lib/rate-limit.js";
 
 // Keep requests bounded.
 const MAX_MESSAGES = 16; // most recent turns kept for context
@@ -86,6 +87,10 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed. Use POST." });
   }
+
+  // Before the key lookup and before the body is read: a denied request must
+  // cost nothing. See lib/rate-limit.js for what these numbers can and cannot do.
+  if (enforceRateLimit("chat", req, res)) return;
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
