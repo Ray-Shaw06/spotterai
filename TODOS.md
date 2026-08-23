@@ -133,14 +133,61 @@ the top line.
 **What it does NOT support:** more work on onboarding, the logging UI, or the
 exercise library. None of those sit where the drop is.
 
-**How to re-pull:** `browse` cannot use the Vercel CLI token for analytics (no
-working REST route). Import cookies instead:
-`browse cookie-import-browser chrome --domain vercel.com`, approve the macOS
-Keychain prompt for "Chrome Safe Storage" (the first attempt returns only 6
-anonymous cookies; after approval it returns 11 with auth), then open
-`https://vercel.com/rshaw06/spotterai/analytics`, set the range, and click
-**View All** on the Pages panel. Funnel events are virtual pageviews at
-`/funnel/<event>/<segments>`.
+**How to re-pull (updated 2026-08-23, no UI scraping):** the Vercel CLI token
+still has no working analytics route, but the AUTHENTICATED BROWSER SESSION can
+call the same REST endpoint the dashboard itself uses, which returns complete
+JSON and needs no clicking:
+
+    browse cookie-import-browser chrome --domain vercel.com
+    browse goto https://vercel.com/rshaw06/spotterai/analytics
+    browse js "fetch('https://vercel.com/api/web-analytics/v2/stats?\
+      environment=production&filter=%7B%7D&limit=250&projectId=spotterai&\
+      teamId=team_u10LovYoInSWjI9bMMeVdIXs&tz=America%2FLos_Angeles&type=path&\
+      from=<ISO>&to=<ISO>',{credentials:'include'}).then(r=>r.text())" \
+      --out /tmp/paths.json --raw
+
+`limit=250` means the list is complete rather than the top-N the Pages panel
+shows, so **View All is no longer needed and neither is reading the rendered
+table**. Swap `type=path` for `referrer`, `country`, `device_type`, `os_name`.
+Rows are `{key, total (views), devices (visitors)}`. Funnel events are virtual
+pageviews at `/funnel/<event>/<segments>`.
+
+Two gotchas: `browse eval` with an `async () => {}` IIFE returned empty, while
+`browse js` with a plain promise chain worked — use `js` plus `--out`. And the
+first cookie import may return only anonymous cookies until the macOS Keychain
+prompt for "Chrome Safe Storage" is approved.
+
+---
+
+## INSTRUMENTATION CHECKED 2026-08-23. Two of three new events confirmed live
+
+**This was NOT the funnel re-pull.** The events shipped 2026-08-16, so this
+window is 7 days, not 30, and the sample (22 visitors, ONE person reaching a plan
+screen) cannot answer anything the reading key asks. Pulled only to check the new
+events fire at all, because a mis-instrumented event discovered on 2026-09-15
+costs the whole 30 days.
+
+| event | status |
+|---|---|
+| `returned_with_plan{trained}` | **FIRING**, both branches: `true` 2, `false` 2 |
+| `meal_photo_started{source}` | **FIRING**, `source=landing` 1, so the new hero door is used |
+| `plan_scrolled_to_end` | **zero fires — but not broken, see below** |
+
+**The zero was made unambiguous rather than left as a maybe.** It is wired at
+`app.js:151`, pinned by `test/activation-doors.test.js`, and the
+`IntersectionObserver` behind it had NEVER been observed firing anywhere: the
+preview pane does not fire IO at all (2026-08-16), so ship-time verification could
+only demonstrate the fail-safe. Re-tested in real Chromium via `browse` with the
+exact production `threshold: 0.4` and `rootMargin: "0px 0px -140px 0px"`: **1
+callback, ratio 1.0.** The mechanism works. Only one person reached a plan screen
+in seven days, so zero fires is the expected count, not a defect.
+
+**Do not read the funnel from this pull.** 7d shape, recorded only as a
+sanity check: 22 landed, 2 clicked a CTA, 2 started onboarding, 1 completed, 1 got
+a plan, 2 started a workout (returning users), 1 completed. Also worth one glance
+and no conclusions: 30-day visitors are **159, down from 170** at the 2026-08-16
+pull, and `meal_photo_succeeded` shows 0 in the last 7 days against 1
+`meal_photo_started`. Both are n-of-1 noise. The real pull is still ~2026-09-15.
 
 **Priority:** DONE. The follow-on question is below.
 
