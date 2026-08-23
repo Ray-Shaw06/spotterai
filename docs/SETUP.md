@@ -54,14 +54,58 @@ git push -u origin main
      (pasted as one line) that lets `api/audit-telemetry.js` write aggregate
      Safety Lab counters. Leave it unset and that endpoint just accepts
      requests and writes nothing; see `.env.example` for how to generate one.
-     **If you set this, also add a TTL policy**: Firestore console →
-     **Firestore Database → TTL** → create a policy on collection group
-     `audit_telemetry_throttle`, field `expiresAt`. That collection exists
-     only to rate-limit one IP for an hour; every document it writes already
-     carries an `expiresAt` a Firestore-managed TTL deletes, but the deletion
-     itself is a per-field policy configured outside this repo and is not on
-     by default. Skip it and the collection grows forever instead of expiring.
+     See **Audit telemetry** below for the two console steps it needs and for
+     how to tell whether it is actually working.
 4. Click **Deploy**. Your live URL is ready in seconds.
+
+### Audit telemetry (only if you set `FIREBASE_SERVICE_ACCOUNT`)
+
+**Adding the variable is not enough on its own.** Vercel applies environment
+variables to NEW deployments only, so redeploy after adding it: **Deployments →
+the top one → ··· → Redeploy**.
+
+**Verify it by the response header, not the body.** A configured-but-empty
+deployment and a completely unconfigured one both answer
+`{"audits":0,"byCheck":{},"since":null}`, so the body cannot tell you which you
+have. The header can:
+
+    curl -sD - -o /dev/null https://<your-domain>/api/audit-telemetry | grep -i cache-control
+
+`no-store` means **not working** — the endpoint sets it only when Firestore is
+unconfigured or the read threw. Anything else means the success path ran. (Vercel's
+CDN consumes the `s-maxage` the code sends and rewrites the client-facing header to
+`public, max-age=0, must-revalidate`, so do not wait to see `s-maxage`.)
+
+This matters more than it sounds: the client is fire-and-forget by design, the
+endpoint answers 204 on every path including the dropped one, and the Safety Lab
+hides its production block on `audits <= 0`. A completely broken write path and a
+site with no traffic look identical from the outside. This exact configuration was
+missed once and shipped inert for four days without anything reporting it.
+
+**The TTL policy is in the Google Cloud Console, not the Firebase console,** and it
+cannot be created until the collection exists:
+
+1. **Generate one plan on the live site first.** Firestore creates a collection on
+   its first write, so `audit_telemetry_throttle` does not exist — and is not
+   offered by the TTL picker — until a real audit has been recorded.
+2. Open `https://console.cloud.google.com/firestore/databases/-default-/ttl?project=<your-project-id>`
+   (or: Google Cloud Console → Firestore → your database → **Time-to-live (TTL)**).
+3. **Create policy** → collection group `audit_telemetry_throttle`, timestamp field
+   `expiresAt`. Both are case-sensitive. There is no offset or duration to set: the
+   code writes `expiresAt` one hour ahead, and Firestore deletes each document when
+   that timestamp passes.
+
+A **403 "Missing or insufficient permissions"** here is usually the Cloud Console
+being signed into a different Google account than the one that owns the Firebase
+project, or the project picker not actually pointing at it. If both are right,
+check your role at
+`https://console.cloud.google.com/iam-admin/iam?project=<your-project-id>` — TTL
+management needs Owner, Editor, or Cloud Datastore Owner.
+
+**Honest sizing: this step is housekeeping, not urgent.** `audit_telemetry_throttle`
+holds one small document per IP per hour that actually triggers an audit. Skip the
+policy and it grows instead of expiring, but against Firestore's 1 GiB free tier
+that is years away from mattering. Do not let a 403 block your launch.
 
 ---
 
