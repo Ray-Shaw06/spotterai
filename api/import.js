@@ -21,6 +21,7 @@
 
 import { SCHEMA_HINT, extractJson, isValidPlan, normalizePlan } from "../lib/plan.js";
 import { callGemini } from "../lib/gemini.js";
+import { enforceRateLimit } from "../lib/rate-limit.js";
 
 // A five-day plan pasted with formatting runs 1500-3000 chars; 8000 leaves room
 // for headers, blank lines and notes without inviting someone to paste a novel.
@@ -150,6 +151,10 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed. Use POST." });
   }
+
+  // Before the key lookup and before the body is read: a denied request must
+  // cost nothing. See lib/rate-limit.js for what these numbers can and cannot do.
+  if (enforceRateLimit("import", req, res)) return;
 
   let payload = req.body;
   if (typeof payload === "string") {

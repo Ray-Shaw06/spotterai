@@ -15,6 +15,7 @@
 
 import { callGemini } from "../lib/gemini.js";
 import { reconcileKcal } from "../lib/nutrition-math.js";
+import { enforceRateLimit } from "../lib/rate-limit.js";
 
 const MAX_TEXT_CHARS = 400;
 const MAX_OUTPUT_TOKENS = 800;
@@ -99,6 +100,10 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed. Use POST." });
   }
+
+  // Before the key lookup and before the body is read: a denied request must
+  // cost nothing. See lib/rate-limit.js for what these numbers can and cannot do.
+  if (enforceRateLimit("parse", req, res)) return;
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "Server is missing GEMINI_API_KEY." });
