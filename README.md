@@ -1,6 +1,7 @@
 # SpotterAI 🔵
 
 [![CI](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml/badge.svg)](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml)
+&nbsp;[![codecov](https://codecov.io/gh/Ray-Shaw06/spotterai/branch/main/graph/badge.svg)](https://codecov.io/gh/Ray-Shaw06/spotterai)
 &nbsp;[![License: MIT](https://img.shields.io/badge/License-MIT-3b8ef5.svg)](LICENSE)
 
 **A deterministic verifier for LLM output, in a domain where users can't check the answer themselves.** &nbsp;·&nbsp; **[▶ Live demo](https://spotterai.xyz)** &nbsp;·&nbsp; **[▶ Audit a plan you already have](https://spotterai.xyz/#/import)**
@@ -9,7 +10,7 @@
 > evaluator** (no AI, fixed rubric, 11 checks) grades that plan and shows the
 > flags before you train. The red-team suite that tests the evaluator is
 > [published and runs live in your browser](https://spotterai.xyz/#/evals).
-> **409 tests, 21 adversarial eval cases, one runtime dependency, no build step.**
+> **717 tests, 21 adversarial eval cases, one runtime dependency, no build step.**
 > Solo-built by a CS student. Vanilla ES modules, Node serverless functions on
 > Vercel, Gemini, on-device MediaPipe.
 

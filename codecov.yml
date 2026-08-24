@@ -1,0 +1,33 @@
+# Codecov configuration.
+#
+# The suite is the product's credibility here, so the number is worth showing.
+# What it must not become is a second, noisier CI that blocks work: the tests
+# themselves are the gate, and this file is deliberately tuned to report.
+
+coverage:
+  status:
+    # Project coverage CAN fail: a real drop across the whole codebase is worth
+    # a red check. "auto" compares against the base commit and 1% absorbs the
+    # normal jitter of a few lines moving around.
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    # Patch coverage is informational. On a solo repo the usual patch-status
+    # failure is a two-line fix with no new test, which is not a signal worth
+    # blocking on.
+    patch:
+      default:
+        informational: true
+
+# Excluded here as well as in --test-coverage-exclude, so the percentage is the
+# same whether it is read from the lcov file or from Codecov's own totals.
+ignore:
+  - "test/**"
+  - "scripts/**"
+  - "eval.mjs"
+  - "eval-nutrition.mjs"
+
+comment:
+  layout: "reach, diff, files"
+  require_changes: true
