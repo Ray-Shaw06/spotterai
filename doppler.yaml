@@ -1,0 +1,7 @@
+# Pins which Doppler project and config this working copy uses, so `doppler
+# setup` is non-interactive and every machine lands on the same config.
+#
+# This file holds NO secret values — only the names of where they live.
+setup:
+  project: spotterai
+  config: dev

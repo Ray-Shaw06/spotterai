@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <!-- Sentry DSN. Public by design (it ships in every Sentry browser client).
+       Empty means error reporting is off; paste the DSN to turn it on. -->
+  <meta name="sentry-dsn" content="" />
   <title>SpotterAI, your AI fitness copilot (plan, track, adapt, audit)</title>
   <meta
     name="description"
@@ -1433,6 +1436,8 @@
   </script>
   <script defer src="/_vercel/insights/script.js"></script>
 
+  <!-- First, so an error thrown while a later module evaluates is still caught. -->
+  <script type="module" src="sentry-init.js"></script>
   <script type="module" src="router.js"></script>
   <script type="module" src="focus-trap.js"></script>
   <script type="module" src="anim-gate.js"></script>

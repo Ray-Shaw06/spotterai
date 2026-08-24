@@ -15,8 +15,20 @@ jobs:
         with:
           node-version: "22"
       # Zero dependencies — nothing to install. Node's built-in test runner only.
+      # Coverage comes from node's own --experimental-test-coverage, so this
+      # stays true: no nyc, no c8, nothing added to run the suite.
       - name: Run tests
-        run: node --test
+        run: npm run test:coverage
+      # Coverage is a report, not a gate. fail_ci_if_error stays false so a
+      # Codecov outage — or a run before CODECOV_TOKEN is set at all — cannot
+      # turn a passing suite red. The test step above is what gates the build.
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
   evaluator:
     name: Evaluator benchmark

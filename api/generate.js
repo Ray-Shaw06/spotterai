@@ -25,6 +25,7 @@ import { callGemini as callLLM } from "../lib/gemini.js";
 import { SCHEMA_HINT, clampNumber, extractJson, isValidPlan, normalizePlan } from "../lib/plan.js";
 import { equipmentCapabilities, exercisesForEquipment } from "../exercise-data.js";
 import { enforceRateLimit } from "../lib/rate-limit.js";
+import { withSentry } from "../lib/sentry-server.js";
 
 // How many extra times we re-ask Gemini if it returns unparseable JSON.
 const MAX_RETRIES = 2;
@@ -180,7 +181,7 @@ async function callGemini(apiKey, prompt, timeoutMs) {
 // Serverless handler (Vercel: default export of a (req, res) function)
 // ----------------------------------------------------------------------------
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   // Only POST is supported.
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -267,3 +268,7 @@ export default async function handler(req, res) {
   // All attempts exhausted.
   return res.status(502).json({ error: `Could not generate a valid plan. ${lastError}` });
 };
+
+// Reports an unhandled throw to Sentry, then re-throws so the platform's own
+// 500 is unchanged. Inert when SENTRY_DSN is unset.
+export default withSentry(handler, { route: "generate" });

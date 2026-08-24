@@ -20,6 +20,7 @@ import { callGemini } from "../lib/gemini.js";
 import { reconcileKcal } from "../lib/nutrition-math.js";
 import { FOODS } from "../foods.js";
 import { enforceRateLimit } from "../lib/rate-limit.js";
+import { withSentry } from "../lib/sentry-server.js";
 
 // Must mirror MUSCLES in exercises.js so the classified group is one the UI knows.
 const MUSCLES = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Cardio", "Full body"];
@@ -220,7 +221,7 @@ function normalizeExercise(o, query) {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed. Use POST." });
@@ -294,3 +295,7 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: "The estimator is unavailable right now. Try again shortly." });
   }
 };
+
+// Reports an unhandled throw to Sentry, then re-throws so the platform's own
+// 500 is unchanged. Inert when SENTRY_DSN is unset.
+export default withSentry(handler, { route: "estimate" });
