@@ -41,7 +41,11 @@ done
 
 if [ -f "$ENV_FILE" ]; then
   echo "==> uploading $ENV_FILE into $PROJECT/dev"
-  doppler secrets upload "$ENV_FILE" --project "$PROJECT" --config dev
+  # --silent AND >/dev/null: `secrets upload` prints the resulting secrets
+  # table, VALUES INCLUDED, so without both of these every key lands in
+  # terminal scrollback and any CI log this ever runs in.
+  doppler secrets upload "$ENV_FILE" --project "$PROJECT" --config dev --silent >/dev/null
+  echo "    uploaded $(grep -cE '^[A-Za-z_][A-Za-z0-9_]*=' "$ENV_FILE") keys (names and values not printed)"
   echo "    done. Values are now in Doppler; $ENV_FILE is still git-ignored."
 else
   echo "==> no $ENV_FILE found, skipping upload"
