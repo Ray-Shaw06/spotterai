@@ -16,6 +16,7 @@
 import { callGemini } from "../lib/gemini.js";
 import { reconcileKcal } from "../lib/nutrition-math.js";
 import { enforceRateLimit } from "../lib/rate-limit.js";
+import { withSentry } from "../lib/sentry-server.js";
 
 const MAX_TEXT_CHARS = 400;
 const MAX_OUTPUT_TOKENS = 800;
@@ -95,7 +96,7 @@ function normalizeNutrition(n) {
   return { meal, items };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed. Use POST." });
@@ -161,3 +162,7 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: "Couldn't reach the parser right now. Try again shortly." });
   }
 }
+
+// Reports an unhandled throw to Sentry, then re-throws so the platform's own
+// 500 is unchanged. Inert when SENTRY_DSN is unset.
+export default withSentry(handler, { route: "parse" });

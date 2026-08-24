@@ -30,6 +30,7 @@
 import { createHash } from "node:crypto";
 import { sanitizeTelemetry } from "../lib/telemetry-schema.js";
 import { clientIp } from "../lib/rate-limit.js";
+import { withSentry } from "../lib/sentry-server.js";
 
 export const DAILY_AUDIT_CAP = 5000;
 export const IP_HOURLY_CAP = 60;
@@ -251,7 +252,7 @@ export async function recordAudit(store, FieldValue, clean, req) {
   return true;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   // HEAD is GET without the body (RFC 9110), and it is what uptime monitors
   // send. Answering it with 405 while advertising `Allow: GET, POST` was a
   // contradiction. Node discards the body on a HEAD response, so the GET path
@@ -309,3 +310,7 @@ export default async function handler(req, res) {
   }
   return res.status(204).end();
 }
+
+// Reports an unhandled throw to Sentry, then re-throws so the platform's own
+// 500 is unchanged. Inert when SENTRY_DSN is unset.
+export default withSentry(handler, { route: "audit-telemetry" });

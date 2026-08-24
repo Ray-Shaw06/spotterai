@@ -22,6 +22,7 @@
 import { SCHEMA_HINT, extractJson, isValidPlan, normalizePlan } from "../lib/plan.js";
 import { callGemini } from "../lib/gemini.js";
 import { enforceRateLimit } from "../lib/rate-limit.js";
+import { withSentry } from "../lib/sentry-server.js";
 
 // A five-day plan pasted with formatting runs 1500-3000 chars; 8000 leaves room
 // for headers, blank lines and notes without inviting someone to paste a novel.
@@ -146,7 +147,7 @@ Rules:
 - "progression" is the document's own stated rule for getting harder. Empty string if it states none.
 - If the text is not a training plan at all, return {"days": []}.`;
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed. Use POST." });
@@ -229,3 +230,7 @@ export default async function handler(req, res) {
   const plan = normalizePlan(bounded, {});
   return res.status(200).json({ plan, shape: planShape(plan) });
 }
+
+// Reports an unhandled throw to Sentry, then re-throws so the platform's own
+// 500 is unchanged. Inert when SENTRY_DSN is unset.
+export default withSentry(handler, { route: "import" });
