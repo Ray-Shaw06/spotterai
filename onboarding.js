@@ -96,7 +96,15 @@ export function mapOnboardingToInputs(d = {}) {
   // equipment is empty. The conservative default lives where it belongs, at the
   // point of use, instead of being baked in upstream where it destroys the
   // distinction between "bodyweight" and "we never asked".
+  //
+  // `cardio` joins the second class. It was collected here from the start and
+  // then dropped on the floor, so a plan could not honour it and the audit
+  // could not judge it. It is now read by BOTH the generator and the evaluator
+  // (checkCardioLoad), which is exactly why it is spread in only when answered:
+  // an unanswered question must not become an answer asserted back at the user.
+  const cardio = CARDIO_PREFS.includes(d.cardio) ? d.cardio : "";
   return {
+    ...(cardio ? { cardio } : {}),
     goal: goalOpt ? goalOpt.goal : "General",
     experience: ageOpt ? ageOpt.experience : "",
     daysPerWeek: Number(d.days) || 3,

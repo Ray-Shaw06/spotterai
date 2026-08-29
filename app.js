@@ -24,6 +24,20 @@ import { lineChart } from "./charts.js";
 import { setPlan, store, planUpdatedAt } from "./store.js";
 import { getContext as getTrackerContext, buildAdaptContext, getState as getTrackerState } from "./tracker-store.js";
 import { adaptPlan } from "./adapt-engine.js";
+
+/**
+ * What goes in the plan table's Reps column. A cardio entry has no rep count;
+ * when the model wrote the duration into `durationMin` and left `reps` terse or
+ * empty, showing the raw field leaves the row looking broken.
+ */
+function planReps(ex) {
+  if (!isCardioEntry(ex)) return ex.reps;
+  const stated = String(ex.reps ?? "").trim();
+  if (stated) return stated;
+  return Number(ex.durationMin) > 0 ? `${ex.durationMin} min` : "-";
+}
+
+import { isCardioEntry } from "./lib/plan.js";
 import { swapExercise, removeExercise, addExercise } from "./plan-edit.js";
 import { suggestAlternatives } from "./exercise-data.js";
 import { searchExercises } from "./exercises.js";
@@ -655,7 +669,7 @@ function renderPlan(plan) {
                     ${ex.notes ? `<span class="ex-note">${esc(ex.notes)}</span>` : ""}
                   </td>
                   <td class="num">${esc(ex.sets)}</td>
-                  <td class="num">${esc(ex.reps)}</td>
+                  <td class="num">${esc(planReps(ex))}</td>
                   <td class="num">${ex.rpe == null || ex.rpe === "" ? "-" : esc(ex.rpe)}</td>
                   <td class="ex-row-acts">
                     <button type="button" class="ex-act" data-act="ex-swap" data-day="${idx}" data-name="${esc(ex.name)}" title="Substitute" aria-label="Substitute ${esc(ex.name)}">⇄</button>

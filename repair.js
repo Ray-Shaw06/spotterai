@@ -16,11 +16,14 @@ import {
   evaluatePlan,
   INJURY_RULES,
   computeWeeklyVolume,
+  computeWeeklyCardio,
   MUSCLE_KEYWORDS,
+  LEG_GROUPS,
   PUSH_GROUPS,
   PULL_GROUPS,
   THRESHOLDS,
 } from "./evaluator.js";
+import { isCardioEntry } from "./lib/plan.js";
 import { lookupExercise, isContraindicated } from "./exercise-data.js";
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -177,6 +180,77 @@ function repairBalance(plan, changes) {
   });
 }
 
+/** Leg working sets on one day, cardio excluded. Mirrors the evaluator. */
+function legSetsForDay(day) {
+  let sets = 0;
+  for (const ex of day.exercises || []) {
+    if (isCardioEntry(ex)) continue;
+    const count = Number(ex.sets) || 0;
+    if (count > 0 && LEG_GROUPS.some((g) => matchesGroup(ex.name, g))) sets += count;
+  }
+  return sets;
+}
+
+/** Easy conditioning to fall back on when a hard session has nowhere to go. */
+const EASY_CARDIO_SWAPS = ["Incline Walk", "Stationary Bike", "Elliptical"];
+
+/**
+ * Hard cardio sitting on, or the day before, a heavy leg day.
+ *
+ * Preference order is move, then soften. Moving keeps the prescription intact
+ * and only changes when it happens, which is the cheapest possible fix. Only
+ * when no day can take it does the session get swapped for easy conditioning,
+ * and the change bullet says plainly that the hard effort was the thing given
+ * up.
+ */
+function repairCardioConflict(plan, changes) {
+  const days = plan.days || [];
+  const legSets = days.map(legSetsForDay);
+  const heavy = (i) => (legSets[i] || 0) >= THRESHOLDS.CARDIO_CONFLICT_LEG_SETS;
+  const conflicted = (i) => heavy(i) || heavy(i + 1);
+
+  for (const day of computeWeeklyCardio(plan).days) {
+    if (!day.hard || !conflicted(day.index)) continue;
+    const source = days[day.index];
+    const entries = (source.exercises || []).filter(isCardioEntry);
+    if (!entries.length) continue;
+
+    // A destination must be clear itself AND not hand the same problem to the
+    // next day. Rest days are skipped: parking hard intervals on a rest day is
+    // not a fix, it just relabels the collision.
+    const target = days.findIndex((d, j) => j !== day.index && !isRestDay(d) && !conflicted(j));
+
+    if (target >= 0) {
+      days[target].exercises = [...(days[target].exercises || []), ...entries];
+      source.exercises = (source.exercises || []).filter((ex) => !entries.includes(ex));
+      // A day emptied of everything is a rest day, and saying so beats leaving
+      // a training day with nothing in it.
+      if (!source.exercises.length) source.focus = "Rest / active recovery";
+      changes.push({
+        issue: `Hard conditioning (${day.names.join(", ")}) collides with heavy leg work`,
+        fix: `Moved it to ${days[target].focus || days[target].day || `day ${target + 1}`}`,
+        why: "Hard conditioning and heavy lower-body lifting draw on the same recovery, so whichever comes second is the one that suffers.",
+        tradeoff: "The same conditioning, on a different day of the week.",
+      });
+      continue;
+    }
+
+    // Nowhere to move it: soften instead of pretending otherwise.
+    const swap = EASY_CARDIO_SWAPS[0];
+    for (const ex of entries) {
+      ex.name = swap;
+      ex.intensity = "easy";
+      ex.notes = ex.notes ? `${ex.notes} · eased to protect the leg session` : "Eased to protect the leg session";
+    }
+    changes.push({
+      issue: `Hard conditioning (${day.names.join(", ")}) collides with heavy leg work and no other day is free`,
+      fix: `Swapped it for easy ${swap}`,
+      why: "Every other day either trains legs heavily or sits right before one, so easing the effort is the only way to keep both sessions productive.",
+      tradeoff: "You lose the hard conditioning stimulus this week, not the movement.",
+    });
+  }
+}
+
 function repairBeginner(plan, changes) {
   let capped = 0;
   for (const day of plan.days || []) {
@@ -209,6 +283,7 @@ export function repairPlan(originalPlan, inputs = {}) {
     else if (c.id === "weekly_volume") repairVolume(plan, changes);
     else if (c.id === "muscle_balance") repairBalance(plan, changes);
     else if (c.id === "beginner_load") repairBeginner(plan, changes);
+    else if (c.id === "cardio_conflict") repairCardioConflict(plan, changes);
   }
 
   if (changes.length) plan.version = nextVersion(originalPlan.version);

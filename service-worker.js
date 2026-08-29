@@ -59,6 +59,7 @@ const BOOT_MODULES = [
   "form-session.js",
   "gamify.js",
   "import-ui.js",
+  "lib/plan.js",
   "lib/sentry.js",
   "lib/telemetry-schema.js",
   "library-ui.js",

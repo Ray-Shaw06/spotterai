@@ -25,6 +25,7 @@ import { buildWorkoutSummary } from "./workout-summary.js";
 import { trackFunnel, trackFunnelOnce } from "./analytics.js";
 import { notifyRestComplete } from "./workout-alerts.js";
 import { createRestAlarm } from "./rest-alarm.js";
+import { isCardioEntry } from "./lib/plan.js";
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -763,11 +764,22 @@ function sessionFromPlanDay(day, source = "dashboard") {
     exercises: (day.exercises || []).map((e) => {
       const repsNum = parseInt(String(e.reps).match(/\d+/)?.[0] || "", 10);
       const count = Math.max(1, Number(e.sets) || 1);
+      // The plan states `type` for cardio now, so trust it over the name: a
+      // prescribed run should open with the minutes/distance inputs, not with
+      // weight x reps waiting to be filled in with nothing.
+      const cardio = isCardioEntry(e);
       return {
         name: e.name,
         muscle: findExercise(e.name)?.muscle || "",
-        cardio: isCardio(e.name),
-        sets: Array.from({ length: count }, () => ({ weight: "", reps: Number.isFinite(repsNum) ? repsNum : "", done: false })),
+        cardio,
+        // Pre-fill the prescribed duration; it is the number the plan actually
+        // asked for, and typing it again is the kind of friction that stops
+        // people logging at all.
+        sets: Array.from({ length: count }, () =>
+          cardio
+            ? { weight: "", reps: "", durationMin: Number(e.durationMin) || "", distance: "", done: false }
+            : { weight: "", reps: Number.isFinite(repsNum) ? repsNum : "", done: false }
+        ),
       };
     }),
   };

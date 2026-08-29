@@ -87,6 +87,33 @@ function renderVocabulary(byMuscle) {
 // Exported for tests only — Vercel routes on the default export. Worth the
 // extra surface: the equipment vocabulary is assembled here, and asserting on
 // the real string beats grepping the source for the code that builds it.
+/**
+ * The cardio section of the prompt. Empty when the client never answered, so an
+ * unanswered question does not turn into a prescription: `mapOnboardingToInputs`
+ * deliberately omits the field in that case, and the evaluator skips its cardio
+ * checks for the same reason.
+ *
+ * When it IS answered, the conflict rule goes in the prompt rather than being
+ * left to the repair engine to clean up afterwards. Deterministic repair can
+ * move a session to another day, but a plan that arrives correct is better than
+ * one that arrives wrong and gets edited in front of the user.
+ */
+function renderCardio(preference) {
+  const choice = String(preference || "").toLowerCase();
+  if (!choice || choice.includes("none")) return "";
+  const lots = choice.includes("lot");
+  const budget = lots ? "3 to 4 conditioning sessions, 120 to 240 minutes total" : "1 to 2 conditioning sessions, 40 to 90 minutes total";
+
+  return `
+CONDITIONING (the client asked for: ${preference})
+- Include ${budget} across the week, as entries with "type": "cardio".
+- A cardio entry uses "durationMin" (minutes) and "intensity" ("easy", "moderate" or "hard"). Set "sets": 1 and put the effort description in "reps" (e.g. "35 min easy").
+- NEVER put hard cardio (intervals, sprints, hills, threshold work) on the same day as heavy lower-body lifting, or on the day immediately BEFORE one. Hard running and heavy squatting compete for the same recovery, and the session that comes second is the one that suffers.
+- Easy aerobic work (walking, easy cycling, easy jogging) next to leg days is fine and does not count as a conflict.
+- Use cardio names from the exercise library where you can: Treadmill Run, Incline Walk, Stationary Bike, Rowing Machine, Stair Climber, Elliptical, Jog, Sprint, Cycling (outdoor), Swimming, Jump Rope, HIIT Circuit.
+`;
+}
+
 export function buildPrompt(inputs) {
   const goal = inputs.goal || "General fitness";
   const experience = inputs.experience || "Beginner";
@@ -96,6 +123,7 @@ export function buildPrompt(inputs) {
       ? inputs.equipment.join(", ")
       : "bodyweight only";
   const sessionLength = clampNumber(inputs.sessionLength, 20, 120, 60);
+  const cardio = renderCardio(inputs.cardio);
 
   // Home training gets an EXACT vocabulary rather than a rule it has to invent
   // against. "Only prescribe exercises possible with the available equipment"
@@ -129,7 +157,8 @@ CLIENT PROFILE
 - Available equipment: ${equipment}
 - Time per session: ${sessionLength} minutes
 - Injuries / limitations: ${injuriesSummary}
-
+- Cardio preference: ${inputs.cardio || "not stated"}
+${cardio}
 ${vocabulary}REQUIREMENTS
 - Design exactly ${days} training days. Use clear focus labels (e.g. "Upper Body", "Push", "Lower Body", "Full Body").
 - Only prescribe exercises possible with the available equipment.${
@@ -144,6 +173,7 @@ ${vocabulary}REQUIREMENTS
 - Balance pushing and pulling volume; include adequate recovery for the chosen frequency.
 - Keep total work realistic for the session length.
 - "reps" is a string (e.g. "8-12", "5", "30s"). "rpe" is a number 6-10 or null for warm-up/mobility. "sets" is an integer.
+- Lifting entries omit "type", "durationMin" and "intensity" entirely. Only cardio entries carry them.
 - Fill "progression" with how to add load/reps over the coming weeks, and "general_notes" with warm-up and recovery guidance.
 
 OUTPUT FORMAT

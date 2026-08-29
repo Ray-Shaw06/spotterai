@@ -12,6 +12,7 @@ import { deriveStats, getWater, getState, dayCounts, daysSinceBodyweight, dateDa
 import { evaluateNutrition } from "./nutrition-safety.js";
 import { todaysWorkout, coachNote, trainingDays, weekStrip } from "./today.js";
 import { openItems, catchUpSummary } from "./catch-up.js";
+import { isCardioEntry } from "./lib/plan.js";
 
 const content = document.getElementById("today-content");
 const dateEl = document.getElementById("today-date");
@@ -25,8 +26,13 @@ const ymd = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).p
 
 function estDuration(workout, inputs) {
   if (inputs?.sessionLength) return `~${inputs.sessionLength} min`;
-  const sets = (workout.exercises || []).reduce((n, e) => n + (Number(e.sets) || 0), 0);
-  return `~${Math.max(30, Math.round((sets * 3.5 + 10) / 5) * 5)} min`;
+  const exercises = workout.exercises || [];
+  // Cardio contributes its own prescribed minutes. Counting a 40-minute run as
+  // one "set" put a run day at the 30-minute floor, which is not a small error.
+  const cardioMinutes = exercises.filter(isCardioEntry).reduce((n, e) => n + (Number(e.durationMin) || 0), 0);
+  const sets = exercises.filter((e) => !isCardioEntry(e)).reduce((n, e) => n + (Number(e.sets) || 0), 0);
+  const lifting = sets ? sets * 3.5 + 10 : 0;
+  return `~${Math.max(sets ? 30 : 10, Math.round((lifting + cardioMinutes) / 5) * 5)} min`;
 }
 
 function card(inner, cls = "") {
@@ -87,9 +93,16 @@ function render() {
   } else {
     // Command-center hero: giant session readout left, numbered exercise
     // manifest right, one dominant START control.
+    // Cardio is one continuous effort, so "1×35 min" is the wrong readout for
+    // it. Minutes and stated intensity are what the session actually asks for.
+    const rx = (e) => {
+      if (!isCardioEntry(e)) return `${esc(e.sets)}×${esc(e.reps)}${e.rpe ? ` <em>@${esc(e.rpe)}</em>` : ""}`;
+      const mins = Number(e.durationMin) > 0 ? `${e.durationMin} min` : esc(e.reps || "cardio");
+      return `${esc(mins)}${e.intensity ? ` <em>${esc(e.intensity)}</em>` : ""}`;
+    };
     const exRows = (workout.exercises || [])
       .slice(0, 8)
-      .map((e) => `<li class="cmd-ex"><span class="cmd-ex__name">${esc(e.name)}</span><span class="cmd-ex__rx">${esc(e.sets)}×${esc(e.reps)}${e.rpe ? ` <em>@${esc(e.rpe)}</em>` : ""}</span></li>`)
+      .map((e) => `<li class="cmd-ex"><span class="cmd-ex__name">${esc(e.name)}</span><span class="cmd-ex__rx">${rx(e)}</span></li>`)
       .join("");
     workoutCard = `
       <div class="cmd today-card--workout">

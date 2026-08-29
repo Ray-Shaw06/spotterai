@@ -13,6 +13,7 @@
 import { ACHIEVEMENTS, RANKS, XP, achievementXp, levelFor, rankFor, workoutXp } from "./gamify.js";
 import { trackerKey } from "./profile-store.js";
 import { deloadFromWeeklyVolume, epley1RM, suggestNextWeight } from "./progression.js";
+import { isCardioExercise } from "./exercise-catalog.js";
 
 const DEFAULTS = {
   workouts: [], // { id, date 'YYYY-MM-DD', name, focus, exercises:[{name,sets,reps,weight}], volume, xp }
@@ -848,6 +849,31 @@ function topSetHistory(name) {
 }
 
 /**
+ * Cardio actually logged in the last `days` days, newest first.
+ *
+ * The adapt engine needs this to answer the question the app could not answer
+ * before: you ran hard yesterday, so today's squats are not the same squats.
+ * It reports what happened and how long it took; deciding what counts as HARD
+ * is the engine's job, next to the rest of its rules.
+ */
+export function recentCardio(days = 7, from = today()) {
+  const cutoff = ymdOffset(from, -Math.max(0, days));
+  const out = [];
+  for (const w of state.workouts) {
+    if (!w.date || w.date < cutoff || w.date > from) continue;
+    for (const ex of w.exercises || []) {
+      const cardio = String(ex.muscle || "").toLowerCase() === "cardio" || isCardioExercise(ex.name);
+      if (!cardio) continue;
+      const sets = setsOf(ex).filter(setHasWork);
+      const durationMin = sets.reduce((m, x) => m + (Number(x.durationMin) || 0), 0);
+      const distance = sets.reduce((d, x) => d + (Number(x.distance) || 0), 0);
+      out.push({ date: w.date, name: ex.name, durationMin: Math.round(durationMin), distance: Math.round(distance * 10) / 10 });
+    }
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/**
  * Structured context for the deterministic adapt engine (adapt-engine.js).
  * Everything the engine needs, as plain data — no display strings. Returns null
  * when there's nothing logged. Only exercises that appear in BOTH the plan and
@@ -872,6 +898,7 @@ export function buildAdaptContext(plan) {
     };
   }
 
+  const cardio = recentCardio(7);
   return {
     workoutsLogged: ctx.workoutsLogged,
     thisWeek: ctx.thisWeek,
@@ -881,6 +908,11 @@ export function buildAdaptContext(plan) {
     recentPain: ctx.recentPain,
     unit: state.unit,
     exercises,
+    cardio: {
+      weeklyMinutes: cardio.reduce((m, c) => m + c.durationMin, 0),
+      recent: cardio,
+      today: today(),
+    },
   };
 }
 

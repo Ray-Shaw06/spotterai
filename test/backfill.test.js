@@ -179,3 +179,51 @@ test("addRoutine keeps duration and distance, so a saved run is not empty", () =
   assert.equal(lifting.exercises[0].sets[0].reps, 5);
   assert.equal(lifting.exercises[0].sets[0].durationMin, undefined, "no empty cardio fields on a lift");
 });
+
+// ---------------------------------------------------------------------------
+// Logged cardio, as the adapt engine reads it
+// ---------------------------------------------------------------------------
+
+test("recentCardio reports logged runs, newest first, with minutes summed", () => {
+  reset();
+  const { recentCardio } = store;
+  addWorkout({ name: "Intervals", exercises: [{ name: "Sprint", muscle: "Cardio", sets: [{ durationMin: 12, distance: 2 }, { durationMin: 10, distance: 1.8 }] }], date: dateDaysAgo(1) });
+  addWorkout({ name: "Easy", exercises: [{ name: "Jog", muscle: "Cardio", sets: [{ durationMin: 30, distance: 5 }] }], date: dateDaysAgo(3) });
+  addWorkout({ name: "Push", exercises: [bench()], date: dateDaysAgo(2) });
+
+  const out = recentCardio(7);
+  assert.equal(out.length, 2, "the bench session is not cardio");
+  assert.equal(out[0].name, "Sprint");
+  assert.equal(out[0].durationMin, 22, "both sets of the interval session count");
+  assert.equal(out[0].distance, 3.8);
+  assert.equal(out[1].name, "Jog");
+});
+
+test("recentCardio recognises cardio by name when the muscle field is blank", () => {
+  reset();
+  const { recentCardio } = store;
+  // Quick Log and free-typed exercises do not always carry a muscle.
+  addWorkout({ name: "Run", exercises: [{ name: "Treadmill Run", muscle: "", sets: [{ durationMin: 35 }] }], date: dateDaysAgo(1) });
+  assert.equal(recentCardio(7).length, 1);
+});
+
+test("recentCardio honours its window", () => {
+  reset();
+  const { recentCardio } = store;
+  addWorkout({ name: "Old run", exercises: [{ name: "Jog", muscle: "Cardio", sets: [{ durationMin: 30 }] }], date: dateDaysAgo(10) });
+  assert.equal(recentCardio(7).length, 0);
+  assert.equal(recentCardio(14).length, 1);
+});
+
+test("buildAdaptContext carries cardio, so the engine reads logs and not a guess", () => {
+  reset();
+  const { buildAdaptContext } = store;
+  addWorkout({ name: "Push", exercises: [bench()], date: dateDaysAgo(2) });
+  addWorkout({ name: "Intervals", exercises: [{ name: "Sprint", muscle: "Cardio", sets: [{ durationMin: 25 }] }], date: dateDaysAgo(1) });
+
+  const ctx = buildAdaptContext({ days: [{ focus: "Push", exercises: [{ name: "Bench Press", sets: 3, reps: "8" }] }] });
+  assert.ok(ctx.cardio);
+  assert.equal(ctx.cardio.weeklyMinutes, 25);
+  assert.equal(ctx.cardio.recent[0].name, "Sprint");
+  assert.equal(ctx.cardio.today, dateDaysAgo(0), "the engine needs today to measure how stale a session is");
+});
