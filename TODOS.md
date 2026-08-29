@@ -18,6 +18,61 @@ the check-count claim.
 
 ---
 
+## CLOSED 2026-08-29. Consistency, cardio, and a rest alarm that fires
+
+Three problems in one release. Spec:
+`docs/superpowers/specs/2026-08-29-consistency-cardio-and-alarms-design.md`.
+
+**The rest timer did not fire with the screen off.** Two independent bugs.
+`workout-ui.js` counted down with `restRemaining -= 1` on a one-second
+interval, and mobile browsers freeze background timers on screen lock, so the
+countdown stopped with the screen and resumed on unlock. Then `beep()` built a
+BRAND NEW AudioContext at fire time, outside any user gesture, which iOS starts
+suspended, so even a timely fire was silent.
+
+`rest-alarm.js` holds a wall-clock deadline and books the tone on the AUDIO
+timeline inside the set-done tap, the only moment the context can be unlocked.
+Audio scheduling runs on the audio thread and is not subject to timer
+throttling, which is the part that makes the sound land on time. A near-silent
+looping source plus a silent `<audio>` element keep the page in a playing-media
+state, because iOS suspends a context with nothing playing through it, and
+`reconcile()` on visibilitychange fires anything the throttled backstop owed.
+
+**The limit it cannot beat, stated in the module header:** a force-quit app
+fires nothing. This is a page-alive alarm, not a scheduled push, and the
+2026-07-22 decision to retire Web Push is not reopened.
+
+**Logging depended on remembering.** Since the app cannot reach you when it is
+closed, forgetting had to stop costing anything. `catch-up.js` reports what is
+unlogged today and yesterday, hour-gated so nothing is "missed" at 9am, capped
+at three rows, silent on a clean day, with a test pinning the copy against
+shaming language. Backfill logs against any of the last 14 days, with a
+banner so a past-dated save is never a surprise at Finish, and a one-tap repeat
+of the last session. The catch-up card PROPOSES yesterday's date and never
+writes it: the app proposes, the user approves.
+
+**The app could not program cardio.** The logging layer had known about cardio
+for a while; nothing upstream of it did. `evaluator.js`, `repair.js`,
+`adapt-engine.js` and `api/generate.js` had no cardio logic at all, and
+`mapOnboardingToInputs` collected `CARDIO_PREFS` and dropped it on the floor.
+Cardio is now in the schema (inferred from the catalog when absent, so saved
+plans upgrade on read with no migration), in the audit as two zero-weight
+conditionally-emitted checks, in the repair engine (move the session before
+softening it), and in the adapt engine, which reads logged runs and eases leg
+accessories without touching the day's opening lift.
+
+**Free findings.** `addRoutine` rebuilt every set as `{ weight, reps }`, so
+saving a run or a plank as a routine dropped `durationMin` / `distance` /
+`durationSec` and `setHasWork` then filtered the whole routine away as empty.
+And the README claimed 11 evaluator checks against a table of 12; it is 14 now
+and the table lists all of them.
+
+Benchmark 21 -> 23 cases, 30 -> 34 expectations, still zero false positives with
+every pre-existing case unmoved. Evaluator v1.3.0 -> v1.4.0. Cache v65 -> v66.
+Tests 736 -> 813.
+
+---
+
 ## CLOSED 2026-08-23. The AI routes are rate limited
 
 `test/generate-guard.test.js` recorded this threat on 2026-08-02 and closed only
