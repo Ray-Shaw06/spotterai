@@ -286,3 +286,76 @@ test("the prompt scales the ask to the answer", () => {
   assert.match(buildPrompt({ ...base, cardio: "A little" }), /1 to 2 conditioning sessions/);
   assert.match(buildPrompt({ ...base, cardio: "Lots" }), /3 to 4 conditioning sessions/);
 });
+
+// ---------------------------------------------------------------------------
+// Regressions found by the pre-landing review: consumers that predate the
+// cardio fields and quietly dropped them.
+// ---------------------------------------------------------------------------
+
+const { replaceDay } = await import("../plan-edit.js");
+const { buildWorkoutCalendar } = await import("../calendar-export.js");
+
+test("an LLM-supplied duration is clamped, like every other number read off a plan", () => {
+  // Everything else this file reads off a model response is bounded. An
+  // unbounded durationMin renders straight to the user and sums into the week.
+  assert.equal(cardioMinutes({ durationMin: 100000 }), 600);
+  assert.equal(cardioMinutes({ reps: "99999 min" }), 600);
+  assert.equal(cardioMinutes({ durationMin: 0.2 }), 1, "and it never rounds a real prescription to zero");
+  assert.equal(cardioMinutes({ durationMin: 45 }), 45, "a sane number passes through untouched");
+});
+
+test("re-focusing a day keeps its cardio a run, not three sets of eight", () => {
+  const before = plan([day("Conditioning", [run("Sprint", 25, "hard")]), legDay(), day("Rest", [])]);
+  const { plan: after, changed } = replaceDay(before, {
+    day: "Conditioning",
+    focus: "Intervals",
+    exercises: [run("Sprint", 25, "hard")],
+  });
+
+  assert.equal(changed, 1);
+  const ex = after.days[0].exercises[0];
+  // It used to rebuild from a hard-coded lifting field set, so the duration and
+  // intensity vanished and the reps default wrote "8-12" onto a sprint.
+  assert.equal(ex.type, "cardio");
+  assert.equal(ex.durationMin, 25);
+  assert.equal(ex.intensity, "hard");
+  assert.notEqual(ex.reps, "8-12");
+  assert.equal(ex.sets, 1);
+  assert.equal(ex.rpe, null);
+
+  // And the conflict check still has the intensity it reads.
+  const audit = evaluatePlan(after, { goal: "Strength", experience: "Intermediate", cardio: "A little" });
+  assert.equal(check(audit, "cardio_conflict").status, "warn");
+});
+
+test("re-focusing a lifting day is unchanged by the cardio branch", () => {
+  const before = plan([upperDay(), day("Rest", [])]);
+  const { plan: after } = replaceDay(before, { day: "Upper Body", focus: "Push", exercises: [lift("Barbell Bench Press", 4, "6-8")] });
+  const ex = after.days[0].exercises[0];
+  assert.equal(ex.sets, 4);
+  assert.equal(ex.reps, "6-8");
+  assert.equal(ex.rpe, 8);
+  assert.equal(Object.hasOwn(ex, "type"), false);
+});
+
+test("the calendar export writes a run as minutes, not as one set of nothing", () => {
+  const ics = buildWorkoutCalendar({
+    plan: plan([day("Conditioning", [run("Treadmill Run", 35, "easy")]), day("Rest", [])]),
+    startDate: "2026-09-01",
+    time: "07:00",
+  });
+  // Unfolding first: RFC 5545 wraps at 75 octets, so a long DESCRIPTION is
+  // split across continuation lines and a naive match would miss it.
+  const unfolded = ics.replace(/\r\n /g, "");
+  assert.match(unfolded, /Treadmill Run - 35 min easy/);
+  assert.doesNotMatch(unfolded, /Treadmill Run - 1×/);
+});
+
+test("the calendar export still writes lifts as sets by reps", () => {
+  const ics = buildWorkoutCalendar({
+    plan: plan([upperDay(), day("Rest", [])]),
+    startDate: "2026-09-01",
+    time: "07:00",
+  });
+  assert.match(ics.replace(/\r\n /g, ""), /Barbell Bench Press - 4×5/);
+});

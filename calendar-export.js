@@ -16,6 +16,7 @@
  * prompt/response text.
  */
 import { trainingDays } from "./today.js";
+import { isCardioEntry, cardioMinutes } from "./lib/plan.js";
 
 export class CalendarInputError extends Error {
   constructor(field, message) {
@@ -97,6 +98,15 @@ function exerciseLines(day) {
     .map((ex) => {
       const name = String(ex?.name || "").trim();
       if (!name) return null;
+      // Cardio is one continuous effort, so the sets×reps readout is wrong for
+      // it: a 35 minute run exported as "1×" or "1×35 min" is the same mistake
+      // the Today manifest used to make.
+      if (isCardioEntry(ex)) {
+        const minutes = cardioMinutes(ex);
+        const effort = minutes ? `${minutes} min` : String(ex?.reps || "").trim();
+        const intensity = ex?.intensity ? ` ${ex.intensity}` : "";
+        return effort ? `${name} - ${effort}${intensity}` : name;
+      }
       const sets = ex?.sets;
       const reps = ex?.reps;
       if (sets != null && reps != null) return `${name} - ${sets}×${reps}`;
