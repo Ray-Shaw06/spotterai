@@ -8,9 +8,10 @@
  */
 
 import { store } from "./store.js";
-import { deriveStats, getWater, getState } from "./tracker-store.js";
+import { deriveStats, getWater, getState, dayCounts, daysSinceBodyweight, dateDaysAgo } from "./tracker-store.js";
 import { evaluateNutrition } from "./nutrition-safety.js";
 import { todaysWorkout, coachNote, trainingDays, weekStrip } from "./today.js";
+import { openItems, catchUpSummary } from "./catch-up.js";
 
 const content = document.getElementById("today-content");
 const dateEl = document.getElementById("today-date");
@@ -150,6 +151,38 @@ function render() {
     "today-card--recovery"
   );
 
+  // --- Catch-up: what is still unlogged ------------------------------------
+  // The app cannot reach you when it is closed, so the moment you open it, it
+  // owes you a straight answer about what is still open. Renders nothing at all
+  // on a fully logged day.
+  const todayCounts = dayCounts(ymd());
+  const yCounts = dayCounts(dateDaysAgo(1));
+  const items = openItems({
+    hour: new Date().getHours(),
+    hasPlan: true,
+    trainingDayDue: !!workout,
+    workoutsToday: todayCounts.workouts,
+    nutritionToday: todayCounts.nutrition,
+    workoutsYesterday: yCounts.workouts,
+    nutritionYesterday: yCounts.nutrition,
+    daysSinceBodyweight: daysSinceBodyweight(),
+  });
+  const catchUpCard = items.length
+    ? card(
+        `<p class="today-card__eyebrow">Catch-up</p>
+         <p class="today-card__title today-card__title--sm">${esc(catchUpSummary(items))}</p>
+         <ul class="catchup-list">${items
+           .map(
+             (it) => `<li class="catchup-item">
+               <span class="catchup-item__text"><strong>${esc(it.label)}</strong><span class="catchup-item__hint">${esc(it.hint)}</span></span>
+               <button type="button" class="btn btn--ghost btn--sm today-qa" data-act="catchup" data-catchup="${esc(it.act)}" data-scope="${esc(it.scope)}">${it.act === "backfill" ? "Fill it in" : "Log it"}</button>
+             </li>`
+           )
+           .join("")}</ul>`,
+        "today-card--catchup"
+      )
+    : "";
+
   // --- Week at a glance ----------------------------------------------------
   const strip = weekStrip(plan, stats.thisWeek.sessions || 0);
   const stripHtml = strip.length
@@ -168,6 +201,7 @@ function render() {
   content.innerHTML = `
     ${quickActions(true)}
     ${stripHtml}
+    ${catchUpCard}
     ${workoutCard}
     <div class="today-telemetry">${coachCard}${nutritionCard}${recoveryCard}</div>`;
 }
@@ -177,6 +211,22 @@ content?.addEventListener("click", (e) => {
   const btn = e.target.closest(".today-qa");
   if (!btn) return;
   const act = btn.dataset.act;
+  if (act === "catchup") {
+    const kind = btn.dataset.catchup;
+    if (kind === "backfill") {
+      // Never write yesterday for the user. "Repeat the last session onto
+      // yesterday" would be the app asserting a workout happened, and the
+      // whole product rule is that it proposes and you approve. This opens the
+      // logger dated yesterday instead; the repeat button is offered there.
+      location.hash = "#/dashboard";
+      window.dispatchEvent(new CustomEvent("spotter:log-for-date", { detail: { date: dateDaysAgo(1) } }));
+      return;
+    }
+    if (kind === "meal") location.hash = "#/nutrition";
+    else if (kind === "weight") location.hash = "#/progress";
+    else location.hash = "#/dashboard";
+    return;
+  }
   if (act === "start") {
     // Open the workout tracker WITH today's session loaded — no hunting for it.
     const workout = store.plan ? todaysWorkout(store.plan, deriveStats().thisWeek.sessions || 0) : null;

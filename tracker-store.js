@@ -442,10 +442,19 @@ export function addRoutine({ name, exercises = [] } = {}) {
   const routine = {
     id: uid(),
     name: String(name || "Routine").slice(0, 40),
+    // Same field set cleanExercises keeps. Rebuilding sets as { weight, reps }
+    // only meant a saved run or plank came back with no work in it at all,
+    // because setHasWork reads durationMin / distance / durationSec too.
     exercises: exercises.map((e) => ({
       name: String(e.name || "Exercise"),
       muscle: e.muscle || "",
-      sets: setsOf(e).map((s) => ({ weight: Number(s.weight) || 0, reps: Number(s.reps) || 0 })),
+      sets: setsOf(e).map((s) => ({
+        weight: Number(s.weight) || 0,
+        reps: Number(s.reps) || 0,
+        ...(s.durationMin ? { durationMin: Number(s.durationMin) || 0 } : {}),
+        ...(s.distance ? { distance: Number(s.distance) || 0 } : {}),
+        ...(s.durationSec ? { durationSec: Number(s.durationSec) || 0 } : {}),
+      })),
     })),
   };
   state.routines.push(routine);
@@ -531,6 +540,73 @@ function ymdOffset(ymdStr, days) {
   const d = new Date(ymdStr + "T12:00:00"); // noon avoids DST edge-cases
   d.setDate(d.getDate() + days);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// --- Catch-up + backfill ----------------------------------------------------
+// Everything here exists because the app cannot remind you (Web Push was
+// retired 2026-07-22 for a $0 bill). If forgetting has to be survivable, a
+// past day must be as easy to fill as the current one.
+
+/** How far back a backdated entry is allowed to land. A typo should not be able
+ *  to file today's session under a date from years ago. */
+export const BACKFILL_MAX_DAYS = 14;
+
+/** The date `days` ago, as 'YYYY-MM-DD'. Negative days are not accepted. */
+export function dateDaysAgo(days = 0) {
+  return ymdOffset(today(), -Math.max(0, Math.round(Number(days) || 0)));
+}
+
+/** The dates a backdated log may use, newest first. Drives the date picker. */
+export function backfillDates(max = BACKFILL_MAX_DAYS) {
+  const out = [];
+  for (let i = 0; i <= Math.max(0, max); i++) out.push(dateDaysAgo(i));
+  return out;
+}
+
+/** Is `date` a real 'YYYY-MM-DD' inside the backfill window (never the future)? */
+export function isBackfillDate(date, max = BACKFILL_MAX_DAYS) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) return false;
+  return backfillDates(max).includes(date);
+}
+
+/** What is on the books for one day. The catch-up card reads counts, not sums:
+ *  a 0 kcal entry is still a logged entry, and still means you did not forget. */
+export function dayCounts(date = today()) {
+  return {
+    date,
+    workouts: state.workouts.filter((w) => w.date === date).length,
+    nutrition: state.nutrition.filter((e) => e.date === date).length,
+    bodyweight: state.bodyweight.filter((b) => b.date === date).length,
+  };
+}
+
+/** Whole days since the most recent weigh-in, or null when there has never been one. */
+export function daysSinceBodyweight(from = today()) {
+  const dates = (state.bodyweight || []).map((b) => b.date).filter(Boolean).sort();
+  if (!dates.length) return null;
+  const last = parseDay(dates[dates.length - 1]).getTime();
+  const ref = parseDay(from).getTime();
+  return Math.max(0, Math.round((ref - last) / 86400000));
+}
+
+/**
+ * Log the most recent session again, sets, reps and weights intact, onto
+ * `date`. The one-tap answer to "I did the same thing as last time and forgot
+ * to open the app". Returns the same shape as addWorkout, or null when there is
+ * nothing to repeat or the date is out of the window.
+ */
+export function repeatLastWorkout({ date } = {}) {
+  const target = date || today();
+  if (!isBackfillDate(target)) return null;
+  const last = state.workouts[state.workouts.length - 1];
+  if (!last) return null;
+  return addWorkout({
+    name: last.name,
+    focus: last.focus,
+    date: target,
+    durationSec: last.durationSec,
+    exercises: (last.exercises || []).map((e) => ({ name: e.name, muscle: e.muscle, notes: e.notes, sets: setsOf(e) })),
+  });
 }
 
 // --- Saved meals (templates): log a whole meal in one tap -------------------

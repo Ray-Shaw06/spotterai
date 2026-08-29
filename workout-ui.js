@@ -11,7 +11,12 @@
  * re-rendering, so inputs never lose focus; structural changes re-render.
  */
 
-import { addCustomExercise, addRoutine, addWorkout, deriveStats, getCustomExercises, getLoggedExerciseNames, getPainReports, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setHasWork, setsOf, setUnit, subscribe, suggestProgression, updateCustomExercise, updateWorkout } from "./tracker-store.js";
+import { addCustomExercise, addRoutine, addWorkout, deriveStats, getCustomExercises, getLoggedExerciseNames, getPainReports, getRoutines, getState, lastSetFor, removeEntry, removeRoutine, setHasWork, setsOf, setUnit, subscribe, suggestProgression, updateCustomExercise, updateWorkout,
+  BACKFILL_MAX_DAYS,
+  dateDaysAgo,
+  isBackfillDate,
+  repeatLastWorkout,
+} from "./tracker-store.js";
 import { findExercise, isCardio, isTimeBased, searchExercises } from "./exercises.js";
 import { classifyExercise } from "./ai.js";
 import { epley1RM } from "./progression.js";
@@ -19,12 +24,17 @@ import { store } from "./store.js";
 import { buildWorkoutSummary } from "./workout-summary.js";
 import { trackFunnel, trackFunnelOnce } from "./analytics.js";
 import { notifyRestComplete } from "./workout-alerts.js";
+import { createRestAlarm } from "./rest-alarm.js";
 
 const $ = (id) => document.getElementById(id);
 const el = {
   idle: $("workout-idle"),
   routineList: $("routine-list"),
   startEmpty: $("start-empty"),
+  backfillDate: $("backfill-date"),
+  backfillStart: $("backfill-start"),
+  repeatLast: $("repeat-last"),
+  backdateNote: $("session-backdate"),
   session: $("workout-session"),
   name: $("session-name"),
   unitToggle: $("session-unit"),
@@ -168,9 +178,12 @@ function stopTimer() {
 // ----------------------------------------------------------------------------
 // Rest timer (auto-starts when a set is checked done)
 // ----------------------------------------------------------------------------
+// `restId` only drives the on-screen countdown. The alarm itself lives in
+// rest-alarm.js, on a wall-clock deadline with its tone pre-booked on the audio
+// timeline, because this interval is exactly what a locked screen freezes.
 let restId = null;
-let restRemaining = 0;
 let restTotal = 120;
+const restAlarm = createRestAlarm({ onFire: () => restDone() });
 const REST_KEY = "spotterai.rest.default";
 let restDefault = clampRest(Number(localStorage.getItem(REST_KEY)) || 120);
 
@@ -220,23 +233,31 @@ function startRest(sec = restDefault) {
   if (!el.restTimer) return;
   stopRest();
   restTotal = clampRest(sec);
-  restRemaining = restTotal;
+  // Arming happens inside the tap that got us here. That gesture is the only
+  // moment the AudioContext can be unlocked, and an alarm that cannot make a
+  // sound is the whole bug.
+  restAlarm.arm(restTotal);
   el.restTimer.classList.add("is-running");
   tickRest();
-  syncBarGeometry(); // running swaps Start for +15s/Skip, which is the wider set
-  restId = setInterval(() => {
-    restRemaining -= 1;
-    if (restRemaining <= 0) return restDone();
-    tickRest();
-  }, 1000);
+  restId = setInterval(tickRest, 500);
 }
 function tickRest() {
-  if (el.restTime) el.restTime.textContent = fmtTime(Math.max(0, restRemaining));
-  if (el.restFill) el.restFill.style.transform = `scaleX(${Math.max(0, restRemaining / restTotal)})`;
+  const left = restAlarm.remaining();
+  if (el.restTime) el.restTime.textContent = fmtTime(left);
+  if (el.restFill) el.restFill.style.transform = `scaleX(${restTotal ? Math.max(0, left / restTotal) : 0})`;
+  // While the tab is visible this is what ends the rest, not the setTimeout
+  // backstop: the deadline is read from the clock, so it cannot be late.
+  if (left <= 0) restAlarm.reconcile();
 }
-function stopRest() {
+/** Stop the on-screen countdown WITHOUT touching the alarm. Used by restDone,
+ *  which must not cancel the tone it is currently playing. */
+function stopRestDisplay() {
   if (restId) clearInterval(restId);
   restId = null;
+}
+function stopRest() {
+  stopRestDisplay();
+  restAlarm.disarm();
 }
 function skipRest() {
   stopRest();
@@ -244,46 +265,37 @@ function skipRest() {
 }
 function addRest(sec) {
   if (!el.restTimer || !el.restTimer.classList.contains("is-running")) return;
-  restRemaining = Math.max(1, restRemaining + sec);
-  restTotal = Math.max(restTotal, restRemaining); // keep the bar sane when extending
+  const next = Math.max(1, restAlarm.remaining() + sec);
+  restTotal = Math.max(restTotal, next); // keep the bar sane when extending
+  restAlarm.arm(next); // re-arm so the tone moves with the deadline
   tickRest();
 }
 function restDone() {
-  stopRest();
-  restRemaining = 0;
+  stopRestDisplay();
   tickRest();
   try {
     navigator.vibrate?.([200, 80, 200]);
   } catch {
     /* ignore */
   }
-  beep();
-  // Optional on-device notification (only if the user enabled rest alerts and
-  // granted permission). Never blocks the visual/audio/vibration feedback above.
+  // No beep() here any more. The tone was booked on the audio timeline when the
+  // rest started, so it plays on time even with the screen off, where a call
+  // made at this moment would have been suspended into silence.
   notifyRestComplete().catch(() => {});
-  setTimeout(renderRestIdle, 1200);
+  // Let the tone finish before releasing the keepalive.
+  setTimeout(() => {
+    restAlarm.disarm();
+    renderRestIdle();
+  }, 1500);
 }
-function beep() {
-  try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.connect(g);
-    g.connect(ctx.destination);
-    o.type = "sine";
-    o.frequency.value = 880;
-    g.gain.setValueAtTime(0.0001, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.45);
-    o.start();
-    o.stop(ctx.currentTime + 0.47);
-    o.onended = () => ctx.close();
-  } catch {
-    /* audio blocked — vibrate/visual still fire */
-  }
-}
+
+// Coming back to a visible tab: fire anything the throttled backstop owed us,
+// then resync the display, which has been frozen the whole time.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || !restAlarm.armed()) return;
+  restAlarm.reconcile();
+  tickRest();
+});
 
 // ----------------------------------------------------------------------------
 // Tools — plate calculator + 1RM estimate
@@ -380,6 +392,7 @@ function startSession(preset) {
   el.idle.hidden = true;
   el.session.hidden = false;
   el.name.value = session.name;
+  renderBackdateNote();
   // Set the Finish label BEFORE revealing the bar: "Save changes" is wider than
   // "Finish" and is what makes the bar wrap on a narrow screen, so measuring
   // first would measure the wrong bar.
@@ -437,7 +450,15 @@ function finishSession() {
   const durationSec = Math.floor((Date.now() - session.startedAt) / 1000);
   const source = session.source || "unknown";
   const priorPRs = deriveStats().prs || {}; // capture BEFORE the workout is added
-  const { workout, newAchievements } = addWorkout({ name: el.name.value.trim() || session.name, exercises, durationSec, difficulty: session.difficulty });
+  // `logDate` is only set when the user deliberately backdated this session.
+  // Undefined falls through to addWorkout's own today() default.
+  const { workout, newAchievements } = addWorkout({
+    name: el.name.value.trim() || session.name,
+    exercises,
+    durationSec,
+    difficulty: session.difficulty,
+    ...(session.logDate ? { date: session.logDate } : {}),
+  });
   if (workout) {
     // Two different questions, two different events. `workout_completed` is
     // ongoing volume and fires every time. `first_workout_completed` is the
@@ -630,6 +651,43 @@ function renderSession() {
 // ----------------------------------------------------------------------------
 // Idle view (start options + routines + plan)
 // ----------------------------------------------------------------------------
+/** Banner shown only while a session is deliberately backdated, so a past-dated
+ *  save can never be a silent surprise at Finish. */
+function renderBackdateNote() {
+  if (!el.backdateNote) return;
+  const date = session?.logDate;
+  el.backdateNote.hidden = !date;
+  if (!date) return;
+  const label = new Date(date + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+  el.backdateNote.innerHTML = `Logging this session for <strong>${esc(label)}</strong>. <button type="button" class="btn-link" data-act="clear-backdate">Log for today instead</button>`;
+}
+
+/** Open an empty session dated `date`. Refuses anything outside the window. */
+function startBackfillSession(date) {
+  if (!isBackfillDate(date)) {
+    toast("<strong>Pick a date</strong> within the last " + BACKFILL_MAX_DAYS + " days.");
+    return;
+  }
+  if (session) {
+    // Never clobber typed sets; retarget the session in progress instead.
+    session.logDate = date;
+    saveDraft();
+    renderBackdateNote();
+    return;
+  }
+  startSession({ name: defaultName(), startedAt: Date.now(), exercises: [], source: "backfill", logDate: date });
+}
+
+function renderBackfillControls() {
+  if (el.backfillDate) {
+    el.backfillDate.max = dateDaysAgo(0);
+    el.backfillDate.min = dateDaysAgo(BACKFILL_MAX_DAYS);
+    if (!el.backfillDate.value) el.backfillDate.value = dateDaysAgo(1);
+  }
+  // "Repeat last session" is only truthful when there IS a last session.
+  if (el.repeatLast) el.repeatLast.hidden = !getState().workouts?.length;
+}
+
 function renderIdle() {
   if (!el.routineList) return;
   const routines = getRoutines();
@@ -659,6 +717,7 @@ function renderIdle() {
       .join("")}</div>`;
   }
   el.routineList.innerHTML = html;
+  renderBackfillControls();
 }
 
 function sessionFromRoutine(r) {
@@ -800,6 +859,30 @@ function renderResults(q) {
 function init() {
   // Idle: start buttons
   el.startEmpty?.addEventListener("click", () => startSession());
+
+  // --- Backfill -------------------------------------------------------------
+  el.backfillStart?.addEventListener("click", () => startBackfillSession(el.backfillDate?.value));
+  el.repeatLast?.addEventListener("click", () => {
+    const date = el.backfillDate?.value || dateDaysAgo(1);
+    const done = repeatLastWorkout({ date });
+    if (!done) return toast("<strong>Nothing to repeat yet</strong>: log a session first.");
+    toast(`<strong>Logged</strong> ${esc(done.workout.name)} for ${esc(date)} · +${done.workout.xp} XP`);
+    renderIdle();
+    renderHistory();
+  });
+  el.backdateNote?.addEventListener("click", (e) => {
+    if (!e.target.closest('[data-act="clear-backdate"]') || !session) return;
+    delete session.logDate;
+    saveDraft();
+    renderBackdateNote();
+  });
+  // Sent by the Today catch-up card. It proposes the date; it never writes.
+  window.addEventListener("spotter:log-for-date", (e) => {
+    const date = e.detail?.date;
+    if (!isBackfillDate(date)) return;
+    if (el.backfillDate) el.backfillDate.value = date;
+    startBackfillSession(date);
+  });
   el.routineList?.addEventListener("click", (e) => {
     const start = e.target.closest('[data-act="start-routine"]');
     const del = e.target.closest('[data-act="del-routine"]');
