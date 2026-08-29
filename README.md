@@ -7,7 +7,7 @@
 **A deterministic verifier for LLM output, in a domain where users can't check the answer themselves.** &nbsp;·&nbsp; **[▶ Live demo](https://spotterai.xyz)** &nbsp;·&nbsp; **[▶ Audit a plan you already have](https://spotterai.xyz/#/import)**
 
 > **At a glance:** an LLM writes a training plan, then a separate **pure-code
-> evaluator** (no AI, fixed rubric, 11 checks) grades that plan and shows the
+> evaluator** (no AI, fixed rubric, 14 checks) grades that plan and shows the
 > flags before you train. The red-team suite that tests the evaluator is
 > [published and runs live in your browser](https://spotterai.xyz/#/evals).
 > **717 tests, 21 adversarial eval cases, one runtime dependency, no build step.**
@@ -78,9 +78,21 @@ that answers questions about your program and training in general. The app is
 organized into clean, separate **pages** (Plan · Dashboard · Nutrition ·
 Progress · Form check · Safety Lab) via a tiny client-side router, with optional local
 **profiles** so different people can keep separate data on the same browser,
-while optional Firebase sync remains a separate, explicit opt-in. Reminders are
-zero-cost: an in-browser calendar export plus local on-device rest-timer alerts,
-with no remote push.
+while optional Firebase sync remains a separate, explicit opt-in.
+
+Because SpotterAI has **no remote push** (retired for a genuinely $0 operator
+bill), it cannot reach you when it is closed, and it does not pretend to.
+Instead it makes forgetting cost nothing: a **catch-up card** on Today reports
+what is still unlogged today and yesterday, and **backfill** logs a session
+against any of the last 14 days, including a one-tap repeat of the last one.
+Reminders themselves stay zero-cost: an in-browser calendar export, plus a
+**rest alarm** that survives a locked screen by holding a wall-clock deadline
+and booking its tone on the audio timeline during the tap that starts it.
+
+The plan also programs **cardio**. Conditioning is a first-class part of the
+schema, the audit and the adaptation, so a hard run logged yesterday eases
+today's leg accessories and flags the load on the main lift, and the auditor
+refuses to put sprints the day before a heavy squat session.
 
 ---
 
@@ -278,6 +290,9 @@ safe.**
 | 9 | **Exercise recognition** | Transparency: how much of the plan matched the structured DB vs fell back to keywords | `warn` (suggestion) when recognition is low, so the audit is honest about its own estimate quality |
 | 10 | **Training frequency** | For a hypertrophy goal, checks whether a muscle getting real weekly volume is trained on more than one day (`computeWeeklyFrequency`) | `warn` (suggestion, **zero score weight**) when a high-volume muscle is trained only 1×/week; spreading it across ~2 days grows it better. Volume is already scored, so this never moves the number |
 | 11 | **Equipment fit** | Maps the user's equipment (bodyweight / dumbbells / barbell / bands / full gym) to each exercise's requirements (`equipmentCapabilities` + `canPerform`) | `warn` (suggestion, **zero score weight**) naming any prescribed lift that needs gear the user didn't list, so the plan stays runnable |
+| 12 | **Cardio load** | Weekly conditioning minutes against what the user actually asked for (`computeWeeklyCardio`) | `warn` (suggestion, **zero score weight**) when cardio was requested and the plan has none, when it was declined and the plan has some, or above ~300 min/week; `fail` above ~500, where conditioning starts eating the lifting |
+| 13 | **Progressive overload** | Reads the plan's `progression` field for a concrete rule rather than encouragement, matched at word boundaries | `warn` (suggestion, **zero score weight**) when the plan states no real progression scheme. "Progress over time" is not a rule |
+| 14 | **Cardio / leg-day conflict** | Hard conditioning (stated `intensity: "hard"`, or sprint / interval / hill work) on, or the day immediately before, a heavy lower-body day | `warn` (**zero score weight**) on one collision, `fail` on two. Easy aerobic work next to a leg day is explicitly **not** flagged, or the check would fire on a normal training week |
 
 > Injuries generate **one check row per injury** so each gets its own explanation
 > and regression suggestion.

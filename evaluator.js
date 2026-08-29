@@ -21,6 +21,7 @@
  */
 
 import { lookupExercise, isContraindicated, volumeContribution, equipmentCapabilities, canPerform, hasKnownEquipment } from "./exercise-data.js";
+import { isCardioEntry, cardioMinutes } from "./lib/plan.js";
 
 // ============================================================================
 // 1. TUNABLE CONSTANTS  (the rubric)
@@ -76,6 +77,17 @@ export const THRESHOLDS = {
 
   // --- Structured-data coverage (transparency about estimate quality) ------
   COVERAGE_MIN: 0.7, // below this, many lifts fell back to rougher keyword logic
+
+  // --- Cardio ---------------------------------------------------------------
+  // Weekly conditioning minutes. The warn line sits well above the 150 min/week
+  // health guideline on purpose: this check is about cardio competing with
+  // lifting recovery, not about whether someone does enough of it.
+  CARDIO_WEEKLY_MIN_WARN: 300,
+  CARDIO_WEEKLY_MIN_FAIL: 500,
+  // Leg volume on a day, above which hard cardio next to it is a real conflict.
+  // Below this a day is not a leg day in any meaningful sense.
+  CARDIO_CONFLICT_LEG_SETS: 6,
+  CARDIO_CONFLICTS_FOR_FAIL: 2, // one collision is a warn, a pattern is a fail
 };
 
 /**
@@ -100,6 +112,13 @@ export const PENALTY = {
   // introduction (v1.3.0) so adding the check cannot regress any existing
   // case's score — same discipline used for muscle_frequency and equipment_fit.
   progressive_overload: { warn: 0, fail: 0 },
+  // Cardio checks land zero-weight on introduction, the same discipline
+  // muscle_frequency, equipment_fit and progressive_overload got: adding a
+  // check must not be able to move any existing case's score. They are also
+  // emitted CONDITIONALLY (see evaluatePlan), so a lifting-only plan gets no
+  // cardio rows at all and every pre-existing benchmark case is untouched.
+  cardio_load: { warn: 0, fail: 0 },
+  cardio_conflict: { warn: 0, fail: 0 },
 };
 
 // ============================================================================
@@ -161,6 +180,21 @@ export const MUSCLE_KEYWORDS = {
 // Which groups count as "push" vs "pull" for the upper-body balance check.
 export const PUSH_GROUPS = ["chest", "shoulders", "triceps"];
 export const PULL_GROUPS = ["back", "biceps"];
+
+// The lower body, for the cardio conflict check. Calves are left out: they are
+// not what running interferes with, and including them would let a day of calf
+// raises read as a leg day.
+export const LEG_GROUPS = ["quads", "hamstrings", "glutes"];
+
+/**
+ * Cardio that competes with heavy lifting for the same recovery. Matched on the
+ * exercise name when the plan does not state an intensity.
+ *
+ * Deliberately NOT here: "jog", "walk", "incline walk", "cycling", "elliptical",
+ * "swim". Easy aerobic work next to a leg day is a normal training week, and
+ * flagging it would make the check noise.
+ */
+export const HARD_CARDIO_KEYWORDS = ["sprint", "hiit", "interval", "hill", "tempo run", "threshold", "assault bike", "battle rope", "sled", "stair climber"];
 
 /**
  * Words that indicate a real progression instruction rather than encouragement.
@@ -363,6 +397,67 @@ export function computeWeeklyFrequency(plan) {
   return freq;
 }
 
+/**
+ * Read the plan's conditioning work: total weekly minutes, and a per-day view
+ * the conflict check walks.
+ *
+ * `hard` is decided by the plan's stated intensity first and the exercise name
+ * second, so an easy 40-minute jog and 40 minutes of hill sprints are not
+ * treated as the same demand on the same legs.
+ */
+export function computeWeeklyCardio(plan) {
+  const days = [];
+  let minutes = 0;
+  let sessions = 0;
+  let hardSessions = 0;
+
+  (plan?.days || []).forEach((day, index) => {
+    let dayMinutes = 0;
+    let dayHard = false;
+    const names = [];
+
+    for (const ex of day.exercises || []) {
+      if (!isCardioEntry(ex)) continue;
+      const mins = cardioMinutes(ex);
+      dayMinutes += mins;
+      names.push(ex.name);
+      const stated = String(ex.intensity || "").toLowerCase();
+      const hard = stated === "hard" || (!stated && matchesAny(ex.name, HARD_CARDIO_KEYWORDS));
+      if (hard) dayHard = true;
+    }
+
+    if (!names.length) return;
+    minutes += dayMinutes;
+    sessions += 1;
+    if (dayHard) hardSessions += 1;
+    days.push({ index, focus: day.focus || day.day || `Day ${index + 1}`, minutes: dayMinutes, hard: dayHard, names });
+  });
+
+  return { minutes, sessions, hardSessions, days };
+}
+
+/** Working sets a single day puts into the lower body. Exported so the repair
+ *  engine reads leg volume the same way the check that flagged it did. */
+export function legSetsForDay(day) {
+  let sets = 0;
+  for (const ex of day.exercises || []) {
+    if (isCardioEntry(ex)) continue; // a run is not leg volume; that is the point
+    const count = Number(ex.sets) || 0;
+    if (count <= 0) continue;
+    const contrib = volumeContribution(ex.name);
+    if (contrib) {
+      for (const group of LEG_GROUPS) if (contrib[group]) sets += count * contrib[group];
+    } else {
+      const name = norm(ex.name);
+      for (const group of LEG_GROUPS) {
+        const map = MUSCLE_KEYWORDS[group];
+        if (map.include.some((k) => name.includes(k)) && !map.exclude.some((k) => name.includes(k))) sets += count;
+      }
+    }
+  }
+  return Math.round(sets * 2) / 2;
+}
+
 /** Sum the sets across a list of groups. */
 function sumGroups(volume, groups) {
   return groups.reduce((total, g) => total + (volume[g] || 0), 0);
@@ -408,6 +503,85 @@ export function activeInjuries(userInputs) {
 // 6. INDIVIDUAL CHECKS
 //    Each returns { id, label, status, detail } and (internally) a penalty.
 // ============================================================================
+
+/** How much cardio the user asked for, normalized. Null when never asked. */
+function cardioRequest(userInputs) {
+  const raw = norm(userInputs?.cardio);
+  if (!raw) return null;
+  if (raw.includes("none") || raw === "no") return "none";
+  if (raw.includes("lot") || raw.includes("high")) return "lots";
+  if (raw.includes("little") || raw.includes("some") || raw.includes("moderate")) return "some";
+  return null;
+}
+
+/**
+ * Cardio volume, and whether the plan honoured what was asked for.
+ *
+ * The high thresholds are about conditioning competing with lifting recovery,
+ * not about hitting a health guideline. SpotterAI programs lifting; it says so
+ * rather than quietly grading someone's running.
+ */
+function checkCardioLoad(plan, cardio, userInputs) {
+  const id = "cardio_load";
+  const label = "Cardio load";
+  const request = cardioRequest(userInputs);
+  const mins = cardio.minutes;
+
+  if (request && request !== "none" && cardio.sessions === 0) {
+    return finalize(id, label, "warn", `You asked for ${request === "lots" ? "a lot of" : "some"} cardio and this plan prescribes none. Conditioning is missing rather than deliberately left out.`);
+  }
+  if (request === "none" && cardio.sessions > 0) {
+    return finalize(id, label, "warn", `You asked for no cardio, but the plan includes ${cardio.sessions} conditioning session${cardio.sessions > 1 ? "s" : ""} (${mins} min). Drop them, or update your preference so the plan and the profile agree.`);
+  }
+  if (mins >= THRESHOLDS.CARDIO_WEEKLY_MIN_FAIL) {
+    return finalize(id, label, "fail", `${mins} minutes of cardio a week alongside the lifting in this plan is a lot to recover from. At this volume conditioning starts eating into strength and muscle gains, and the injury risk climbs. Cut it back or drop a lifting day.`);
+  }
+  if (mins >= THRESHOLDS.CARDIO_WEEKLY_MIN_WARN) {
+    return finalize(id, label, "warn", `${mins} minutes of cardio a week is high next to this much lifting. It is workable if you are running for its own sake; expect slower strength progress and watch your recovery.`);
+  }
+  return finalize(id, label, "pass", cardio.sessions ? `${cardio.sessions} cardio session${cardio.sessions > 1 ? "s" : ""} (${mins} min a week) sits comfortably alongside the lifting here.` : "No cardio prescribed, and none was requested.");
+}
+
+/**
+ * Hard conditioning stacked on, or immediately before, a heavy leg day.
+ *
+ * This is the failure that motivated cardio support at all: run hard on
+ * Tuesday and Wednesday's squats are not the same squats. Adjacency is read in
+ * PLAN ORDER, which is the order the app rotates days in, so "the day before"
+ * means what a user would mean by it.
+ */
+function checkCardioConflict(plan, cardio) {
+  const id = "cardio_conflict";
+  const label = "Cardio and leg-day conflict";
+  const days = plan.days || [];
+  const legSets = days.map(legSetsForDay);
+  const hardDays = new Map(cardio.days.filter((d) => d.hard).map((d) => [d.index, d]));
+  const conflicts = [];
+
+  for (const [index, day] of hardDays) {
+    const own = legSets[index] || 0;
+    if (own >= THRESHOLDS.CARDIO_CONFLICT_LEG_SETS) {
+      conflicts.push(`${day.focus} pairs ${day.names.join(", ")} with ${own} sets of leg work on the same day`);
+      continue; // one day, one conflict; the same-day collision is the worse one
+    }
+    // The week WRAPS. todaysWorkout rotates with `sessions % days.length`, so
+    // the last day is followed by the first one, and a sprint session at the end
+    // of the plan lands the day before a leg day at the top of it. Reading only
+    // index + 1 made that collision invisible in exactly the plans where the
+    // conditioning was scheduled last.
+    const nextIndex = days.length > 1 ? (index + 1) % days.length : -1;
+    const next = nextIndex >= 0 ? days[nextIndex] : null;
+    if (next && (legSets[nextIndex] || 0) >= THRESHOLDS.CARDIO_CONFLICT_LEG_SETS) {
+      conflicts.push(`${day.focus} (${day.names.join(", ")}) lands the day before ${next.focus || next.day || "a leg day"}, which has ${legSets[nextIndex]} sets of leg work`);
+    }
+  }
+
+  if (!conflicts.length) {
+    return finalize(id, label, "pass", cardio.hardSessions ? "Hard cardio is kept clear of the heavy leg work." : "No hard conditioning scheduled next to leg training.");
+  }
+  const status = conflicts.length >= THRESHOLDS.CARDIO_CONFLICTS_FOR_FAIL ? "fail" : "warn";
+  return finalize(id, label, status, `${conflicts.join("; ")}. Hard conditioning and heavy lower-body lifting draw on the same recovery, so the second one of the pair is the one that suffers.`);
+}
 
 /** Recovery: is there at least one rest day in the week? */
 function checkRestDays(plan) {
@@ -823,7 +997,10 @@ function checkCoverage(plan) {
 // ============================================================================
 
 /** A stable version string surfaced in the Trust Report. Bump on rubric change. */
-export const EVALUATOR_VERSION = "v1.3.0";
+// v1.4.0 adds the two cardio checks. They are zero-weight and conditionally
+// emitted, so no pre-existing case moved, but the rubric now covers something it
+// did not before and the Trust Report should say which rubric it ran.
+export const EVALUATOR_VERSION = "v1.4.0";
 
 /** Suggested fixes for the non-injury checks, keyed by check id. */
 const REMEDIES = {
@@ -856,6 +1033,14 @@ const REMEDIES = {
   progressive_overload: {
     fix: "State one concrete rule, for example: add 2.5kg to the main lift when you hit the top of the rep range on every set, then drop back to the bottom.",
   },
+  cardio_load: {
+    fix: "Bring the weekly cardio minutes in line with what you asked for: trim the longest session, or add one if the plan left conditioning out entirely.",
+    alternatives: ["Incline Walk", "Stationary Bike", "Rowing Machine", "Jog", "Swimming"],
+  },
+  cardio_conflict: {
+    fix: "Move the hard conditioning to a day that is neither a leg day nor the day before one, or run it easy instead. Upper-body days and rest days both absorb it without a cost.",
+    alternatives: ["Incline Walk", "Stationary Bike", "Elliptical", "Swimming"],
+  },
 };
 
 /**
@@ -876,7 +1061,11 @@ function tierFor(check) {
   // `progressive_overload` belongs here with the other zero-weight quality
   // notes: at "warning" it reads as a safety concern, and trust.js drops the
   // Trust Report from High to Medium on a plan with nothing unsafe about it.
-  if (check.id === "goal_fit" || check.id === "leg_balance" || check.id === "coverage" || check.id === "muscle_frequency" || check.id === "equipment_fit" || check.id === "progressive_overload") return "suggestion";
+  if (check.id === "goal_fit" || check.id === "leg_balance" || check.id === "coverage" || check.id === "muscle_frequency" || check.id === "equipment_fit" || check.id === "progressive_overload" || check.id === "cardio_load") return "suggestion";
+  // cardio_conflict is a recovery concern, so it reads as a warning rather than
+  // a suggestion, but it never reaches "critical": it is a programming order
+  // problem, not an unsafe prescription, and it carries no score penalty.
+  if (check.id === "cardio_conflict") return "warning";
   if (check.id.startsWith("injury_")) return check.status === "fail" ? "critical" : "warning";
   const CRITICAL_ON_FAIL = new Set(["rest_days", "weekly_volume", "beginner_load", "session_load"]);
   if (check.status === "fail" && CRITICAL_ON_FAIL.has(check.id)) return "critical";
@@ -937,6 +1126,17 @@ export function evaluatePlan(plan, userInputs = {}) {
   const goal = goalBucket(userInputs.goal || plan.goal);
   const volume = computeWeeklyVolume(plan);
   const frequency = computeWeeklyFrequency(plan);
+  const cardio = computeWeeklyCardio(plan);
+
+  // Cardio rows are emitted ONLY when there is cardio to judge, or the user
+  // asked for some. A plan with no conditioning and no request gets no rows at
+  // all, which is what keeps every pre-existing audit byte-identical: an
+  // unconditional check would add a row to summary.total for every plan ever
+  // audited, and would break the two suites that assert a full-input audit has
+  // zero unassessed checks. Same shape as checkInjuries, which has always
+  // contributed a variable number of rows.
+  const cardioRelevant = cardio.sessions > 0 || cardioRequest(userInputs) !== null;
+  const cardioChecks = cardioRelevant ? [checkCardioLoad(plan, cardio, userInputs), checkCardioConflict(plan, cardio)] : [];
 
   // Run every check. Injuries can contribute multiple rows.
   const checks = [
@@ -948,6 +1148,7 @@ export function evaluatePlan(plan, userInputs = {}) {
     checkEquipmentFit(plan, userInputs),
     checkSessionLoad(plan),
     checkProgressiveOverload(plan),
+    ...cardioChecks,
     ...checkInjuries(plan, userInputs),
     checkBeginnerLoad(plan, volume, userInputs),
     checkGoalFit(plan, userInputs, goal),

@@ -18,6 +18,9 @@
  *   1. Injuries / pain      — merged into inputs; the safety close (step 6) swaps
  *                             contraindicated movements deterministically.
  *   2. Adherence pullback   — missed sessions → ease accessory volume.
+ *   3b. Cardio fatigue      — hard running logged in the last 48h → ease leg
+ *                             accessory volume and flag the load on the main lift.
+ *                             Skipped during a deload, which already cut everything.
  *   3. Deload               — rising-volume peak → back off ~40%.
  *   4. Progression          — lifts hit at/above target for 2+ sessions → add a
  *                             set and suggest the next load. Skipped when we just
@@ -33,7 +36,8 @@
 
 import { suggestNextWeight, deloadFromWeeklyVolume } from "./progression.js";
 import { repairPlan } from "./repair.js";
-import { evaluatePlan, computeWeeklyVolume, MUSCLE_KEYWORDS, THRESHOLDS } from "./evaluator.js";
+import { evaluatePlan, computeWeeklyVolume, MUSCLE_KEYWORDS, THRESHOLDS, LEG_GROUPS, HARD_CARDIO_KEYWORDS } from "./evaluator.js";
+import { isCardioEntry } from "./lib/plan.js";
 import { sendAuditTelemetry } from "./audit-telemetry-client.js";
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -120,6 +124,97 @@ function pullBack(work, changes, pulledBack) {
   return trims;
 }
 
+// ----------------------------------------------------------------------------
+// Cardio fatigue
+// ----------------------------------------------------------------------------
+
+/** Cardio at or above this many minutes taxes the legs whatever the pace. */
+const LONG_CARDIO_MIN = 45;
+
+/** Within this many days a hard session is still in your legs. */
+const CARDIO_FATIGUE_DAYS = 2;
+
+/** Trim at most this many leg sets, so one run cannot gut a week. */
+const MAX_CARDIO_TRIMS = 2;
+
+const daysBetween = (a, b) => Math.round((new Date(`${b}T12:00:00`) - new Date(`${a}T12:00:00`)) / 86400000);
+
+/**
+ * The most recent cardio session that is still costing you something, or null.
+ *
+ * Hard means the name says so (sprints, intervals, hills) or it simply ran
+ * long. Logged cardio carries no intensity field, so duration is the honest
+ * second signal rather than a guess at effort.
+ */
+export function recentHardCardio(context) {
+  const cardio = context?.cardio;
+  if (!cardio || !Array.isArray(cardio.recent) || !cardio.recent.length) return null;
+  const today = cardio.today;
+  if (!today) return null;
+
+  for (const session of cardio.recent) {
+    const age = daysBetween(session.date, today);
+    if (age < 0 || age > CARDIO_FATIGUE_DAYS) continue;
+    const byName = HARD_CARDIO_KEYWORDS.some((k) => norm(session.name).includes(k));
+    const byLength = Number(session.durationMin) >= LONG_CARDIO_MIN;
+    if (byName || byLength) return { ...session, age, reason: byName ? "hard" : "long" };
+  }
+  return null;
+}
+
+/** Does this exercise train the lower body? Cardio entries never count. */
+function isLegWork(ex) {
+  if (isCardioEntry(ex)) return false;
+  return LEG_GROUPS.includes(primaryGroup(ex.name)) || groupsFor(ex.name).some((g) => LEG_GROUPS.includes(g));
+}
+
+/**
+ * Ease the lower body after real running.
+ *
+ * Trims leg ACCESSORIES only (never the day's first lift) and writes a load
+ * note on the primary, which is the coaching answer: you keep the main lift and
+ * take the volume off around it. Records the groups it touched so progression
+ * cannot turn around and re-load them in the same pass.
+ */
+function easeAfterCardio(work, session, changes, pulledBack) {
+  let trimmed = 0;
+  let noted = 0;
+
+  for (const day of work.days || []) {
+    const exs = (day.exercises || []).filter((ex) => !isCardioEntry(ex));
+    const legs = exs.filter(isLegWork);
+    if (legs.length < 2) continue; // not a leg day, nothing to ease
+
+    // Accessories first, from the end, never the day's opening lift.
+    for (let i = exs.length - 1; i >= 1 && trimmed < MAX_CARDIO_TRIMS; i--) {
+      const ex = exs[i];
+      if (!isLegWork(ex) || Number(ex.sets) <= 2) continue;
+      ex.sets = Number(ex.sets) - 1;
+      trimmed += 1;
+      const g = primaryGroup(ex.name);
+      if (g) pulledBack.add(g);
+    }
+
+    const primary = legs[0];
+    if (primary && !String(primary.notes || "").includes("legs are still")) {
+      const tip = `Start lighter if your legs are still from ${session.name}`;
+      primary.notes = primary.notes ? `${primary.notes} · ${tip}` : tip;
+      noted += 1;
+    }
+  }
+
+  if (!trimmed && !noted) return false;
+
+  const when = session.age === 0 ? "today" : session.age === 1 ? "yesterday" : `${session.age} days ago`;
+  const what = session.durationMin > 0 ? `${session.name} for ${session.durationMin} min ${when}` : `${session.name} ${when}`;
+  const did = [
+    trimmed ? `eased ${trimmed} leg accessory set${trimmed > 1 ? "s" : ""}` : "",
+    noted ? `flagged the load on ${noted === 1 ? "the main leg lift" : `${noted} main leg lifts`}` : "",
+  ].filter(Boolean);
+  changes.push(`You logged ${what}, so this ${did.join(" and ")}. Running and heavy legs pull on the same recovery, and the squat is the one that pays for it.`);
+  return true;
+}
+
 /** Back off ~40% of working sets across the board (floor of 2 per exercise). */
 function deloadVolume(work) {
   let cut = 0;
@@ -184,6 +279,12 @@ export function adaptPlan(plan, context, inputs = {}) {
     const cut = deloadVolume(work);
     if (cut) changes.push(`Deload week: trimmed ${cut} working sets (~40%). ${deload.reason}`);
   }
+
+  // 3b. Cardio fatigue. Skipped during a deload, which has already backed every
+  //     lift off by ~40%: easing the legs again on top of that is a double cut,
+  //     and the second one would not be justified by anything the user did.
+  const hardCardio = deloaded ? null : recentHardCardio(context);
+  if (hardCardio) easeAfterCardio(work, hardCardio, changes, pulledBack);
 
   // 4. Progression — only when we haven't just deloaded.
   if (!deloaded) {

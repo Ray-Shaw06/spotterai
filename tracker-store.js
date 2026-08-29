@@ -13,6 +13,7 @@
 import { ACHIEVEMENTS, RANKS, XP, achievementXp, levelFor, rankFor, workoutXp } from "./gamify.js";
 import { trackerKey } from "./profile-store.js";
 import { deloadFromWeeklyVolume, epley1RM, suggestNextWeight } from "./progression.js";
+import { isCardioExercise } from "./exercise-catalog.js";
 
 const DEFAULTS = {
   workouts: [], // { id, date 'YYYY-MM-DD', name, focus, exercises:[{name,sets,reps,weight}], volume, xp }
@@ -442,10 +443,19 @@ export function addRoutine({ name, exercises = [] } = {}) {
   const routine = {
     id: uid(),
     name: String(name || "Routine").slice(0, 40),
+    // Same field set cleanExercises keeps. Rebuilding sets as { weight, reps }
+    // only meant a saved run or plank came back with no work in it at all,
+    // because setHasWork reads durationMin / distance / durationSec too.
     exercises: exercises.map((e) => ({
       name: String(e.name || "Exercise"),
       muscle: e.muscle || "",
-      sets: setsOf(e).map((s) => ({ weight: Number(s.weight) || 0, reps: Number(s.reps) || 0 })),
+      sets: setsOf(e).map((s) => ({
+        weight: Number(s.weight) || 0,
+        reps: Number(s.reps) || 0,
+        ...(s.durationMin ? { durationMin: Number(s.durationMin) || 0 } : {}),
+        ...(s.distance ? { distance: Number(s.distance) || 0 } : {}),
+        ...(s.durationSec ? { durationSec: Number(s.durationSec) || 0 } : {}),
+      })),
     })),
   };
   state.routines.push(routine);
@@ -460,16 +470,34 @@ export function getRoutines() {
   return state.routines || [];
 }
 
+/**
+ * Workouts newest-first BY DATE, not by insertion order.
+ *
+ * Backfill broke the assumption every "most recent" reader was built on. Log
+ * Tuesday's missed session on Friday and it is the last element of the array
+ * while being the oldest thing in the week, so an insertion-order scan hands
+ * back a stale weight as your "Previous" and repeats the wrong session.
+ * Insertion order is the tie-break inside a single day, which is right: two
+ * sessions on the same date happened in the order they were logged.
+ */
+function workoutsNewestFirst() {
+  return state.workouts
+    .map((w, i) => ({ w, i }))
+    .sort((a, b) => (a.w.date === b.w.date ? b.i - a.i : String(b.w.date).localeCompare(String(a.w.date))))
+    .map((x) => x.w);
+}
+
 /** Most recent logged sets for an exercise (the "Previous" reference). */
 export function lastSetFor(name) {
   const key = String(name || "").toLowerCase();
-  for (let i = state.workouts.length - 1; i >= 0; i--) {
-    const ex = (state.workouts[i].exercises || []).find((e) => String(e.name).toLowerCase() === key);
+  const ordered = workoutsNewestFirst();
+  for (let i = 0; i < ordered.length; i++) {
+    const ex = (ordered[i].exercises || []).find((e) => String(e.name).toLowerCase() === key);
     if (!ex) continue;
     const sets = setsOf(ex).filter(setHasWork);
     if (!sets.length) continue;
     const top = sets.reduce((b, s) => (s.weight > (b.weight || 0) ? s : b), sets[0]);
-    return { date: state.workouts[i].date, sets, top };
+    return { date: ordered[i].date, sets, top };
   }
   return null;
 }
@@ -531,6 +559,73 @@ function ymdOffset(ymdStr, days) {
   const d = new Date(ymdStr + "T12:00:00"); // noon avoids DST edge-cases
   d.setDate(d.getDate() + days);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// --- Catch-up + backfill ----------------------------------------------------
+// Everything here exists because the app cannot remind you (Web Push was
+// retired 2026-07-22 for a $0 bill). If forgetting has to be survivable, a
+// past day must be as easy to fill as the current one.
+
+/** How far back a backdated entry is allowed to land. A typo should not be able
+ *  to file today's session under a date from years ago. */
+export const BACKFILL_MAX_DAYS = 14;
+
+/** The date `days` ago, as 'YYYY-MM-DD'. Negative days are not accepted. */
+export function dateDaysAgo(days = 0) {
+  return ymdOffset(today(), -Math.max(0, Math.round(Number(days) || 0)));
+}
+
+/** The dates a backdated log may use, newest first. Drives the date picker. */
+export function backfillDates(max = BACKFILL_MAX_DAYS) {
+  const out = [];
+  for (let i = 0; i <= Math.max(0, max); i++) out.push(dateDaysAgo(i));
+  return out;
+}
+
+/** Is `date` a real 'YYYY-MM-DD' inside the backfill window (never the future)? */
+export function isBackfillDate(date, max = BACKFILL_MAX_DAYS) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) return false;
+  return backfillDates(max).includes(date);
+}
+
+/** What is on the books for one day. The catch-up card reads counts, not sums:
+ *  a 0 kcal entry is still a logged entry, and still means you did not forget. */
+export function dayCounts(date = today()) {
+  return {
+    date,
+    workouts: state.workouts.filter((w) => w.date === date).length,
+    nutrition: state.nutrition.filter((e) => e.date === date).length,
+    bodyweight: state.bodyweight.filter((b) => b.date === date).length,
+  };
+}
+
+/** Whole days since the most recent weigh-in, or null when there has never been one. */
+export function daysSinceBodyweight(from = today()) {
+  const dates = (state.bodyweight || []).map((b) => b.date).filter(Boolean).sort();
+  if (!dates.length) return null;
+  const last = parseDay(dates[dates.length - 1]).getTime();
+  const ref = parseDay(from).getTime();
+  return Math.max(0, Math.round((ref - last) / 86400000));
+}
+
+/**
+ * Log the most recent session again, sets, reps and weights intact, onto
+ * `date`. The one-tap answer to "I did the same thing as last time and forgot
+ * to open the app". Returns the same shape as addWorkout, or null when there is
+ * nothing to repeat or the date is out of the window.
+ */
+export function repeatLastWorkout({ date } = {}) {
+  const target = date || today();
+  if (!isBackfillDate(target)) return null;
+  const last = workoutsNewestFirst()[0];
+  if (!last) return null;
+  return addWorkout({
+    name: last.name,
+    focus: last.focus,
+    date: target,
+    durationSec: last.durationSec,
+    exercises: (last.exercises || []).map((e) => ({ name: e.name, muscle: e.muscle, notes: e.notes, sets: setsOf(e) })),
+  });
 }
 
 // --- Saved meals (templates): log a whole meal in one tap -------------------
@@ -772,6 +867,31 @@ function topSetHistory(name) {
 }
 
 /**
+ * Cardio actually logged in the last `days` days, newest first.
+ *
+ * The adapt engine needs this to answer the question the app could not answer
+ * before: you ran hard yesterday, so today's squats are not the same squats.
+ * It reports what happened and how long it took; deciding what counts as HARD
+ * is the engine's job, next to the rest of its rules.
+ */
+export function recentCardio(days = 7, from = today()) {
+  const cutoff = ymdOffset(from, -Math.max(0, days));
+  const out = [];
+  for (const w of state.workouts) {
+    if (!w.date || w.date < cutoff || w.date > from) continue;
+    for (const ex of w.exercises || []) {
+      const cardio = String(ex.muscle || "").toLowerCase() === "cardio" || isCardioExercise(ex.name);
+      if (!cardio) continue;
+      const sets = setsOf(ex).filter(setHasWork);
+      const durationMin = sets.reduce((m, x) => m + (Number(x.durationMin) || 0), 0);
+      const distance = sets.reduce((d, x) => d + (Number(x.distance) || 0), 0);
+      out.push({ date: w.date, name: ex.name, durationMin: Math.round(durationMin), distance: Math.round(distance * 10) / 10 });
+    }
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/**
  * Structured context for the deterministic adapt engine (adapt-engine.js).
  * Everything the engine needs, as plain data — no display strings. Returns null
  * when there's nothing logged. Only exercises that appear in BOTH the plan and
@@ -796,6 +916,7 @@ export function buildAdaptContext(plan) {
     };
   }
 
+  const cardio = recentCardio(7);
   return {
     workoutsLogged: ctx.workoutsLogged,
     thisWeek: ctx.thisWeek,
@@ -805,6 +926,11 @@ export function buildAdaptContext(plan) {
     recentPain: ctx.recentPain,
     unit: state.unit,
     exercises,
+    cardio: {
+      weeklyMinutes: cardio.reduce((m, c) => m + c.durationMin, 0),
+      recent: cardio,
+      today: today(),
+    },
   };
 }
 

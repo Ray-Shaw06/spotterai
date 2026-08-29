@@ -1924,6 +1924,21 @@ table {
 .today-stat { display: flex; flex-direction: column; }
 .today-stat__v { font-family: var(--font-mono); font-size: 1.4rem; font-weight: 600; color: var(--accent); letter-spacing: -0.02em; }
 .today-stat__l { font-size: 0.72rem; color: var(--text-muted); }
+/* Catch-up: what is still unlogged. Quiet by design, this is a nudge and not
+   an alarm, so it borrows the muted surface rather than the warning colour. */
+.today-card--catchup { border-color: var(--border); background: var(--surface-2); }
+.today-card__title--sm { font-size: 1.05rem; }
+.catchup-list { list-style: none; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; }
+.catchup-item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--border-soft); }
+.catchup-item:first-child { border-top: 0; padding-top: var(--space-2); }
+.catchup-item__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.catchup-item__text strong { font-size: var(--fs-small); font-weight: 600; color: var(--text); }
+.catchup-item__hint { font-size: 0.72rem; color: var(--text-faint); line-height: 1.45; }
+.catchup-item .btn { flex: none; }
+@media (max-width: 560px) {
+  .catchup-item { align-items: flex-start; flex-direction: column; gap: var(--space-2); }
+  .catchup-item .btn { align-self: flex-start; }
+}
 .today-card--coach { border-color: var(--accent-ring); }
 .today-empty { text-align: center; padding: var(--space-5) var(--space-4); }
 .today-empty .btn { margin-top: var(--space-4); }
@@ -5336,6 +5351,15 @@ table {
   margin-bottom: var(--space-3);
 }
 .workout-idle__head .card-title { margin: 0; }
+/* Backfill. Sits under the routine list, deliberately quiet: this is the
+   escape hatch for a forgotten day, not the primary way to start training. */
+.workout-backfill { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--border-soft); }
+.workout-backfill__label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); font-weight: 600; }
+.workout-backfill__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
+.workout-backfill__row .input { width: auto; flex: 0 1 11rem; }
+.workout-backfill__hint { margin-top: var(--space-2); font-size: 0.72rem; color: var(--text-faint); }
+.session-backdate { margin-top: var(--space-2); padding: var(--space-2) var(--space-3); font-size: var(--fs-small); color: var(--text-muted); background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: var(--r-sm); }
+.session-backdate strong { color: var(--text); }
 .routine-list { display: flex; flex-direction: column; gap: var(--space-2); }
 .workout-grouplabel {
   margin: var(--space-2) 0 0;

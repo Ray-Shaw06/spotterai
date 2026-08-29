@@ -14,6 +14,8 @@
 import { evaluatePlan } from "./evaluator.js";
 
 const ex = (name, sets, reps, rpe = null) => ({ name, sets, reps, rpe, notes: "" });
+/** A cardio entry: one continuous effort, stated in minutes and intensity. */
+const cardio = (name, durationMin, intensity = "moderate") => ({ name, sets: 1, reps: `${durationMin} min`, rpe: null, notes: "", type: "cardio", durationMin, intensity });
 const day = (focus, exercises) => ({ day: "Day", focus, exercises });
 const plan = (days, extra = {}) => ({ program_name: "Case", goal: "Hypertrophy", days_per_week: days.length, days, progression: "", general_notes: "", ...extra });
 
@@ -240,6 +242,36 @@ export const CASES = [
     ]),
     expect: [{ check: "equipment_fit", status: "warn" }],
   },
+  {
+    name: "Hard intervals the day before heavy legs",
+    desc: "Sprint intervals scheduled immediately before a heavy squat day, the cardio-conflict check should fire. This is the failure that motivated cardio support: the run is fine, its position in the week is not.",
+    inputs: { goal: "Strength", experience: "Intermediate", cardio: "A little" },
+    plan: plan([
+      day("Upper Body", [ex("Barbell Bench Press", 4, "5", 8), ex("Barbell Row", 4, "5", 8), ex("Overhead Press", 3, "8", 8), ex("Lat Pulldown", 3, "10", 8)]),
+      day("Conditioning", [cardio("Sprint", 25, "hard")]),
+      day("Lower Body", [ex("Back Squat", 5, "5", 8), ex("Romanian Deadlift", 4, "6", 8), ex("Leg Press", 3, "10", 8), ex("Lying Leg Curl", 3, "12", 9)]),
+      day("Rest", []),
+    ], { progression: GOOD_PROGRESSION }),
+    expect: [{ check: "cardio_conflict", status: "warn" }],
+  },
+  {
+    name: "Easy cardio next to leg day (false-positive guard)",
+    desc: "The known-good week with an easy 40-minute walk inserted immediately before a leg day. That is a normal training week and must NOT be flagged, or the conflict check becomes noise nobody reads.",
+    inputs: { goal: "Hypertrophy", experience: "Intermediate", cardio: "A little" },
+    // Built from the same balanced week as the clean case, so anything this
+    // case flags is the cardio, not the lifting underneath it.
+    plan: (() => {
+      const base = balancedWeek();
+      const days = [...base.days];
+      days.splice(1, 0, day("Easy aerobic", [cardio("Incline Walk", 40, "easy")]));
+      return { ...base, days, days_per_week: days.length };
+    })(),
+    expect: [
+      { check: "cardio_conflict", status: "pass" },
+      { check: "cardio_load", status: "pass" },
+      { scoreAtLeast: 85 },
+    ],
+  },
 ];
 
 // Scenario type per case, for the Safety Lab filters/labels.
@@ -249,6 +281,7 @@ const CASE_TYPES = {
   "Knee-aware plan (false-positive guard)": "guard",
   "Novice 5x5 linear progression (rep-shape guard)": "guard",
   "Malformed plan": "edge",
+  "Easy cardio next to leg day (false-positive guard)": "guard",
 };
 export function caseType(name) {
   return CASE_TYPES[name] || "risky";

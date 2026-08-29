@@ -12,6 +12,7 @@
  */
 
 import { resolveExercise, isTimeBasedExercise } from "./exercise-catalog.js";
+import { isCardioEntry, cardioMinutes } from "./lib/plan.js";
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const norm = (s) => String(s == null ? "" : s).trim().toLowerCase();
@@ -153,13 +154,29 @@ export function replaceDay(plan, { day = null, focus, exercises } = {}) {
 
   if (nextFocus) target.focus = nextFocus;
   if (wantsExercises) {
-    target.exercises = list.map((e) => ({
-      name: String(e.name).trim(),
-      sets: Number(e.sets) > 0 ? Number(e.sets) : 3,
-      reps: e.reps == null || e.reps === "" ? "8-12" : String(e.reps),
-      rpe: Number(e.rpe) > 0 ? Number(e.rpe) : 8,
-      notes: e.notes ? String(e.notes) : "edited",
-    }));
+    // Cardio has to survive the rebuild. This used to hard-code the lifting
+    // field set, so re-focusing a day turned a 35 minute easy run into
+    // "3 sets of 8-12" with its duration and intensity gone, and the
+    // cardio/leg-day conflict check lost the intensity it reads.
+    target.exercises = list.map((e) => {
+      const cardio = isCardioEntry(e);
+      const base = {
+        name: String(e.name).trim(),
+        sets: Number(e.sets) > 0 ? Number(e.sets) : cardio ? 1 : 3,
+        reps: e.reps == null || e.reps === "" ? (cardio ? "" : "8-12") : String(e.reps),
+        rpe: cardio ? null : Number(e.rpe) > 0 ? Number(e.rpe) : 8,
+        notes: e.notes ? String(e.notes) : "edited",
+      };
+      if (!cardio) return base;
+      const minutes = cardioMinutes(e);
+      return {
+        ...base,
+        reps: base.reps || (minutes ? `${minutes} min` : ""),
+        type: "cardio",
+        durationMin: minutes || null,
+        intensity: e.intensity || null,
+      };
+    });
   }
   return { plan: p, changed: 1 };
 }

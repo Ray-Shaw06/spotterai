@@ -621,6 +621,17 @@
                 <button type="button" id="start-empty" class="btn btn--ghost btn--sm">Blank workout</button>
               </div>
               <div id="routine-list" class="routine-list"></div>
+              <!-- Backfill. SpotterAI cannot remind you, so a session you forgot
+                   to log has to be as easy to add as one happening now. -->
+              <div class="workout-backfill">
+                <label class="workout-backfill__label" for="backfill-date">Log a past session</label>
+                <div class="workout-backfill__row">
+                  <input type="date" id="backfill-date" class="input" aria-describedby="backfill-hint" />
+                  <button type="button" id="backfill-start" class="btn btn--ghost btn--sm">Log for this date</button>
+                  <button type="button" id="repeat-last" class="btn btn--ghost btn--sm" hidden>Repeat last session</button>
+                </div>
+                <p id="backfill-hint" class="workout-backfill__hint">Backdated entries count the same. Last 14 days.</p>
+              </div>
             </div>
 
             <div id="workout-session" hidden>
@@ -632,6 +643,7 @@
                 </div>
                 <span id="session-timer" class="session-timer" aria-label="Duration">0:00</span>
               </div>
+              <p id="session-backdate" class="session-backdate" hidden></p>
 
               <!-- The rest timer used to sit here, between the session head and
                    the first exercise, pushing the set inputs further down the
@@ -1346,6 +1358,7 @@
       <div class="account-section account-workout-alerts" id="account-workout-alerts" aria-busy="true">
         <h3 class="account-h">Workout alerts</h3>
         <p class="account-note">On-device only. When a rest timer ends, this device shows a notification, nothing is sent when the app is closed, and this preference never leaves your device. Vibration and sound always work regardless.</p>
+        <p class="account-note">The rest timer runs on a wall clock and books its sound the moment the timer starts, so locking your screen does not delay it. The limit that stays: if you force-quit SpotterAI, or your phone closes it to free memory, nothing fires. There is no server and no scheduled push, so there is nothing left running to reach you.</p>
         <label class="toggle-row">
           <input type="checkbox" id="rest-alerts-toggle" role="switch" aria-checked="false" disabled />
           <span>Enable rest-timer alerts</span>

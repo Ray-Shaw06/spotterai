@@ -8,9 +8,11 @@
  */
 
 import { store } from "./store.js";
-import { deriveStats, getWater, getState } from "./tracker-store.js";
+import { deriveStats, getWater, getState, dayCounts, daysSinceBodyweight, dateDaysAgo } from "./tracker-store.js";
 import { evaluateNutrition } from "./nutrition-safety.js";
 import { todaysWorkout, coachNote, trainingDays, weekStrip } from "./today.js";
+import { openItems, catchUpSummary } from "./catch-up.js";
+import { isCardioEntry } from "./lib/plan.js";
 
 const content = document.getElementById("today-content");
 const dateEl = document.getElementById("today-date");
@@ -24,8 +26,13 @@ const ymd = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).p
 
 function estDuration(workout, inputs) {
   if (inputs?.sessionLength) return `~${inputs.sessionLength} min`;
-  const sets = (workout.exercises || []).reduce((n, e) => n + (Number(e.sets) || 0), 0);
-  return `~${Math.max(30, Math.round((sets * 3.5 + 10) / 5) * 5)} min`;
+  const exercises = workout.exercises || [];
+  // Cardio contributes its own prescribed minutes. Counting a 40-minute run as
+  // one "set" put a run day at the 30-minute floor, which is not a small error.
+  const cardioMinutes = exercises.filter(isCardioEntry).reduce((n, e) => n + (Number(e.durationMin) || 0), 0);
+  const sets = exercises.filter((e) => !isCardioEntry(e)).reduce((n, e) => n + (Number(e.sets) || 0), 0);
+  const lifting = sets ? sets * 3.5 + 10 : 0;
+  return `~${Math.max(sets ? 30 : 10, Math.round((lifting + cardioMinutes) / 5) * 5)} min`;
 }
 
 function card(inner, cls = "") {
@@ -86,9 +93,16 @@ function render() {
   } else {
     // Command-center hero: giant session readout left, numbered exercise
     // manifest right, one dominant START control.
+    // Cardio is one continuous effort, so "1×35 min" is the wrong readout for
+    // it. Minutes and stated intensity are what the session actually asks for.
+    const rx = (e) => {
+      if (!isCardioEntry(e)) return `${esc(e.sets)}×${esc(e.reps)}${e.rpe ? ` <em>@${esc(e.rpe)}</em>` : ""}`;
+      const mins = Number(e.durationMin) > 0 ? `${e.durationMin} min` : esc(e.reps || "cardio");
+      return `${esc(mins)}${e.intensity ? ` <em>${esc(e.intensity)}</em>` : ""}`;
+    };
     const exRows = (workout.exercises || [])
       .slice(0, 8)
-      .map((e) => `<li class="cmd-ex"><span class="cmd-ex__name">${esc(e.name)}</span><span class="cmd-ex__rx">${esc(e.sets)}×${esc(e.reps)}${e.rpe ? ` <em>@${esc(e.rpe)}</em>` : ""}</span></li>`)
+      .map((e) => `<li class="cmd-ex"><span class="cmd-ex__name">${esc(e.name)}</span><span class="cmd-ex__rx">${rx(e)}</span></li>`)
       .join("");
     workoutCard = `
       <div class="cmd today-card--workout">
@@ -150,6 +164,38 @@ function render() {
     "today-card--recovery"
   );
 
+  // --- Catch-up: what is still unlogged ------------------------------------
+  // The app cannot reach you when it is closed, so the moment you open it, it
+  // owes you a straight answer about what is still open. Renders nothing at all
+  // on a fully logged day.
+  const todayCounts = dayCounts(ymd());
+  const yCounts = dayCounts(dateDaysAgo(1));
+  const items = openItems({
+    hour: new Date().getHours(),
+    hasPlan: true,
+    trainingDayDue: !!workout,
+    workoutsToday: todayCounts.workouts,
+    nutritionToday: todayCounts.nutrition,
+    workoutsYesterday: yCounts.workouts,
+    nutritionYesterday: yCounts.nutrition,
+    daysSinceBodyweight: daysSinceBodyweight(),
+  });
+  const catchUpCard = items.length
+    ? card(
+        `<p class="today-card__eyebrow">Catch-up</p>
+         <p class="today-card__title today-card__title--sm">${esc(catchUpSummary(items))}</p>
+         <ul class="catchup-list">${items
+           .map(
+             (it) => `<li class="catchup-item">
+               <span class="catchup-item__text"><strong>${esc(it.label)}</strong><span class="catchup-item__hint">${esc(it.hint)}</span></span>
+               <button type="button" class="btn btn--ghost btn--sm today-qa" data-act="catchup" data-catchup="${esc(it.act)}" data-scope="${esc(it.scope)}">${it.act === "backfill" ? "Fill it in" : "Log it"}</button>
+             </li>`
+           )
+           .join("")}</ul>`,
+        "today-card--catchup"
+      )
+    : "";
+
   // --- Week at a glance ----------------------------------------------------
   const strip = weekStrip(plan, stats.thisWeek.sessions || 0);
   const stripHtml = strip.length
@@ -168,6 +214,7 @@ function render() {
   content.innerHTML = `
     ${quickActions(true)}
     ${stripHtml}
+    ${catchUpCard}
     ${workoutCard}
     <div class="today-telemetry">${coachCard}${nutritionCard}${recoveryCard}</div>`;
 }
@@ -177,6 +224,22 @@ content?.addEventListener("click", (e) => {
   const btn = e.target.closest(".today-qa");
   if (!btn) return;
   const act = btn.dataset.act;
+  if (act === "catchup") {
+    const kind = btn.dataset.catchup;
+    if (kind === "backfill") {
+      // Never write yesterday for the user. "Repeat the last session onto
+      // yesterday" would be the app asserting a workout happened, and the
+      // whole product rule is that it proposes and you approve. This opens the
+      // logger dated yesterday instead; the repeat button is offered there.
+      location.hash = "#/dashboard";
+      window.dispatchEvent(new CustomEvent("spotter:log-for-date", { detail: { date: dateDaysAgo(1) } }));
+      return;
+    }
+    if (kind === "meal") location.hash = "#/nutrition";
+    else if (kind === "weight") location.hash = "#/progress";
+    else location.hash = "#/dashboard";
+    return;
+  }
   if (act === "start") {
     // Open the workout tracker WITH today's session loaded — no hunting for it.
     const workout = store.plan ? todaysWorkout(store.plan, deriveStats().thisWeek.sessions || 0) : null;
