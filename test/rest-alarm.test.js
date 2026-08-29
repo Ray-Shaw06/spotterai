@@ -8,7 +8,7 @@ import { createRestAlarm, clampRestSeconds, silentWavBytes } from "../rest-alarm
 // assert on WHEN the tone was booked, which is the whole point of the module.
 // ---------------------------------------------------------------------------
 function fakeEnv({ withAudio = true, clockStart = 0 } = {}) {
-  const log = { oscillators: [], sources: [], timeouts: [], resumed: 0, played: 0, paused: 0 };
+  const log = { oscillators: [], sources: [], timeouts: [], elements: [], resumed: 0, played: 0, paused: 0, objectUrls: 0, revoked: 0 };
   const env = {
     navigator: {},
     setTimeout: (fn, ms) => {
@@ -21,6 +21,36 @@ function fakeEnv({ withAudio = true, clockStart = 0 } = {}) {
       if (t) t.cleared = true;
     },
   };
+
+  env.Blob = function FakeBlob(parts, opts) {
+    this.parts = parts;
+    this.type = opts?.type;
+  };
+  env.URL = {
+    createObjectURL: () => {
+      log.objectUrls += 1;
+      return `blob:fake-${log.objectUrls}`;
+    },
+    revokeObjectURL: () => {
+      log.revoked += 1;
+    },
+  };
+  env.document = {};
+  env.Audio = function FakeAudio() {
+    const el = {
+      src: "", loop: false, volume: 1,
+      setAttribute(name, value) { el.attrs[name] = value; },
+      attrs: {},
+      play() { log.played += 1; return Promise.resolve(); },
+      pause() { log.paused += 1; },
+    };
+    log.elements.push(el);
+    return el;
+  };
+  env.MediaMetadata = function FakeMetadata(init) {
+    Object.assign(this, init);
+  };
+  env.navigator.mediaSession = { metadata: null, playbackState: "none" };
 
   if (withAudio) {
     env.AudioContext = function FakeContext() {
@@ -226,4 +256,81 @@ test("an onFire listener that throws still leaves the alarm disarmed", () => {
   clock.advance(10_000);
   assert.doesNotThrow(() => alarm.reconcile());
   assert.equal(alarm.armed(), false, "a broken listener must not strand an armed alarm");
+});
+
+test("a silent looping element plays while armed, because Web Audio alone is not enough on iOS", () => {
+  const clock = fakeClock();
+  const { env, log } = fakeEnv();
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+
+  alarm.arm(120);
+  assert.equal(log.elements.length, 1);
+  const el = log.elements[0];
+  assert.equal(el.loop, true, "a one-shot would stop holding the page after a second");
+  assert.equal(el.attrs.playsinline, "", "iOS refuses to play inline without it");
+  assert.match(el.src, /^blob:/, "the WAV is built in-process, so there is nothing to fetch on a cold cache");
+  assert.equal(log.played, 1);
+
+  alarm.disarm();
+  assert.equal(log.paused, 1, "nothing keeps the audio thread alive outside an armed rest");
+});
+
+test("the rest shows up on the lock screen, and clears when it ends", () => {
+  const clock = fakeClock();
+  const { env } = fakeEnv();
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+
+  alarm.arm(150);
+  assert.equal(env.navigator.mediaSession.playbackState, "playing");
+  assert.equal(env.navigator.mediaSession.metadata.title, "Rest 2:30");
+  assert.equal(env.navigator.mediaSession.metadata.artist, "SpotterAI");
+
+  alarm.disarm();
+  assert.equal(env.navigator.mediaSession.playbackState, "none", "an invisible background player is worse than none");
+});
+
+test("a missing MediaSession is decoration failing, not the alarm failing", () => {
+  const clock = fakeClock();
+  const { env } = fakeEnv();
+  delete env.navigator.mediaSession;
+  let fires = 0;
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => (fires += 1) });
+
+  assert.doesNotThrow(() => alarm.arm(20));
+  clock.advance(20_000);
+  assert.equal(alarm.reconcile(), true);
+  assert.equal(fires, 1);
+});
+
+test("destroy() releases the object URL and closes the context", () => {
+  const clock = fakeClock();
+  const { env, log } = fakeEnv();
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+
+  alarm.arm(60);
+  alarm.destroy();
+
+  assert.equal(alarm.armed(), false);
+  assert.equal(log.paused, 1);
+  assert.equal(log.revoked, 1, "the blob URL leaks for the life of the document otherwise");
+
+  // And it stays usable: arm() rebuilds whatever destroy() tore down.
+  assert.doesNotThrow(() => alarm.arm(30));
+  assert.equal(alarm.remaining(), 30);
+});
+
+test("no media element support still leaves a working alarm", () => {
+  const clock = fakeClock();
+  const { env, log } = fakeEnv();
+  delete env.Audio;
+  let fires = 0;
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => (fires += 1) });
+
+  alarm.arm(15);
+  assert.equal(log.elements.length, 0);
+  assert.equal(log.oscillators.length, 3, "the Web Audio keepalive and the tone still stand");
+
+  clock.advance(15_000);
+  assert.equal(alarm.reconcile(), true);
+  assert.equal(fires, 1);
 });
