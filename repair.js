@@ -17,8 +17,8 @@ import {
   INJURY_RULES,
   computeWeeklyVolume,
   computeWeeklyCardio,
+  legSetsForDay,
   MUSCLE_KEYWORDS,
-  LEG_GROUPS,
   PUSH_GROUPS,
   PULL_GROUPS,
   THRESHOLDS,
@@ -180,17 +180,6 @@ function repairBalance(plan, changes) {
   });
 }
 
-/** Leg working sets on one day, cardio excluded. Mirrors the evaluator. */
-function legSetsForDay(day) {
-  let sets = 0;
-  for (const ex of day.exercises || []) {
-    if (isCardioEntry(ex)) continue;
-    const count = Number(ex.sets) || 0;
-    if (count > 0 && LEG_GROUPS.some((g) => matchesGroup(ex.name, g))) sets += count;
-  }
-  return sets;
-}
-
 /** Easy conditioning to fall back on when a hard session has nowhere to go. */
 const EASY_CARDIO_SWAPS = ["Incline Walk", "Stationary Bike", "Elliptical"];
 
@@ -207,7 +196,11 @@ function repairCardioConflict(plan, changes) {
   const days = plan.days || [];
   const legSets = days.map(legSetsForDay);
   const heavy = (i) => (legSets[i] || 0) >= THRESHOLDS.CARDIO_CONFLICT_LEG_SETS;
-  const conflicted = (i) => heavy(i) || heavy(i + 1);
+  // Same wraparound the check uses: the week rotates, so "the day after the last
+  // day" is the first one. A destination picked without this would look clear
+  // and re-create the collision the repair was for.
+  const nextIndex = (i) => (days.length > 1 ? (i + 1) % days.length : -1);
+  const conflicted = (i) => heavy(i) || heavy(nextIndex(i));
 
   for (const day of computeWeeklyCardio(plan).days) {
     if (!day.hard || !conflicted(day.index)) continue;

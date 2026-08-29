@@ -470,16 +470,34 @@ export function getRoutines() {
   return state.routines || [];
 }
 
+/**
+ * Workouts newest-first BY DATE, not by insertion order.
+ *
+ * Backfill broke the assumption every "most recent" reader was built on. Log
+ * Tuesday's missed session on Friday and it is the last element of the array
+ * while being the oldest thing in the week, so an insertion-order scan hands
+ * back a stale weight as your "Previous" and repeats the wrong session.
+ * Insertion order is the tie-break inside a single day, which is right: two
+ * sessions on the same date happened in the order they were logged.
+ */
+function workoutsNewestFirst() {
+  return state.workouts
+    .map((w, i) => ({ w, i }))
+    .sort((a, b) => (a.w.date === b.w.date ? b.i - a.i : String(b.w.date).localeCompare(String(a.w.date))))
+    .map((x) => x.w);
+}
+
 /** Most recent logged sets for an exercise (the "Previous" reference). */
 export function lastSetFor(name) {
   const key = String(name || "").toLowerCase();
-  for (let i = state.workouts.length - 1; i >= 0; i--) {
-    const ex = (state.workouts[i].exercises || []).find((e) => String(e.name).toLowerCase() === key);
+  const ordered = workoutsNewestFirst();
+  for (let i = 0; i < ordered.length; i++) {
+    const ex = (ordered[i].exercises || []).find((e) => String(e.name).toLowerCase() === key);
     if (!ex) continue;
     const sets = setsOf(ex).filter(setHasWork);
     if (!sets.length) continue;
     const top = sets.reduce((b, s) => (s.weight > (b.weight || 0) ? s : b), sets[0]);
-    return { date: state.workouts[i].date, sets, top };
+    return { date: ordered[i].date, sets, top };
   }
   return null;
 }
@@ -599,7 +617,7 @@ export function daysSinceBodyweight(from = today()) {
 export function repeatLastWorkout({ date } = {}) {
   const target = date || today();
   if (!isBackfillDate(target)) return null;
-  const last = state.workouts[state.workouts.length - 1];
+  const last = workoutsNewestFirst()[0];
   if (!last) return null;
   return addWorkout({
     name: last.name,

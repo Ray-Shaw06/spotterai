@@ -227,3 +227,34 @@ test("buildAdaptContext carries cardio, so the engine reads logs and not a guess
   assert.equal(ctx.cardio.recent[0].name, "Sprint");
   assert.equal(ctx.cardio.today, dateDaysAgo(0), "the engine needs today to measure how stale a session is");
 });
+
+// ---------------------------------------------------------------------------
+// Adversarial pass: backfill broke "most recent" for every insertion-order reader
+// ---------------------------------------------------------------------------
+
+test("'most recent' means most recent by date, not last logged", () => {
+  reset();
+  const { lastSetFor } = store;
+  // Trained Thursday at 80kg. Then on Friday you remember Tuesday's session and
+  // backfill it at 60kg. The Tuesday record is now LAST in the array.
+  addWorkout({ name: "Push", exercises: [bench(80, 5)], date: dateDaysAgo(1) });
+  addWorkout({ name: "Push", exercises: [bench(60, 5)], date: dateDaysAgo(3) });
+
+  const prev = lastSetFor("Bench Press");
+  assert.equal(prev.date, dateDaysAgo(1), "the Previous reference must not go backwards");
+  assert.equal(prev.top.weight, 80, "a stale 60kg here tells you to load the bar wrong");
+
+  const repeated = repeatLastWorkout({ date: dateDaysAgo(0) });
+  assert.equal(repeated.workout.exercises[0].sets[0].weight, 80, "repeat means the newest session, not the newest row");
+});
+
+test("two sessions on the same day keep their logged order", () => {
+  reset();
+  const { lastSetFor } = store;
+  const d = dateDaysAgo(1);
+  addWorkout({ name: "AM", exercises: [bench(60, 5)], date: d });
+  addWorkout({ name: "PM", exercises: [bench(70, 5)], date: d });
+  // Insertion order is the right tie-break inside one date: they happened in
+  // the order they were logged.
+  assert.equal(lastSetFor("Bench Press").top.weight, 70);
+});

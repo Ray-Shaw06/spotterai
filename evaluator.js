@@ -436,8 +436,9 @@ export function computeWeeklyCardio(plan) {
   return { minutes, sessions, hardSessions, days };
 }
 
-/** Working sets a single day puts into the lower body. */
-function legSetsForDay(day) {
+/** Working sets a single day puts into the lower body. Exported so the repair
+ *  engine reads leg volume the same way the check that flagged it did. */
+export function legSetsForDay(day) {
   let sets = 0;
   for (const ex of day.exercises || []) {
     if (isCardioEntry(ex)) continue; // a run is not leg volume; that is the point
@@ -563,9 +564,15 @@ function checkCardioConflict(plan, cardio) {
       conflicts.push(`${day.focus} pairs ${day.names.join(", ")} with ${own} sets of leg work on the same day`);
       continue; // one day, one conflict; the same-day collision is the worse one
     }
-    const next = days[index + 1];
-    if (next && (legSets[index + 1] || 0) >= THRESHOLDS.CARDIO_CONFLICT_LEG_SETS) {
-      conflicts.push(`${day.focus} (${day.names.join(", ")}) lands the day before ${next.focus || next.day || "a leg day"}, which has ${legSets[index + 1]} sets of leg work`);
+    // The week WRAPS. todaysWorkout rotates with `sessions % days.length`, so
+    // the last day is followed by the first one, and a sprint session at the end
+    // of the plan lands the day before a leg day at the top of it. Reading only
+    // index + 1 made that collision invisible in exactly the plans where the
+    // conditioning was scheduled last.
+    const nextIndex = days.length > 1 ? (index + 1) % days.length : -1;
+    const next = nextIndex >= 0 ? days[nextIndex] : null;
+    if (next && (legSets[nextIndex] || 0) >= THRESHOLDS.CARDIO_CONFLICT_LEG_SETS) {
+      conflicts.push(`${day.focus} (${day.names.join(", ")}) lands the day before ${next.focus || next.day || "a leg day"}, which has ${legSets[nextIndex]} sets of leg work`);
     }
   }
 

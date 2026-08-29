@@ -359,3 +359,45 @@ test("the calendar export still writes lifts as sets by reps", () => {
   });
   assert.match(ics.replace(/\r\n /g, ""), /Barbell Bench Press - 4×5/);
 });
+
+// ---------------------------------------------------------------------------
+// Adversarial pass: the week wraps, and the two engines must read leg volume
+// the same way.
+// ---------------------------------------------------------------------------
+
+test("hard cardio on the LAST day is flagged against the first, because the week wraps", () => {
+  // todaysWorkout rotates with `sessions % days.length`, so day N is followed
+  // by day 0. Reading only index+1 made this collision invisible in exactly the
+  // plans that schedule conditioning last.
+  const p = plan([legDay(), upperDay(), day("Intervals", [run("Sprint", 25, "hard")])]);
+  const audit = evaluatePlan(p, { goal: "Strength", experience: "Intermediate", cardio: "A little" });
+  assert.equal(check(audit, "cardio_conflict").status, "warn");
+  assert.match(check(audit, "cardio_conflict").detail, /day before/);
+});
+
+test("a single-day plan is never counted as adjacent to itself", () => {
+  // (i + 1) % 1 === 0 makes a lone day its own neighbour. Left unguarded, this
+  // day would record the same collision twice and escalate warn to fail.
+  const only = plan([day("Legs + intervals", [...legDay().exercises, run("Sprint", 20, "hard")])]);
+  const c = check(evaluatePlan(only, { goal: "Strength", experience: "Intermediate", cardio: "A little" }), "cardio_conflict");
+  assert.equal(c.status, "warn", "one day, one collision");
+  assert.equal(c.detail.split(";").length, 1, "and it is reported once, not twice");
+});
+
+test("repair does not move a session onto the day that wraps into a leg day", () => {
+  const p = plan([legDay(), upperDay(), day("Intervals", [run("Sprint", 25, "hard")])]);
+  const r = repairPlan(p, { goal: "Strength", experience: "Intermediate", cardio: "A little" });
+  // The only other non-leg day is index 1, and index 2 wraps into index 0's legs.
+  // Whatever it picks, the audit it came from has to come back clean.
+  assert.equal(check(r.after, "cardio_conflict").status, "pass");
+});
+
+test("repair reads leg volume the same way the check that flagged it does", () => {
+  // repair.js used to keep its own keyword-only copy of legSetsForDay while the
+  // evaluator used the structured fractional model, so the two could disagree
+  // about whether a day was heavy, and a "fix" could land on a still-flagged day.
+  const p = plan([day("Intervals", [run("Sprint", 25, "hard")]), legDay(), upperDay(), day("Rest", [])]);
+  const r = repairPlan(p, { goal: "Strength", experience: "Intermediate", cardio: "A little" });
+  assert.equal(check(r.before, "cardio_conflict").status, "warn");
+  assert.equal(check(r.after, "cardio_conflict").status, "pass", "the fix has to satisfy the same reading that raised the flag");
+});
