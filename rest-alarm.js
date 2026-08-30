@@ -23,6 +23,15 @@
  *   - A near-silent looping source (Web Audio) plus a silent looping <audio>
  *     element hold the page in a playing-media state, because iOS suspends a
  *     context with nothing playing through it.
+ *   - `navigator.audioSession.type = "playback"` (WebKit, iOS 16.4+) declares
+ *     this a playback session, which is what lets the tone through the ring/
+ *     silent switch and keeps it alive in the background. Without it a phone on
+ *     silent plays NOTHING, no matter how correctly the tone is scheduled, and
+ *     that failure looks identical to a broken timer from the outside.
+ *   - iOS can suspend the context or pause the element on an audio-session
+ *     interruption (a call, another app taking the session). Both are watched
+ *     while armed and restarted, because a keepalive that dies silently is
+ *     worse than no keepalive: it looks fine right up until it matters.
  *   - `reconcile()` on wake fires immediately if the deadline passed while
  *     hidden and nothing fired, so the worst case is exactly today's behaviour.
  *
@@ -100,9 +109,25 @@ export function createRestAlarm({ env = globalThis, onFire = () => {}, now = () 
   let keepaliveNode = null;
   let scheduled = []; // oscillator nodes booked on the audio timeline
   let element = null; // silent looping <audio>
+  let contextWatched = false;
   let elementUrl = null;
 
   // --- Web Audio ------------------------------------------------------------
+
+  /**
+   * Declare a PLAYBACK audio session (WebKit, iOS 16.4+). This is the switch
+   * that decides whether a phone on silent makes any sound at all, so it is set
+   * before the tone is ever scheduled. Feature-detected: every other browser
+   * has no navigator.audioSession and is unaffected.
+   */
+  function declarePlaybackSession() {
+    try {
+      const session = env.navigator?.audioSession;
+      if (session && session.type !== "playback") session.type = "playback";
+    } catch {
+      /* read-only or unsupported; the rest of the alarm is unchanged */
+    }
+  }
 
   function audioContext() {
     if (ctx) return ctx;
@@ -131,6 +156,28 @@ export function createRestAlarm({ env = globalThis, onFire = () => {}, now = () 
       keepaliveNode = source;
     } catch {
       /* keepalive is a best effort; reconcile() still covers the wake path */
+    }
+  }
+
+  /**
+   * iOS suspends the context when another app takes the audio session (a call,
+   * a video). Nothing wakes it on its own, so the scheduled tone would be
+   * silently dropped. Resume whenever it drops out from under us while armed.
+   */
+  function watchContext(context) {
+    if (contextWatched || typeof context.addEventListener !== "function") return;
+    contextWatched = true;
+    try {
+      context.addEventListener("statechange", () => {
+        if (!armed() || context.state === "running") return;
+        try {
+          context.resume?.();
+        } catch {
+          /* reconcile() on wake is still the floor */
+        }
+      });
+    } catch {
+      /* no event support; nothing lost */
     }
   }
 
@@ -214,6 +261,17 @@ export function createRestAlarm({ env = globalThis, onFire = () => {}, now = () 
       audio.loop = true;
       audio.volume = 0.01;
       audio.setAttribute?.("playsinline", "");
+      // Same interruption problem as the context: iOS pauses the element and
+      // never resumes it, which drops the page out of playing-media state and
+      // lets the whole keepalive lapse mid-rest.
+      audio.addEventListener?.("pause", () => {
+        if (element !== audio || !armed()) return;
+        try {
+          audio.play?.()?.catch?.(() => {});
+        } catch {
+          /* blocked; the Web Audio keepalive and reconcile() still apply */
+        }
+      });
       const played = audio.play?.();
       if (played && typeof played.catch === "function") played.catch(() => {});
       element = audio;
@@ -294,6 +352,10 @@ export function createRestAlarm({ env = globalThis, onFire = () => {}, now = () 
     endsAt = now() + sec * 1000;
     fired = false;
 
+    // Before anything else: on iOS this decides whether a phone on silent makes
+    // a sound at all, and it has to be set while we hold the gesture.
+    declarePlaybackSession();
+
     const context = audioContext();
     if (context) {
       // Resume inside the gesture, then schedule against the running clock.
@@ -302,6 +364,7 @@ export function createRestAlarm({ env = globalThis, onFire = () => {}, now = () 
       } catch {
         /* a blocked resume still leaves the fallback path intact */
       }
+      watchContext(context);
       startKeepalive(context);
       scheduleTone(context, sec);
     }
@@ -364,6 +427,7 @@ export function createRestAlarm({ env = globalThis, onFire = () => {}, now = () 
       /* ignore */
     }
     ctx = null;
+    contextWatched = false;
   }
 
   return { arm, disarm, remaining, reconcile, destroy, armed, endsAt: () => endsAt };

@@ -8,7 +8,7 @@ import { createRestAlarm, clampRestSeconds, silentWavBytes } from "../rest-alarm
 // assert on WHEN the tone was booked, which is the whole point of the module.
 // ---------------------------------------------------------------------------
 function fakeEnv({ withAudio = true, clockStart = 0 } = {}) {
-  const log = { oscillators: [], sources: [], timeouts: [], elements: [], resumed: 0, played: 0, paused: 0, objectUrls: 0, revoked: 0 };
+  const log = { oscillators: [], sources: [], timeouts: [], elements: [], contexts: [], resumed: 0, played: 0, paused: 0, objectUrls: 0, revoked: 0 };
   const env = {
     navigator: {},
     setTimeout: (fn, ms) => {
@@ -41,6 +41,9 @@ function fakeEnv({ withAudio = true, clockStart = 0 } = {}) {
       src: "", loop: false, volume: 1,
       setAttribute(name, value) { el.attrs[name] = value; },
       attrs: {},
+      listeners: {},
+      addEventListener(ev, fn) { (el.listeners[ev] ||= []).push(fn); },
+      emit(ev) { (el.listeners[ev] || []).forEach((fn) => fn()); },
       play() { log.played += 1; return Promise.resolve(); },
       pause() { log.paused += 1; },
     };
@@ -51,14 +54,26 @@ function fakeEnv({ withAudio = true, clockStart = 0 } = {}) {
     Object.assign(this, init);
   };
   env.navigator.mediaSession = { metadata: null, playbackState: "none" };
+  env.navigator.audioSession = { type: "auto" };
 
   if (withAudio) {
     env.AudioContext = function FakeContext() {
       this.currentTime = clockStart;
       this.sampleRate = 8000;
       this.destination = {};
+      this.state = "running";
+      this.listeners = {};
+      this.addEventListener = (ev, fn) => {
+        (this.listeners[ev] ||= []).push(fn);
+      };
+      this.emit = (ev) => (this.listeners[ev] || []).forEach((fn) => fn());
       this.resume = () => {
         log.resumed += 1;
+        this.state = "running";
+      };
+      this.interrupt = () => {
+        this.state = "suspended";
+        this.emit("statechange");
       };
       this.close = () => {};
       this.createBuffer = (channels, length) => ({
@@ -73,6 +88,7 @@ function fakeEnv({ withAudio = true, clockStart = 0 } = {}) {
         connect() {},
         gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} },
       });
+      log.contexts.push(this);
       this.createOscillator = () => {
         const node = {
           type: "", frequency: { value: 0 }, startedAt: null, stoppedAt: null,
@@ -333,4 +349,99 @@ test("no media element support still leaves a working alarm", () => {
   clock.advance(15_000);
   assert.equal(alarm.reconcile(), true);
   assert.equal(fires, 1);
+});
+
+// ---------------------------------------------------------------------------
+// iOS hardening: the three ways a correctly scheduled tone still makes no sound
+// ---------------------------------------------------------------------------
+
+test("arming declares a playback audio session, so a phone on silent still rings", () => {
+  const clock = fakeClock();
+  const { env } = fakeEnv();
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+
+  assert.equal(env.navigator.audioSession.type, "auto");
+  alarm.arm(120);
+  // Without this, iOS routes the tone through the ring/silent switch and a
+  // silenced phone plays NOTHING, which looks exactly like a broken timer.
+  assert.equal(env.navigator.audioSession.type, "playback");
+});
+
+test("no audioSession support is not an error", () => {
+  const clock = fakeClock();
+  const { env } = fakeEnv();
+  delete env.navigator.audioSession;
+  let fires = 0;
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => (fires += 1) });
+
+  assert.doesNotThrow(() => alarm.arm(15));
+  clock.advance(15_000);
+  assert.equal(alarm.reconcile(), true);
+  assert.equal(fires, 1);
+});
+
+test("a read-only audioSession does not break arming", () => {
+  const clock = fakeClock();
+  const { env } = fakeEnv();
+  Object.defineProperty(env.navigator, "audioSession", {
+    get: () => ({ get type() { return "auto"; }, set type(_v) { throw new Error("read-only"); } }),
+  });
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+  assert.doesNotThrow(() => alarm.arm(60));
+  assert.equal(alarm.remaining(), 60);
+});
+
+test("an interrupted context is resumed while armed", () => {
+  const clock = fakeClock();
+  const { env, log } = fakeEnv();
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+
+  alarm.arm(120);
+  const ctx = log.contexts[0];
+  const before = log.resumed;
+
+  ctx.interrupt(); // a phone call takes the audio session mid-rest
+  assert.equal(log.resumed, before + 1, "nothing else wakes it, so the tone would be dropped");
+  assert.equal(ctx.state, "running");
+});
+
+test("a context that drops out while NOT armed is left alone", () => {
+  const clock = fakeClock();
+  const { env, log } = fakeEnv();
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+
+  alarm.arm(60);
+  alarm.disarm();
+  const ctx = log.contexts[0];
+  const before = log.resumed;
+
+  ctx.interrupt();
+  assert.equal(log.resumed, before, "holding the audio thread open between sets is a battery cost, not a feature");
+});
+
+test("an element paused by an interruption restarts while armed", () => {
+  const clock = fakeClock();
+  const { env, log } = fakeEnv();
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+
+  alarm.arm(120);
+  const el = log.elements[0];
+  assert.equal(log.played, 1);
+
+  el.emit("pause"); // iOS pauses it and never resumes it on its own
+  assert.equal(log.played, 2, "otherwise the page silently leaves playing-media state mid-rest");
+});
+
+test("the element is not restarted after the rest ends", () => {
+  const clock = fakeClock();
+  const { env, log } = fakeEnv();
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+
+  alarm.arm(60);
+  const el = log.elements[0];
+  alarm.disarm();
+  const played = log.played;
+
+  el.emit("pause");
+  assert.equal(log.played, played, "a disarmed alarm must not keep an audio element alive");
 });
