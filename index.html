@@ -814,6 +814,22 @@
         </header>
 
         <div class="dash-grid">
+          <div class="card dash-card cal-card">
+            <div class="cal-head">
+              <h3 class="card-title">Consistency</h3>
+              <div class="cal-nav">
+                <button id="cal-prev" type="button" class="btn btn--ghost btn--sm" aria-label="Previous month">&larr;</button>
+                <span id="cal-label" class="cal-label" aria-live="polite"></span>
+                <button id="cal-next" type="button" class="btn btn--ghost btn--sm" aria-label="Next month">&rarr;</button>
+              </div>
+            </div>
+            <div id="cal-grid" class="cal-grid" role="grid" aria-label="Training and nutrition by day"></div>
+            <div id="cal-summary" class="cal-summary"></div>
+            <p class="dash-hint">
+              Rest days are part of a good plan, so this counts weeks that hit your
+              session target rather than days in a row.
+            </p>
+          </div>
           <div class="card dash-card">
             <h3 class="card-title">Weekly volume</h3>
             <div id="chart-weekly"></div>
@@ -839,22 +855,6 @@
             <p id="exercise-progress-meta" class="dash-hint"></p>
           </div>
 
-          <div class="card dash-card cal-card">
-            <div class="cal-head">
-              <h3 class="card-title">Consistency</h3>
-              <div class="cal-nav">
-                <button id="cal-prev" type="button" class="btn btn--ghost btn--sm" aria-label="Previous month">&larr;</button>
-                <span id="cal-label" class="cal-label" aria-live="polite"></span>
-                <button id="cal-next" type="button" class="btn btn--ghost btn--sm" aria-label="Next month">&rarr;</button>
-              </div>
-            </div>
-            <div id="cal-grid" class="cal-grid" role="grid" aria-label="Training and nutrition by day"></div>
-            <div id="cal-summary" class="cal-summary"></div>
-            <p class="dash-hint">
-              Rest days are part of a good plan, so this counts weeks that hit your
-              session target rather than days in a row.
-            </p>
-          </div>
         </div>
       </div>
     </section>

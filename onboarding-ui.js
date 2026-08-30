@@ -15,6 +15,7 @@ import {
   SESSION_LENGTHS,
   DAYS_OPTIONS,
   CARDIO_PREFS,
+  LEG_DAY_PREFS,
   INTENSITY_PREFS,
   COACHING_STYLES,
   SAFETY_AREAS,
@@ -117,6 +118,7 @@ function stepPrefs() {
     <p class="onb-sub">All optional. These nudge exercise selection and tone.</p>
     <div class="onb-cols">${field("Exercises you like", input("likes", "e.g. rows, hinges"))}${field("Exercises you dislike", input("dislikes", "e.g. burpees"))}</div>
     ${field("Cardio", chips("cardio", CARDIO_PREFS))}
+    ${field("Leg days", chips("legDays", LEG_DAY_PREFS), "Runners often replace leg days with runs. Say so and the plan stops prescribing sessions you skip.")}
     ${field("Intensity", chips("intensity", INTENSITY_PREFS))}
     ${field("Coaching style", chips("coaching", COACHING_STYLES))}`;
 }

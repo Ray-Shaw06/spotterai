@@ -114,6 +114,35 @@ CONDITIONING (the client asked for: ${preference})
 `;
 }
 
+/**
+ * The lower-body section, when the client trains legs by running.
+ *
+ * This does NOT delete lower-body work, and that is a deliberate coaching call
+ * rather than a literal reading of the preference. Running is quad-dominant and
+ * leaves the posterior chain comparatively undertrained, and the evaluator
+ * already checks exactly that (checkLegBalance, a knee-health antagonist check
+ * that flags quad volume far outweighing direct hamstring work). Stripping legs
+ * to zero would generate plans that trip the app's own rubric every time. So
+ * the runs replace the heavy squat sessions, and a small amount of hamstring
+ * and glute work stays.
+ */
+function renderLegDays(preference) {
+  const choice = String(preference || "").toLowerCase();
+  if (!choice || choice.includes("lift")) return "";
+  const both = choice.includes("both");
+
+  return `
+LOWER BODY (the client answered: ${preference})
+- ${both
+    ? "Keep ONE lower-body strength day and cover the rest of their leg training with running."
+    : "Do NOT program heavy lower-body strength days. Their leg training is the running."}
+- Runs go in as "type": "cardio" entries with "durationMin" and "intensity".
+- STILL include 2 to 4 sets a week of direct HAMSTRING and GLUTE work (Romanian Deadlift, Lying Leg Curl, Hip Thrust, Glute Bridge, Nordic Curl), placed on an upper-body or accessory day. Running is quad-dominant and leaves the posterior chain behind, and that imbalance is a knee-health concern, not a preference. This is a small amount of work, not a leg day.
+- Do not replace it with squats, leg press or lunges. Those are the sessions they told you they are not doing.
+- Say in "general_notes" that the runs are covering their leg training and why the hamstring work stayed.
+`;
+}
+
 export function buildPrompt(inputs) {
   const goal = inputs.goal || "General fitness";
   const experience = inputs.experience || "Beginner";
@@ -124,6 +153,7 @@ export function buildPrompt(inputs) {
       : "bodyweight only";
   const sessionLength = clampNumber(inputs.sessionLength, 20, 120, 60);
   const cardio = renderCardio(inputs.cardio);
+  const legDays = renderLegDays(inputs.legDays);
 
   // Home training gets an EXACT vocabulary rather than a rule it has to invent
   // against. "Only prescribe exercises possible with the available equipment"
@@ -158,7 +188,8 @@ CLIENT PROFILE
 - Time per session: ${sessionLength} minutes
 - Injuries / limitations: ${injuriesSummary}
 - Cardio preference: ${inputs.cardio || "not stated"}
-${cardio}
+- Leg days: ${inputs.legDays || "not stated"}
+${cardio}${legDays}
 ${vocabulary}REQUIREMENTS
 - Design exactly ${days} training days. Use clear focus labels (e.g. "Upper Body", "Push", "Lower Body", "Full Body").
 - Only prescribe exercises possible with the available equipment.${
