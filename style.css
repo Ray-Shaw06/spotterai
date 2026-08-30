@@ -3173,6 +3173,11 @@ table {
 .rest-timer:not(.is-running) [data-rest="skip"] { display: none; }
 .rest-timer.is-running .rest-timer__time { animation: rest-pulse 1s ease-in-out infinite; }
 @keyframes rest-pulse { 50% { opacity: 0.55; } }
+/* The in-context rest-alert offer. Sits above the bar, inside the fixed
+   session chrome, and is dismissed for good on "Not now". */
+.rest-offer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: var(--r-sm); margin-bottom: var(--space-2); }
+.rest-offer__text { margin: 0; font-size: 0.82rem; color: var(--text); flex: 1 1 12rem; }
+.rest-offer__acts { display: flex; align-items: center; gap: var(--space-2); flex: none; }
 .rest-timer__bar { height: 4px; background: color-mix(in srgb, var(--accent) 16%, transparent); border-radius: var(--r-full); overflow: hidden; }
 .rest-timer__fill { display: block; height: 100%; width: 100%; transform: scaleX(0); transform-origin: left center; background: var(--accent); border-radius: var(--r-full); transition: transform 0.95s linear; }
 .session-tools {

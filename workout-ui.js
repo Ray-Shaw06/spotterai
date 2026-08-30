@@ -23,7 +23,13 @@ import { epley1RM } from "./progression.js";
 import { store } from "./store.js";
 import { buildWorkoutSummary } from "./workout-summary.js";
 import { trackFunnel, trackFunnelOnce } from "./analytics.js";
-import { notifyRestComplete } from "./workout-alerts.js";
+import {
+  notifyRestComplete,
+  restAlertCapability,
+  restAlertsEnabled,
+  enableRestAlerts,
+  hapticsCapability,
+} from "./workout-alerts.js";
 import { createRestAlarm } from "./rest-alarm.js";
 import { isCardioEntry } from "./lib/plan.js";
 
@@ -36,6 +42,10 @@ const el = {
   backfillStart: $("backfill-start"),
   repeatLast: $("repeat-last"),
   backdateNote: $("session-backdate"),
+  restOffer: $("rest-offer"),
+  restOfferText: $("rest-offer-text"),
+  restOfferYes: $("rest-offer-yes"),
+  restOfferNo: $("rest-offer-no"),
   session: $("workout-session"),
   name: $("session-name"),
   unitToggle: $("session-unit"),
@@ -394,6 +404,7 @@ function startSession(preset) {
   el.session.hidden = false;
   el.name.value = session.name;
   renderBackdateNote();
+  renderRestOffer();
   // Set the Finish label BEFORE revealing the bar: "Save changes" is wider than
   // "Finish" and is what makes the bar wrap on a narrow screen, so measuring
   // first would measure the wrong bar.
@@ -654,6 +665,61 @@ function renderSession() {
 // ----------------------------------------------------------------------------
 /** Banner shown only while a session is deliberately backdated, so a past-dated
  *  save can never be a silent surprise at Finish. */
+const REST_OFFER_DISMISSED = "spotterai.restAlerts.offerDismissed";
+
+/**
+ * Offer the rest alert where the rest actually happens.
+ *
+ * The alert has always existed and always defaulted off, and its only switch
+ * lived in Account, which nobody opens between sets. So the feature shipped and
+ * effectively nobody had it on. This asks once, at the moment it is obviously
+ * useful, and never asks again.
+ *
+ * Shown only when it can actually be acted on: hidden when alerts are already
+ * on, when permission was refused, and when the browser will never do it.
+ * On iOS in a Safari tab it explains the one thing that WOULD make it work.
+ */
+function renderRestOffer() {
+  if (!el.restOffer) return;
+  let dismissed = false;
+  try {
+    dismissed = localStorage.getItem(REST_OFFER_DISMISSED) === "true";
+  } catch {
+    /* storage disabled; treat as not dismissed */
+  }
+  const cap = restAlertCapability();
+  const offerable = cap === "needs-permission" || cap === "needs-install";
+  const show = !dismissed && !restAlertsEnabled() && offerable;
+  const was = el.restOffer.hidden;
+  el.restOffer.hidden = !show;
+  // Showing this makes the fixed session bar taller, and the chat FAB is
+  // positioned off --session-bar-h. Without a re-measure the FAB sits on top of
+  // the offer's buttons at phone width, which is the collision this bar's
+  // geometry sync exists to prevent.
+  if (was !== el.restOffer.hidden) requestAnimationFrame(syncBarGeometry);
+  if (!show) return;
+
+  if (el.restOfferText) {
+    el.restOfferText.textContent =
+      cap === "needs-install"
+        ? "Add SpotterAI to your home screen to get a rest notification. iOS only gives them to installed apps."
+        : hapticsCapability() === "vibration"
+          ? "Get a notification and a buzz when rest ends?"
+          : "Get a notification when rest ends? On iPhone it is also the only way to get a buzz.";
+  }
+  // Nothing to grant on iOS-in-Safari; the fix is an install, not a prompt.
+  if (el.restOfferYes) el.restOfferYes.hidden = cap === "needs-install";
+}
+
+function dismissRestOffer() {
+  try {
+    localStorage.setItem(REST_OFFER_DISMISSED, "true");
+  } catch {
+    /* storage disabled; it reappears next session, which is acceptable */
+  }
+  renderRestOffer();
+}
+
 function renderBackdateNote() {
   if (!el.backdateNote) return;
   const date = session?.logDate;
@@ -882,6 +948,15 @@ function init() {
     renderIdle();
     renderHistory();
   });
+  el.restOfferYes?.addEventListener("click", async () => {
+    // Must run from this tap: requestPermission is gesture-gated.
+    const result = await enableRestAlerts();
+    if (result.enabled) toast("<strong>Rest alerts on</strong> for this device.");
+    else if (result.state === "denied") toast("Notifications are blocked in your device settings.");
+    dismissRestOffer();
+  });
+  el.restOfferNo?.addEventListener("click", dismissRestOffer);
+
   el.backdateNote?.addEventListener("click", (e) => {
     if (!e.target.closest('[data-act="clear-backdate"]') || !session) return;
     delete session.logDate;
