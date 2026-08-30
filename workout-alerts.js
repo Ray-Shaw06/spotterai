@@ -51,21 +51,65 @@ function safeLocalStorage() {
   }
 }
 
+/** Is this an iPhone or iPad? Used only to tell "never" apart from "not yet". */
+export function isIOS(env = globalThis) {
+  const nav = env.navigator;
+  if (!nav) return false;
+  const ua = String(nav.userAgent || "");
+  if (/iPad|iPhone|iPod/.test(ua)) return true;
+  // iPadOS 13+ reports a desktop Safari UA, and is only distinguishable by
+  // having touch points on a "Macintosh".
+  return /Macintosh/.test(ua) && (nav.maxTouchPoints || 0) > 1;
+}
+
+/** Running from the home screen rather than a browser tab. */
+export function isInstalled(env = globalThis) {
+  try {
+    if (env.navigator && env.navigator.standalone === true) return true; // iOS
+    return !!(env.matchMedia && env.matchMedia("(display-mode: standalone)").matches);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * What the current device can do, without prompting.
- *   "unsupported"       — no Notification API or no service worker
+ *   "unsupported"       — no Notification API, and none is coming
+ *   "needs-install"     — iOS in a browser tab: notifications exist ONLY for a
+ *                         home-screen install (16.4+), so this is fixable
  *   "needs-permission"  — supported, permission is "default" (never asked)
  *   "denied"            — the user blocked notifications
  *   "ready"             — permission granted; alerts can fire when enabled
+ *
+ * The `needs-install` tier exists because the old code returned "unsupported"
+ * for an iPhone in Safari and told the user their device "can't show
+ * notifications". It can. It needs Add to Home Screen first, and a dead end is
+ * a worse answer than an instruction.
  */
 export function restAlertCapability(env = globalThis) {
   const hasNotification = typeof env.Notification === "function";
   const hasSW = !!(env.navigator && env.navigator.serviceWorker);
-  if (!hasNotification || !hasSW) return "unsupported";
+  if (!hasNotification || !hasSW) {
+    return !hasNotification && isIOS(env) && !isInstalled(env) ? "needs-install" : "unsupported";
+  }
   const perm = env.Notification.permission;
   if (perm === "granted") return "ready";
   if (perm === "denied") return "denied";
   return "needs-permission";
+}
+
+/**
+ * What this device can do to get your attention physically.
+ *   "vibration"         — navigator.vibrate works (Android)
+ *   "notification-only" — no Vibration API, but a notification will buzz if the
+ *                         OS is set to. This is every iPhone: WebKit has never
+ *                         shipped the Vibration API, so the notification is the
+ *                         ONLY route to a haptic.
+ *   "none"              — neither
+ */
+export function hapticsCapability(env = globalThis) {
+  if (typeof env.navigator?.vibrate === "function") return "vibration";
+  return restAlertCapability(env) === "unsupported" ? "none" : "notification-only";
 }
 
 /** Local enabled flag. Fails closed to `false` on any read problem. */
@@ -135,6 +179,11 @@ export async function notifyRestComplete(env = globalThis) {
       badge: "/icons/spotterai-192.png",
       tag: "spotterai-rest",
       renotify: true,
+      // Android buzzes from the notification itself. On iOS this key is
+      // ignored and the OS decides from the user's own notification settings,
+      // which is the only haptic route WebKit offers.
+      vibrate: [200, 80, 200],
+      silent: false,
       // The SW notificationclick handler ignores any payload URL and routes to
       // a fixed same-origin destination, so nothing here can redirect the user.
       data: { kind: "rest" },
@@ -165,17 +214,21 @@ export function initWorkoutAlertsUI(doc = globalThis.document) {
     const enabled = restAlertsEnabled();
     if (toggle) {
       toggle.checked = enabled && cap === "ready";
-      toggle.disabled = cap === "unsupported" || cap === "denied";
+      toggle.disabled = cap === "unsupported" || cap === "denied" || cap === "needs-install";
       toggle.setAttribute("aria-checked", String(toggle.checked));
     }
-    if (cap === "unsupported") {
-      setStatus("This device can't show notifications. The rest timer still buzzes, beeps, and counts down on screen.");
+    if (cap === "needs-install") {
+      setStatus("Add SpotterAI to your home screen first: Share, then Add to Home Screen. iOS only gives notifications to installed apps, not to a Safari tab. The rest timer still beeps and counts down either way.");
+    } else if (cap === "unsupported") {
+      setStatus("This device can't show notifications. The rest timer still beeps and counts down on screen.");
     } else if (cap === "denied") {
-      setStatus("Notifications are blocked in your device settings. The rest timer still buzzes, beeps, and counts down on screen.");
+      setStatus("Notifications are blocked in your device settings. The rest timer still beeps and counts down on screen.");
     } else if (enabled && cap === "ready") {
       setStatus("On, when a rest timer ends you'll get a notification on this device, booked in advance so a locked screen doesn't delay it. Nothing is sent when the app is closed, and nothing fires if you force-quit it.");
     } else {
-      setStatus("Off, turn on to get a notification on this device when a rest timer ends. The alarm sound, vibration and countdown work either way.");
+      setStatus(hapticsCapability() === "vibration"
+        ? "Off, turn on to get a notification on this device when a rest timer ends. The alarm sound, vibration and countdown work either way."
+        : "Off, turn on to get a notification when a rest timer ends. On iPhone that notification is also the only way to get a buzz: Safari has no vibration API, so the sound and the countdown are what you get without it.");
     }
     section.removeAttribute("aria-busy");
   }

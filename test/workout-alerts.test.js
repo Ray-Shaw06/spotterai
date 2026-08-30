@@ -10,6 +10,9 @@ import {
   disableRestAlerts,
   notifyRestComplete,
   purgeLegacyNotificationStorage,
+  hapticsCapability,
+  isIOS,
+  isInstalled,
 } from "../workout-alerts.js";
 
 function fakeStore(initial = {}) {
@@ -122,4 +125,73 @@ test("purgeLegacyNotificationStorage removes only spotterai.notifications.* keys
   });
   purgeLegacyNotificationStorage(store);
   assert.deepEqual(store.keys().sort(), ["spotterai.plan", "spotterai.rest.default"]);
+});
+
+// ---------------------------------------------------------------------------
+// Reachability: the alert shipped, defaulted off, and hid its only switch in
+// Account. These pin the tiers that decide whether it can be offered at all.
+// ---------------------------------------------------------------------------
+
+function iosEnv({ installed = false, notification = false, permission = "default" } = {}) {
+  const env = {
+    navigator: { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1", maxTouchPoints: 5 },
+    matchMedia: () => ({ matches: installed }),
+  };
+  if (installed) env.navigator.standalone = true;
+  if (notification) {
+    env.Notification = function () {};
+    env.Notification.permission = permission;
+    env.navigator.serviceWorker = { ready: Promise.resolve({ showNotification: async () => {} }) };
+  }
+  return env;
+}
+
+test("an iPhone in Safari is told to install, not that its device cannot do it", () => {
+  // This is the actual reason a real iPhone got no notification. The old code
+  // returned "unsupported" and told the user their device can't show
+  // notifications. It can, once it is on the home screen.
+  assert.equal(restAlertCapability(iosEnv()), "needs-install");
+});
+
+test("the same iPhone installed to the home screen can be asked for permission", () => {
+  assert.equal(restAlertCapability(iosEnv({ installed: true, notification: true })), "needs-permission");
+  assert.equal(restAlertCapability(iosEnv({ installed: true, notification: true, permission: "granted" })), "ready");
+  assert.equal(restAlertCapability(iosEnv({ installed: true, notification: true, permission: "denied" })), "denied");
+});
+
+test("a desktop browser with no Notification API is still a plain dead end", () => {
+  const env = { navigator: { userAgent: "Mozilla/5.0 (X11; Linux x86_64)", maxTouchPoints: 0 } };
+  assert.equal(restAlertCapability(env), "unsupported");
+});
+
+test("iPadOS reporting a desktop UA is still recognised as iOS", () => {
+  // iPadOS 13+ claims to be a Macintosh; touch points are the only tell.
+  const env = { navigator: { userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", maxTouchPoints: 5 } };
+  assert.equal(restAlertCapability(env), "needs-install");
+  // A real Mac must NOT be told to add it to a home screen.
+  const mac = { navigator: { userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", maxTouchPoints: 0 } };
+  assert.equal(restAlertCapability(mac), "unsupported");
+});
+
+test("haptics report honestly per platform", () => {
+  const android = { navigator: { vibrate: () => true, userAgent: "Android" } };
+  assert.equal(hapticsCapability(android), "vibration");
+
+  // WebKit has never shipped the Vibration API, so on iPhone the notification
+  // is the only route to a buzz. Promising "it vibrates" there is a lie.
+  assert.equal(hapticsCapability(iosEnv({ installed: true, notification: true })), "notification-only");
+
+  const nothing = { navigator: { userAgent: "Mozilla/5.0 (X11; Linux x86_64)", maxTouchPoints: 0 } };
+  assert.equal(hapticsCapability(nothing), "none");
+});
+
+test("the notification asks the OS to buzz as well as show", async () => {
+  let opts = null;
+  const env = envWith({ permission: "granted", showNotification: async (_t, o) => { opts = o; } });
+  setRestAlertsEnabled(true, fakeStore());
+  // enable through the real store so notifyRestComplete's own gate passes
+  globalThis.localStorage = fakeStore({ [REST_ALERTS_KEY]: "true" });
+  assert.equal(await notifyRestComplete(env), "shown");
+  assert.deepEqual(opts.vibrate, [200, 80, 200]);
+  assert.equal(opts.silent, false);
 });

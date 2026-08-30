@@ -1207,6 +1207,16 @@
        disappearing with the Dashboard view. -->
   <div id="session-bar" class="session-bar" aria-label="Workout controls">
     <div id="rest-timer" class="rest-timer">
+      <!-- Offered at the moment it matters, not buried in Account. The rest
+           alert has always existed and defaulted off, and the only switch was
+           on a settings page nobody opens mid-set. -->
+      <div class="rest-offer" id="rest-offer" hidden>
+        <p class="rest-offer__text" id="rest-offer-text">Get a notification when rest ends?</p>
+        <div class="rest-offer__acts">
+          <button type="button" class="btn btn--primary btn--sm" id="rest-offer-yes">Turn on</button>
+          <button type="button" class="btn-link" id="rest-offer-no">Not now</button>
+        </div>
+      </div>
       <div class="rest-timer__bar"><span class="rest-timer__fill" id="rest-fill"></span></div>
       <div class="rest-timer__row">
         <!-- Tapping the time opens the duration presets. They are a set-once
