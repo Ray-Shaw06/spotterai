@@ -6,7 +6,8 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mapOnboardingToInputs, bodyweightKg, ONBOARDING_STEPS } from "../onboarding.js";
+import { mapOnboardingToInputs,
+  LEG_DAY_PREFS, bodyweightKg, ONBOARDING_STEPS } from "../onboarding.js";
 import { measurementSystem, switchMeasurementSystem, validateMeasurements } from "../measurements.js";
 
 test("goal + training age map to the generator's goal + experience", () => {
@@ -123,4 +124,58 @@ test("legacy kg and lb values keep their respective measurement systems", () => 
 
 test("there are a small number of intake steps (coach-style, not a giant form)", () => {
   assert.ok(ONBOARDING_STEPS.length >= 4 && ONBOARDING_STEPS.length <= 6);
+});
+
+// ---------------------------------------------------------------------------
+// Leg days: a runner's leg day IS the run
+// ---------------------------------------------------------------------------
+
+test("the leg-day answer reaches the plan inputs, and an unanswered one does not", () => {
+  for (const pref of LEG_DAY_PREFS) {
+    assert.equal(mapOnboardingToInputs({ goal: "muscle", legDays: pref }).legDays, pref);
+  }
+  // Same doctrine as experience, equipment and cardio: never assert back an
+  // answer the user did not give.
+  assert.equal(Object.hasOwn(mapOnboardingToInputs({ goal: "muscle" }), "legDays"), false);
+  assert.equal(Object.hasOwn(mapOnboardingToInputs({ goal: "muscle", legDays: "whatever" }), "legDays"), false);
+});
+
+test("the generator drops heavy leg days but keeps the posterior chain", async () => {
+  const { buildPrompt } = await import("../api/generate.js");
+  const base = { goal: "Strength", experience: "Intermediate", daysPerWeek: 4, sessionLength: 60, equipment: ["Full gym"], injuries: [] };
+
+  assert.ok(!buildPrompt(base).includes("LOWER BODY"), "silent when never asked");
+  assert.ok(!buildPrompt({ ...base, legDays: "Lift them" }).includes("LOWER BODY"), "silent for a normal lifter");
+
+  const runs = buildPrompt({ ...base, legDays: "Runs instead" });
+  assert.match(runs, /Do NOT program heavy lower-body strength days/);
+  // Deliberately NOT zero legs. Running is quad-dominant, and checkLegBalance
+  // already flags quad volume far outweighing direct hamstring work, so a plan
+  // with no posterior chain would trip the app's own rubric every time.
+  assert.match(runs, /HAMSTRING and GLUTE/);
+  assert.match(runs, /Do not replace it with squats, leg press or lunges/);
+
+  assert.match(buildPrompt({ ...base, legDays: "Both" }), /Keep ONE lower-body strength day/);
+});
+
+test("choosing runs does not silence the audit", async () => {
+  const { evaluatePlan } = await import("../evaluator.js");
+  // The preference changes what is PRESCRIBED. It must not change what is
+  // REPORTED: the product's thesis is telling the truth about a program, and a
+  // preference is not a reason to stop.
+  const plan = {
+    program_name: "Runner",
+    goal: "Strength",
+    days_per_week: 3,
+    days: [
+      { day: "Day 1", focus: "Upper", exercises: [{ name: "Barbell Bench Press", sets: 4, reps: "6-8", rpe: 8, notes: "" }, { name: "Barbell Row", sets: 4, reps: "6-8", rpe: 8, notes: "" }] },
+      { day: "Day 2", focus: "Run", exercises: [{ name: "Jog", sets: 1, reps: "40 min", rpe: null, notes: "", type: "cardio", durationMin: 40, intensity: "easy" }] },
+      { day: "Day 3", focus: "Rest", exercises: [] },
+    ],
+    progression: "Add 2.5kg when you hit the top of the range.",
+    general_notes: "",
+  };
+  const audit = evaluatePlan(plan, mapOnboardingToInputs({ goal: "muscle", trainingAge: "some", legDays: "Runs instead" }));
+  const volume = audit.checks.find((c) => c.id === "weekly_volume");
+  assert.notEqual(volume.status, "pass", "a week with no quad or hamstring work must still be reported");
 });

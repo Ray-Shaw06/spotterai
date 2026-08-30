@@ -46,6 +46,21 @@ export const AGE_RANGES = ["Under 18", "18–29", "30–44", "45–59", "60+"];
 export const SESSION_LENGTHS = [30, 45, 60, 90];
 export const DAYS_OPTIONS = [2, 3, 4, 5, 6];
 export const CARDIO_PREFS = ["None", "A little", "Lots"];
+
+/**
+ * How this person trains their lower body.
+ *
+ * "Runs instead" is a real and common pattern, not an edge case: a runner's
+ * leg day IS the run. Before this, the plan kept prescribing squat sessions
+ * they never did, which quietly poisoned everything downstream, because the
+ * adapt engine reads logged sessions and a leg day nobody does teaches it
+ * nothing.
+ *
+ * NOT a way to silence the audit. The evaluator still reports what running
+ * does not cover, because that is the product's whole thesis and a preference
+ * is not a reason to stop telling someone the truth about their training.
+ */
+export const LEG_DAY_PREFS = ["Lift them", "Runs instead", "Both"];
 export const INTENSITY_PREFS = ["Easy", "Moderate", "Hard"];
 export const COACHING_STYLES = ["Gentle", "Balanced", "Direct"];
 
@@ -103,8 +118,10 @@ export function mapOnboardingToInputs(d = {}) {
   // (checkCardioLoad), which is exactly why it is spread in only when answered:
   // an unanswered question must not become an answer asserted back at the user.
   const cardio = CARDIO_PREFS.includes(d.cardio) ? d.cardio : "";
+  const legDays = LEG_DAY_PREFS.includes(d.legDays) ? d.legDays : "";
   return {
     ...(cardio ? { cardio } : {}),
+    ...(legDays ? { legDays } : {}),
     goal: goalOpt ? goalOpt.goal : "General",
     experience: ageOpt ? ageOpt.experience : "",
     daysPerWeek: Number(d.days) || 3,
