@@ -54,7 +54,9 @@ Three properties matter more than the check list:
 evaluator could not detect either failure that motivated the entire project:
 there was no progressive-overload check, and the rep-range check passed
 unconditionally for any plan without a declared goal, which is every pasted
-plan. Write-up: [an evaluator that couldn't catch its own bug](docs/an-evaluator-that-couldnt-catch-its-own-bug.md).
+plan. Write-up: [an evaluator that couldn't catch its own bug](docs/an-evaluator-that-couldnt-catch-its-own-bug.md),
+and [grading the model](docs/grading-the-model.md) for how the rubric, the
+tiers and the benchmark fit together.
 
 Fitness is the demo. The pattern is a deterministic verifier for LLM output in
 any domain where the consumer cannot evaluate correctness themselves.

@@ -140,9 +140,12 @@ to you *because* they can't tell the difference.
 
 ## Where it stands
 
-The evaluator is v1.3.0. 409 tests, 21 adversarial eval cases, 17 of 17 risky
-plans caught, zero false positives. There's a fourth tier now, and a zero-input
-audit reports two checks it could not assess instead of quietly passing them.
+*Updated 2026-08-31.* The evaluator is v1.4.0. 845 tests, 23 adversarial eval
+cases, 18 of 18 risky plans caught, zero false positives. There's a fourth tier
+now, and a zero-input audit reports two checks it could not assess instead of
+quietly passing them. The rubric has grown to 14 checks since this was written,
+most recently two for cardio; how the whole thing fits together is in
+[grading the model](grading-the-model.md).
 
 Run the same directionless plan through it today and you get two flags:
 **Progressive overload** and **Goal fit**. Exactly the two things I could see
