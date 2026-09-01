@@ -43,7 +43,7 @@ answer twice. It can go in CI. A vibe cannot go in CI.
 | 1 | Recovery and rest days | Warn at six training days, fail at seven |
 | 2 | Weekly volume sanity | Sets per muscle group, fractional: a full set to each primary mover, half to each secondary |
 | 3 | Push / pull balance | Fails when one side is more than triple the other, or absent |
-| 4 | Quad / hamstring balance | An antagonist check, because the knee pays for that imbalance |
+| 4 | Quad / hamstring balance | Programming balance. Deliberately **not** an injury claim, see [rubric sources](rubric-sources.md) |
 | 5 | Injury conflicts | Each lift against curated contraindications, one row per injury |
 | 6 | Beginner load sanity | RPE 10 for someone two months in is a hard flag |
 | 7 | Session length sanity | Past ~40 working sets in one workout, quality has already collapsed |
@@ -58,6 +58,17 @@ answer twice. It can go in CI. A vibe cannot go in CI.
 None of these are clever. That is the point. Every threshold lives in a named
 constant in one block (`THRESHOLDS` in `evaluator.js`), so the rubric can be
 read in ninety seconds and disagreed with specifically.
+
+Each one is also sourced in **[where the thresholds come from](rubric-sources.md)**,
+which grades the evidence behind it: Supported, Directional, Practical, or
+Contradicted. Three are Practical, meaning no literature sets them and they are
+recovery judgments wearing a number. One was Contradicted, and writing that
+document is what caught it: the quad/hamstring check was described as a
+knee-health measure, and a systematic review concludes the
+hamstrings-to-quadriceps ratio ["has limited value for the prediction of ACL and
+hamstring injuries"](https://pubmed.ncbi.nlm.nih.gov/35065297/). The check
+stays, because lopsided programming is still worth flagging. The injury claim
+is gone.
 
 ## Three decisions that made it work
 

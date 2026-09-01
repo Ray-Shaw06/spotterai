@@ -120,9 +120,11 @@ CONDITIONING (the client asked for: ${preference})
  * This does NOT delete lower-body work, and that is a deliberate coaching call
  * rather than a literal reading of the preference. Running is quad-dominant and
  * leaves the posterior chain comparatively undertrained, and the evaluator
- * already checks exactly that (checkLegBalance, a knee-health antagonist check
- * that flags quad volume far outweighing direct hamstring work). Stripping legs
- * to zero would generate plans that trip the app's own rubric every time. So
+ * already checks exactly that (checkLegBalance, which flags quad volume far
+ * outweighing direct hamstring work). Stripping legs to zero would generate
+ * plans that trip the app's own rubric every time. Note this is a
+ * programming-completeness argument, not an injury-prevention one: see
+ * docs/rubric-sources.md. So
  * the runs replace the heavy squat sessions, and a small amount of hamstring
  * and glute work stays.
  */
@@ -137,7 +139,7 @@ LOWER BODY (the client answered: ${preference})
     ? "Keep ONE lower-body strength day and cover the rest of their leg training with running."
     : "Do NOT program heavy lower-body strength days. Their leg training is the running."}
 - Runs go in as "type": "cardio" entries with "durationMin" and "intensity".
-- STILL include 2 to 4 sets a week of direct HAMSTRING and GLUTE work (Romanian Deadlift, Lying Leg Curl, Hip Thrust, Glute Bridge, Nordic Curl), placed on an upper-body or accessory day. Running is quad-dominant and leaves the posterior chain behind, and that imbalance is a knee-health concern, not a preference. This is a small amount of work, not a leg day.
+- STILL include 2 to 4 sets a week of direct HAMSTRING and GLUTE work (Romanian Deadlift, Lying Leg Curl, Hip Thrust, Glute Bridge, Nordic Curl), placed on an upper-body or accessory day. Running is quad-dominant and leaves the posterior chain comparatively undertrained, so this keeps their lower-body training complete. This is a small amount of work, not a leg day.
 - Do not replace it with squats, leg press or lunges. Those are the sessions they told you they are not doing.
 - Say in "general_notes" that the runs are covering their leg training and why the hamstring work stayed.
 `;

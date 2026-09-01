@@ -27,17 +27,33 @@ import { isCardioEntry, cardioMinutes } from "./lib/plan.js";
 // 1. TUNABLE CONSTANTS  (the rubric)
 // ============================================================================
 
+/**
+ * The rubric.
+ *
+ * Every constant below is sourced in `docs/rubric-sources.md`, which lists the
+ * evidence behind it and grades how well that evidence actually supports the
+ * number: Supported, Directional, Practical, or Contradicted. Three are graded
+ * Practical (no literature sets them, they are recovery and realism judgments)
+ * and that is stated there rather than implied away here.
+ *
+ * If you change a number, update its entry there in the same commit. A
+ * threshold you cannot cite is a threshold you picked.
+ */
 export const THRESHOLDS = {
   // --- Recovery / rest days -------------------------------------------------
   TRAINING_DAYS_WARN: 6, // 6 training days in the week → limited recovery (warn)
   TRAINING_DAYS_FAIL: 7, // 7 training days → no rest day at all (fail)
 
   // --- Weekly working sets per major muscle group ---------------------------
+  // Sources: rubric-sources.md#volume. The LOW line is Directional (Schoenfeld
+  // dose-response); the HIGH/VERY_HIGH ceilings are Practical, and the
+  // dose-response literature arguably points the other way.
   HIGH_WEEKLY_SETS_WARN: 24, // above this is likely junk volume / overtraining
   VERY_HIGH_WEEKLY_SETS_FAIL: 32, // clearly excessive for almost anyone
   LOW_WEEKLY_SETS_FOR_GROWTH: 6, // a prime mover below this is under-stimulated
 
   // --- Training frequency (hypertrophy) -------------------------------------
+  // Sources: rubric-sources.md#frequency. Supported: train a muscle 2x/week.
   FREQUENCY_MIN_SETS_TO_JUDGE: 10, // only assess frequency once a muscle gets real weekly volume
   FREQUENCY_TARGET_DAYS: 2, // ~2x/week is the common frequency recommendation for growth
 
@@ -55,6 +71,8 @@ export const THRESHOLDS = {
   PROGRESSION_MIN_SIGNALS: 2, // distinct progression words needed to count as a scheme
 
   // --- Beginner load sanity -------------------------------------------------
+  // Sources: rubric-sources.md#intensity. RPE here is reps-in-reserve; novices
+  // judge proximity to failure less accurately, which is the case for a cap.
   BEGINNER_MAX_RPE: 8, // beginners should rarely exceed RPE 8
   BEGINNER_MAXOUT_RPE: 10, // prescribing RPE 10 to a beginner is a hard flag
   BEGINNER_MAX_WEEKLY_SETS_PER_MUSCLE: 22, // beginners need less volume to adapt
@@ -67,7 +85,11 @@ export const THRESHOLDS = {
   // --- Injuries -------------------------------------------------------------
   INJURY_MATCHES_FOR_FAIL: 2, // this many contraindicated movements → fail (else warn)
 
-  // --- Quad / hamstring balance (knee-health antagonist check) --------------
+  // --- Quad / hamstring balance (programming balance, NOT injury prediction) -
+  // A systematic review concludes the H:Q ratio "has limited value for the
+  // prediction of ACL and hamstring injuries" (see docs/rubric-sources.md), so
+  // this flags lopsided PROGRAMMING, which is defensible coaching, and
+  // deliberately claims nothing about injury risk.
   LEG_BALANCE_RATIO_WARN: 3.0, // one side > 3× the other → imbalance (lenient)
   LEG_MIN_SETS_TO_JUDGE: 4,
 
@@ -79,6 +101,8 @@ export const THRESHOLDS = {
   COVERAGE_MIN: 0.7, // below this, many lifts fell back to rougher keyword logic
 
   // --- Cardio ---------------------------------------------------------------
+  // Sources: rubric-sources.md#conditioning. The leg-day conflict rule follows
+  // Wilson et al. 2012: interference is running-specific and lower-body-specific.
   // Weekly conditioning minutes. The warn line sits well above the 150 min/week
   // health guideline on purpose: this check is about cardio competing with
   // lifting recovery, not about whether someone does enough of it.
@@ -845,7 +869,8 @@ function checkProgressiveOverload(plan) {
   );
 }
 
-/** Quad / hamstring balance — antagonist check that supports knee health. */
+/** Quad / hamstring balance. A programming-balance check, not an injury
+ *  predictor: see docs/rubric-sources.md for why that claim was removed. */
 function checkLegBalance(volume) {
   const id = "leg_balance";
   const label = "Quad / hamstring balance";
@@ -861,7 +886,7 @@ function checkLegBalance(volume) {
   const ratio = Math.max(quad, ham) / Math.min(quad, ham);
   const heavier = quad > ham ? "quads" : "hamstrings";
   if (ratio >= THRESHOLDS.LEG_BALANCE_RATIO_WARN) {
-    return finalize(id, label, "warn", `Lower body skews toward ${heavier} (quads ${round(quad)} vs hamstrings ${round(ham)} sets, ${round(ratio)}×). A more even split supports knee health.`);
+    return finalize(id, label, "warn", `Lower body skews toward ${heavier} (quads ${round(quad)} vs hamstrings ${round(ham)} sets, ${round(ratio)}×). A more even split trains the lower body more completely.`);
   }
   return finalize(id, label, "pass", `Quad and hamstring volume are reasonably balanced (quads ${round(quad)} vs hamstrings ${round(ham)} sets).`);
 }
