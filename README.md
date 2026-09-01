@@ -56,7 +56,10 @@ there was no progressive-overload check, and the rep-range check passed
 unconditionally for any plan without a declared goal, which is every pasted
 plan. Write-up: [an evaluator that couldn't catch its own bug](docs/an-evaluator-that-couldnt-catch-its-own-bug.md),
 and [grading the model](docs/grading-the-model.md) for how the rubric, the
-tiers and the benchmark fit together.
+tiers and the benchmark fit together. Every threshold is sourced in
+[where the thresholds come from](docs/rubric-sources.md), including the three
+graded as judgment calls rather than findings, and the one whose original
+rationale the evidence did not support.
 
 Fitness is the demo. The pattern is a deterministic verifier for LLM output in
 any domain where the consumer cannot evaluate correctness themselves.
