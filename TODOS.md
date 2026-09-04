@@ -34,9 +34,20 @@ suspended, so even a timely fire was silent.
 timeline inside the set-done tap, the only moment the context can be unlocked.
 Audio scheduling runs on the audio thread and is not subject to timer
 throttling, which is the part that makes the sound land on time. A near-silent
-looping source plus a silent `<audio>` element keep the page in a playing-media
-state, because iOS suspends a context with nothing playing through it, and
-`reconcile()` on visibilitychange fires anything the throttled backstop owed.
+looping source keeps the page in a playing-media state, because iOS suspends a
+context with nothing playing through it, and `reconcile()` on visibilitychange
+fires anything the throttled backstop owed.
+
+**Audio mode (`spotterai.restAlarm.audioMode`).** The alarm holds an audio
+session for the whole rest, not just for the beep, so the session TYPE decides
+whether your music survives the workout. It defaults to `"mix"`: an `ambient`
+session (falling back to `transient`), no silent `<audio>` element and no
+MediaSession metadata, so other apps keep the output at full volume and keep
+the lock screen. `"solo"` is the opt-in old behaviour — a `playback` session
+plus the element and the lock-screen entry, which rings through the ring/silent
+switch and best survives a locked screen, at the cost of pausing whatever else
+is playing for the length of every rest. Either way the session type is handed
+back on disarm rather than held between sets.
 
 **The limit it cannot beat, stated in the module header:** a force-quit app
 fires nothing. This is a page-alive alarm, not a scheduled push, and the

@@ -1,13 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createRestAlarm, clampRestSeconds, silentWavBytes } from "../rest-alarm.js";
+import { createRestAlarm, clampRestSeconds, silentWavBytes, restAudioMode, setRestAudioMode, REST_AUDIO_MODE_KEY, MIX, SOLO } from "../rest-alarm.js";
 
 // ---------------------------------------------------------------------------
 // A fake browser. Everything the alarm touches is recorded so the tests can
 // assert on WHEN the tone was booked, which is the whole point of the module.
 // ---------------------------------------------------------------------------
-function fakeEnv({ withAudio = true, clockStart = 0 } = {}) {
+function fakeEnv({ withAudio = true, clockStart = 0, sessionTypes = ["auto", "playback", "transient", "transient-solo", "ambient", "play-and-record"], store = {} } = {}) {
   const log = { oscillators: [], sources: [], timeouts: [], elements: [], contexts: [], resumed: 0, played: 0, paused: 0, objectUrls: 0, revoked: 0 };
   const env = {
     navigator: {},
@@ -54,7 +54,31 @@ function fakeEnv({ withAudio = true, clockStart = 0 } = {}) {
     Object.assign(this, init);
   };
   env.navigator.mediaSession = { metadata: null, playbackState: "none" };
-  env.navigator.audioSession = { type: "auto" };
+
+  // A real engine rejects an enum value it does not know. A permissive fake
+  // would let a typo'd session type pass every test and stop music in the wild.
+  let sessionType = "auto";
+  log.sessionTypes = [];
+  env.navigator.audioSession = {
+    get type() {
+      return sessionType;
+    },
+    set type(value) {
+      if (!sessionTypes.includes(value)) throw new TypeError(`unsupported: ${value}`);
+      sessionType = value;
+      log.sessionTypes.push(value);
+    },
+  };
+
+  env.localStorage = {
+    getItem: (k) => (k in store ? store[k] : null),
+    setItem: (k, v) => {
+      store[k] = String(v);
+    },
+    removeItem: (k) => {
+      delete store[k];
+    },
+  };
 
   if (withAudio) {
     env.AudioContext = function FakeContext() {
@@ -274,10 +298,10 @@ test("an onFire listener that throws still leaves the alarm disarmed", () => {
   assert.equal(alarm.armed(), false, "a broken listener must not strand an armed alarm");
 });
 
-test("a silent looping element plays while armed, because Web Audio alone is not enough on iOS", () => {
+test("solo mode plays a silent looping element, because Web Audio alone is not enough on iOS", () => {
   const clock = fakeClock();
   const { env, log } = fakeEnv();
-  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {}, mode: SOLO });
 
   alarm.arm(120);
   assert.equal(log.elements.length, 1);
@@ -291,10 +315,10 @@ test("a silent looping element plays while armed, because Web Audio alone is not
   assert.equal(log.paused, 1, "nothing keeps the audio thread alive outside an armed rest");
 });
 
-test("the rest shows up on the lock screen, and clears when it ends", () => {
+test("solo mode shows the rest on the lock screen, and clears it when it ends", () => {
   const clock = fakeClock();
   const { env } = fakeEnv();
-  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {}, mode: SOLO });
 
   alarm.arm(150);
   assert.equal(env.navigator.mediaSession.playbackState, "playing");
@@ -321,7 +345,7 @@ test("a missing MediaSession is decoration failing, not the alarm failing", () =
 test("destroy() releases the object URL and closes the context", () => {
   const clock = fakeClock();
   const { env, log } = fakeEnv();
-  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {}, mode: SOLO });
 
   alarm.arm(60);
   alarm.destroy();
@@ -340,7 +364,7 @@ test("no media element support still leaves a working alarm", () => {
   const { env, log } = fakeEnv();
   delete env.Audio;
   let fires = 0;
-  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => (fires += 1) });
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => (fires += 1), mode: SOLO });
 
   alarm.arm(15);
   assert.equal(log.elements.length, 0);
@@ -355,16 +379,131 @@ test("no media element support still leaves a working alarm", () => {
 // iOS hardening: the three ways a correctly scheduled tone still makes no sound
 // ---------------------------------------------------------------------------
 
-test("arming declares a playback audio session, so a phone on silent still rings", () => {
+test("arming declares a MIXABLE session by default, so music keeps playing", () => {
   const clock = fakeClock();
   const { env } = fakeEnv();
   const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
 
   assert.equal(env.navigator.audioSession.type, "auto");
   alarm.arm(120);
-  // Without this, iOS routes the tone through the ring/silent switch and a
-  // silenced phone plays NOTHING, which looks exactly like a broken timer.
+  // "playback" is non-mixable: it STOPS Spotify the moment a set is checked
+  // off, for the whole rest, which is the bug this default exists to avoid.
+  assert.equal(env.navigator.audioSession.type, "ambient");
+  assert.notEqual(env.navigator.audioSession.type, "playback");
+});
+
+test("mix mode falls back to ducking when the engine has no ambient session", () => {
+  const clock = fakeClock();
+  // An older WebKit: it knows transient but not ambient.
+  const { env } = fakeEnv({ sessionTypes: ["auto", "playback", "transient"] });
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+
+  alarm.arm(60);
+  // Second best, and still never stops the track: it dips and comes back.
+  assert.equal(env.navigator.audioSession.type, "transient");
+});
+
+test("mix mode never takes the lock screen or starts a competing player", () => {
+  const clock = fakeClock();
+  const { env, log } = fakeEnv();
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+
+  alarm.arm(120);
+
+  assert.equal(log.elements.length, 0, "a looping element competes for the one Now Playing slot");
+  assert.equal(log.played, 0);
+  assert.equal(env.navigator.mediaSession.metadata, null, "the lock screen belongs to whatever is actually playing");
+  assert.equal(env.navigator.mediaSession.playbackState, "none");
+  // The tone itself is still booked: mixing is not the same as going quiet.
+  assert.equal(log.oscillators.length, 3);
+  assert.equal(log.sources.length, 1, "the inaudible keepalive is mixable, so it stays in both modes");
+});
+
+test("mix mode leaves a foreign mediaSession state alone on disarm", () => {
+  const clock = fakeClock();
+  const { env } = fakeEnv();
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+
+  env.navigator.mediaSession.playbackState = "playing"; // the user's music app
+  alarm.arm(60);
+  alarm.disarm();
+  assert.equal(env.navigator.mediaSession.playbackState, "playing", "we never announced, so this is not ours to clear");
+});
+
+test("solo mode is opt-in and still takes the session for a silenced phone", () => {
+  const clock = fakeClock();
+  const { env, log } = fakeEnv();
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {}, mode: SOLO });
+
+  alarm.arm(120);
+  // Rings through the ring/silent switch, at the cost of interrupting music.
   assert.equal(env.navigator.audioSession.type, "playback");
+  assert.equal(log.elements.length, 1);
+  assert.equal(env.navigator.mediaSession.playbackState, "playing");
+});
+
+test("the session type is handed back on disarm, not held between sets", () => {
+  const clock = fakeClock();
+  const { env } = fakeEnv();
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+
+  alarm.arm(60);
+  assert.equal(env.navigator.audioSession.type, "ambient");
+  alarm.disarm();
+  assert.equal(env.navigator.audioSession.type, "auto", "a claim on the mixer we are not using is a claim to give back");
+});
+
+test("the mode is read fresh on each arm, so the toggle takes effect next rest", () => {
+  const clock = fakeClock();
+  const store = {};
+  const { env, log } = fakeEnv({ store });
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+
+  alarm.arm(60);
+  assert.equal(alarm.mode(), MIX);
+  assert.equal(log.elements.length, 0);
+
+  setRestAudioMode(SOLO, env);
+  alarm.arm(60);
+  assert.equal(alarm.mode(), SOLO, "no reload required");
+  assert.equal(log.elements.length, 1);
+});
+
+test("the stored mode defaults to mix, and only an exact opt-in reads as solo", () => {
+  const store = {};
+  const { env } = fakeEnv({ store });
+
+  assert.equal(restAudioMode(env), MIX, "taking over someone's music is never the default");
+
+  setRestAudioMode(SOLO, env);
+  assert.equal(store[REST_AUDIO_MODE_KEY], "solo");
+  assert.equal(restAudioMode(env), SOLO);
+
+  setRestAudioMode(MIX, env);
+  assert.equal(restAudioMode(env), MIX);
+
+  store[REST_AUDIO_MODE_KEY] = "banana"; // corrupt or from a future build
+  assert.equal(restAudioMode(env), MIX, "an unreadable value must fall back to the quiet-neighbour mode");
+});
+
+test("storage that throws does not stop the alarm arming in mix mode", () => {
+  const clock = fakeClock();
+  const { env } = fakeEnv();
+  env.localStorage = {
+    getItem() {
+      throw new Error("storage disabled");
+    },
+    setItem() {
+      throw new Error("storage disabled");
+    },
+  };
+
+  assert.equal(restAudioMode(env), MIX);
+  assert.doesNotThrow(() => setRestAudioMode(SOLO, env));
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+  assert.doesNotThrow(() => alarm.arm(45));
+  assert.equal(alarm.mode(), MIX);
+  assert.equal(alarm.remaining(), 45);
 });
 
 test("no audioSession support is not an error", () => {
@@ -384,11 +523,66 @@ test("a read-only audioSession does not break arming", () => {
   const clock = fakeClock();
   const { env } = fakeEnv();
   Object.defineProperty(env.navigator, "audioSession", {
+    configurable: true,
     get: () => ({ get type() { return "auto"; }, set type(_v) { throw new Error("read-only"); } }),
   });
   const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
   assert.doesNotThrow(() => alarm.arm(60));
   assert.equal(alarm.remaining(), 60);
+  assert.doesNotThrow(() => alarm.disarm());
+});
+
+test("an engine that silently ignores a type falls through instead of believing it", () => {
+  const clock = fakeClock();
+  const { env } = fakeEnv();
+  // WebKit shipped `ambient` after `transient`, and an engine that has neither
+  // may swallow the assignment rather than throw. Reading the value back is the
+  // only way to tell "accepted" from "ignored"; take it on trust and we stop at
+  // the first candidate, leaving the session on a type that stops music.
+  let current = "auto";
+  const writes = [];
+  Object.defineProperty(env.navigator, "audioSession", {
+    configurable: true,
+    value: Object.defineProperty({}, "type", {
+      get: () => current,
+      set: (v) => {
+        writes.push(v);
+        if (v !== "ambient") current = v; // ambient is ignored, not rejected
+      },
+    }),
+  });
+
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+  alarm.arm(60);
+
+  assert.deepEqual(writes, ["ambient", "transient"], "the ignored value must not end the search");
+  assert.equal(env.navigator.audioSession.type, "transient", "ducking is the fallback, and it still never stops the track");
+
+  alarm.disarm();
+  assert.equal(env.navigator.audioSession.type, "auto", "and the one we did land on is handed back");
+});
+
+test("a session left untouched is never 'restored' over", () => {
+  const clock = fakeClock();
+  const { env } = fakeEnv();
+  // Every candidate is ignored, so we changed nothing. Writing a remembered
+  // value back on disarm would be this page stamping the OS mixer for no
+  // reason, on top of a session another app may since have taken.
+  const writes = [];
+  Object.defineProperty(env.navigator, "audioSession", {
+    configurable: true,
+    value: Object.defineProperty({}, "type", {
+      get: () => "auto",
+      set: (v) => writes.push(v),
+    }),
+  });
+
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+  alarm.arm(60);
+  const attempted = writes.length;
+  alarm.disarm();
+
+  assert.equal(writes.length, attempted, "nothing took, so disarm has nothing to put back");
 });
 
 test("an interrupted context is resumed while armed", () => {
@@ -422,7 +616,7 @@ test("a context that drops out while NOT armed is left alone", () => {
 test("an element paused by an interruption restarts while armed", () => {
   const clock = fakeClock();
   const { env, log } = fakeEnv();
-  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {}, mode: SOLO });
 
   alarm.arm(120);
   const el = log.elements[0];
@@ -435,7 +629,7 @@ test("an element paused by an interruption restarts while armed", () => {
 test("the element is not restarted after the rest ends", () => {
   const clock = fakeClock();
   const { env, log } = fakeEnv();
-  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {}, mode: SOLO });
 
   alarm.arm(60);
   const el = log.elements[0];
