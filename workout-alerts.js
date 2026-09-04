@@ -15,6 +15,8 @@
  * device only and never leaves it.
  */
 
+import { restAudioMode, setRestAudioMode, MIX, SOLO } from "./rest-alarm.js";
+
 export const REST_ALERTS_KEY = "spotterai.restAlerts.enabled";
 
 // Legacy Web Push credentials/preferences. Deleted once on first load so the
@@ -242,6 +244,40 @@ export function initWorkoutAlertsUI(doc = globalThis.document) {
     } else {
       disableRestAlerts();
     }
+    render();
+  });
+
+  initRestAudioModeUI(doc);
+  render();
+}
+
+/**
+ * "Interrupt other audio for the alarm". Off by default, because the rest timer
+ * used to hold a non-mixable audio session for the whole rest and that STOPPED
+ * whatever the user had playing every time they checked off a set.
+ *
+ * Kept as a control rather than a silent change: for someone training without
+ * music, interrupting is strictly the better alarm — it rings through the
+ * ring/silent switch and is the version most likely to survive a locked screen.
+ */
+export function initRestAudioModeUI(doc = globalThis.document) {
+  if (!doc) return;
+  const toggle = doc.getElementById("rest-audio-solo-toggle");
+  if (!toggle) return;
+  const status = doc.getElementById("rest-audio-status");
+
+  function render() {
+    const solo = restAudioMode() === SOLO;
+    toggle.checked = solo;
+    toggle.setAttribute("aria-checked", String(solo));
+    if (!status) return;
+    status.textContent = solo
+      ? "On, the alarm takes over the audio output, so it rings even with your phone on silent and is the most reliable with the screen locked. Music, podcasts and anything else you have playing are paused for the length of each rest."
+      : "Off, the rest timer plays over your music and leaves it running.";
+  }
+
+  toggle.addEventListener("change", () => {
+    setRestAudioMode(toggle.checked ? SOLO : MIX);
     render();
   });
 
