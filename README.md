@@ -500,7 +500,11 @@ remains an explicit opt-in.
   nothing. During a workout, opt into **on-device rest-timer alerts** (a local
   notification when a rest timer ends). There is no remote push, no subscription,
   and no promise of anything after the app is closed, vibration, sound, and the
-  on-screen timer always work regardless.
+  on-screen timer always work regardless. The rest timer **plays over your
+  music** rather than stopping it, and leaves your lock screen and headphone
+  buttons with your music app; if you train without music, one toggle lets the
+  alarm interrupt other audio instead, which rings through the ring/silent
+  switch and best survives a locked screen.
 - **The coach sees all of it.** The tracker is summarized by
   [`tracker-store.js`](tracker-store.js) (`getContext()`) and passed to the
   chatbot, so **"summarize my week"**, "am I hitting protein?", and "what should I
