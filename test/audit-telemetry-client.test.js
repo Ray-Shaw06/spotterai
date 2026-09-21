@@ -99,7 +99,7 @@ test("sending uses sendBeacon and never throws when the transport fails", () => 
   };
 
   const calls = [];
-  setNavigator({ sendBeacon: (url, blob) => { calls.push(url); return true; } });
+  setNavigator({ sendBeacon: (url, _blob) => { calls.push(url); return true; } });
   assert.equal(sendAuditTelemetry(audit, plan, inputs, "generate"), true);
   assert.deepEqual(calls, ["/api/audit-telemetry"]);
 

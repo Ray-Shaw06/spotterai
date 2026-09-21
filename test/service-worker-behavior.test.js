@@ -176,7 +176,7 @@ test("a cached asset is served without waiting for the network", async () => {
 
   const settled = await Promise.race([
     pending.then((res) => res.text()),
-    new Promise((resolve) => setTimeout(() => resolve("TIMED OUT ON NETWORK"), 60)),
+    new Promise((resolve) => { setTimeout(() => resolve("TIMED OUT ON NETWORK"), 60); }),
   ]);
   assert.equal(settled, "cached:style.css", "the cached copy must answer while the network is still hanging");
 });

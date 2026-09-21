@@ -28,7 +28,7 @@ function loadMeta() {
   }
 }
 
-let meta = loadMeta();
+const meta = loadMeta();
 
 function saveMeta() {
   try {

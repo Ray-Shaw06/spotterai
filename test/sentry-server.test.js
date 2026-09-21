@@ -32,7 +32,7 @@ test("a throwing handler is reported and the error still propagates", async () =
 test("delivery is awaited, because a returned function stops executing", async () => {
   let resolved = false;
   const reporter = createServerReporter({ SENTRY_DSN: DSN }, async () => {
-    await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => { setTimeout(r, 10); });
     resolved = true;
     return true;
   });

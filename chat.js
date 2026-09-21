@@ -16,6 +16,7 @@ import { screenRequest, SAFE_REDIRECT } from "./safety-boundaries.js";
 import { parseCoachActions, describeAction } from "./chat-actions.js";
 import { applyPlanAction } from "./plan-edit.js";
 import { aiFailureMessage, classifyAiFailure, fetchWithTimeout } from "./ai-errors.js";
+import { attachFabTuck } from "./fab-tuck.js";
 
 // Bound the request like the plan surface does. The server's own ladder (two
 // models, two tries each) can run long under provider overload; without a
@@ -272,7 +273,7 @@ async function send() {
         body: JSON.stringify({ messages, plan: store.plan, tracker: getTrackerContext() }),
       }, REQUEST_TIMEOUT_MS);
       if (res.status !== 503) break;
-      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => { setTimeout(r, 1500); });
     }
     hideTyping();
 
@@ -352,4 +353,9 @@ if (fab && panel && form && input) {
   };
   window.addEventListener("spotter:plan", refresh);
   window.addEventListener("spotter:tracker", refresh);
+
+  // The launcher is pinned to a corner that is content on a narrow screen, so
+  // it steps aside while the page scrolls forward. See fab-tuck.js for the
+  // cases where it deliberately refuses to move.
+  attachFabTuck({ fab, isPanelOpen: () => panel.classList.contains("is-open") });
 }

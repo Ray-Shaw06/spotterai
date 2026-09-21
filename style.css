@@ -14,7 +14,7 @@
    renders those characters. Same runtime bytes as before for English, minus
    the third-party round trip.
 
-   Fonts are SIL Open Font License 1.1 (Inter, Literata, JetBrains Mono).
+   Fonts are SIL Open Font License 1.1 (Inter, JetBrains Mono).
    Regenerate with scripts/fetch-fonts.mjs if a family or weight range changes.
    --------------------------------------------------------------------------- */
 
@@ -54,23 +54,6 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-@font-face {
-  font-family: "Literata";
-  font-style: normal;
-  font-weight: 600 700;
-  font-display: swap;
-  src: url("fonts/literata-latin-ext.woff2") format("woff2");
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-
-@font-face {
-  font-family: "Literata";
-  font-style: normal;
-  font-weight: 600 700;
-  font-display: swap;
-  src: url("fonts/literata-latin.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
 
 /* ============================================================================
    SpotterAI — stylesheet
@@ -6774,4 +6757,166 @@ body.session-live .plan-bar { display: none; }
   .nut-snap { display: flex; align-items: center; gap: var(--space-4); }
   .nut-snap__btn { width: auto; flex: none; }
   .nut-snap__note { margin: 0; }
+}
+
+/* ============================================================================
+   F. INSTRUMENT REGISTER
+   ----------------------------------------------------------------------------
+   Fifth layer (see the CONTENTS block at the top of this file).
+
+   Layer D was right that the blueprint grid was decoration doing no work, and
+   right that tracked caps on every field label is scaffolding. But in removing
+   them it also swapped the display face for a humanist serif on tinted paper —
+   and serif-display-on-warm-paper is the single most recognisable signature of
+   an AI assistant UI. The app was read as "looks like a chat assistant" by a
+   first-time viewer, which for a product whose entire pitch is *deterministic,
+   pure-code verification* is exactly the wrong association.
+
+   This layer moves the register from ESSAY to INSTRUMENT, without bringing
+   back any of the decoration layer D correctly deleted:
+
+     1. Display type: serif → Inter. Layer D paired serif against sans for
+        contrast; the contrast axis here is sans against MONO instead, which
+        is the axis this product actually earns — the evaluator is code, and
+        the numbers are readouts. No new font bytes: JetBrains Mono is already
+        loaded and already carries the scores.
+     2. Geometry: pill buttons and 12px cards → squared. Fully-rounded buttons
+        are the consumer-assistant tell. `--r-full` is deliberately NOT changed,
+        because the 59 things using it (severity pills, progress tracks, chips)
+        are round by genuine convention.
+     3. Elevation: near-flat already, now flat. Structure reads through ruled
+        hairlines rather than drop shadows — a spec sheet, not a floating card.
+
+   The palette is untouched on purpose. The forest green is the brand and the
+   "passed / safe" signal at once, and every text tier in layer A was verified
+   ≥4.5:1 against --bg, --surface and --surface-2. Re-tinting the ground would
+   invalidate all of it for no gain; none of the genericness lived in the hue.
+
+   Additive layer: these rules override earlier ones purely by cascade order.
+   ============================================================================ */
+
+:root {
+  /* --- 1. Type: sans display, mono as the structural voice ----------------- */
+  --font-display: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* --- 2. Geometry: squared. Instruments and documents have edges. --------- */
+  --r-sm: 3px;
+  --r-md: 4px;
+  --r-lg: 6px;
+  --r-xl: 8px;
+  /* --r-full stays 999px — see the note above. */
+
+  /* --- 3. Elevation: flat; hairlines carry the structure ------------------- */
+  --border: #ccd8d0;      /* one step more present, so rules read as drawn */
+  --border-soft: #dde6e0;
+  --shadow-sm: 0 1px 0 rgba(20, 26, 23, 0.04);
+  --shadow-md: 0 1px 0 rgba(20, 26, 23, 0.04);
+  --shadow-lg: 0 1px 2px rgba(20, 26, 23, 0.06);
+  --glow-accent: none;
+  --glow-accent-strong: 0 0 0 2px var(--accent-ring);
+}
+
+/* A sans at display size wants tighter tracking and leading than the serif
+   layer D tuned these for. */
+h1, h2, h3, h4, h5,
+.hero__title,
+.section-title--lg,
+.cmd__title {
+  letter-spacing: -0.022em;
+  line-height: 1.1;
+  font-weight: 700;
+}
+.hero__title,
+.cmd__title {
+  font-size: var(--fs-display);
+  letter-spacing: -0.028em;
+  line-height: 1.04;
+  font-weight: 800;
+}
+
+/* The eyebrow is a genuine technical marker rather than an ordinary field
+   label, so it takes the mono voice — in sentence case, because layer D was
+   right that caps-plus-tracking on everything is scaffolding. */
+.eyebrow,
+.plan__eyebrow {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 0.74rem;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+/* The wordmark is the one place the instrument voice should be unmistakable. */
+.wordmark,
+.sidebar__brand {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+}
+
+/* --- 2 (cont). Buttons: squared, and they no longer bounce ------------------
+   The lift-on-hover is a consumer-app gesture. Feedback now comes from colour
+   and a crisp ring, which is also steadier for anyone sensitive to motion. */
+.btn {
+  border-radius: var(--r-md);
+  letter-spacing: -0.015em;
+}
+.btn:hover,
+.btn--primary:hover {
+  transform: none;
+}
+.btn--primary:hover {
+  box-shadow: var(--glow-accent-strong);
+}
+.btn--ghost:hover {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-ring);
+}
+
+/* The coach launcher was the last pill left on screen, and a floating rounded
+   chat bubble is the most recognisable assistant affordance there is. Squared,
+   it reads as a panel you open rather than a bot you summon. */
+.chat-fab {
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+}
+.chat-fab:hover {
+  transform: none;
+  box-shadow: var(--glow-accent-strong);
+}
+
+/* --- 4. A stray indicator that only ever showed where it was wrong ----------
+   `.nav-link.is-active::before` is a 3x20px glowing bar pinned to the LEFT
+   edge of the active item — an indicator drawn for a vertical sidebar. The
+   desktop rail (min-width: 961px) already hides it. Below that the sidebar
+   becomes a horizontal bottom tab bar, and nothing hid it there, so it
+   rendered as a floating green tick beside the active tab, clipped by the bar
+   and attached to nothing. It was visible only in the one layout it was never
+   designed for. The active tab already reads through colour and its icon. */
+@media (max-width: 960px) {
+  .sidebar__nav .nav-link.is-active::before { display: none; }
+}
+
+/* --- 5. The launcher steps aside while you read -----------------------------
+   `.is-tucked` is driven by fab-tuck.js on scroll. `visibility: hidden` is
+   what takes it out of the tab order, so the delay on that property is what
+   lets the slide-out finish before it disappears; coming back it flips
+   immediately. Anything that only fades would stay focusable while invisible,
+   which is the usual accessibility bug in this pattern. */
+.chat-fab {
+  transition: transform var(--transition), opacity var(--transition),
+    background var(--transition), box-shadow var(--transition), visibility 0s;
+}
+.chat-fab.is-tucked {
+  opacity: 0;
+  transform: translateY(150%);
+  pointer-events: none;
+  visibility: hidden;
+  transition: transform var(--transition), opacity var(--transition), visibility 0s linear 240ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Keep the behaviour — it is the fix — but drop the travel. */
+  .chat-fab,
+  .chat-fab.is-tucked { transition: none; }
+  .chat-fab.is-tucked { transform: none; }
 }

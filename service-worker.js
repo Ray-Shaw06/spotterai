@@ -16,7 +16,7 @@
  * Bump CACHE when shipping changes so old caches are cleaned on activate.
  */
 
-const CACHE = "spotterai-v70";
+const CACHE = "spotterai-v72";
 // Explicit local module graph rooted at every <script type="module"> in index.html.
 // test/service-worker-behavior.test.js derives the graph independently so a new
 // boot import cannot be shipped without being added here.
@@ -47,6 +47,7 @@ const BOOT_MODULES = [
   "exercise-data.js",
   "exercise-metadata.js",
   "exercises.js",
+  "fab-tuck.js",
   "firebase-config.js",
   "first-week-ui.js",
   "first-week.js",
@@ -108,8 +109,6 @@ const BOOT_MODULES = [
 const FONTS = [
   "fonts/inter-latin.woff2",
   "fonts/inter-latin-ext.woff2",
-  "fonts/literata-latin.woff2",
-  "fonts/literata-latin-ext.woff2",
   "fonts/jetbrains-mono-latin.woff2",
   "fonts/jetbrains-mono-latin-ext.woff2",
 ];
@@ -221,7 +220,7 @@ self.addEventListener("notificationclick", (event) => {
         if (typeof client.navigate === "function") await client.navigate(destination.href);
         await client.focus();
         return;
-      } catch {}
+      } catch { /* client went away mid-focus; fall through to openWindow */ }
     }
     await self.clients.openWindow(destination.href);
   })());

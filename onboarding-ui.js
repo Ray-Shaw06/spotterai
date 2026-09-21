@@ -46,7 +46,7 @@ function esc(t) {
   return d.innerHTML;
 }
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify({ step, data })); } catch {}
+  try { localStorage.setItem(KEY, JSON.stringify({ step, data })); } catch { /* private mode / quota: resume is a convenience, not a requirement */ }
 }
 function load() {
   try {
@@ -184,7 +184,7 @@ function finish() {
     const s = saferTargets({ bodyweight: kg, unit: "kg", goal: inputs.goal });
     if (s) setTargets({ kcal: Math.round((s.kcalLow + s.kcalHigh) / 2), protein: Math.round((s.proteinLow + s.proteinHigh) / 2) });
   }
-  try { localStorage.removeItem(KEY); } catch {}
+  try { localStorage.removeItem(KEY); } catch { /* nothing to clean up if storage is unavailable */ }
   close();
   location.hash = "#/"; // the Plan page, where results render
   window.dispatchEvent(new CustomEvent("spotter:generate", { detail: inputs }));

@@ -7,7 +7,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { SessionRecorder, tipsFor } from "../form-session.js";
-import { reportHTML } from "../form-report.js";
+import { reportHTML, pickRecorderMime, markersFor, videoHTML } from "../form-report.js";
 
 const GOOD = { level: "good", text: "Hit depth" };
 const SHALLOW = { level: "warn", text: "Too shallow, bigger range" };
@@ -103,8 +103,6 @@ test("exercise labels and cue text are HTML-escaped", () => {
 });
 
 // ---- session recording helpers (pure) -------------------------------------
-
-import { pickRecorderMime, markersFor, videoHTML } from "../form-report.js";
 
 test("recorder mime prefers mp4 (iOS), falls back to webm, then null", () => {
   assert.equal(pickRecorderMime((t) => t === "video/mp4"), "video/mp4");

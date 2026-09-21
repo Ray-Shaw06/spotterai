@@ -197,7 +197,9 @@ test("every @font-face in style.css points at a font file that exists", () => {
   // looks like a design regression rather than a missing file.
   const css = readFileSync(join(root, "style.css"), "utf8");
   const urls = [...css.matchAll(/src:\s*url\("([^"]+)"\)/g)].map((m) => m[1]);
-  assert.ok(urls.length >= 6, `expected at least 6 @font-face sources, found ${urls.length}`);
+  // Two families (Inter, JetBrains Mono) x two subsets (latin, latin-ext).
+  // Literata went with the serif display face in style layer F.
+  assert.ok(urls.length >= 4, `expected at least 4 @font-face sources, found ${urls.length}`);
   for (const url of urls) {
     const buf = readFileSync(join(root, url));
     assert.equal(buf.subarray(0, 4).toString("hex"), "774f4632", `${url} is not a woff2 file`);

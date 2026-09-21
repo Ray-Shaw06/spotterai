@@ -27,7 +27,7 @@ function load() {
   try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; }
 }
 function persist(v) {
-  try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {}
+  try { localStorage.setItem(KEY, JSON.stringify(v)); } catch { /* private mode / quota: first-week state is best-effort */ }
 }
 
 /** Stat-derived checklist booleans for the current day. */

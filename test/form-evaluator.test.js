@@ -87,7 +87,7 @@ test("push-up reliability follows the wrist, not the legs", () => {
 const P = FORM_THRESHOLDS.pullup;
 
 function runReps(counter, seq) {
-  let completed = [];
+  const completed = [];
   for (const [t, elbow] of seq) {
     const r = counter.update({ elbow, reliable: true }, t);
     if (r.justCompleted) completed.push(counter.lastRep);

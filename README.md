@@ -1,8 +1,8 @@
-# SpotterAI 🔵
+# SpotterAI 🟢
 
 [![CI](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml/badge.svg)](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml)
 &nbsp;[![codecov](https://codecov.io/gh/Ray-Shaw06/spotterai/branch/main/graph/badge.svg)](https://codecov.io/gh/Ray-Shaw06/spotterai)
-&nbsp;[![License: MIT](https://img.shields.io/badge/License-MIT-3b8ef5.svg)](LICENSE)
+&nbsp;[![License: MIT](https://img.shields.io/badge/License-MIT-1a5c42.svg)](LICENSE)
 
 **A deterministic verifier for LLM output, in a domain where users can't check the answer themselves.** &nbsp;·&nbsp; **[▶ Live demo](https://spotterai.xyz)** &nbsp;·&nbsp; **[▶ Audit a plan you already have](https://spotterai.xyz/#/import)**
 
@@ -10,13 +10,44 @@
 > evaluator** (no AI, fixed rubric, 14 checks) grades that plan and shows the
 > flags before you train. The red-team suite that tests the evaluator is
 > [published and runs live in your browser](https://spotterai.xyz/#/evals).
-> **717 tests, 21 adversarial eval cases, one runtime dependency, no build step.**
+> **870 tests, 23 adversarial eval cases, 2 runtime dependencies, no build step.**
+> (These counts are [checked by CI](scripts/check-readme-claims.mjs) against the
+> live repo, so they cannot silently go stale.)
 > Solo-built by a CS student. Vanilla ES modules, Node serverless functions on
 > Vercel, Gemini, on-device MediaPipe.
 
 <p align="center">
   <img src="og-home.png" alt="A flags-first plan safety audit: issues to review, severity tiers, and a demoted quality score." width="700" />
 </p>
+
+## Don't take this README's word for it
+
+Every quality claim below is a command you can run. The fastest check needs
+**nothing installed at all** — Node 22 and the repo:
+
+```bash
+git clone https://github.com/Ray-Shaw06/spotterai && cd spotterai
+npm test          # the full suite, ~7s, nothing to install
+npm run eval      # the evaluator benchmark, no API key, no network
+```
+
+For the full gate, `npm ci && npm run verify`. That is four checks, and all four
+run on every pull request ([`ci.yml`](.github/workflows/ci.yml)):
+
+| Gate | What it actually proves | Command |
+| --- | --- | --- |
+| **Lint** | No undeclared identifiers, no dead imports, no undocumented silent `catch {}`. This repo has no build step and no type checker, so `no-undef` is the only thing standing between a typo in a browser module and a `ReferenceError` on someone's phone. Config and the reasoning for every rule: [`eslint.config.js`](eslint.config.js). | `npm run lint` |
+| **Tests** | The full suite, holding **line coverage above 85%** ([live figure](https://codecov.io/gh/Ray-Shaw06/spotterai)), on Node's built-in runner. | `npm test` |
+| **Evaluator benchmark** | The safety evaluator catches **18 of 18** known-risky plans and false-flags **0 of 5** known-good ones. A regression fails the build rather than quietly moving a dashboard. | `npm run eval` |
+| **README claims** | The numbers on this page are derived from the repo, not typed by hand — [the check](scripts/check-readme-claims.mjs) fails CI if the prose drifts from reality. | `npm run check:readme` |
+
+**The honest limits,** so you can weigh the above properly: there is **no type
+checker** (vanilla ES modules, no build step — lint plus tests carry that load),
+there is **no automated browser/E2E suite** (the [manual QA checklist](#manual-qa-checklist)
+is genuinely run by hand), and coverage is a *report* above its floor rather
+than a hard gate. The evaluator benchmark is a **bundled local suite**, not a
+live-model eval; what it proves is that the deterministic checker behaves, not
+that the LLM behind it does.
 
 ## The idea
 
@@ -43,7 +74,7 @@ Three properties matter more than the check list:
   run. It does not quietly call it a pass. A verifier that invents reassurance
   is worse than no verifier.
 - **It is testable, and the tests are public.** The [Safety Lab](https://spotterai.xyz/#/evals)
-  runs 21 adversarial cases against the evaluator live in your browser, including
+  runs 23 adversarial cases against the evaluator live in your browser, including
   the known-good plans it must *not* flag.
 - **It works on plans it did not write.** [`/import`](https://spotterai.xyz/#/import)
   takes a plan pasted from a chatbot, a PDF or a coach's email and runs the same
@@ -350,13 +381,15 @@ explanations are the product.
 
 ### Tested + CI, and a live "red-team" proof page
 
-The trust logic is covered by **409 automated tests** across the evaluator (tiers, the
-fractional volume model, structured-data injury matching), the plan-repair
-engine, safety boundaries, nutrition guardrails, rule explanations, plan/nutrition
-**Trust Report confidence**, **form-check confidence** thresholds, the benchmark
+The trust logic is covered across the evaluator (tiers, the fractional volume
+model, structured-data injury matching), the plan-repair engine, safety
+boundaries, nutrition guardrails, rule explanations, plan/nutrition **Trust
+Report confidence**, **form-check confidence** thresholds, the benchmark
 computations, and UI-copy/positioning guards, plus the search, progression, and
-chat-guard logic. It uses **Node's built-in test runner**, still **zero
-dependencies**, and runs on every push via **GitHub Actions** (the badge up top).
+chat-guard logic — **870 tests** in total, holding **line coverage above 85%**
+(the codecov badge up top is the live figure). The suite uses **Node's built-in
+test runner** and needs **nothing installed to run it**, and it runs on every
+push via **GitHub Actions**.
 
 ```bash
 npm test          # or: node --test

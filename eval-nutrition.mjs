@@ -65,7 +65,7 @@ const argVal = (name, def) => {
 };
 const delayMs = Math.max(0, Number(argVal("delay", 7000)));
 const limit = Math.max(1, Number(argVal("limit", NUTRITION_CASES.length)));
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
 const shortErr = (m = "") =>
   /\b429\b/.test(m) ? "rate-limited (429) — free-tier quota"
     : /\b404\b/.test(m) ? "model unavailable (404)"

@@ -332,7 +332,7 @@ function startRecording() {
   recorderTimer = setTimeout(() => {
     try {
       if (recorder && recorder.state !== "inactive") recorder.stop();
-    } catch {}
+    } catch { /* recorder already torn down by the browser */ }
     if (el.rec) el.rec.hidden = true;
   }, RECORD_MAX_MS);
 }

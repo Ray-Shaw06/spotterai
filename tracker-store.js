@@ -10,7 +10,7 @@
  * Emits a "spotter:tracker" window event on every change.
  */
 
-import { ACHIEVEMENTS, RANKS, XP, achievementXp, levelFor, rankFor, workoutXp } from "./gamify.js";
+import { ACHIEVEMENTS, XP, achievementXp, levelFor, rankFor, workoutXp } from "./gamify.js";
 import { trackerKey } from "./profile-store.js";
 import { deloadFromWeeklyVolume, epley1RM, suggestNextWeight } from "./progression.js";
 import { isCardioExercise } from "./exercise-catalog.js";
@@ -1090,7 +1090,7 @@ export function calendarMonth(year, monthIndex) {
 
   const todayKey = today();
   const weeks = [];
-  let cursor = new Date(start);
+  const cursor = new Date(start);
   while (cursor <= end) {
     const week = [];
     for (let i = 0; i < 7; i++) {

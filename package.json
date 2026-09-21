@@ -8,6 +8,10 @@
     "dev": "vercel dev",
     "start": "vercel dev",
     "test": "node --test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "check:readme": "node scripts/check-readme-claims.mjs",
+    "verify": "npm run lint && npm run test && npm run eval && npm run check:readme",
     "test:coverage": "mkdir -p coverage && node --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-coverage-exclude='scripts/**' --test-reporter=lcov --test-reporter-destination=coverage/lcov.info --test-reporter=spec --test-reporter-destination=stdout",
     "test:firebase-emulator": "node scripts/run-firebase-emulator-gate.mjs",
     "check": "node --test",
@@ -27,8 +31,11 @@
     "firebase-admin": "^14.2.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@firebase/rules-unit-testing": "^5.0.1",
+    "eslint": "^9.39.4",
     "firebase": "^12.16.0",
-    "firebase-tools": "^15.23.0"
+    "firebase-tools": "^15.23.0",
+    "globals": "^17.12.0"
   }
 }
