@@ -6920,3 +6920,333 @@ h1, h2, h3, h4, h5,
   .chat-fab.is-tucked { transition: none; }
   .chat-fab.is-tucked { transform: none; }
 }
+
+/* ============================================================================
+   G. READOUT SYSTEM  ·  light default, dark opt-in
+   ----------------------------------------------------------------------------
+   Layer F changed tokens — radii, a display face, shadow depth — and left the
+   composition alone. That is a re-skin, and it showed: the page got plainer
+   without getting more designed. This layer changes the composition.
+
+   The product is a deterministic verifier. Its most convincing surface has
+   always been the Safety Lab, because that page is dense, numeric and
+   structured — it reads like an instrument. The landing page, meanwhile, put
+   the audit output in a decorative card beside the headline, which is the one
+   thing on the page that actually proves the claim. So:
+
+     1. The readout becomes the hero object, with a real score dial, a
+        segmented severity meter and per-check detail — not a static mock.
+     2. A type scale with genuine contrast: a 3.9rem headline against 11px
+        mono micro-labels. Before, everything sat within two sizes of
+        everything else, which is what read as flat.
+     3. Structural density: a live status strip above the fold and a telemetry
+        rail of the four numbers that are the actual proof.
+     4. Dark mode, which the app did not have. Light stays the default — this
+        is used in daylight — and dark is opt-in, by system preference or the
+        toggle in the account sheet.
+
+   Both palettes are verified AA (4.5:1) for every text tier against --bg,
+   --surface AND --surface-2, plus ink-on-accent; test/contrast.test.js runs
+   the arithmetic so this cannot rot. Light keeps the deep forest --accent
+   unchanged, because its ratios were already verified and the genericness was
+   never in the hue. Dark needs a brighter green to stay legible, so it gets
+   one, and the same check covers it.
+
+   Additive layer: these rules override earlier ones purely by cascade order.
+   ============================================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* Dark values live here so the two dark selectors below share one source of
+     truth rather than duplicating twelve hex codes. */
+  --d-bg: #0a0e0c;
+  --d-bg-soft: #0d1310;
+  --d-surface: #101613;
+  --d-surface-2: #161f1a;
+  --d-border: #1e2a24;
+  --d-border-strong: #2b3c34;
+  --d-text: #e9f0ec;
+  --d-muted: #9cb0a5;
+  --d-faint: #8a9e93;
+  --d-accent: #36e08d;
+  --d-accent-hover: #4df0a0;
+  --d-accent-2: #2bbf78;
+  --d-accent-ink: #04130b;
+  --d-warn: #f2b13c;
+  --d-danger: #ff6f64;
+
+  /* Light — the default. Ground is a step cooler than before so white panels
+     separate from it without needing a shadow to do the work. */
+  --bg: #eef2f0;
+  --bg-soft: #e7edea;
+  --surface: #ffffff;
+  --surface-solid: #ffffff;
+  --surface-2: #f5f8f6;
+  --border: #dbe4de;
+  --border-soft: #e4ebe7;
+  --border-strong: #c2d1c8;
+  --text: #0d1411;
+  --text-muted: #4e5d55;
+  --text-faint: #5f7068;
+  --accent-glow: rgba(26, 92, 66, 0.10);
+  --scrim: rgba(13, 20, 17, 0.42);
+}
+
+/* System preference, unless the reader has explicitly chosen light. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: var(--d-bg);
+    --bg-soft: var(--d-bg-soft);
+    --surface: var(--d-surface);
+    --surface-solid: var(--d-surface);
+    --surface-2: var(--d-surface-2);
+    --border: var(--d-border);
+    --border-soft: var(--d-border);
+    --border-strong: var(--d-border-strong);
+    --text: var(--d-text);
+    --text-muted: var(--d-muted);
+    --text-faint: var(--d-faint);
+    --accent: var(--d-accent);
+    --accent-hover: var(--d-accent-hover);
+    --accent-ink: var(--d-accent-ink);
+    --accent-2: var(--d-accent-2);
+    --accent-soft: color-mix(in srgb, var(--d-accent) 12%, transparent);
+    --accent-ring: color-mix(in srgb, var(--d-accent) 34%, transparent);
+    --accent-glow: color-mix(in srgb, var(--d-accent) 13%, transparent);
+    --success: var(--d-accent);
+    --success-soft: color-mix(in srgb, var(--d-accent) 12%, transparent);
+    --success-ring: color-mix(in srgb, var(--d-accent) 32%, transparent);
+    --warn: var(--d-warn);
+    --warn-soft: color-mix(in srgb, var(--d-warn) 13%, transparent);
+    --danger: var(--d-danger);
+    --danger-soft: color-mix(in srgb, var(--d-danger) 13%, transparent);
+    --scrim: rgba(0, 0, 0, 0.62);
+    --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 1px 0 rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 24px 60px -36px rgba(0, 0, 0, 0.85);
+  }
+}
+
+/* Explicit choice always wins over the system. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: var(--d-bg);
+  --bg-soft: var(--d-bg-soft);
+  --surface: var(--d-surface);
+  --surface-solid: var(--d-surface);
+  --surface-2: var(--d-surface-2);
+  --border: var(--d-border);
+  --border-soft: var(--d-border);
+  --border-strong: var(--d-border-strong);
+  --text: var(--d-text);
+  --text-muted: var(--d-muted);
+  --text-faint: var(--d-faint);
+  --accent: var(--d-accent);
+  --accent-hover: var(--d-accent-hover);
+  --accent-ink: var(--d-accent-ink);
+  --accent-2: var(--d-accent-2);
+  --accent-soft: color-mix(in srgb, var(--d-accent) 12%, transparent);
+  --accent-ring: color-mix(in srgb, var(--d-accent) 34%, transparent);
+  --accent-glow: color-mix(in srgb, var(--d-accent) 13%, transparent);
+  --success: var(--d-accent);
+  --success-soft: color-mix(in srgb, var(--d-accent) 12%, transparent);
+  --success-ring: color-mix(in srgb, var(--d-accent) 32%, transparent);
+  --warn: var(--d-warn);
+  --warn-soft: color-mix(in srgb, var(--d-warn) 13%, transparent);
+  --danger: var(--d-danger);
+  --danger-soft: color-mix(in srgb, var(--d-danger) 13%, transparent);
+  --scrim: rgba(0, 0, 0, 0.62);
+  --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 1px 0 rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 24px 60px -36px rgba(0, 0, 0, 0.85);
+}
+
+/* One accent bloom, anchored where the readout sits. Not texture for its own
+   sake: it puts the light source on the thing the page is about. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(760px 520px at 78% 16%, var(--accent-glow), transparent 68%);
+}
+.app-shell, .sidebar, main, .app-main { position: relative; z-index: 1; }
+
+/* --- Panels: hairline structure, no float ---------------------------------- */
+.card,
+.dash-card,
+.audit-card,
+.account-section,
+.quicklog {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: none;
+}
+.audit-card { border-color: var(--border-strong); box-shadow: var(--shadow-lg); }
+
+/* --- Data readouts: numbers are the point, so they get the size ------------ */
+.bench__item dd,
+.tele b {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.045em;
+}
+
+/* --- Status strip: the instrument is on, and says so ----------------------- */
+.strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 76%, transparent);
+  backdrop-filter: blur(8px);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.strip > * {
+  padding: 9px 16px;
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+}
+.strip b { color: var(--text-muted); font-weight: 500; }
+.strip .strip__live { color: var(--accent); display: flex; align-items: center; gap: 7px; }
+.strip .strip__end { margin-left: auto; border-right: 0; border-left: 1px solid var(--border); }
+.strip__dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  animation: strip-pulse 2.4s ease-in-out infinite;
+}
+@keyframes strip-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .strip__dot { animation: none; } }
+@media (max-width: 720px) { .strip .strip__end { display: none; } }
+
+/* --- Hero: asymmetric, dense, readout-led ---------------------------------- */
+.hero__inner { align-items: center; }
+.hero__title { letter-spacing: -0.042em; line-height: 1.02; }
+.hero__title::after {
+  content: ""; display: block; width: 74px; height: 2px;
+  background: var(--accent); margin-top: 26px;
+}
+.hero__lede { margin-top: 24px; max-width: 46ch; }
+
+/* The readout itself. */
+.audit-card { padding: 0; }
+.audit-card__head {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.audit-card__score { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center; padding: 24px 18px 18px; }
+.dial { position: relative; width: 100px; height: 100px; flex: none; }
+.dial svg { transform: rotate(-90deg); }
+.dial circle { fill: none; stroke-width: 6; }
+.dial .dial__track { stroke: var(--border-strong); }
+.dial .dial__val {
+  stroke: var(--accent); stroke-linecap: round;
+  stroke-dasharray: 289; stroke-dashoffset: 46;
+  animation: dial-fill 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s backwards;
+}
+@keyframes dial-fill { from { stroke-dashoffset: 289; } }
+@media (prefers-reduced-motion: reduce) { .dial .dial__val { animation: none; } }
+.dial b {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: 29px; font-weight: 700;
+  letter-spacing: -0.04em; color: var(--text); font-variant-numeric: tabular-nums;
+}
+.audit-card__verdict-line { font-size: 19px; line-height: 1.25; letter-spacing: -0.02em; font-weight: 700; margin: 0 0 8px; }
+.audit-card__scorenote { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); letter-spacing: 0.05em; text-transform: uppercase; margin: 0; }
+
+/* Severity as a segmented meter: eleven checks, colour-coded, at a glance. */
+.audit-meter { display: grid; grid-template-columns: repeat(11, 1fr); gap: 3px; padding: 0 18px 14px; list-style: none; }
+.audit-meter li { height: 5px; border-radius: 1px; background: var(--border-strong); }
+.audit-meter li.is-warn { background: var(--warn); }
+.audit-meter li.is-sugg { background: var(--accent-2); }
+.audit-meter li.is-ok { background: var(--accent); }
+
+.audit-card__counts { display: flex; gap: 18px; flex-wrap: wrap; padding: 0 18px 18px; margin: 0; font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.03em; color: var(--text-faint); list-style: none; }
+.audit-card__counts strong { font-weight: 700; letter-spacing: -0.02em; }
+.audit-card__counts .is-warn strong { color: var(--warn); }
+.audit-card__counts .is-sugg strong { color: var(--text-muted); }
+.audit-card__counts .is-ok strong { color: var(--accent); }
+
+.audit-card__checks { border-top: 1px solid var(--border); margin: 0; padding: 0; list-style: none; }
+.audit-card__checks li {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px 18px; border-bottom: 1px solid var(--border);
+  border-left: 2px solid transparent; font-size: 14px;
+}
+.audit-card__checks li:last-child { border-bottom: 0; }
+.audit-card__checks li.is-warn { border-left-color: var(--warn); }
+.audit-card__checks li.is-ok { border-left-color: var(--accent); }
+.audit-card__checks .ico { width: 15px; height: 15px; flex: none; margin-top: 3px; }
+.audit-card__checks small { display: block; color: var(--text-faint); font-size: 12px; margin-top: 2px; }
+.audit-card__foot {
+  padding: 12px 18px; margin: 0; background: var(--surface-2);
+  border-top: 1px solid var(--border); font-family: var(--font-mono);
+  font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint);
+}
+
+/* --- Telemetry rail: the four numbers that are the actual proof ------------ */
+.tele { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 8px 0 0; list-style: none; padding: 0; }
+.tele li { padding: 24px 0 24px 22px; border-right: 1px solid var(--border); }
+.tele li:last-child { border-right: 0; }
+.tele b { display: block; font-size: 30px; font-weight: 700; line-height: 1; color: var(--text); }
+.tele b i { font-style: normal; color: var(--accent); }
+.tele span { display: block; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-faint); margin-top: 11px; }
+@media (max-width: 720px) {
+  .tele { grid-template-columns: 1fr 1fr; }
+  .tele li { padding-left: 16px; }
+  .tele li:nth-child(2) { border-right: 0; }
+  .tele li:nth-child(-n + 2) { border-bottom: 1px solid var(--border); }
+}
+
+/* --- Theme control --------------------------------------------------------- */
+.theme-row { display: flex; gap: 6px; }
+.theme-opt {
+  flex: 1; min-height: 44px; font: inherit; font-size: var(--fs-small); font-weight: 600;
+  color: var(--text-muted); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  cursor: pointer; transition: var(--transition);
+}
+.theme-opt[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.theme-opt:hover { color: var(--text); }
+
+/* --- Readout polish, from the first pass in a real browser ------------------
+   Four things the screenshots caught that the markup did not predict. */
+
+/* 1. The focus-bracket corners (layer B) drew a second frame 9px inside the
+   card. That read as an instrument when the card was one flat panel; now that
+   it has its own header and footer bars, the brackets cut across both and
+   fight the structure. They stay on every other panel — only the readout,
+   which now has real chrome of its own, drops them. */
+.audit-card::after { content: none; }
+
+/* 2. The card was sized for the old three-line mock. The readout needs the
+   counts on one row: wrapping "8/11 passed" onto its own line reads as a
+   fifth, missing category. */
+.audit-card { max-width: 460px; }
+.audit-card__counts { gap: 14px; font-size: 11px; }
+
+/* 3. The score note wrapped to two lines and pushed the verdict off-centre. */
+.audit-card__scorenote { white-space: nowrap; }
+
+/* 4. The coach launcher sat on the telemetry rail — the four numbers that are
+   the whole proof, and the last thing above the fold. The rail reserves the
+   corner instead, so the launcher floats over margin rather than over data. */
+@media (min-width: 721px) {
+  /* Enough to clear the launcher, not so much that the label wraps — the
+     reserve is for a floating control, so the label must not pay for it. */
+  .tele li:last-child { padding-right: 150px; }
+  .tele span { white-space: nowrap; }
+}

@@ -10,7 +10,7 @@
 > evaluator** (no AI, fixed rubric, 14 checks) grades that plan and shows the
 > flags before you train. The red-team suite that tests the evaluator is
 > [published and runs live in your browser](https://spotterai.xyz/#/evals).
-> **870 tests, 23 adversarial eval cases, 2 runtime dependencies, no build step.**
+> **886 tests, 23 adversarial eval cases, 2 runtime dependencies, no build step.**
 > (These counts are [checked by CI](scripts/check-readme-claims.mjs) against the
 > live repo, so they cannot silently go stale.)
 > Solo-built by a CS student. Vanilla ES modules, Node serverless functions on
@@ -115,6 +115,13 @@ organized into clean, separate **pages** (Plan · Dashboard · Nutrition ·
 Progress · Form check · Safety Lab) via a tiny client-side router, with optional local
 **profiles** so different people can keep separate data on the same browser,
 while optional Firebase sync remains a separate, explicit opt-in.
+
+The interface is **light by default with an opt-in dark theme** — your system
+preference, or an explicit choice that overrides it in both directions. Both
+palettes are **verified AA**: [a test](test/contrast.test.js) parses the colour
+tokens straight out of `style.css` and checks every text tier against every
+surface it can actually sit on, so the accessibility claim is arithmetic rather
+than a comment that used to be true.
 
 Because SpotterAI has **no remote push** (retired for a genuinely $0 operator
 bill), it cannot reach you when it is closed, and it does not pretend to.
@@ -386,7 +393,7 @@ model, structured-data injury matching), the plan-repair engine, safety
 boundaries, nutrition guardrails, rule explanations, plan/nutrition **Trust
 Report confidence**, **form-check confidence** thresholds, the benchmark
 computations, and UI-copy/positioning guards, plus the search, progression, and
-chat-guard logic — **870 tests** in total, holding **line coverage above 85%**
+chat-guard logic — **886 tests** in total, holding **line coverage above 85%**
 (the codecov badge up top is the live figure). The suite uses **Node's built-in
 test runner** and needs **nothing installed to run it**, and it runs on every
 push via **GitHub Actions**.

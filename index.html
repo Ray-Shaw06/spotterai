@@ -61,6 +61,16 @@
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin />
 
+  <script>
+    /* Colour scheme, before first paint. theme.js owns this afterwards; this
+       inline copy exists only because a deferred module cannot beat the paint,
+       and a white flash on a dark-mode load is worse than four duplicated
+       lines. Keep the key and the values in step with theme.js. */
+    try {
+      var p = localStorage.getItem("spotter.theme");
+      if (p === "dark" || p === "light") document.documentElement.setAttribute("data-theme", p);
+    } catch (e) { /* private mode: the light default is already correct */ }
+  </script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -128,6 +138,16 @@
   <main id="main-content">
     <!-- ============================ HOME / PLAN PAGE ============================ -->
     <div class="view" data-view="home">
+    <!-- Status strip: the evaluator is a running instrument, and the page says
+         so before it says anything else. Landing-scoped on purpose — the
+         rubric version is context for the claim, not chrome for every page. -->
+    <div class="strip">
+      <span class="strip__live"><span class="strip__dot" aria-hidden="true"></span> Evaluator online</span>
+      <span>Rubric <b>v1.4.0</b></span>
+      <span>Deterministic · <b>no model</b></span>
+      <span class="strip__end">Audit <b>0.12 ms</b></span>
+    </div>
+
     <!-- ===================== HERO ===================== -->
     <section class="hero">
       <div class="container hero__inner">
@@ -168,7 +188,26 @@
               <span class="audit-card__title">Plan safety audit</span>
               <span class="audit-card__live"><span class="audit-card__pulse"></span> deterministic</span>
             </div>
-            <p class="audit-card__verdict-line">2 issues to review before training</p>
+            <div class="audit-card__score">
+              <div class="dial">
+                <svg width="100" height="100" viewBox="0 0 104 104" aria-hidden="true">
+                  <circle class="dial__track" cx="52" cy="52" r="46"></circle>
+                  <circle class="dial__val" cx="52" cy="52" r="46"></circle>
+                </svg>
+                <b>84</b>
+              </div>
+              <div>
+                <p class="audit-card__verdict-line">2 issues to review before training</p>
+                <p class="audit-card__scorenote">Quality score · demoted on purpose</p>
+              </div>
+            </div>
+            <!-- Severity at a glance: one segment per check, same eleven the
+                 counts below add up to. -->
+            <ul class="audit-meter" aria-hidden="true">
+              <li class="is-warn"></li><li class="is-warn"></li><li class="is-sugg"></li>
+              <li class="is-ok"></li><li class="is-ok"></li><li class="is-ok"></li><li class="is-ok"></li>
+              <li class="is-ok"></li><li class="is-ok"></li><li class="is-ok"></li><li class="is-ok"></li>
+            </ul>
             <ul class="audit-card__counts">
               <!-- These must satisfy the same invariant the real evaluator does:
                    critical + warnings + suggestions + passed === total. A mock
@@ -180,23 +219,26 @@
               <li class="is-ok"><strong>8/11</strong> passed</li>
             </ul>
             <ul class="audit-card__checks">
-              <li class="is-warn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 8v5m0 3h.01M10.3 4 2 18h20L13.7 4a2 2 0 0 0-3.4 0z" /></svg> High squat frequency: monitor fatigue</li>
-              <li class="is-warn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 8v5m0 3h.01M10.3 4 2 18h20L13.7 4a2 2 0 0 0-3.4 0z" /></svg> Pushing volume outweighs pulling</li>
-              <li class="is-ok"><svg class="ico" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" /></svg> Adequate rest between hard sessions</li>
+              <li class="is-warn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 8v5m0 3h.01M10.3 4 2 18h20L13.7 4a2 2 0 0 0-3.4 0z" /></svg> <span>High squat frequency<small>4 sessions/week — monitor fatigue</small></span></li>
+              <li class="is-warn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 8v5m0 3h.01M10.3 4 2 18h20L13.7 4a2 2 0 0 0-3.4 0z" /></svg> <span>Pushing volume outweighs pulling<small>22 vs 12 weekly sets — add rows</small></span></li>
+              <li class="is-ok"><svg class="ico" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" /></svg> <span>Adequate rest between hard sessions<small>48h minimum met</small></span></li>
             </ul>
-            <p class="audit-card__foot"><span class="audit-card__qs">Quality score 84/100</span> · guardrails, not a guarantee</p>
+            <p class="audit-card__foot">Guardrails, not a guarantee</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Three quick value props, one quiet line -->
+    <!-- Telemetry rail. Same claim the quiet facts line used to make, except
+         these are the four numbers a sceptic can actually go and reproduce:
+         npm run eval prints the middle two, npm test prints the last. -->
     <div class="container">
-      <p class="hero__facts" aria-label="What SpotterAI does">
-        <span><strong>11</strong> automated safety &amp; quality checks</span>
-        <span><strong>0–100</strong> transparent, rubric-based score</span>
-        <span>a heuristic that flags concerns, never certifies</span>
-      </p>
+      <ul class="tele" aria-label="What SpotterAI does">
+        <li><b>11</b><span>Safety checks</span></li>
+        <li><b>18<i>/18</i></b><span>Risky plans caught</span></li>
+        <li><b>0</b><span>False flags</span></li>
+        <li><b>886</b><span>Tests in CI</span></li>
+      </ul>
     </div>
 
     <!-- ===================== PRODUCT LOOP ===================== -->
@@ -1368,6 +1410,16 @@
         <p class="account-note">Switches weights, water and distance across the whole app. Your existing data is converted, not just relabelled.</p>
       </div>
 
+      <div class="account-section">
+        <h4 class="account-h">Appearance</h4>
+        <div class="theme-row" role="group" aria-label="Colour scheme">
+          <button type="button" class="theme-opt" data-theme-pref="system" aria-pressed="true">System</button>
+          <button type="button" class="theme-opt" data-theme-pref="light" aria-pressed="false">Light</button>
+          <button type="button" class="theme-opt" data-theme-pref="dark" aria-pressed="false">Dark</button>
+        </div>
+        <p class="account-note">Light is the default. “System” follows your device and keeps following it if it changes.</p>
+      </div>
+
       <div class="account-section account-workout-alerts" id="account-workout-alerts" aria-busy="true">
         <h3 class="account-h">Workout alerts</h3>
         <p class="account-note">On-device only. When a rest timer ends, this device shows a notification, nothing is sent when the app is closed, and this preference never leaves your device. Vibration and sound always work regardless.</p>
@@ -1472,6 +1524,7 @@
 
   <!-- First, so an error thrown while a later module evaluates is still caught. -->
   <script type="module" src="sentry-init.js"></script>
+  <script type="module" src="theme.js"></script>
   <script type="module" src="router.js"></script>
   <script type="module" src="focus-trap.js"></script>
   <script type="module" src="anim-gate.js"></script>
