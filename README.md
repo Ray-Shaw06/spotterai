@@ -1,8 +1,8 @@
-# SpotterAI 🔵
+# SpotterAI 🟢
 
 [![CI](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml/badge.svg)](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml)
 &nbsp;[![codecov](https://codecov.io/gh/Ray-Shaw06/spotterai/branch/main/graph/badge.svg)](https://codecov.io/gh/Ray-Shaw06/spotterai)
-&nbsp;[![License: MIT](https://img.shields.io/badge/License-MIT-3b8ef5.svg)](LICENSE)
+&nbsp;[![License: MIT](https://img.shields.io/badge/License-MIT-1a5c42.svg)](LICENSE)
 
 **A deterministic verifier for LLM output, in a domain where users can't check the answer themselves.** &nbsp;·&nbsp; **[▶ Live demo](https://spotterai.xyz)** &nbsp;·&nbsp; **[▶ Audit a plan you already have](https://spotterai.xyz/#/import)**
 
