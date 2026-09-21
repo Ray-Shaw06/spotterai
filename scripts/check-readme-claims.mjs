@@ -10,10 +10,16 @@
  * reader could catch in about a minute — which is worse than never having
  * claimed a number, because it makes them wonder what else is out of date.
  *
+ * It said "14 checks" too, which was worse: not stale, just wrong. No
+ * configuration of the evaluator returns 14 — a plain plan gets 11 and the
+ * ceiling is 15, once cardio and two injuries are declared.
+ *
  * So the claims are derived, not trusted:
  *   - test count      — from an actual `node --test` run, not a grep
  *   - eval case count — imported from eval-suite.js, the same array the
  *                       benchmark and the in-app Safety Lab both run
+ *   - rubric size     — by running evaluatePlan itself, both the every-plan
+ *                       baseline and the maximum with cardio + injuries
  *   - runtime deps    — from package.json `dependencies`
  *
  * Run by `npm run verify` and by CI. When it fails it prints the corrected
@@ -25,6 +31,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { CASES } from "../eval-suite.js";
+import { evaluatePlan } from "../evaluator.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const readmePath = join(root, "README.md");
@@ -49,9 +56,32 @@ function actualTestCount() {
   return Number(tests[1]);
 }
 
+/** How many checks a plain plan gets, and the ceiling once cardio and injuries
+ *  are in play. Both are advertised on the README, and both were wrong: it said
+ *  "14 checks", a number no configuration of the evaluator actually produces. */
+function rubricSize() {
+  const plain = CASES.find((c) => /balanced hypertrophy/i.test(c.name));
+  if (!plain) throw new Error("expected a plain, no-injury case to measure the baseline against");
+  const baseline = evaluatePlan(plain.plan, plain.inputs ?? {}).checks.length;
+
+  let max = 0;
+  for (const c of CASES) {
+    for (const injuries of [undefined, ["knee", "shoulder"]]) {
+      const inputs = { ...(c.inputs ?? {}), ...(injuries ? { injuries } : {}) };
+      let result;
+      try { result = evaluatePlan(c.plan, inputs); } catch { continue; }
+      max = Math.max(max, result?.checks?.length ?? 0);
+    }
+  }
+  return { baseline, max };
+}
+
+const rubric = rubricSize();
 const actual = {
   tests: actualTestCount(),
   evalCases: CASES.length,
+  checksBaseline: rubric.baseline,
+  checksMax: rubric.max,
   runtimeDeps: Object.keys(JSON.parse(readFileSync(join(root, "package.json"), "utf8")).dependencies ?? {}).length,
 };
 
@@ -75,6 +105,18 @@ const claims = [
     pattern: /(\d+) adversarial (?:eval )?cases/g,
     expected: actual.evalCases,
     occurrences: 2,
+  },
+  {
+    label: "checks on every plan",
+    pattern: /(\d+) checks on every plan/g,
+    expected: actual.checksBaseline,
+    occurrences: 1,
+  },
+  {
+    label: "maximum rubric size",
+    pattern: /up to (\d+) with\n?> ?cardio/g,
+    expected: actual.checksMax,
+    occurrences: 1,
   },
   {
     label: "runtime dependencies",
@@ -112,12 +154,13 @@ if (problems.length) {
   for (const p of problems) console.error(`  ✗ ${p}`);
   console.error(
     `\n  Live values: ${actual.tests} tests, ${actual.evalCases} eval cases, ` +
-      `${actual.runtimeDeps} runtime dependencies.\n`,
+      `${actual.runtimeDeps} runtime dependencies, ${actual.checksBaseline} checks baseline, ` +
+      `${actual.checksMax} max.\n`,
   );
   process.exit(1);
 }
 
 console.log(
   `README claims check: OK (${actual.tests} tests, ${actual.evalCases} eval cases, ` +
-    `${actual.runtimeDeps} runtime dependencies)`,
+    `${actual.runtimeDeps} runtime dependencies, ${actual.checksBaseline}-${actual.checksMax} checks)`,
 );
