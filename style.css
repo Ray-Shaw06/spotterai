@@ -6896,3 +6896,27 @@ h1, h2, h3, h4, h5,
 @media (max-width: 960px) {
   .sidebar__nav .nav-link.is-active::before { display: none; }
 }
+
+/* --- 5. The launcher steps aside while you read -----------------------------
+   `.is-tucked` is driven by fab-tuck.js on scroll. `visibility: hidden` is
+   what takes it out of the tab order, so the delay on that property is what
+   lets the slide-out finish before it disappears; coming back it flips
+   immediately. Anything that only fades would stay focusable while invisible,
+   which is the usual accessibility bug in this pattern. */
+.chat-fab {
+  transition: transform var(--transition), opacity var(--transition),
+    background var(--transition), box-shadow var(--transition), visibility 0s;
+}
+.chat-fab.is-tucked {
+  opacity: 0;
+  transform: translateY(150%);
+  pointer-events: none;
+  visibility: hidden;
+  transition: transform var(--transition), opacity var(--transition), visibility 0s linear 240ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Keep the behaviour — it is the fix — but drop the travel. */
+  .chat-fab,
+  .chat-fab.is-tucked { transition: none; }
+  .chat-fab.is-tucked { transform: none; }
+}
