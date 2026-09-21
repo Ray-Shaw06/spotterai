@@ -143,7 +143,8 @@ to you *because* they can't tell the difference.
 *Updated 2026-08-31.* The evaluator is v1.4.0. 845 tests, 23 adversarial eval
 cases, 18 of 18 risky plans caught, zero false positives. There's a fourth tier
 now, and a zero-input audit reports two checks it could not assess instead of
-quietly passing them. The rubric has grown to 14 checks since this was written,
+quietly passing them. The rubric has grown since this was written — 11 checks run on every plan and
+up to 15 when cardio and injuries are declared —
 most recently two for cardio; how the whole thing fits together is in
 [grading the model](grading-the-model.md).
 
