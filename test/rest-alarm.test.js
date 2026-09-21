@@ -573,7 +573,7 @@ test("a session left untouched is never 'restored' over", () => {
     configurable: true,
     value: Object.defineProperty({}, "type", {
       get: () => "auto",
-      set: (v) => writes.push(v),
+      set: (v) => { writes.push(v); },
     }),
   });
 

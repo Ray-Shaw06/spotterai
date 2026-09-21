@@ -11,8 +11,6 @@ import {
   notifyRestComplete,
   purgeLegacyNotificationStorage,
   hapticsCapability,
-  isIOS,
-  isInstalled,
 } from "../workout-alerts.js";
 
 function fakeStore(initial = {}) {

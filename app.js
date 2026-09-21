@@ -16,7 +16,7 @@
 import { evaluatePlan, EVALUATOR_VERSION } from "./evaluator.js";
 import { repairPlan } from "./repair.js";
 import { screenRequest, GENERATOR_BOUNDARY } from "./safety-boundaries.js";
-import { TIER_LABEL, TIER_ORDER, allClearText, auditVerdictText, flaggedChecks, renderFlagCard } from "./audit-view.js";
+import { allClearText, auditVerdictText, flaggedChecks, renderFlagCard } from "./audit-view.js";
 import { planConfidence } from "./trust.js";
 import { buildAuditEntry, recordAudit, getAuditHistory, auditTrend } from "./trust-history.js";
 import { sendAuditTelemetry } from "./audit-telemetry-client.js";

@@ -217,7 +217,7 @@ function parseRestInput(str) {
 }
 function setRestDefault(sec) {
   restDefault = clampRest(sec);
-  try { localStorage.setItem(REST_KEY, String(restDefault)); } catch {}
+  try { localStorage.setItem(REST_KEY, String(restDefault)); } catch { /* private mode / quota: rest default falls back to the built-in */ }
   renderRestIdle();
 }
 function renderRestPresets() {

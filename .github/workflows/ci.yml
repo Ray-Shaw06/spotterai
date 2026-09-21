@@ -6,6 +6,27 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    # There is no build step and no type checker, so nothing else in this repo
+    # stands between a typo in a browser module and a ReferenceError on a
+    # user's phone. `no-undef` is that backstop. The config is tuned to report
+    # only what is worth fixing — see the reasoning in eslint.config.js.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      # Unlike the test job below, linting does need its tool installed.
+      # `npm ci` installs from the lockfile, so the version that gates CI is
+      # exactly the version a contributor gets locally.
+      - name: Install dev dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+
   test:
     name: Unit tests
     runs-on: ubuntu-latest
@@ -45,3 +66,18 @@ jobs:
           node-version: "22"
       - name: Run the evaluator benchmark
         run: npm run eval
+
+  readme:
+    name: README claims
+    runs-on: ubuntu-latest
+    # The README's headline numbers are the first thing a reader checks, and
+    # they had drifted (717/21/one vs. the real 855/23/two). This job derives
+    # each figure from the repo and fails if the prose disagrees, so the
+    # numbers can never quietly go stale again. No install needed.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check README claims against the repo
+        run: npm run check:readme

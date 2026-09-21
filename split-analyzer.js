@@ -49,9 +49,8 @@ export function analyzeWorkout(workout = {}) {
 /**
  * Analyze a whole split (the workouts you run in a week).
  * @param {Array} workouts [{ name, exercises:[{ name, sets }] }]  (sets = array or count)
- * @param {object} [opts] { goal }
  */
-export function analyzeSplit(workouts = [], opts = {}) {
+export function analyzeSplit(workouts = []) {
   const list = Array.isArray(workouts) ? workouts.filter((w) => w && (w.exercises || []).length) : [];
   const groups = Object.keys(MUSCLE_KEYWORDS);
   const volume = computeWeeklyVolume(toPlan(list));

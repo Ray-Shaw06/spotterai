@@ -115,6 +115,6 @@ export function trackFunnel(name, properties = {}) {
   }
   const route = ["", "funnel", name, ...routeSegments].join("/");
   const path = ["", "funnel", name, ...segments].join("/");
-  try { window.va?.("pageview", { route, path }); } catch {}
+  try { window.va?.("pageview", { route, path }); } catch { /* analytics must never break a page view */ }
   return true;
 }

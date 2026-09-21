@@ -272,7 +272,7 @@ async function send() {
         body: JSON.stringify({ messages, plan: store.plan, tracker: getTrackerContext() }),
       }, REQUEST_TIMEOUT_MS);
       if (res.status !== 503) break;
-      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => { setTimeout(r, 1500); });
     }
     hideTyping();
 

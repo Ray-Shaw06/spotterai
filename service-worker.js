@@ -221,7 +221,7 @@ self.addEventListener("notificationclick", (event) => {
         if (typeof client.navigate === "function") await client.navigate(destination.href);
         await client.focus();
         return;
-      } catch {}
+      } catch { /* client went away mid-focus; fall through to openWindow */ }
     }
     await self.clients.openWindow(destination.href);
   })());

@@ -273,7 +273,7 @@ export async function searchOpenFoodFacts(query, signal) {
     res = await fetch(url, { signal });
     if (res.ok) break;
     if (res.status < 500) throw new Error(`Open Food Facts ${res.status}`); // permanent
-    await new Promise((r) => setTimeout(r, 500 * (attempt + 1))); // transient (e.g. 503) → backoff + retry
+    await new Promise((r) => { setTimeout(r, 500 * (attempt + 1)); }); // transient (e.g. 503) → backoff + retry
   }
   if (!res.ok) throw new Error(`Open Food Facts ${res.status}`);
   const data = await res.json();

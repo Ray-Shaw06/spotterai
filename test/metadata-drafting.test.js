@@ -27,7 +27,7 @@ import { dirname, join } from "node:path";
 import { CATALOG, resolveExercise } from "../exercise-catalog.js";
 import {
   validate, pickFrom, resolveNames, render, buildPrompt,
-  PATTERNS, DIFFICULTIES, JOINTS, CONTRA, MUSCLES,
+  PATTERNS, DIFFICULTIES, JOINTS, CONTRA,
 } from "../scripts/draft-exercise-metadata.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -174,7 +174,7 @@ test("a rendered entry is valid JS in the shape exercise-metadata.js uses", asyn
   const r = validate(good, entryFor("Dumbbell Calf Raise"));
   const line = render(r.value);
   const E = (name, o) => ({ name, secondaryMuscles: [], jointStress: [], contraindications: [], commonSubstitutions: [], regressionOptions: [], progressionOptions: [], ...o });
-  // eslint-disable-next-line no-new-func
+   
   const parsed = new Function("E", `return [${line.trim().replace(/,$/, "")}];`)(E)[0];
   assert.equal(parsed.name, "Dumbbell Calf Raise");
   assert.deepEqual(parsed.equipment, ["dumbbell"]);

@@ -251,7 +251,7 @@ async function onSignedIn(user) {
 
   // Switch to this account's local mirror profile (fires profile/tracker events).
   upsertProfile({ id: "g:" + user.uid, name: currentUser.name, google: true });
-  await new Promise((r) => setTimeout(r, 0)); // let the profile switch settle
+  await new Promise((r) => { setTimeout(r, 0); }); // let the profile switch settle
 
   try {
     await migrateLegacyDocument(user.uid);

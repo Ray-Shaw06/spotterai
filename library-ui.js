@@ -8,7 +8,7 @@
  * current plan and re-audit it. Unknown exercises degrade gracefully.
  */
 
-import { EXERCISE_DATA, lookupExercise, suggestAlternatives } from "./exercise-data.js";
+import { lookupExercise, suggestAlternatives } from "./exercise-data.js";
 import { CATALOG, searchCatalog, normalizeExerciseName } from "./exercise-catalog.js";
 import { cuesFor, PATTERN_LABEL } from "./movement-cues.js";
 import { patternAnimation } from "./exercise-anim.js";
