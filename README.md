@@ -42,9 +42,20 @@ run on every pull request ([`ci.yml`](.github/workflows/ci.yml)):
 | **Evaluator benchmark** | The safety evaluator catches **18 of 18** known-risky plans and false-flags **0 of 5** known-good ones. A regression fails the build rather than quietly moving a dashboard. | `npm run eval` |
 | **README claims** | The numbers on this page are derived from the repo, not typed by hand — [the check](scripts/check-readme-claims.mjs) fails CI if the prose drifts from reality. | `npm run check:readme` |
 
+There is one more check that is not a CI gate, because it cannot honestly be
+one: [`npm run visual:baseline`](scripts/visual-snapshot.mjs) then
+`npm run visual:check` fingerprints ~108,000 computed styles across every
+route, both themes and two viewports, and fails if a refactor moved anything.
+It compares two runs in the same environment rather than against a committed
+baseline, because computed values include resolved layout and those differ
+between machines. It earned its place: flattening the stylesheet produced two
+regressions that looked correct in the diff and were only wrong at one
+viewport.
+
 **The honest limits,** so you can weigh the above properly: there is **no type
 checker** (vanilla ES modules, no build step — lint plus tests carry that load),
-there is **no automated browser/E2E suite** (the [manual QA checklist](#manual-qa-checklist)
+there is **no automated browser/E2E suite** (the visual harness above is a
+refactor net, not behaviour coverage, and the [manual QA checklist](#manual-qa-checklist)
 is genuinely run by hand), and coverage is a *report* above its floor rather
 than a hard gate. The evaluator benchmark is a **bundled local suite**, not a
 live-model eval; what it proves is that the deterministic checker behaves, not
