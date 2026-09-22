@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Your AI fitness copilot \u2014 plan, track, adapt, and audit your training. Generates a weekly plan with Gemini, then a deterministic evaluator flags risky/low-quality programming (flags-first, with fixes) before you trust it.",
+  "description": "Your AI fitness copilot — plan, track, adapt, and audit your training. Generates a weekly plan with Gemini, then a deterministic evaluator flags risky/low-quality programming (flags-first, with fixes) before you trust it.",
   "scripts": {
     "dev": "vercel dev",
     "start": "vercel dev",
@@ -20,7 +20,9 @@
     "benchmark:history": "node scripts/append-benchmark-history.mjs",
     "draft-metadata": "node --env-file=.env scripts/draft-exercise-metadata.mjs",
     "fonts": "node scripts/fetch-fonts.mjs",
-    "fonts:check": "node scripts/fetch-fonts.mjs --check"
+    "fonts:check": "node scripts/fetch-fonts.mjs --check",
+    "visual:baseline": "node scripts/visual-snapshot.mjs baseline",
+    "visual:check": "node scripts/visual-snapshot.mjs check"
   },
   "license": "MIT",
   "engines": {
@@ -36,6 +38,7 @@
     "eslint": "^9.39.4",
     "firebase": "^12.16.0",
     "firebase-tools": "^15.23.0",
-    "globals": "^17.12.0"
+    "globals": "^17.12.0",
+    "playwright": "^1.63.0"
   }
 }

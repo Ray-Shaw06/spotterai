@@ -1,10 +1,10 @@
 /**
  * Both palettes, against WCAG AA, read out of style.css itself.
  *
- * Layer A's comments claimed verified ratios for the light palette, and the
- * claim was true — but it was a comment, so nothing stopped the next edit from
- * quietly invalidating it. Layer G then added a whole second palette for dark
- * mode, doubling the surface area for exactly that kind of rot.
+ * The stylesheet used to claim verified ratios in a comment, and the claim was
+ * true — but a comment cannot stop the next edit from quietly invalidating it,
+ * and adding a second palette for dark mode doubled the surface area for
+ * exactly that kind of rot.
  *
  * So the arithmetic runs here instead of living in a comment. Every text tier
  * is checked against every ground it can actually sit on — --bg, --surface and
@@ -59,10 +59,11 @@ function tokensIn(block) {
   return out;
 }
 
-/** Every bare `:root {...}` block, concatenated. The stylesheet is layered —
- *  layer A opens one and layer G opens another to retune light and declare the
- *  --d-* set — so reading only the first finds the wrong one. Scoped selectors
- *  like :root[data-theme="dark"] are excluded by the trailing brace. */
+/** Every bare `:root {...}` block, concatenated. There is one today, holding
+ *  both the light palette and the --d-* set the dark selectors map from, but
+ *  reading only the first block would silently find the wrong one if that ever
+ *  splits again. Scoped selectors like :root[data-theme="dark"] are excluded by
+ *  the trailing brace. */
 function rootBlock() {
   const blocks = [];
   for (const m of css.matchAll(/:root\s*\{/g)) {
@@ -78,10 +79,10 @@ function rootBlock() {
   return blocks.join("\n");
 }
 
-/** Layer G keeps every dark literal on one `--d-*` set, so both dark
- *  selectors share a single source of truth. That is what we check. */
+/** Every dark literal lives on one `--d-*` set, so both dark selectors share a
+ *  single source of truth. That is what the last test in this file checks. */
 function palettes() {
-  // Light literals are spread across layers (A defines, G retunes); later wins.
+  // Later declarations win, so scan the whole sheet rather than the first hit.
   const all = {};
   for (const m of css.matchAll(/(--[a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{3,6})\s*;/g)) {
     all[m[1]] = m[2];

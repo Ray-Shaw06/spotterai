@@ -198,7 +198,7 @@ test("every @font-face in style.css points at a font file that exists", () => {
   const css = readFileSync(join(root, "style.css"), "utf8");
   const urls = [...css.matchAll(/src:\s*url\("([^"]+)"\)/g)].map((m) => m[1]);
   // Two families (Inter, JetBrains Mono) x two subsets (latin, latin-ext).
-  // Literata went with the serif display face in style layer F.
+  // Literata went with the serif display face it was loaded for.
   assert.ok(urls.length >= 4, `expected at least 4 @font-face sources, found ${urls.length}`);
   for (const url of urls) {
     const buf = readFileSync(join(root, url));

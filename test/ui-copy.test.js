@@ -57,9 +57,9 @@ function samplePlan() {
 }
 
 test("the advertised check count matches how many checks the evaluator runs", () => {
-  // The number moved from the prose facts line into the telemetry rail (style
-  // layer G). The guarantee is unchanged — what the landing page advertises must
-  // be what evaluatePlan actually runs — only the element it lives in moved.
+  // The number lives in the telemetry rail rather than the prose facts line it
+  // used to sit in. The guarantee is unchanged — what the landing page
+  // advertises must be what evaluatePlan actually runs.
   const advertised = Number(html.match(/<b>(\d+)<\/b><span>Safety checks<\/span>/)?.[1]);
   assert.ok(Number.isInteger(advertised), "could not read the advertised check count from index.html");
 
