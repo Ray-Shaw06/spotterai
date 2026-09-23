@@ -91,3 +91,19 @@ test("every module script in index.html exists", () => {
   const missing = entryPoints().filter((src) => !existsSync(join(root, src))).sort();
   assert.deepEqual(missing, [], `index.html loads modules that do not exist: ${missing.join(", ")}`);
 });
+
+test("nothing is precached that the page never imports", () => {
+  // The other direction, to match how the font lists guard each other in
+  // pwa.test.js. A stale entry does not break anything, which is exactly why
+  // it would survive: it just costs every installing device a download for a
+  // module nothing loads. The two lists are equal today; this keeps them that
+  // way rather than leaving it to luck.
+  const reachable = reachableModules();
+  const dead = [...bootModules()].filter((m) => !reachable.has(m)).sort();
+  assert.deepEqual(
+    dead,
+    [],
+    `precached but nothing imports them — drop them from BOOT_MODULES, or if one ` +
+      `is loaded a way this walk cannot see, say so here: ${dead.join(", ")}`,
+  );
+});
