@@ -1422,8 +1422,8 @@
 
       <div class="account-section account-workout-alerts" id="account-workout-alerts" aria-busy="true">
         <h3 class="account-h">Workout alerts</h3>
-        <p class="account-note">On-device only. When a rest timer ends, this device shows a notification, nothing is sent when the app is closed, and this preference never leaves your device. Vibration and sound always work regardless.</p>
-        <p class="account-note">The rest timer runs on a wall clock and books its sound the moment the timer starts, so locking your screen does not delay it. The limit that stays: if you force-quit SpotterAI, or your phone closes it to free memory, nothing fires. There is no server and no scheduled push, so there is nothing left running to reach you.</p>
+        <p class="account-note">When a rest timer ends, this device shows a notification. The preference lives on this device. Sound and the on-screen countdown always work regardless, and so does vibration where the phone has it.</p>
+        <p class="account-note">The rest timer runs on a wall clock and books its sound the moment the timer starts, so locking your screen does not delay the beeps. The notification is booked the same way when the server allows it: the timer's end and this device's push address are sent once per rest, nothing else, nothing is kept, and the banner then reaches you with the screen locked or the app closed. Without that booking the notification shows when you unlock.</p>
         <label class="toggle-row">
           <input type="checkbox" id="rest-alerts-toggle" role="switch" aria-checked="false" disabled />
           <span>Enable rest-timer alerts</span>
