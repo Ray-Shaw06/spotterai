@@ -11,7 +11,7 @@
 > cardio and injuries declared) grades that plan and shows the
 > flags before you train. The red-team suite that tests the evaluator is
 > [published and runs live in your browser](https://spotterai.xyz/#/evals).
-> **887 tests, 23 adversarial eval cases, 2 runtime dependencies, no build step.**
+> **962 tests, 23 adversarial eval cases, 3 runtime dependencies, no build step.**
 > (These counts are [checked by CI](scripts/check-readme-claims.mjs) against the
 > live repo, so they cannot silently go stale.)
 > Solo-built by a CS student. Vanilla ES modules, Node serverless functions on
@@ -38,7 +38,7 @@ run on every pull request ([`ci.yml`](.github/workflows/ci.yml)):
 | Gate | What it actually proves | Command |
 | --- | --- | --- |
 | **Lint** | No undeclared identifiers, no dead imports, no undocumented silent `catch {}`. This repo has no build step and no type checker, so `no-undef` is the only thing standing between a typo in a browser module and a `ReferenceError` on someone's phone. Config and the reasoning for every rule: [`eslint.config.js`](eslint.config.js). | `npm run lint` |
-| **Tests** | **887 tests**, holding **line coverage above 85%** ([live figure](https://codecov.io/gh/Ray-Shaw06/spotterai)), on Node's built-in runner. | `npm test` |
+| **Tests** | **962 tests**, holding **line coverage above 85%** ([live figure](https://codecov.io/gh/Ray-Shaw06/spotterai)), on Node's built-in runner. | `npm test` |
 | **Evaluator benchmark** | The safety evaluator catches **18 of 18** known-risky plans and false-flags **0 of 5** known-good ones. A regression fails the build rather than quietly moving a dashboard. | `npm run eval` |
 | **README claims** | The numbers on this page are derived from the repo, not typed by hand — [the check](scripts/check-readme-claims.mjs) fails CI if the prose drifts from reality. | `npm run check:readme` |
 
@@ -183,10 +183,10 @@ The long version — every feature, the full rubric, the file layout — is in
 ## Tech stack
 
 - **No framework, no build step.** Vanilla ES modules, deployed as static files.
-  Two runtime dependencies.
-- **Backend:** four Node functions on Vercel (plan generation, coach chat, food
-  and exercise estimates, quick-log parsing). Plan adaptation runs entirely
-  client-side. AI keys stay server-only.
+  Three runtime dependencies.
+- **Backend:** five Node functions on Vercel (plan generation, coach chat, food
+  and exercise estimates, quick-log parsing, and the optional rest-timer push).
+  Plan adaptation runs entirely client-side. AI keys stay server-only.
 - **Local-first:** `localStorage` for everything, with JSON export/import.
   Firebase Auth + Firestore sync is optional and off until configured.
 - **On-device CV:** MediaPipe Tasks Vision for the form check — no server, no
@@ -195,9 +195,11 @@ The long version — every feature, the full rubric, the file layout — is in
   CSS variables. Inter + JetBrains Mono, self-hosted as variable woff2 rather
   than linked from Google Fonts, which used to be the last render-blocking
   resource on cold boot. Light by default, opt-in dark, both AA-verified.
-- **Zero-cost by construction:** no Web Push, no scheduled functions, no paid
-  tier. Reminders are `.ics` files built in the browser and local on-device
-  alerts.
+- **Zero-cost by construction:** no database, no scheduled functions, no paid
+  tier. Reminders are `.ics` files built in the browser. The rest-timer
+  notification is optional: with keys set, `api/rest-push.js` books it for the
+  deadline through Upstash QStash's free tier so it reaches a locked phone;
+  without them the app shows it locally, exactly as before.
 
 ## Try it in 10 seconds + install it
 

@@ -53,6 +53,12 @@ back on disarm rather than held between sets.
 fires nothing. This is a page-alive alarm, not a scheduled push, and the
 2026-07-22 decision to retire Web Push is not reopened.
 
+> **Superseded 2026-09-24 for the NOTIFICATION only.** The banner is now booked
+> for the deadline through QStash's free tier (`api/rest-push.js`), so it
+> reaches a locked, backgrounded or closed app. The TONE is still page-alive:
+> an evicted app gets the banner and the OS buzz, not the beeps. See
+> `2026-09-19_rest-push-booked-via-qstash` in the brain.
+
 **Logging depended on remembering.** Since the app cannot reach you when it is
 closed, forgetting had to stop costing anything. `catch-up.js` reports what is
 unlogged today and yesterday, hour-gated so nothing is "missed" at 9am, capped

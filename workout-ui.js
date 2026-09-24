@@ -29,6 +29,8 @@ import {
   restAlertsEnabled,
   enableRestAlerts,
   hapticsCapability,
+  scheduleRestPush,
+  cancelRestPush,
 } from "./workout-alerts.js";
 import { createRestAlarm } from "./rest-alarm.js";
 import { isCardioEntry } from "./lib/plan.js";
@@ -195,6 +197,9 @@ function stopTimer() {
 let restId = null;
 let restTotal = 120;
 const restAlarm = createRestAlarm({ onFire: () => restDone() });
+/** A burst of +15s taps settles into one booking after this long. */
+const REBOOK_DEBOUNCE_MS = 600;
+let rebookId = null;
 const REST_KEY = "spotterai.rest.default";
 let restDefault = clampRest(Number(localStorage.getItem(REST_KEY)) || 120);
 
@@ -248,6 +253,10 @@ function startRest(sec = restDefault) {
   // moment the AudioContext can be unlocked, and an alarm that cannot make a
   // sound is the whole bug.
   restAlarm.arm(restTotal);
+  // Book the notification for the deadline with the server, when there is one.
+  // This is the route that survives a locked screen; the local notification in
+  // restDone() cannot, because it needs page JS awake at that moment.
+  scheduleRestPush(restAlarm.endsAt()).catch(() => {});
   el.restTimer.classList.add("is-running");
   tickRest();
   restId = setInterval(tickRest, 500);
@@ -268,7 +277,9 @@ function stopRestDisplay() {
 }
 function stopRest() {
   stopRestDisplay();
+  if (rebookId) { clearTimeout(rebookId); rebookId = null; }
   restAlarm.disarm();
+  cancelRestPush().catch(() => {});
 }
 function skipRest() {
   stopRest();
@@ -279,10 +290,19 @@ function addRest(sec) {
   const next = Math.max(1, restAlarm.remaining() + sec);
   restTotal = Math.max(restTotal, next); // keep the bar sane when extending
   restAlarm.arm(next); // re-arm so the tone moves with the deadline
+  // The tone moves immediately; the BOOKING waits for the tapping to stop.
+  // Tapping +15s four times is one deadline, and should cost one booking
+  // rather than four cancel/book round trips against a 20/min budget.
+  if (rebookId) clearTimeout(rebookId);
+  rebookId = setTimeout(() => {
+    rebookId = null;
+    if (restAlarm.armed()) scheduleRestPush(restAlarm.endsAt()).catch(() => {});
+  }, REBOOK_DEBOUNCE_MS);
   tickRest();
 }
 function restDone() {
   stopRestDisplay();
+  if (rebookId) { clearTimeout(rebookId); rebookId = null; }
   tickRest();
   try {
     navigator.vibrate?.([200, 80, 200]);
@@ -292,7 +312,17 @@ function restDone() {
   // No beep() here any more. The tone was booked on the audio timeline when the
   // rest started, so it plays on time even with the screen off, where a call
   // made at this moment would have been suspended into silence.
+  //
+  // The local notification ALWAYS fires. It used to be suppressed when a push
+  // had been booked and we were running late, on the assumption that the push
+  // had already shown the banner. But "booked" only ever meant QStash accepted
+  // the message: a phone that was offline past the push TTL, an expired
+  // subscription, a rotated key, all leave the user with no notification at
+  // all, which is worse than before this feature existed. Both banners share a
+  // tag and neither sets renotify, so when the push DID land this replaces it
+  // silently rather than alerting twice.
   notifyRestComplete().catch(() => {});
+  cancelRestPush().catch(() => {}); // a no-op if it already fired; frees the token either way
   // Let the tone finish before releasing the keepalive.
   setTimeout(() => {
     restAlarm.disarm();

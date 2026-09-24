@@ -215,17 +215,23 @@ test("calendar export copy is honest: the user's own calendar owns reminders, no
   assert.match(calendarExport, /RRULE:FREQ=WEEKLY/);
 });
 
-test("Account exposes a local on-device rest-alert toggle, not a remote schedule editor", () => {
+test("Account exposes a rest-alert toggle that says what leaves the device, not a remote schedule editor", () => {
   assert.match(html, /id="account-workout-alerts"/);
   assert.match(html, /Enable rest-timer alerts/);
-  assert.match(html, /nothing is sent when the app is closed/i);
+  // The booked push sends exactly two things, once per rest, and keeps nothing.
+  assert.match(html, /timer.s end and this device.s push address are sent once per rest, nothing else, nothing is kept/i);
+  assert.match(html, /Without that booking the notification shows when you unlock/i);
   // No leftover schedule/quiet-hours/category editor copy.
   assert.doesNotMatch(html, /Quiet hours|Streak-protection reminder|id="notification-account-enable"/);
 });
 
-test("workout alerts make no closed-app promise and stay fully on-device", () => {
+test("workout alerts keep the local route and only ever book with our own endpoint", () => {
   assert.match(workoutAlerts, /notifyRestComplete/);
-  assert.doesNotMatch(workoutAlerts, /PushManager|VAPID|subscribe|fetch\(/i);
+  assert.match(workoutAlerts, /scheduleRestPush/);
+  assert.match(workoutAlerts, /cancelRestPush/);
+  // Both status strings the toggle can show are honest about what fires when.
+  assert.match(workoutAlerts, /With the screen locked it shows when you unlock/);
+  assert.match(workoutAlerts, /nothing is kept once it fires/);
   assert.match(reminders, /initWorkoutAlertsUI/);
   assert.match(reminders, /initCalendarExport/);
 });

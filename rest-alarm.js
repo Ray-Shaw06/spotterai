@@ -61,10 +61,11 @@
  * Either way the session type is put back the way we found it on disarm, so
  * between sets this page is not sitting on the OS mixer at all.
  *
- * HONEST LIMIT, and it is the same one the rest of the app keeps: if the OS
- * evicts the tab or you force-quit the app, NOTHING fires. This is a
- * page-alive alarm, not a scheduled push. See the 2026-07-22 decision to retire
- * Web Push, which this does not reopen: no server, no subscription, no key.
+ * HONEST LIMIT of this module: if the OS evicts the tab or you force-quit the
+ * app, NOTHING here fires. This is a page-alive alarm. The NOTIFICATION has a
+ * second route that does survive that, a push booked for the deadline at arm
+ * time (workout-alerts.js scheduleRestPush, api/rest-push.js), which is what
+ * reaches a locked iPhone. The tone does not: audio needs a live page.
  *
  * Pure enough to test: every browser API is reached through an injected `env`
  * and guarded, so the deadline logic runs headless in Node.

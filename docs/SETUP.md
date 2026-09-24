@@ -146,10 +146,11 @@ workout contents, AI prompts/responses, account identifiers, push endpoints, tok
 or raw errors to funnel paths. See Vercel's [Web Analytics
 guide](https://vercel.com/docs/analytics) for dashboard behavior.
 
-### Reminders (zero-cost, no operator setup)
+### Reminders (zero-cost; the booked rest push is optional)
 
-Reminders need **no environment variables, no Firebase Blaze plan, no VAPID keys,
-and no server**, they were deliberately built to keep the operator bill at $0.
+Calendar export and the rest timer itself need **no environment variables, no
+Firebase Blaze plan, and no server**. The one optional piece is the booked rest
+notification, which needs five free env vars, plus one optional (below).
 
 - **Calendar export.** After a plan is generated, **Add workouts to calendar**
   builds a standards-based `.ics` file in the browser
@@ -157,17 +158,46 @@ and no server**, they were deliberately built to keep the operator bill at $0.
   weekly-recurring event with an optional native reminder (none / 10 / 30 / 60 min).
   The user's calendar app owns everything after import. SpotterAI never learns
   whether an event was imported and stores no calendar data.
-- **Local rest-timer alerts.** In **Account → Workout alerts**, the user can opt
-  into a local notification when a rest timer ends
+- **Rest-timer alerts.** In **Account → Workout alerts** (or the one-tap offer in
+  the session bar), the user opts into a notification when a rest timer ends
   ([`workout-alerts.js`](workout-alerts.js)). Permission is requested only on a
-  deliberate tap; the enabled flag is stored on that device only. The alert is shown
-  by the already-installed service worker's `showNotification()` and its click
-  routes to a **fixed** same-origin Today URL.
+  deliberate tap; the enabled flag is stored on that device only. Two routes show
+  the same banner:
+  - **Local, always.** The page calls the service worker's `showNotification()`
+    when the timer hits zero. Needs page JS awake, so on a locked iPhone it shows
+    at unlock.
+  - **Booked, when configured.** The moment a rest starts, the page POSTs the
+    deadline and this device's push subscription to `/api/rest-push`, which parks
+    a message with [QStash](https://upstash.com/docs/qstash) until the deadline.
+    QStash calls the route back (signed), and the route sends a Web Push. This is
+    the route that reaches a locked or backgrounded phone, and on iPhone the only
+    route to a buzz. Skip, +15s and a new set cancel the booking.
 
-**Honest limits.** A closed or suspended PWA cannot run timers, and SpotterAI makes
-**no promise of any notification after the app is closed**, there is no background
-or scheduled push. Vibration, sound, and the on-screen timer are the universal
-fallback and always work, including when notifications are unsupported or blocked.
+**Booked push setup (optional, free).** Set these in Vercel → Settings →
+Environment Variables; leave them all unset and the app keeps the local route
+only. Five are required; `QSTASH_NEXT_SIGNING_KEY` is optional and only widens
+which signatures are accepted while you rotate keys.
+
+| Variable | Where from |
+|---|---|
+| `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY` | `npx web-push generate-vapid-keys`, once |
+| `WEB_PUSH_SUBJECT` | `mailto:you@example.com` (or an https URL) |
+| `QSTASH_TOKEN` | [Upstash console → QStash](https://console.upstash.com/qstash) |
+| `QSTASH_CURRENT_SIGNING_KEY` | same page |
+| `QSTASH_NEXT_SIGNING_KEY` *(optional)* | same page; set it so a key rotation never drops a rest |
+| `REST_PUSH_ORIGIN` *(optional)* | only if you are not on Vercel, or you serve from a custom domain. Otherwise the platform's own `VERCEL_PROJECT_PRODUCTION_URL` is used, which is what QStash calls back. |
+
+Nothing is stored server-side: the subscription travels sealed inside the one
+pending QStash message and is unsealed only by this route. Cancel tokens are an
+HMAC of the message id. Rate limits in [`lib/rate-limit.js`](../lib/rate-limit.js)
+keep one client from spending the free tier (1,000 messages/day).
+
+**Honest limits.** Without the booked push, a closed or suspended PWA cannot run
+timers and SpotterAI shows the notification at unlock. With it, the notification
+fires at the deadline regardless, but the SOUND is still the page-alive alarm:
+if iOS has evicted the app, you get the banner (and the OS buzz), not the beeps.
+Vibration where the platform has it, sound, and the on-screen timer are the
+universal fallback and always work.
 
 ---
 

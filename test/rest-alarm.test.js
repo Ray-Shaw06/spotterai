@@ -639,3 +639,51 @@ test("the element is not restarted after the rest ends", () => {
   el.emit("pause");
   assert.equal(log.played, played, "a disarmed alarm must not keep an audio element alive");
 });
+
+test("endsAt() survives the fire, so a late caller can tell a frozen page from an on-time one", () => {
+  // workout-ui's restDone() subtracts endsAt() from the wall clock to decide
+  // whether it is running at the deadline or only at unlock — and suppresses
+  // its own notification in the second case, because the booked push already
+  // showed one. If fire() ever zeroed endsAt the way disarm() does, that
+  // subtraction would read as "always late" and the on-time local banner would
+  // quietly disappear for everyone with the push route enabled.
+  const clock = fakeClock();
+  const { env } = fakeEnv();
+  let fires = 0;
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => (fires += 1) });
+
+  const deadline = alarm.arm(90);
+  assert.equal(deadline, clock.now() + 90_000, "arm() hands back the deadline it booked");
+  assert.equal(alarm.endsAt(), deadline);
+
+  // On time: the page was awake, the fallback ran at the deadline.
+  clock.advance(90_000);
+  assert.equal(alarm.reconcile(), true);
+  assert.equal(fires, 1);
+  assert.equal(alarm.endsAt(), deadline, "the deadline is still readable inside onFire's wake");
+  assert.equal(clock.now() - alarm.endsAt(), 0, "zero lateness, so a local notification is right");
+
+  // Frozen: the same alarm read three minutes later is unmistakably late.
+  clock.advance(180_000);
+  assert.equal(clock.now() - alarm.endsAt(), 180_000);
+
+  // Only disarm() clears it, and after that nothing is armed to be late about.
+  alarm.disarm();
+  assert.equal(alarm.endsAt(), 0);
+  assert.equal(alarm.armed(), false);
+});
+
+test("re-arming for +15s moves the deadline, which is what the new booking is made for", () => {
+  // addRest() re-arms and books scheduleRestPush(restAlarm.endsAt()); if arm()
+  // did not publish the new deadline synchronously, the second booking would
+  // be made for the old one and the push would land 15 seconds early.
+  const clock = fakeClock();
+  const { env } = fakeEnv();
+  const alarm = createRestAlarm({ env, now: clock.now, onFire: () => {} });
+
+  const first = alarm.arm(60);
+  clock.advance(20_000);
+  const second = alarm.arm(alarm.remaining() + 15);
+  assert.equal(second, alarm.endsAt(), "readable the instant arm() returns");
+  assert.equal(second - first, 15_000, "exactly the added seconds later");
+});
