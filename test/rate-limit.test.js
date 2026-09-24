@@ -25,6 +25,7 @@ import {
   checkRateLimit,
   clientIp,
   enforceRateLimit,
+  identityFor,
   __resetRateLimitForTests,
 } from "../lib/rate-limit.js";
 
@@ -147,4 +148,44 @@ test("enforceRateLimit answers 429 with Retry-After and reports that it did", ()
   assert.equal(out.headers["Retry-After"], "60");
   assert.match(out.body.error, /too many requests/i);
   assert.doesNotMatch(JSON.stringify(out.body), /minute|hour|instance/i, "the response must not teach a caller how to pace around the tiers");
+});
+
+test("rest push is counted per device, so a gym behind one IP does not lock itself out", () => {
+  // The failure this prevents: five lifters on one wifi share an IP, rest push
+  // fires twice a set without anyone choosing it, and around set 24 they start
+  // refusing each other's bookings. Each failed cancel also strands a live
+  // push that buzzes someone mid-set.
+  __resetRateLimitForTests();
+  const NOW = 1_700_000_000_000;
+  const req = (endpoint) => ({ headers: { "x-forwarded-for": "203.0.113.7" }, body: { subscription: { endpoint } } });
+
+  for (let i = 0; i < LIMITS.restPush.perMinute; i++) {
+    assert.equal(checkRateLimit("restPush", req("https://web.push.apple.com/one"), NOW), null, `call ${i + 1}`);
+  }
+  assert.ok(checkRateLimit("restPush", req("https://web.push.apple.com/one"), NOW), "that device is now at its limit");
+  assert.equal(checkRateLimit("restPush", req("https://web.push.apple.com/two"), NOW), null, "the lifter next to them is unaffected");
+
+  // Nothing is ever unmetered: with no endpoint to read, it falls back to the IP.
+  assert.match(identityFor("restPush", req("https://web.push.apple.com/x")), /^sub:/);
+  assert.match(identityFor("restPush", { headers: {}, socket: { remoteAddress: "1.2.3.4" } }), /^ip:/);
+  assert.match(identityFor("chat", req("https://web.push.apple.com/x")), /^ip:/, "other routes are unchanged");
+});
+
+test("rest push does not spend the instance budget the AI routes depend on", () => {
+  // That ceiling exists to protect one shared Gemini key from an IP rotation.
+  // Rest timers touch no AI quota, so a busy gym must not be able to refuse
+  // someone's plan generation.
+  __resetRateLimitForTests();
+  const NOW = 1_700_000_000_000;
+  for (let d = 0; d < 40; d++) {
+    for (let i = 0; i < LIMITS.restPush.perMinute; i++) {
+      checkRateLimit("restPush", { headers: { "x-forwarded-for": `10.0.0.${d}` }, body: { subscription: { endpoint: `https://web.push.apple.com/${d}` } } }, NOW);
+    }
+  }
+  assert.equal(
+    checkRateLimit("generate", { headers: { "x-forwarded-for": "9.9.9.9" } }, NOW),
+    null,
+    "a first plan generation must not be refused because rest timers filled the window",
+  );
+  assert.ok(INSTANCE_PER_MINUTE > 0);
 });
