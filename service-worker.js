@@ -16,7 +16,7 @@
  * Bump CACHE when shipping changes so old caches are cleaned on activate.
  */
 
-const CACHE = "spotterai-v73";
+const CACHE = "spotterai-v74";
 // Explicit local module graph rooted at every <script type="module"> in index.html.
 // test/service-worker-behavior.test.js derives the graph independently so a new
 // boot import cannot be shipped without being added here.
@@ -203,11 +203,66 @@ self.addEventListener("fetch", (event) => {
   // Cross-origin (fonts, CDNs) → default network handling.
 });
 
-// Local rest-timer alerts (workout-alerts.js) are the only notifications SpotterAI
-// shows — there is no `push` listener and no remote push path. The click handler
-// always routes to a FIXED same-origin destination, never a payload-provided URL,
-// so a notification can only ever reopen the app's Today surface.
+// Rest-timer alerts are the only notifications SpotterAI shows, by two routes:
+// the page's own showNotification (workout-alerts.js) and a push booked for the
+// rest's deadline (api/rest-push.js), which is what still fires with the screen
+// locked. Both render the same banner. The click handler always routes to a
+// FIXED same-origin destination, never a payload-provided URL, so a notification
+// can only ever reopen the app's Today surface.
 const NOTIFICATION_DESTINATION = "/#/today";
+
+/** How late a rest push can be and still claim the rest just ended. */
+const REST_FRESH_MS = 90 * 1000;
+
+const REST_NOTIFICATION = Object.freeze({
+  body: "Time for your next set.",
+  icon: "/icons/spotterai-192.png",
+  badge: "/icons/spotterai-192.png",
+  tag: "spotterai-rest",
+  // NOT renotify: this banner and the page's own (workout-alerts.js) share a
+  // tag, so the tag alone replaces whichever landed first, silently. With
+  // renotify the shared tag would alert twice a few seconds apart on every set
+  // where both arrive, which is every set with the app open.
+  renotify: false,
+  vibrate: [200, 80, 200],
+  silent: false,
+  data: { kind: "rest" },
+});
+
+// Every push shows a notification, whatever it carries. Two reasons: only our
+// own server can address this subscription, so an unrecognised payload is a
+// bug, not a stranger; and iOS revokes push permission after a few pushes that
+// show nothing, so "ignore it" would be the one response that makes things
+// worse. The payload is treated as untrusted anyway: nothing in it is rendered
+// or navigated to, it only picks between two fixed banners.
+self.addEventListener("push", (event) => {
+  let payload = null;
+  try {
+    payload = event.data ? event.data.json() : null;
+  } catch {
+    payload = null;
+  }
+  const isRest = !!payload && payload.kind === "rest";
+  // A push can arrive late: QStash retries, or a phone that reconnects after
+  // being out of signal. "Rest complete — time for your next set" is wrong by
+  // then, and buzzes the user mid-set. Past this window the banner still shows
+  // (a push that displays nothing gets the subscription revoked on iOS) but it
+  // stops asserting that a rest just ended.
+  const endsAt = Number(payload?.endsAt);
+  const fresh = !Number.isFinite(endsAt) || Date.now() - endsAt <= REST_FRESH_MS;
+  const title = isRest ? (fresh ? "Rest complete" : "Rest timer") : "SpotterAI";
+  const body = isRest
+    ? (fresh ? REST_NOTIFICATION.body : "Your rest ended a while ago.")
+    : "Open SpotterAI.";
+  event.waitUntil(
+    self.registration
+      .showNotification(title, { ...REST_NOTIFICATION, body })
+      // A push that shows nothing is the one failure iOS punishes, by revoking
+      // the subscription, so fall back to the plainest banner the engine can
+      // possibly render rather than letting waitUntil reject.
+      .catch(() => self.registration.showNotification(title, { body, tag: REST_NOTIFICATION.tag }))
+  );
+});
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

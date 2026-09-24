@@ -90,11 +90,13 @@ test("offline shell precaches every current install asset under a fresh cache", 
   }
 });
 
-test("service worker has no remote push path and routes clicks to a fixed same-origin Today URL", () => {
-  // Web Push is retired: no push listener, no remote subscription surface.
-  assert.doesNotMatch(serviceWorker, /addEventListener\(\s*["']push["']/);
-  assert.doesNotMatch(serviceWorker, /event\.data\.json\(\)/);
+test("service worker shows a fixed banner for a push and routes clicks to a fixed same-origin Today URL", () => {
+  // The booked rest push (api/rest-push.js) is the one remote path. The worker
+  // renders nothing from the payload and never subscribes on its own: the
+  // subscription is created by the page, with the key the server publishes.
+  assert.match(serviceWorker, /addEventListener\("push"/);
   assert.doesNotMatch(serviceWorker, /PushManager|applicationServerKey|VAPID/i);
+  assert.doesNotMatch(serviceWorker, /body:\s*payload\.|title:\s*payload\./);
 
   // The only notification interaction is a click handler with a FIXED destination.
   assert.match(serviceWorker, /addEventListener\("notificationclick"/);
@@ -107,11 +109,19 @@ test("service worker has no remote push path and routes clicks to a fixed same-o
   assert.doesNotMatch(serviceWorker, /navigate\(\s*event\.notification\.data/);
 });
 
-test("the only notification shown is the local rest alert, branded and same-origin", () => {
+test("the notification shown is the branded rest alert, and the only server the page talks to for it is our own", () => {
   assert.match(workoutAlerts, /showNotification\(/);
   assert.match(workoutAlerts, /icon:\s*"\/?icons\/spotterai-192\.png"/);
-  // On-device only: no subscription, VAPID, or server call anywhere in the module.
-  assert.doesNotMatch(workoutAlerts, /PushManager|applicationServerKey|VAPID|fetch\(/i);
+  // The booked-push route: subscribe with the key OUR server publishes, and
+  // every fetch goes to the one same-origin endpoint. No third-party URL, no
+  // key baked into the client.
+  assert.match(workoutAlerts, /userVisibleOnly:\s*true/);
+  assert.match(workoutAlerts, /REST_PUSH_ENDPOINT = "\/api\/rest-push"/);
+  const fetchTargets = [...workoutAlerts.matchAll(/\bf\((`?[^,)]+)/g)].map((m) => m[1]);
+  assert.ok(fetchTargets.length >= 3, "GET config, POST book, DELETE cancel");
+  for (const target of fetchTargets) assert.match(target, /REST_PUSH_ENDPOINT/, target);
+  assert.doesNotMatch(workoutAlerts, /https?:\/\//, "no absolute URL anywhere in the module");
+  assert.doesNotMatch(workoutAlerts, /B[A-Za-z0-9_-]{86}/, "no VAPID public key literal in the client");
 });
 
 test("production UI never points users back to the legacy red icons", () => {

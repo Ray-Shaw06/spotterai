@@ -247,10 +247,37 @@ test("activation supports an offline relaunch for the complete local boot module
   }), undefined);
 });
 
-test("the service worker registers no push handler (remote Web Push is retired)", () => {
-  const { handlers } = harness();
-  assert.equal(handlers.has("push"), false);
-  assert.doesNotMatch(source, /addEventListener\(\s*["']push["']/);
+test("a rest push shows the branded rest banner, with the OS buzz asked for", async () => {
+  const { handlers, shown } = harness();
+  assert.ok(handlers.has("push"), "the booked-push route needs a push listener");
+  await dispatch(handlers.get("push"), { data: { json: () => ({ kind: "rest", endsAt: Date.now() }) } });
+  assert.equal(shown.length, 1);
+  const [title, options] = shown[0];
+  assert.equal(title, "Rest complete");
+  assert.equal(options.body, "Time for your next set.");
+  assert.equal(options.tag, "spotterai-rest", "shares a tag with the page's own banner so the two collapse to one");
+  assert.equal(options.renotify, false, "the shared tag replaces the banner; renotify would alert a second time");
+  // Values cross the vm realm boundary, so compare by value, not by prototype.
+  assert.deepEqual([...options.vibrate], [200, 80, 200]);
+  assert.equal(options.silent, false);
+  assert.deepEqual(JSON.parse(JSON.stringify(options.data)), { kind: "rest" });
+  assert.match(options.icon, /^\/icons\//);
+});
+
+test("every push shows SOMETHING, because iOS revokes permission after silent ones, and nothing in the payload is rendered", async () => {
+  const { handlers, shown } = harness();
+  const push = handlers.get("push");
+  await dispatch(push, { data: null });
+  await dispatch(push, { data: { json: () => { throw new Error("not json"); } } });
+  await dispatch(push, { data: { json: () => ({ kind: "other", body: "<b>injected</b>", url: "https://evil.example" }) } });
+  assert.equal(shown.length, 3);
+  for (const [title, options] of shown) {
+    assert.equal(title, "SpotterAI");
+    assert.equal(options.body, "Open SpotterAI.");
+    assert.equal(JSON.stringify(options).includes("evil"), false);
+    assert.equal(JSON.stringify(options).includes("injected"), false);
+    assert.deepEqual(JSON.parse(JSON.stringify(options.data)), { kind: "rest" }, "the click handler only ever sees the fixed data");
+  }
 });
 
 test("notification click navigates and focuses only an existing same-origin client, ignoring any payload URL", async () => {
@@ -278,4 +305,22 @@ test("notification click opens the canonical same-origin Today URL when no clien
   });
 
   assert.deepEqual(opened, ["https://spotter.example/#/today"]);
+});
+
+test("a push that arrives long after the rest ended stops claiming the rest just ended", async () => {
+  // QStash retries, and a phone reconnecting after a dead zone, both land late.
+  // "Rest complete, time for your next set" is wrong by then and buzzes the
+  // user mid-set. Something still shows: a push that displays nothing is what
+  // gets the subscription revoked on iOS.
+  const { handlers, shown } = harness();
+  await dispatch(handlers.get("push"), { data: { json: () => ({ kind: "rest", endsAt: Date.now() - 10 * 60 * 1000 }) } });
+  assert.equal(shown.length, 1);
+  const [title, options] = shown[0];
+  assert.equal(title, "Rest timer");
+  assert.notEqual(options.body, "Time for your next set.");
+
+  // On time, it says what it always said.
+  const fresh = harness();
+  await dispatch(fresh.handlers.get("push"), { data: { json: () => ({ kind: "rest", endsAt: Date.now() - 2000 }) } });
+  assert.equal(fresh.shown[0][0], "Rest complete");
 });
