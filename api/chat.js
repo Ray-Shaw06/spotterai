@@ -121,6 +121,9 @@ async function handler(req, res) {
       systemInstruction: buildSystemInstruction(payload.plan, payload.tracker),
       generationConfig: { temperature: 0.7, maxOutputTokens: MAX_OUTPUT_TOKENS },
       timeoutMs: 25000,
+      // Under vercel.json's 30s maxDuration, so a slow Gemini 503 still leaves
+      // Groq time to answer instead of the platform killing the request.
+      deadlineMs: 26000,
     });
 
     if (!reply.trim()) {
