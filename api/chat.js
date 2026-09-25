@@ -23,6 +23,9 @@ const MAX_MESSAGE_CHARS = 4000; // per message
 const MAX_PLAN_CHARS = 6000; // truncated plan JSON
 const MAX_TRACKER_CHARS = 6000; // truncated tracker summary JSON
 const MAX_OUTPUT_TOKENS = 1024;
+// Under vercel.json's 30s maxDuration, so a slow Gemini 503 still leaves Groq
+// time to answer instead of the platform killing the request.
+const CHAT_DEADLINE_MS = 26000;
 
 /** Build the system instruction, embedding the user's plan and tracker data. */
 function buildSystemInstruction(plan, tracker) {
@@ -121,6 +124,7 @@ async function handler(req, res) {
       systemInstruction: buildSystemInstruction(payload.plan, payload.tracker),
       generationConfig: { temperature: 0.7, maxOutputTokens: MAX_OUTPUT_TOKENS },
       timeoutMs: 25000,
+      deadlineMs: CHAT_DEADLINE_MS,
     });
 
     if (!reply.trim()) {

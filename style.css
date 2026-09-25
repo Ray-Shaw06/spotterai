@@ -7672,7 +7672,10 @@ body::after {
   z-index: 0;
   background: radial-gradient(760px 520px at 78% 16%, var(--accent-glow), transparent 68%);
 }
-.app-shell, .sidebar, main, .app-main { position: relative; z-index: 1; }
+/* .sidebar is left out on purpose: it positions itself (sticky on desktop,
+   fixed top bar + bottom tab bar on phones), and .app-shell already lifts it
+   above the bloom. Listing it here overrode both and hid the tab bar. */
+.app-shell, main, .app-main { position: relative; z-index: 1; }
 
 .card,
 .dash-card,

@@ -18,7 +18,7 @@ async function estimate(kind, query, signal, extra = {}) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ kind, query, ...extra }),
     signal,
-  }, 35_000);
+  }, 60_000);
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     const err = new Error(data.error || `Estimate failed (${res.status})`);

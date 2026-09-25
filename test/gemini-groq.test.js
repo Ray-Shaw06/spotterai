@@ -99,6 +99,42 @@ test("text requests advance past Gemini timeouts and reach Groq", async () => {
   }
 });
 
+test("slow Gemini 503s stop at the deadline and leave Groq time to answer", async () => {
+  // Real overload: Gemini takes 12-19s to say 503. Retrying that inside a 30s
+  // function ran out the clock before Groq was ever tried.
+  const originalFetch = globalThis.fetch;
+  const originalGroqKey = process.env.GROQ_API_KEY;
+  process.env.GROQ_API_KEY = "test-groq-key";
+  globalThis.fetch = (url) => {
+    if (String(url).includes("generativelanguage.googleapis.com")) {
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(new Response('{"error":{"status":"UNAVAILABLE"}}', { status: 503 })), 800);
+      });
+    }
+    return Promise.resolve(new Response(JSON.stringify({
+      choices: [{ message: { content: "Groq answered" } }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+  };
+
+  const startedAt = Date.now();
+  try {
+    const result = await gemini.callGemini({
+      apiKey: "test-key",
+      contents: [{ role: "user", parts: [{ text: "What should I train today?" }] }],
+      timeoutMs: 5000,
+      deadlineMs: 3000,
+      groqReserveMs: 500,
+    });
+
+    assert.equal(result, "Groq answered");
+    assert.ok(Date.now() - startedAt < 3000, `took ${Date.now() - startedAt}ms, past the 3000ms deadline`);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalGroqKey == null) delete process.env.GROQ_API_KEY;
+    else process.env.GROQ_API_KEY = originalGroqKey;
+  }
+});
+
 test("hasImagePart detects Gemini inline_data (vision must stay Gemini-only)", () => {
   const vision = [{ role: "user", parts: [{ text: "what is this" }, { inline_data: { mime_type: "image/jpeg", data: "…" } }] }];
   const textOnly = [{ role: "user", parts: [{ text: "2 eggs" }] }];

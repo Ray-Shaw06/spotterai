@@ -147,3 +147,23 @@ test("form-report video markers hit the 44px touch floor and the report wraps at
   assert.match(rule(".form-video__markers"), /flex-wrap:\s*wrap/);
   assert.match(rule(".form-video__player"), /width:\s*100%/);
 });
+
+test("only the sidebar's own rules position it, so the mobile top bar and tab bar stay fixed", () => {
+  // A later grouped rule like `.app-shell, .sidebar { position: relative }`
+  // wins the cascade over both the desktop sticky rule and the mobile fixed
+  // rule: the sidebar scrolls away and its z-index traps the bottom tab bar
+  // under the page.
+  const positioners = [];
+  for (const [, selectors, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const list = selectors.replace(/\/\*[\s\S]*?\*\//g, "").split(",").map((s) => s.trim());
+    if (list.includes(".sidebar") && /(^|;|\s)position\s*:/.test(body)) {
+      positioners.push({ list, position: body.match(/position\s*:\s*([^;]+)/)[1].trim() });
+    }
+  }
+  assert.deepEqual(
+    positioners.map((p) => p.position),
+    ["sticky", "fixed"],
+    `unexpected rules positioning .sidebar: ${JSON.stringify(positioners)}`
+  );
+  assert.ok(positioners.every((p) => p.list.length === 1), "position .sidebar in its own rule, not a grouped one");
+});
