@@ -167,3 +167,21 @@ test("only the sidebar's own rules position it, so the mobile top bar and tab ba
   );
   assert.ok(positioners.every((p) => p.list.length === 1), "position .sidebar in its own rule, not a grouped one");
 });
+
+test("text fields are 16px on touch screens, so iOS never zooms the page into them", () => {
+  // iOS Safari zooms into any focused field under 16px, and an installed PWA
+  // often stays zoomed: the food search pushed Snap / Estimate out of view and
+  // the meal cards ran past the screen edge.
+  assertInMedia("(pointer: coarse)", /input[^{]*,[^{]*textarea[^{]*,[^{]*select[^{]*\{[^}]*font-size:\s*max\(16px/);
+});
+
+test("every modal dialog sits outside the app shell, above the fixed top bar and tab bar", () => {
+  // .app-main is its own stacking layer (z-index 1) under the mobile top bar
+  // and tab bar (z-index 50). A modal inside it is drawn under both.
+  const html = readFileSync(join(root, "index.html"), "utf8");
+  const shellEnd = html.indexOf("<!-- /.app-shell -->");
+  assert.notEqual(shellEnd, -1, "app shell close marker");
+  for (const [tag] of html.matchAll(/<[^>]*aria-modal="true"[^>]*>/g)) {
+    assert.ok(html.indexOf(tag) > shellEnd, `${tag.match(/id="([^"]+)"/)?.[1]} is inside the app shell`);
+  }
+});

@@ -4677,6 +4677,17 @@ table {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .input--sm { max-width: 100px; }
+/* iOS Safari zooms the page into any focused field under 16px, and an installed
+   PWA often stays zoomed afterwards: the food search pushed its Snap / Estimate
+   rows out of view and the meal cards ran past the screen edge. The fields
+   here are 13-14px across a dozen selectors, so this is a platform floor, not
+   a style choice, and !important keeps a later, more specific rule from
+   quietly bringing the zoom back. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea,
+  select { font-size: max(16px, 1em) !important; }
+}
 .field-inline {
   display: flex;
   gap: var(--space-2);
