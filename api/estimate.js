@@ -22,6 +22,11 @@ import { FOODS } from "../foods.js";
 import { enforceRateLimit } from "../lib/rate-limit.js";
 import { withSentry } from "../lib/sentry-server.js";
 
+// Total budgets, under vercel.json's 60s maxDuration. Text lookups stop early
+// so Groq can answer; photos are Gemini-only and a slow one can take 20s+.
+const TEXT_DEADLINE_MS = 26000;
+const PHOTO_DEADLINE_MS = 55000;
+
 // Must mirror MUSCLES in exercises.js so the classified group is one the UI knows.
 const MUSCLES = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Cardio", "Full body"];
 
@@ -282,6 +287,7 @@ async function handler(req, res) {
         responseSchema: food ? FOOD_SCHEMA : EXERCISE_SCHEMA,
       },
       timeoutMs,
+      deadlineMs: image ? PHOTO_DEADLINE_MS : TEXT_DEADLINE_MS,
     });
 
     const parsed = extractJson(text);

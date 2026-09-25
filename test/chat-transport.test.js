@@ -67,6 +67,26 @@ test("every api function gets an explicit maxDuration", () => {
   }
 });
 
+test("coach and nutrition routes finish inside maxDuration, and the browser waits for them", () => {
+  // A real session: the nutrition tracker said "The coach is temporarily
+  // unavailable". An overloaded Gemini takes ~14s to return 503 and a meal
+  // photo can take 20s+ to succeed, so per-call timeouts with no total budget
+  // outran the 30s limit and the platform killed the request (504).
+  const aiClient = readFileSync(join(root, "ai.js"), "utf8");
+  const clientTimeout = Number(aiClient.match(/\},\s*([\d_]+)\);/)[1].replace(/_/g, ""));
+  for (const route of ["api/chat.js", "api/estimate.js"]) {
+    const source = readFileSync(join(root, route), "utf8");
+    assert.match(source, /deadlineMs/, `${route} gives callGemini a total deadline`);
+    const deadlines = [...source.matchAll(/DEADLINE_MS = ([\d_]+)/g)].map((m) => Number(m[1].replace(/_/g, "")));
+    assert.ok(deadlines.length, `${route} names its deadline(s)`);
+    const limit = vercelConfig.functions[route].maxDuration * 1000;
+    for (const deadline of deadlines) {
+      assert.ok(deadline <= limit - 4000, `${route}: ${deadline}ms deadline leaves room under ${limit}ms`);
+      if (route === "api/estimate.js") assert.ok(clientTimeout > deadline, `ai.js waits ${clientTimeout}ms, past the ${deadline}ms deadline`);
+    }
+  }
+});
+
 // --- day-level edits --------------------------------------------------------
 // A real session: "I don't want a full body day, I want upper." The coach
 // rewrote some exercises but the day still read "Full Body", because no action

@@ -30,7 +30,7 @@
       "maxDuration": 30
     },
     "api/estimate.js": {
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "api/parse.js": {
       "maxDuration": 30
