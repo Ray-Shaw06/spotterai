@@ -16,7 +16,7 @@
  * Bump CACHE when shipping changes so old caches are cleaned on activate.
  */
 
-const CACHE = "spotterai-v78";
+const CACHE = "spotterai-v79";
 // Explicit local module graph rooted at every <script type="module"> in index.html.
 // test/service-worker-behavior.test.js derives the graph independently so a new
 // boot import cannot be shipped without being added here.
@@ -76,7 +76,9 @@ const BOOT_MODULES = [
   "profile-store.js",
   "progression.js",
   "quick-log.js",
+  "reminder-plan.js",
   "reminders.js",
+  "reminders-sync.js",
   "repair.js",
   "route-gate.js",
   "router.js",
@@ -203,13 +205,15 @@ self.addEventListener("fetch", (event) => {
   // Cross-origin (fonts, CDNs) → default network handling.
 });
 
-// Rest-timer alerts are the only notifications SpotterAI shows, by two routes:
-// the page's own showNotification (workout-alerts.js) and a push booked for the
-// rest's deadline (api/rest-push.js), which is what still fires with the screen
-// locked. Both render the same banner. The click handler always routes to a
-// FIXED same-origin destination, never a payload-provided URL, so a notification
-// can only ever reopen the app's Today surface.
+// SpotterAI shows two families of notification. Rest-timer alerts, by two
+// routes: the page's own showNotification (workout-alerts.js) and a push booked
+// for the rest's deadline (api/rest-push.js), which is what still fires with
+// the screen locked; both render the same banner. And reminders
+// (api/reminders.js): workout, meal and water. The click handler always routes
+// to a FIXED same-origin destination picked by kind, never a payload-provided
+// URL, so a notification can only ever reopen Today or Nutrition.
 const NOTIFICATION_DESTINATION = "/#/today";
+
 
 /** How late a rest push can be and still claim the rest just ended. */
 const REST_FRESH_MS = 90 * 1000;
@@ -229,6 +233,18 @@ const REST_NOTIFICATION = Object.freeze({
   data: { kind: "rest" },
 });
 
+/**
+ * Reminder text and where a tap goes, per kind. The push carries only
+ * { kind, detail, at }; it picks a row here and nothing in it is rendered.
+ */
+const REMINDER_NOTIFICATIONS = Object.freeze({
+  workout: Object.freeze({ title: "Time to train", body: "You haven't logged a workout in a few days. Even a short session counts.", route: "/#/today" }),
+  meal: Object.freeze({ title: "Log your meal", body: "Tap to add what you ate so your targets stay accurate.", route: "/#/nutrition" }),
+  water: Object.freeze({ title: "Drink some water", body: "Have a glass, then tap to log it.", route: "/#/nutrition" }),
+});
+const MEAL_TITLES = Object.freeze({ breakfast: "Log your breakfast", lunch: "Log your lunch", dinner: "Log your dinner" });
+const ownKey = (table, key) => typeof key === "string" && Object.prototype.hasOwnProperty.call(table, key);
+
 // Every push shows a notification, whatever it carries. Two reasons: only our
 // own server can address this subscription, so an unrecognised payload is a
 // bug, not a stranger; and iOS revokes push permission after a few pushes that
@@ -241,6 +257,27 @@ self.addEventListener("push", (event) => {
     payload = event.data ? event.data.json() : null;
   } catch {
     payload = null;
+  }
+  if (ownKey(REMINDER_NOTIFICATIONS, payload?.kind)) {
+    const kind = payload.kind;
+    const spec = REMINDER_NOTIFICATIONS[kind];
+    const title = kind === "meal" && ownKey(MEAL_TITLES, payload.detail) ? MEAL_TITLES[payload.detail] : spec.title;
+    const options = {
+      body: spec.body,
+      icon: "/icons/spotterai-192.png",
+      badge: "/icons/spotterai-192.png",
+      tag: `spotterai-${kind}`,
+      // Unlike the rest pair, a newer reminder replacing an older one of the
+      // same kind (yesterday's water, still in the list) must alert again.
+      renotify: true,
+      data: { kind },
+    };
+    event.waitUntil(
+      self.registration
+        .showNotification(title, options)
+        .catch(() => self.registration.showNotification(title, { body: spec.body, tag: options.tag, data: { kind } }))
+    );
+    return;
   }
   const isRest = !!payload && payload.kind === "rest";
   // A push can arrive late: QStash retries, or a phone that reconnects after
@@ -267,7 +304,9 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil((async () => {
-    const destination = new URL(NOTIFICATION_DESTINATION, self.location.origin);
+    const kind = event.notification?.data?.kind;
+    const route = ownKey(REMINDER_NOTIFICATIONS, kind) ? REMINDER_NOTIFICATIONS[kind].route : NOTIFICATION_DESTINATION;
+    const destination = new URL(route, self.location.origin);
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     for (const client of windows) {
       try {

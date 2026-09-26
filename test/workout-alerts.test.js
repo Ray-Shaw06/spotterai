@@ -589,7 +589,9 @@ test("neither banner sets renotify, so the pair collapses silently instead of al
   // Same tag + renotify:true is an explicit instruction to alert again. With
   // the app open both banners land a few seconds apart, so that would buzz
   // twice on every single set.
-  for (const [name, src] of [["service-worker.js", swSource], ["workout-alerts.js", alertsSource]]) {
+  // Scoped to the rest banner: reminders (their own tags) do renotify on purpose.
+  const restBanner = swSource.match(/const REST_NOTIFICATION = Object\.freeze\(\{[\s\S]*?\}\);/)[0];
+  for (const [name, src] of [["service-worker.js", restBanner], ["workout-alerts.js", alertsSource]]) {
     assert.match(src, /renotify: false/, name);
     assert.doesNotMatch(src, /renotify: true/, name);
     assert.match(src, /tag: "spotterai-rest"/, name);
@@ -656,4 +658,22 @@ test("a re-arm landing mid-booking supersedes the first booking, and the second 
   assert.equal(second, "booked");
   assert.equal(restPushBooked(), true, "the live rest keeps its booking");
   assert.equal(state.requests.filter((r) => r.init.method === "POST").length, 2);
+});
+
+test("turning rest alerts off keeps the push subscription while reminders still use it", () => {
+  const withReminders = fakeStore({
+    [REST_ALERTS_KEY]: "true",
+    [REST_PUSH_SUBSCRIPTION_KEY]: JSON.stringify({ endpoint: "https://web.push.apple.com/x", publicKey: "k" }),
+    "spotterai.reminders": JSON.stringify({ enabled: { water: true } }),
+  });
+  disableRestAlerts({}, withReminders);
+  assert.equal(withReminders.has(REST_ALERTS_KEY), false);
+  assert.equal(withReminders.has(REST_PUSH_SUBSCRIPTION_KEY), true, "releasing it would strand every booked reminder");
+
+  const without = fakeStore({
+    [REST_ALERTS_KEY]: "true",
+    [REST_PUSH_SUBSCRIPTION_KEY]: JSON.stringify({ endpoint: "https://web.push.apple.com/x", publicKey: "k" }),
+  });
+  disableRestAlerts({}, without);
+  assert.equal(without.has(REST_PUSH_SUBSCRIPTION_KEY), false);
 });

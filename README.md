@@ -11,7 +11,7 @@
 > cardio and injuries declared) grades that plan and shows the
 > flags before you train. The red-team suite that tests the evaluator is
 > [published and runs live in your browser](https://spotterai.xyz/#/evals).
-> **976 tests, 23 adversarial eval cases, 3 runtime dependencies, no build step.**
+> **1019 tests, 23 adversarial eval cases, 3 runtime dependencies, no build step.**
 > (These counts are [checked by CI](scripts/check-readme-claims.mjs) against the
 > live repo, so they cannot silently go stale.)
 > Solo-built by a CS student. Vanilla ES modules, Node serverless functions on
@@ -38,7 +38,7 @@ run on every pull request ([`ci.yml`](.github/workflows/ci.yml)):
 | Gate | What it actually proves | Command |
 | --- | --- | --- |
 | **Lint** | No undeclared identifiers, no dead imports, no undocumented silent `catch {}`. This repo has no build step and no type checker, so `no-undef` is the only thing standing between a typo in a browser module and a `ReferenceError` on someone's phone. Config and the reasoning for every rule: [`eslint.config.js`](eslint.config.js). | `npm run lint` |
-| **Tests** | **976 tests**, holding **line coverage above 85%** ([live figure](https://codecov.io/gh/Ray-Shaw06/spotterai)), on Node's built-in runner. | `npm test` |
+| **Tests** | **1019 tests**, holding **line coverage above 85%** ([live figure](https://codecov.io/gh/Ray-Shaw06/spotterai)), on Node's built-in runner. | `npm test` |
 | **Evaluator benchmark** | The safety evaluator catches **18 of 18** known-risky plans and false-flags **0 of 5** known-good ones. A regression fails the build rather than quietly moving a dashboard. | `npm run eval` |
 | **README claims** | The numbers on this page are derived from the repo, not typed by hand — [the check](scripts/check-readme-claims.mjs) fails CI if the prose drifts from reality. | `npm run check:readme` |
 

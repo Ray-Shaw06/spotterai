@@ -41,6 +41,9 @@
     "api/audit-telemetry.js": {
       "maxDuration": 10
     },
+    "api/reminders.js": {
+      "maxDuration": 10
+    },
     "api/rest-push.js": {
       "maxDuration": 10
     }

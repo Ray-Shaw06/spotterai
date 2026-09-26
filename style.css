@@ -3374,6 +3374,9 @@ table {
 .toggle-row:has(input:disabled) { color: var(--text-faint); cursor: not-allowed; }
 
 .notification-status { margin: var(--space-3) 0; font-size: 0.8rem; line-height: 1.5; color: var(--text-muted); }
+.reminder-times { display: grid; gap: var(--space-2); margin: 0 0 var(--space-3); padding-left: 32px; }
+.reminder-times label { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: var(--fs-small); color: var(--text-muted); }
+.reminder-times .input { flex: none; width: 9.5rem; }
 .notification-error { margin: var(--space-3) 0; padding: var(--space-2) var(--space-3); font-size: 0.8rem; line-height: 1.5; color: var(--danger); background: var(--danger-soft); border: 1px solid color-mix(in srgb, var(--danger) 38%, transparent); border-radius: var(--r-sm); }
 
 @media (max-width: 600px) {

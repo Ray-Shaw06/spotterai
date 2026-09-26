@@ -324,3 +324,38 @@ test("a push that arrives long after the rest ended stops claiming the rest just
   await dispatch(fresh.handlers.get("push"), { data: { json: () => ({ kind: "rest", endsAt: Date.now() - 2000 }) } });
   assert.equal(fresh.shown[0][0], "Rest complete");
 });
+
+test("reminder pushes show fixed text for their kind, with their own tag", async () => {
+  const { handlers, shown } = harness();
+  const push = handlers.get("push");
+  await dispatch(push, { data: { json: () => ({ kind: "meal", detail: "lunch", at: Date.now() }) } });
+  await dispatch(push, { data: { json: () => ({ kind: "water", detail: "", at: Date.now() }) } });
+  await dispatch(push, { data: { json: () => ({ kind: "workout", detail: "", at: Date.now() }) } });
+  await dispatch(push, { data: { json: () => ({ kind: "meal", detail: "<script>x</script>" }) } });
+  const view = shown.map(([title, options]) => [title, options.body, options.tag, JSON.parse(JSON.stringify(options.data))]);
+  assert.deepEqual(view, [
+    ["Log your lunch", "Tap to add what you ate so your targets stay accurate.", "spotterai-meal", { kind: "meal" }],
+    ["Drink some water", "Have a glass, then tap to log it.", "spotterai-water", { kind: "water" }],
+    ["Time to train", "You haven't logged a workout in a few days. Even a short session counts.", "spotterai-workout", { kind: "workout" }],
+    ["Log your meal", "Tap to add what you ate so your targets stay accurate.", "spotterai-meal", { kind: "meal" }],
+  ]);
+  assert.equal(JSON.stringify(shown).includes("script"), false, "nothing from the payload is rendered");
+});
+
+test("tapping a reminder opens the screen it is about, from a fixed map", async () => {
+  const cases = [
+    ["meal", "/#/nutrition"],
+    ["water", "/#/nutrition"],
+    ["workout", "/#/today"],
+    ["rest", "/#/today"],
+    ["toString", "/#/today"],
+    ["__proto__", "/#/today"],
+  ];
+  for (const [kind, path] of cases) {
+    const { handlers, opened } = harness({ windows: [] });
+    await dispatch(handlers.get("notificationclick"), {
+      notification: { data: { kind, url: "https://evil.example/" }, close: () => {} },
+    });
+    assert.deepEqual(opened, [`https://spotter.example${path}`], kind);
+  }
+});

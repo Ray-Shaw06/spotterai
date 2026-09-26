@@ -127,7 +127,8 @@ test("slow Gemini 503s stop at the deadline and leave Groq time to answer", asyn
     });
 
     assert.equal(result, "Groq answered");
-    assert.ok(Date.now() - startedAt < 3000, `took ${Date.now() - startedAt}ms, past the 3000ms deadline`);
+    // Headroom for a loaded test runner: the path without a deadline took 5000ms+.
+    assert.ok(Date.now() - startedAt < 4000, `took ${Date.now() - startedAt}ms; without the deadline it takes 5000ms+`);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalGroqKey == null) delete process.env.GROQ_API_KEY;

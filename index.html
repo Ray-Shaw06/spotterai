@@ -1439,6 +1439,29 @@
         <p class="notification-status" id="rest-audio-status" role="status">Off, the rest timer plays over your music and leaves it running.</p>
       </div>
 
+      <div class="account-section account-reminders" id="account-reminders" aria-busy="true">
+        <h3 class="account-h">Reminders</h3>
+        <p class="account-note">Notifications on this device to train, eat and log, and drink water. A reminder you no longer need is cancelled: logging lunch cancels the lunch reminder, and logging water moves the next one back 3 hours.</p>
+        <label class="toggle-row">
+          <input type="checkbox" id="reminder-workout" role="switch" aria-checked="false" disabled />
+          <span>Workout nudges, when you've missed a training day</span>
+        </label>
+        <label class="toggle-row">
+          <input type="checkbox" id="reminder-meals" role="switch" aria-checked="false" disabled />
+          <span>Meal reminders</span>
+        </label>
+        <div class="reminder-times" id="reminder-meal-times" hidden>
+          <label>Breakfast <input type="time" class="input" id="reminder-time-breakfast" value="08:30" /></label>
+          <label>Lunch <input type="time" class="input" id="reminder-time-lunch" value="12:30" /></label>
+          <label>Dinner <input type="time" class="input" id="reminder-time-dinner" value="18:30" /></label>
+        </div>
+        <label class="toggle-row">
+          <input type="checkbox" id="reminder-water" role="switch" aria-checked="false" disabled />
+          <span>Water reminders, every 3 hours from 9am to 9pm</span>
+        </label>
+        <p class="notification-status" id="reminders-status" role="status">Checking notification availability…</p>
+      </div>
+
       <div class="account-section account-actions">
         <button type="button" id="account-export" class="btn btn--ghost btn--sm">Export backup</button>
         <label class="btn btn--ghost btn--sm account-import-label">
