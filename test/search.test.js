@@ -67,14 +67,15 @@ test("food search merges custom foods", () => {
   assert.ok(names(res).includes("Nonna's Lasagne"));
 });
 
-test("Open Food Facts search retries when the browser reports a failed fetch", async () => {
+test("the direct Open Food Facts fallback retries when the browser reports a failed fetch", async () => {
   // OFF's 503 pages carry no CORS header, so the browser surfaces a transient
   // 503 as `TypeError: Failed to fetch`, not a response. The retry loop only
   // looked at response statuses, so one blip ended the search as "offline".
   const { searchOpenFoodFacts } = await import("../foods.js");
   const originalFetch = globalThis.fetch;
   let calls = 0;
-  globalThis.fetch = async () => {
+  globalThis.fetch = async (url) => {
+    if (String(url).startsWith("api/")) throw new TypeError("Failed to fetch"); // no backend: static preview
     calls += 1;
     if (calls < 3) throw new TypeError("Failed to fetch");
     return new Response(JSON.stringify({
@@ -90,12 +91,12 @@ test("Open Food Facts search retries when the browser reports a failed fetch", a
   }
 });
 
-test("Open Food Facts search still gives up after three failed fetches", async () => {
+test("the direct Open Food Facts fallback still gives up after three failed fetches", async () => {
   const { searchOpenFoodFacts } = await import("../foods.js");
   const originalFetch = globalThis.fetch;
   let calls = 0;
-  globalThis.fetch = async () => {
-    calls += 1;
+  globalThis.fetch = async (url) => {
+    if (!String(url).startsWith("api/")) calls += 1;
     throw new TypeError("Failed to fetch");
   };
   try {
