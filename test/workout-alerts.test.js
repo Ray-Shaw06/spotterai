@@ -589,7 +589,9 @@ test("neither banner sets renotify, so the pair collapses silently instead of al
   // Same tag + renotify:true is an explicit instruction to alert again. With
   // the app open both banners land a few seconds apart, so that would buzz
   // twice on every single set.
-  for (const [name, src] of [["service-worker.js", swSource], ["workout-alerts.js", alertsSource]]) {
+  // Scoped to the rest banner: reminders (their own tags) do renotify on purpose.
+  const restBanner = swSource.match(/const REST_NOTIFICATION = Object\.freeze\(\{[\s\S]*?\}\);/)[0];
+  for (const [name, src] of [["service-worker.js", restBanner], ["workout-alerts.js", alertsSource]]) {
     assert.match(src, /renotify: false/, name);
     assert.doesNotMatch(src, /renotify: true/, name);
     assert.match(src, /tag: "spotterai-rest"/, name);
