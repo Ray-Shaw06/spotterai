@@ -183,9 +183,21 @@ export async function enableRestAlerts(env = globalThis, store = safeLocalStorag
   return { state: "enabled", enabled: true, booked: !!subscription };
 }
 
+/** Reminders (reminders-sync.js) book against this same push subscription. */
+function remindersOn(store) {
+  try {
+    const s = JSON.parse(store?.getItem("spotterai.reminders") || "null");
+    return !!(s && s.enabled && (s.enabled.workout || s.enabled.meals || s.enabled.water));
+  } catch {
+    return false;
+  }
+}
+
 export function disableRestAlerts(env = globalThis, store = safeLocalStorage()) {
   setRestAlertsEnabled(false, store);
-  forgetRestPushSubscription(env, store);
+  // Releasing the subscription while reminders are on would strand every
+  // reminder already booked against it.
+  if (!remindersOn(store)) forgetRestPushSubscription(env, store);
   return { state: "disabled", enabled: false };
 }
 
