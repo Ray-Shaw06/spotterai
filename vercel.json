@@ -35,6 +35,9 @@
     "api/parse.js": {
       "maxDuration": 30
     },
+    "api/food-search.js": {
+      "maxDuration": 10
+    },
     "api/audit-telemetry.js": {
       "maxDuration": 10
     },
