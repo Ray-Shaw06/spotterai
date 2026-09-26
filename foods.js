@@ -250,14 +250,59 @@ export function searchFoods(query, limit = 25, extra = []) {
   return scored.slice(0, limit).map((s) => s.f);
 }
 
+/** One search, one cache entry: "Greek  Yogurt " and "greek yogurt" are the same lookup. */
+export function normalizeFoodQuery(query) {
+  return String(query || "").trim().toLowerCase().replace(/\s+/g, " ").slice(0, 80);
+}
+
+/** One Open Food Facts product as a per-100g food, or null without a name and calories. */
+export function offProductToFood(p) {
+  const n = p?.nutriments || {};
+  let kcal = n["energy-kcal_100g"];
+  if (kcal == null && n["energy_100g"] != null) kcal = n["energy_100g"] / 4.184; // kJ → kcal
+  if (!p?.product_name || kcal == null) return null;
+  // The newer search returns brands as an array, the legacy one as "A, B".
+  const firstBrand = (Array.isArray(p.brands) ? p.brands[0] : String(p.brands || "").split(",")[0]) || "";
+  const brand = firstBrand.trim() ? firstBrand.trim() + " " : "";
+  return {
+    name: (brand + p.product_name).slice(0, 60),
+    serving: "100 g",
+    kcal: Math.round(kcal),
+    protein: round1(n.proteins_100g),
+    carbs: round1(n.carbohydrates_100g),
+    fat: round1(n.fat_100g),
+    source: "off",
+  };
+}
+
 /**
- * Search Open Food Facts (free, no key, CORS-enabled). Returns foods with
- * per-100g macros. This endpoint sends `access-control-allow-origin: *` (so it
- * works from the browser) but intermittently returns 503 under load, so we retry
- * transient failures a couple of times. Throws on real failure (caller falls
- * back to the built-in + custom foods).
+ * Search Open Food Facts. Returns foods with per-100g macros; throws on real
+ * failure (the picker still has the built-in + custom foods).
+ *
+ * Our own /api/food-search goes first: it reaches OFF's newer search, which
+ * answers reliably but sends no CORS header, so a browser cannot call it
+ * (lib/food-search.js). Straight to OFF only when that route cannot answer:
+ * a static preview with no backend, a rate limit, or an outage.
  */
 export async function searchOpenFoodFacts(query, signal) {
+  try {
+    const res = await fetch(`api/food-search?q=${encodeURIComponent(normalizeFoodQuery(query))}`, { signal });
+    if (res.ok) {
+      const { foods } = await res.json();
+      if (Array.isArray(foods)) return foods;
+    }
+  } catch (e) {
+    if (e.name === "AbortError") throw e;
+  }
+  return searchOffDirect(query, signal);
+}
+
+/**
+ * OFF's legacy search, the only one that sends `access-control-allow-origin: *`.
+ * It returned 503 on about half of requests (2026-09-25), so transient
+ * failures are retried a couple of times.
+ */
+async function searchOffDirect(query, signal) {
   const url =
     "https://world.openfoodfacts.org/cgi/search.pl?search_terms=" +
     encodeURIComponent(query) +
@@ -284,25 +329,7 @@ export async function searchOpenFoodFacts(query, signal) {
   }
   if (!res.ok) throw new Error(`Open Food Facts ${res.status}`);
   const data = await res.json();
-  const out = [];
-  for (const p of data.products || []) {
-    const n = p.nutriments || {};
-    let kcal = n["energy-kcal_100g"];
-    if (kcal == null && n["energy_100g"] != null) kcal = n["energy_100g"] / 4.184; // kJ → kcal
-    if (!p.product_name || kcal == null) continue;
-    const brand = p.brands ? p.brands.split(",")[0].trim() + " " : "";
-    out.push({
-      name: (brand + p.product_name).slice(0, 60),
-      serving: "100 g",
-      kcal: Math.round(kcal),
-      protein: round1(n.proteins_100g),
-      carbs: round1(n.carbohydrates_100g),
-      fat: round1(n.fat_100g),
-      source: "off",
-    });
-    if (out.length >= 20) break;
-  }
-  return out;
+  return (data.products || []).map(offProductToFood).filter(Boolean).slice(0, 20);
 }
 
 function round1(v) {
@@ -319,20 +346,5 @@ export async function lookupBarcode(code, signal) {
   const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`Open Food Facts ${res.status}`);
   const data = await res.json();
-  const p = data && data.product;
-  if (!p) return null;
-  const n = p.nutriments || {};
-  let kcal = n["energy-kcal_100g"];
-  if (kcal == null && n["energy_100g"] != null) kcal = n["energy_100g"] / 4.184; // kJ → kcal
-  if (!p.product_name || kcal == null) return null;
-  const brand = p.brands ? p.brands.split(",")[0].trim() + " " : "";
-  return {
-    name: (brand + p.product_name).slice(0, 60),
-    serving: "100 g",
-    kcal: Math.round(kcal),
-    protein: round1(n.proteins_100g),
-    carbs: round1(n.carbohydrates_100g),
-    fat: round1(n.fat_100g),
-    source: "off",
-  };
+  return data && data.product ? offProductToFood(data.product) : null;
 }
