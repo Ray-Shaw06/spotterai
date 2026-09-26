@@ -270,9 +270,16 @@ export async function searchOpenFoodFacts(query, signal) {
       e.name = "AbortError";
       throw e;
     }
-    res = await fetch(url, { signal });
-    if (res.ok) break;
-    if (res.status < 500) throw new Error(`Open Food Facts ${res.status}`); // permanent
+    try {
+      res = await fetch(url, { signal });
+    } catch (e) {
+      // OFF's 503 pages carry no CORS header, so the browser reports a
+      // transient 503 as a failed fetch (TypeError) rather than a response.
+      if (e.name !== "TypeError" || attempt === 2) throw e;
+      res = null;
+    }
+    if (res?.ok) break;
+    if (res && res.status < 500) throw new Error(`Open Food Facts ${res.status}`); // permanent
     await new Promise((r) => { setTimeout(r, 500 * (attempt + 1)); }); // transient (e.g. 503) → backoff + retry
   }
   if (!res.ok) throw new Error(`Open Food Facts ${res.status}`);

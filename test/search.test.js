@@ -66,3 +66,50 @@ test("food search merges custom foods", () => {
   const res = searchFoods("nonna lasagne", 25, [{ name: "Nonna's Lasagne", serving: "1 plate", kcal: 600, protein: 30, carbs: 50, fat: 28 }]);
   assert.ok(names(res).includes("Nonna's Lasagne"));
 });
+
+test("Open Food Facts search retries when the browser reports a failed fetch", async () => {
+  // OFF's 503 pages carry no CORS header, so the browser surfaces a transient
+  // 503 as `TypeError: Failed to fetch`, not a response. The retry loop only
+  // looked at response statuses, so one blip ended the search as "offline".
+  const { searchOpenFoodFacts } = await import("../foods.js");
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    if (calls < 3) throw new TypeError("Failed to fetch");
+    return new Response(JSON.stringify({
+      products: [{ product_name: "Pad Thai", nutriments: { "energy-kcal_100g": 180, proteins_100g: 7, carbohydrates_100g: 25, fat_100g: 6 } }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    const results = await searchOpenFoodFacts("pad thai");
+    assert.equal(calls, 3);
+    assert.deepEqual(names(results), ["Pad Thai"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Open Food Facts search still gives up after three failed fetches", async () => {
+  const { searchOpenFoodFacts } = await import("../foods.js");
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    throw new TypeError("Failed to fetch");
+  };
+  try {
+    await assert.rejects(searchOpenFoodFacts("pad thai"), TypeError);
+    assert.equal(calls, 3);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a failed Open Food Facts search only says offline when the device is", async () => {
+  // nutrition-ui.js reads the DOM at module scope, so this is a source guard.
+  const { readFileSync } = await import("node:fs");
+  const ui = readFileSync(new URL("../nutrition-ui.js", import.meta.url), "utf8");
+  assert.match(ui, /navigator\.onLine === false \? "offline" : "unavailable right now"/);
+  assert.doesNotMatch(ui, /Open Food Facts <span class="muted">· offline<\/span>/);
+});

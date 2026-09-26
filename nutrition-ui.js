@@ -591,7 +591,10 @@ function searchOnline(q) {
         ? `<li class="food-grouplabel">Open Food Facts</li>` + results.map((f) => foodOptHtml(f, "online")).join("")
         : "";
     } catch (e) {
-      if (e.name !== "AbortError") marker.innerHTML = `<li class="food-grouplabel">Open Food Facts <span class="muted">· offline</span></li>`;
+      if (e.name !== "AbortError") {
+        const why = navigator.onLine === false ? "offline" : "unavailable right now";
+        marker.innerHTML = `<li class="food-grouplabel">Open Food Facts <span class="muted">· ${why}</span></li>`;
+      }
     }
   }, 450);
 }
