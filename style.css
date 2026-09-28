@@ -5264,7 +5264,7 @@ table {
 }
 .btn--danger:hover {
   background: var(--danger);
-  color: #fff;
+  color: var(--danger-ink);
   border-color: var(--danger);
 }
 
@@ -7562,9 +7562,11 @@ h5 {
   --success-ring: rgba(26, 92, 66, 0.28);
   --warn-soft: rgba(135, 98, 13, 0.10);
   --danger-soft: rgba(194, 47, 38, 0.09);
-  /* Ink for text sitting ON a warn fill (the form-check cue). White clears AA
-     on this dark amber; the dark theme's bright amber takes a dark ink. */
+  /* Inks for text sitting ON a warn or danger fill (the form-check cue, the
+     "Clear all data" hover). White clears AA on these dark fills; the dark
+     theme's brighter amber and red take dark inks. */
   --warn-ink: #ffffff;
+  --danger-ink: #ffffff;
   /* Spacing scale */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -7622,6 +7624,7 @@ h5 {
   --d-warn: #f2b13c;
   --d-warn-ink: #3a2a05;
   --d-danger: #ff6f64;
+  --d-danger-ink: #2a0805;
   --border-strong: #c2d1c8;
   --accent-glow: rgba(26, 92, 66, 0.10);
   --scrim: rgba(13, 20, 17, 0.42);
@@ -7656,6 +7659,7 @@ h5 {
     --warn-ink: var(--d-warn-ink);
     --warn-soft: color-mix(in srgb, var(--d-warn) 13%, transparent);
     --danger: var(--d-danger);
+    --danger-ink: var(--d-danger-ink);
     --danger-soft: color-mix(in srgb, var(--d-danger) 13%, transparent);
     --scrim: rgba(0, 0, 0, 0.62);
     --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.4);
@@ -7696,6 +7700,7 @@ h5 {
   --warn-ink: var(--d-warn-ink);
   --warn-soft: color-mix(in srgb, var(--d-warn) 13%, transparent);
   --danger: var(--d-danger);
+  --danger-ink: var(--d-danger-ink);
   --danger-soft: color-mix(in srgb, var(--d-danger) 13%, transparent);
   --scrim: rgba(0, 0, 0, 0.62);
   --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.4);
