@@ -138,14 +138,16 @@
   <main id="main-content">
     <!-- ============================ HOME / PLAN PAGE ============================ -->
     <div class="view" data-view="home">
-    <!-- Status strip: the evaluator is a running instrument, and the page says
-         so before it says anything else. Landing-scoped on purpose — the
-         rubric version is context for the claim, not chrome for every page. -->
+    <!-- Status strip: three things true of the evaluator itself. It runs in the
+         visitor's browser, its rubric version is EVALUATOR_VERSION (held there
+         by test/ui-copy.test.js), and no model is involved. It used to say
+         "Evaluator online" over a pulsing dot and quote an audit time nothing
+         measured. Landing-scoped on purpose: the version is context for the
+         claim, not chrome for every page. -->
     <div class="strip">
-      <span class="strip__live"><span class="strip__dot" aria-hidden="true"></span> Evaluator online</span>
+      <span class="strip__lead"><span class="strip__dot" aria-hidden="true"></span> Runs in your browser</span>
       <span>Rubric <b>v1.4.0</b></span>
       <span>Deterministic · <b>no model</b></span>
-      <span class="strip__end">Audit <b>0.12 ms</b></span>
     </div>
 
     <!-- ===================== HERO ===================== -->

@@ -242,3 +242,15 @@ test("workout completion no longer syncs to any notification backend", () => {
   // Rest-timer completion routes to the local alert helper instead.
   assert.match(workoutUi, /notifyRestComplete\(\)\.catch\(\(\) => \{\}\)/);
 });
+
+test("the status strip's only figure is the evaluator's real version", async () => {
+  // The strip read "Evaluator online" over a pulsing dot and "Audit 0.12 ms":
+  // a live status nothing checked and a timing nothing measured, on a page
+  // whose whole claim is numbers a sceptic can reproduce (2026-09-27 audit).
+  // The rail's figures are held to the repo by scripts/check-readme-claims.mjs.
+  const { EVALUATOR_VERSION } = await import("../evaluator.js");
+  const strip = html.match(/<div class="strip">([\s\S]*?)<\/div>/)?.[1];
+  assert.ok(strip, "index.html has no status strip");
+  const figures = strip.replace(/<[^>]+>/g, " ").match(/v?\d+(?:\.\d+)*/g) ?? [];
+  assert.deepEqual(figures, [EVALUATOR_VERSION]);
+});

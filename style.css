@@ -7743,7 +7743,7 @@ body::after {
   letter-spacing: -0.045em;
 }
 
-/* --- Status strip: the instrument is on, and says so ----------------------- */
+/* --- Status strip: three facts about the evaluator, none of them a guess --- */
 .strip {
   display: flex;
   align-items: center;
@@ -7763,16 +7763,11 @@ body::after {
   white-space: nowrap;
 }
 .strip b { color: var(--text-muted); font-weight: 500; }
-.strip .strip__live { color: var(--accent); display: flex; align-items: center; gap: 7px; }
-.strip .strip__end { margin-left: auto; border-right: 0; border-left: 1px solid var(--border); }
+.strip .strip__lead { color: var(--accent); display: flex; align-items: center; gap: 7px; }
 .strip__dot {
   width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
-  animation: strip-pulse 2.4s ease-in-out infinite;
 }
-@keyframes strip-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-@media (prefers-reduced-motion: reduce) { .strip__dot { animation: none; } }
-@media (max-width: 720px) { .strip .strip__end { display: none; } }
 
 /* --- Hero: asymmetric, dense, readout-led ---------------------------------- */
 .hero__inner { align-items: center; }
