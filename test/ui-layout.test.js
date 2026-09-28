@@ -241,6 +241,15 @@ test("a closed dialog leaves the tab order instead of only turning transparent",
   }
 });
 
+test("the quick-add food name keeps a full-width field under its label", () => {
+  // Giving it a real <label class="field-label-sm"> also handed it the 120px
+  // cap meant for macro numbers, and food names run long.
+  const nutritionUi = readFileSync(join(root, "nutrition-ui.js"), "utf8");
+  assert.match(nutritionUi, /<label class="field-label-sm detail-name">Food name<input id="qa-name"/);
+  assert.match(rule(".detail-name"), /flex-direction:\s*column/);
+  assert.match(rule(".detail-name .input"), /max-width:\s*none/);
+});
+
 test("on a narrow audit card the four counts sit two by two, so none is left alone on a row", () => {
   // Once the card fit a phone, "8/11 passed" wrapped onto a line of its own,
   // which the readout's own notes say reads as a fifth, missing category.
