@@ -611,7 +611,7 @@ function showDetail(food, quick = false, opts = {}) {
     el.detail.innerHTML = `
       <button type="button" class="detail-back" data-act="detail-back">← Back</button>
       ${opts.note ? `<p class="detail-note">${esc(opts.note)}</p>` : ""}
-      <input id="qa-name" class="input" placeholder="Food name" autocomplete="off" value="${esc(opts.name || "")}" />
+      <label class="field-label-sm detail-name">Food name<input id="qa-name" class="input" autocomplete="off" value="${esc(opts.name || "")}" /></label>
       <div class="detail-grid">
         <label class="field-label-sm">Calories<input id="qa-kcal" class="input" type="number" inputmode="numeric" /></label>
         <label class="field-label-sm">Protein (g)<input id="qa-protein" class="input" type="number" inputmode="decimal" /></label>

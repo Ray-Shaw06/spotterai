@@ -100,6 +100,7 @@ function palettes() {
         accent: all["--accent"], warn: all["--warn"], danger: all["--danger"],
       },
       accent: all["--accent"], accentInk: all["--accent-ink"],
+      warn: all["--warn"], warnInk: all["--warn-ink"],
     },
     dark: {
       grounds: {
@@ -110,6 +111,7 @@ function palettes() {
         accent: pick(dark, "--d-accent"), warn: pick(dark, "--d-warn"), danger: pick(dark, "--d-danger"),
       },
       accent: pick(dark, "--d-accent"), accentInk: pick(dark, "--d-accent-ink"),
+      warn: pick(dark, "--d-warn"), warnInk: dark["--d-warn-ink"],
     },
   };
 }
@@ -134,7 +136,61 @@ for (const [name, p] of Object.entries(palettes())) {
     const r = contrast(p.accentInk, p.accent);
     assert.ok(r >= AA_BODY, `${name}: accent ink is ${r.toFixed(2)}:1 on the accent fill`);
   });
+
+  test(`${name} palette: ink on a filled warn cue clears AA`, () => {
+    // The live form-check cue ("go a little deeper") is read at arm's length
+    // mid-set. Its ink was a literal tuned for the dark theme's bright amber and
+    // measured 2.50:1 on the light theme's dark amber.
+    assert.ok(p.warnInk, `${name}: no warn ink token; a filled warn cue needs an ink from its own palette`);
+    const r = contrast(p.warnInk, p.warn);
+    assert.ok(r >= AA_BODY, `${name}: warn ink is ${r.toFixed(2)}:1 on the warn fill`);
+  });
 }
+
+/** [selectorList, body] for every rule in the sheet, comments stripped. */
+function rules() {
+  const bare = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  return [...bare.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selectors, body]) => [
+    selectors.split(",").map((s) => s.trim()),
+    body,
+  ]);
+}
+
+test("a rule that fills with --warn takes its text colour from --warn-ink", () => {
+  const wrong = [];
+  for (const [selectors, body] of rules()) {
+    if (!/background(?:-color)?\s*:\s*var\(--warn\)\s*;/.test(body)) continue;
+    const colour = body.match(/(?:^|[;\s])color\s*:\s*([^;]+);/)?.[1].trim();
+    if (colour && colour !== "var(--warn-ink)") wrong.push(`${selectors.join(", ")} { color: ${colour} }`);
+  }
+  assert.deepEqual(wrong, [], "text on a warn fill must use --warn-ink so both palettes stay legible");
+});
+
+test("text on the camera stage clears AA in both themes", () => {
+  // The stage frames a video, so it is black whatever the theme. On the light
+  // theme its text inherited the page's dark inks: "Camera is off" measured
+  // 1.13:1, and the live rep count was as dark as the frame behind it.
+  const stage = rules().find(([selectors, body]) => selectors.includes(".camera__stage") && /background\s*:/.test(body))?.[1];
+  const ground = stage?.match(/background\s*:\s*(#[0-9a-fA-F]{3,6})/)?.[1];
+  assert.ok(ground, "the camera stage should declare a literal background colour");
+
+  // Custom properties re-declared on the stage win over the page's palette.
+  const onStage = {};
+  for (const [selectors, body] of rules()) {
+    if (!selectors.includes(".camera__stage")) continue;
+    for (const m of body.matchAll(/(--[a-z0-9-]+)\s*:\s*var\((--d-[a-z0-9-]+)\)/g)) onStage[m[1]] = m[2];
+  }
+  const dark = tokensIn(rootBlock());
+  const failures = [];
+  for (const [theme, p] of Object.entries(palettes())) {
+    for (const [tier, token] of [["text", "--text"], ["muted", "--text-muted"], ["faint", "--text-faint"]]) {
+      const colour = onStage[token] ? dark[onStage[token]] : p.text[tier];
+      const r = contrast(colour, ground);
+      if (r < AA_BODY) failures.push(`${theme} ${tier} = ${r.toFixed(2)}:1`);
+    }
+  }
+  assert.deepEqual(failures, [], `text on the black camera stage: ${failures.join("; ")}`);
+});
 
 test("the dark palette is declared once and referenced twice", () => {
   // Both the media query and the explicit [data-theme="dark"] override must

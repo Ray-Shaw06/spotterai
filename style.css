@@ -814,7 +814,10 @@ table {
 .audit-card__qs { font-family: var(--font-mono); color: var(--text-muted); }
 
 @media (max-width: 900px) {
-  .hero__inner { grid-template-columns: 1fr; }
+  /* minmax(0, …), not 1fr: a 1fr track can never be narrower than its
+     content, and .hero clips overflow, so one unbreakable line in the readout
+     widened the whole column past the screen and cut the copy off mid-word. */
+  .hero__inner { grid-template-columns: minmax(0, 1fr); }
   .hero__visual { justify-content: flex-start; }
   .audit-card { max-width: 440px; }
 }
@@ -3934,8 +3937,11 @@ table {
   gap: var(--space-2);
 }
 
-/* Cue badges — bright fills with dark ink so they read over any video frame.
-   Brand red is avoided here so cues don't clash with "good/warn" semantics. */
+/* Cue badges. On the camera stage they are bright fills with dark ink, since
+   the stage always takes the dark palette (see the dark theme block); in the
+   Last rep card they follow the page theme. Each fill's ink is its own token,
+   so both cases clear AA. Brand red is avoided here so cues don't clash with
+   "good/warn" semantics. */
 .cue {
   display: inline-flex;
   align-items: center;
@@ -3950,7 +3956,7 @@ table {
 }
 .cue--warn {
   background: var(--warn);
-  color: #3a2a05;
+  color: var(--warn-ink);
 }
 
 .cam-placeholder {
@@ -4321,12 +4327,19 @@ table {
   opacity: 0;
   transform: translateY(16px) scale(0.98);
   pointer-events: none;
-  transition: opacity var(--transition), transform var(--transition);
+  /* Opacity alone left Close, Message and Send in the tab order on every page
+     while the panel was shut. visibility is what removes them; it flips after
+     the fade so the close still reads, and flips back at once on open. The
+     launcher and the modals hide the same way. */
+  visibility: hidden;
+  transition: opacity var(--transition), transform var(--transition), visibility 0s linear 240ms;
 }
 .chat-panel.is-open {
   opacity: 1;
   transform: none;
   pointer-events: auto;
+  visibility: visible;
+  transition: opacity var(--transition), transform var(--transition), visibility 0s;
 }
 
 .chat-panel__head {
@@ -5822,6 +5835,10 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
 .detail-qty .field-label-sm { flex-direction: column; align-items: stretch; gap: 4px; flex: 1; }
 .detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-2) var(--space-3); }
 .detail-grid .field-label-sm { flex-direction: column; align-items: stretch; gap: 4px; }
+/* The quick-add food name: label above, full width. .field-label-sm caps its
+   input at 120px for macro numbers, and food names run long. */
+.detail-name { flex-direction: column; align-items: stretch; gap: 4px; }
+.detail-name .input { max-width: none; }
 .detail-preview {
   display: flex;
   align-items: baseline;
@@ -7545,6 +7562,9 @@ h5 {
   --success-ring: rgba(26, 92, 66, 0.28);
   --warn-soft: rgba(135, 98, 13, 0.10);
   --danger-soft: rgba(194, 47, 38, 0.09);
+  /* Ink for text sitting ON a warn fill (the form-check cue). White clears AA
+     on this dark amber; the dark theme's bright amber takes a dark ink. */
+  --warn-ink: #ffffff;
   /* Spacing scale */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -7600,6 +7620,7 @@ h5 {
   --d-accent-2: #2bbf78;
   --d-accent-ink: #04130b;
   --d-warn: #f2b13c;
+  --d-warn-ink: #3a2a05;
   --d-danger: #ff6f64;
   --border-strong: #c2d1c8;
   --accent-glow: rgba(26, 92, 66, 0.10);
@@ -7632,6 +7653,7 @@ h5 {
     --success-soft: color-mix(in srgb, var(--d-accent) 12%, transparent);
     --success-ring: color-mix(in srgb, var(--d-accent) 32%, transparent);
     --warn: var(--d-warn);
+    --warn-ink: var(--d-warn-ink);
     --warn-soft: color-mix(in srgb, var(--d-warn) 13%, transparent);
     --danger: var(--d-danger);
     --danger-soft: color-mix(in srgb, var(--d-danger) 13%, transparent);
@@ -7642,8 +7664,12 @@ h5 {
   }
 }
 
-/* Explicit choice always wins over the system. */
-:root[data-theme="dark"] {
+/* Explicit choice always wins over the system.
+   The camera stage rides along in every theme: it frames a video and is black
+   whatever the page does, so on the light theme it used to inherit dark inks
+   ("Camera is off" measured 1.13:1, the live rep count matched the frame). */
+:root[data-theme="dark"],
+.camera__stage {
   color-scheme: dark;
   --bg: var(--d-bg);
   --bg-soft: var(--d-bg-soft);
@@ -7667,6 +7693,7 @@ h5 {
   --success-soft: color-mix(in srgb, var(--d-accent) 12%, transparent);
   --success-ring: color-mix(in srgb, var(--d-accent) 32%, transparent);
   --warn: var(--d-warn);
+  --warn-ink: var(--d-warn-ink);
   --warn-soft: color-mix(in srgb, var(--d-warn) 13%, transparent);
   --danger: var(--d-danger);
   --danger-soft: color-mix(in srgb, var(--d-danger) 13%, transparent);
@@ -7859,8 +7886,21 @@ body::after {
 .audit-card { max-width: 460px; }
 .audit-card__counts { gap: 14px; font-size: 11px; }
 
-/* 3. The score note wrapped to two lines and pushed the verdict off-centre. */
-.audit-card__scorenote { white-space: nowrap; }
+/* 3. The score note wrapped to two lines and pushed the verdict off-centre.
+   It is held on one line only where the card has room for it: unwrapped it is
+   about 245px, which on a phone made the card, and with it the whole hero
+   column, wider than the screen. The card's own column is the measure, not
+   the viewport, so the narrow right-hand column of the two-up hero is covered
+   as well as phones. */
+.hero__visual { container-type: inline-size; }
+@container (width >= 420px) {
+  .audit-card__scorenote { white-space: nowrap; }
+}
+/* Below the same width the four counts cannot share one row (see 2), so they
+   sit two by two rather than leaving "8/11 passed" alone on a line. */
+@container (width < 420px) {
+  .audit-card__counts { display: grid; grid-template-columns: repeat(2, max-content); column-gap: 18px; row-gap: 6px; }
+}
 
 /* 4. The coach launcher sat on the telemetry rail — the four numbers that are
    the whole proof, and the last thing above the fold. The rail reserves the

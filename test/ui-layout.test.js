@@ -59,6 +59,26 @@ function assertInMedia(condition, pattern) {
   );
 }
 
+/** The sheet minus comments and every @media / @container / @supports block:
+ *  only the rules that apply at every width. */
+function unconditionalCss() {
+  const bare = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  let out = "";
+  let cursor = 0;
+  for (const m of bare.matchAll(/@(media|container|supports)\b/g)) {
+    if (m.index < cursor) continue;
+    out += bare.slice(cursor, m.index);
+    let depth = 0;
+    let i = bare.indexOf("{", m.index);
+    for (; i < bare.length; i += 1) {
+      if (bare[i] === "{") depth += 1;
+      if (bare[i] === "}" && --depth === 0) break;
+    }
+    cursor = i + 1;
+  }
+  return out + bare.slice(cursor);
+}
+
 test("connected cards own their desktop inset and wide grid gutter", () => {
   assert.match(rule(".quicklog"), /padding:\s*var\(--space-5\)/);
   assert.match(rule(".dash-card"), /padding:\s*var\(--space-5\)/);
@@ -184,4 +204,57 @@ test("every modal dialog sits outside the app shell, above the fixed top bar and
   for (const [tag] of html.matchAll(/<[^>]*aria-modal="true"[^>]*>/g)) {
     assert.ok(html.indexOf(tag) > shellEnd, `${tag.match(/id="([^"]+)"/)?.[1]} is inside the app shell`);
   }
+});
+
+test("the landing hero fits a phone: its column can shrink, and the score note wraps when the card is narrow", () => {
+  // .hero clips overflow, so anything that makes the single phone column wider
+  // than the screen cuts the copy off mid-word instead of scrolling, and a
+  // scrollWidth check still reads 0. On 2026-09-27 a `1fr` track (its minimum is
+  // the content's min-content width) plus a nowrap score note held that column
+  // at 419px on every screen narrower than about 436px.
+  assertInMedia("(max-width: 900px)", /\.hero__inner\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  assert.doesNotMatch(
+    unconditionalCss(),
+    /\.audit-card__scorenote\s*\{[^}]*white-space:\s*nowrap/,
+    "an unconditional nowrap on the score note sets the hero column's minimum width"
+  );
+});
+
+test("a closed dialog leaves the tab order instead of only turning transparent", () => {
+  // A panel faded to opacity 0 keeps every control inside it focusable. On
+  // 2026-09-27 Tab walked past the last control on every page into the closed
+  // coach panel's Close, Message and Send, all invisible and aria-hidden.
+  // visibility: hidden or display: none is what takes a closed dialog out.
+  const html = readFileSync(join(root, "index.html"), "utf8");
+  const firstRule = (selector) =>
+    css.match(new RegExp(`(?:^|[\\s,}])${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{([^}]*)\\}`))?.[1] ?? "";
+  const dialogs = [...html.matchAll(/<[^>]*role="dialog"[^>]*>/g)].map(([tag]) => ({
+    id: tag.match(/id="([^"]+)"/)?.[1],
+    classes: tag.match(/class="([^"]+)"/)?.[1].split(/\s+/) ?? [],
+  }));
+  assert.ok(dialogs.length >= 8, `expected the eight dialogs in index.html, found ${dialogs.length}`);
+  for (const { id, classes } of dialogs) {
+    const closed = classes.map((c) => firstRule(`.${c}`)).join(";");
+    const open = classes.map((c) => firstRule(`.${c}.is-open`)).join(";");
+    assert.match(closed, /visibility:\s*hidden|display:\s*none/, `#${id} only fades when closed, so its controls stay focusable`);
+    assert.match(open, /visibility:\s*visible|display:\s*(?!none)[a-z]/, `#${id} is never shown again when opened`);
+  }
+});
+
+test("the quick-add food name keeps a full-width field under its label", () => {
+  // Giving it a real <label class="field-label-sm"> also handed it the 120px
+  // cap meant for macro numbers, and food names run long.
+  const nutritionUi = readFileSync(join(root, "nutrition-ui.js"), "utf8");
+  assert.match(nutritionUi, /<label class="field-label-sm detail-name">Food name<input id="qa-name"/);
+  assert.match(rule(".detail-name"), /flex-direction:\s*column/);
+  assert.match(rule(".detail-name .input"), /max-width:\s*none/);
+});
+
+test("on a narrow audit card the four counts sit two by two, so none is left alone on a row", () => {
+  // Once the card fit a phone, "8/11 passed" wrapped onto a line of its own,
+  // which the readout's own notes say reads as a fifth, missing category.
+  assert.match(
+    css,
+    /@container \(width < 420px\)\s*\{[^{}]*\.audit-card__counts\s*\{[^}]*grid-template-columns:\s*repeat\(2,/
+  );
 });
