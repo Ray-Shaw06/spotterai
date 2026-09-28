@@ -220,6 +220,27 @@ test("the landing hero fits a phone: its column can shrink, and the score note w
   );
 });
 
+test("a closed dialog leaves the tab order instead of only turning transparent", () => {
+  // A panel faded to opacity 0 keeps every control inside it focusable. On
+  // 2026-09-27 Tab walked past the last control on every page into the closed
+  // coach panel's Close, Message and Send, all invisible and aria-hidden.
+  // visibility: hidden or display: none is what takes a closed dialog out.
+  const html = readFileSync(join(root, "index.html"), "utf8");
+  const firstRule = (selector) =>
+    css.match(new RegExp(`(?:^|[\\s,}])${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{([^}]*)\\}`))?.[1] ?? "";
+  const dialogs = [...html.matchAll(/<[^>]*role="dialog"[^>]*>/g)].map(([tag]) => ({
+    id: tag.match(/id="([^"]+)"/)?.[1],
+    classes: tag.match(/class="([^"]+)"/)?.[1].split(/\s+/) ?? [],
+  }));
+  assert.ok(dialogs.length >= 8, `expected the eight dialogs in index.html, found ${dialogs.length}`);
+  for (const { id, classes } of dialogs) {
+    const closed = classes.map((c) => firstRule(`.${c}`)).join(";");
+    const open = classes.map((c) => firstRule(`.${c}.is-open`)).join(";");
+    assert.match(closed, /visibility:\s*hidden|display:\s*none/, `#${id} only fades when closed, so its controls stay focusable`);
+    assert.match(open, /visibility:\s*visible|display:\s*(?!none)[a-z]/, `#${id} is never shown again when opened`);
+  }
+});
+
 test("on a narrow audit card the four counts sit two by two, so none is left alone on a row", () => {
   // Once the card fit a phone, "8/11 passed" wrapped onto a line of its own,
   // which the readout's own notes say reads as a fifth, missing category.

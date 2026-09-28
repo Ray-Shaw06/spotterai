@@ -4324,12 +4324,19 @@ table {
   opacity: 0;
   transform: translateY(16px) scale(0.98);
   pointer-events: none;
-  transition: opacity var(--transition), transform var(--transition);
+  /* Opacity alone left Close, Message and Send in the tab order on every page
+     while the panel was shut. visibility is what removes them; it flips after
+     the fade so the close still reads, and flips back at once on open. The
+     launcher and the modals hide the same way. */
+  visibility: hidden;
+  transition: opacity var(--transition), transform var(--transition), visibility 0s linear 240ms;
 }
 .chat-panel.is-open {
   opacity: 1;
   transform: none;
   pointer-events: auto;
+  visibility: visible;
+  transition: opacity var(--transition), transform var(--transition), visibility 0s;
 }
 
 .chat-panel__head {
