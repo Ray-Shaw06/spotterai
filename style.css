@@ -395,7 +395,7 @@ table {
   opacity: 0.75;
 }
 .sidebar__nav .nav-link:hover {
-  background: rgba(20, 26, 23, 0.05);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
   color: var(--text);
 }
 .sidebar__nav .nav-link.is-active {
@@ -975,7 +975,7 @@ table {
 .flag__head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2); }
 .flag--critical .flag__sev { color: var(--danger); background: var(--danger-soft); }
 .flag--warning .flag__sev { color: var(--warn); background: var(--warn-soft); }
-.flag--suggestion .flag__sev { color: var(--text-muted); background: rgba(20, 26, 23, 0.06); }
+.flag--suggestion .flag__sev { color: var(--text-muted); background: color-mix(in srgb, var(--text) 6%, transparent); }
 .flag__label { font-weight: 600; letter-spacing: -0.01em; }
 .flag__why { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.55; }
 .flag__row { margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text); line-height: 1.5; }
@@ -1105,7 +1105,7 @@ table {
 /* ----------------------------------------------------------------------------
    Guided onboarding overlay
 ---------------------------------------------------------------------------- */
-.onb { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: var(--space-4); background: rgba(20, 26, 23, 0.42); }
+.onb { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: var(--space-4); background: var(--scrim); }
 .onb.is-open { display: flex; }
 .onb__panel { width: 100%; max-width: 560px; max-height: 92vh; display: flex; flex-direction: column; background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--r-xl); box-shadow: var(--shadow-lg); overflow: hidden; }
 .onb__head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-5) 0; }
@@ -1966,8 +1966,8 @@ table {
 .sflag p { font-size: var(--fs-small); color: var(--text-muted); margin-top: 2px; line-height: 1.45; }
 .sflag--warning { border-color: color-mix(in srgb, var(--warn) 35%, var(--border)); }
 .sflag--critical { border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); }
-.sflag--suggestion { border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); }
-.sflag--warning .sflag__tier { color: var(--warn); } .sflag--critical .sflag__tier { color: var(--danger); } .sflag--suggestion .sflag__tier { color: var(--accent); }
+.sflag--suggestion { border-color: color-mix(in srgb, var(--text-muted) 25%, var(--border)); }
+.sflag--warning .sflag__tier { color: var(--warn); } .sflag--critical .sflag__tier { color: var(--danger); } .sflag--suggestion .sflag__tier { color: var(--text-muted); }
 .split-pass { font-size: var(--fs-small); color: var(--success); }
 
 .wcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-3); }
@@ -2570,7 +2570,7 @@ table {
 .skeleton-row {
   height: 18px;
   border-radius: var(--r-sm);
-  background: linear-gradient(100deg, var(--surface-2) 30%, #23262e 50%, var(--surface-2) 70%);
+  background: linear-gradient(100deg, var(--surface-2) 30%, color-mix(in srgb, var(--text) 8%, var(--surface-2)) 50%, var(--surface-2) 70%);
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
 }
@@ -3486,7 +3486,7 @@ table {
 .eval-case__type { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; padding: 2px 7px; border-radius: var(--r-full); vertical-align: middle; margin-left: 6px; }
 .eval-case__type--good, .eval-case__type--guard { color: var(--success); background: var(--success-soft); }
 .eval-case__type--risky { color: var(--warn); background: var(--warn-soft); }
-.eval-case__type--edge { color: var(--text-muted); background: rgba(20, 26, 23, 0.06); }
+.eval-case__type--edge { color: var(--text-muted); background: color-mix(in srgb, var(--text) 6%, transparent); }
 .eval-flagchips { display: flex; flex-wrap: wrap; gap: 6px; }
 .eval-chip { font-size: 0.72rem; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); padding: 3px 10px; }
 .eval-case__sub--muted { color: var(--text-faint); }
@@ -4076,11 +4076,11 @@ table {
 }
 .form-side__status[data-tone="good"] {
   color: var(--success);
-  border-color: rgba(52, 211, 153, 0.35);
+  border-color: color-mix(in srgb, var(--success) 35%, transparent);
 }
 .form-side__status[data-tone="warn"] {
   color: var(--warn);
-  border-color: rgba(251, 191, 36, 0.35);
+  border-color: color-mix(in srgb, var(--warn) 35%, transparent);
 }
 .form-side__block {
   display: flex;
@@ -4183,11 +4183,11 @@ table {
   background: var(--surface-2);
 }
 .rep-chip--good {
-  border-color: rgba(52, 211, 153, 0.45);
+  border-color: color-mix(in srgb, var(--success) 45%, transparent);
   color: var(--success);
 }
 .rep-chip--warn {
-  border-color: rgba(251, 191, 36, 0.45);
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
   color: var(--warn);
 }
 .rep-chip--unjudged {
@@ -4195,7 +4195,7 @@ table {
   border-style: dashed;
 }
 .rep-chip--best {
-  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.25);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 25%, transparent);
 }
 .form-report__findings,
 .form-report__tips {
@@ -4257,12 +4257,12 @@ table {
   font-weight: 600;
   color: var(--text);
   background: var(--surface-2);
-  border: 1px solid rgba(251, 191, 36, 0.45);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
   border-radius: var(--r-full);
   cursor: pointer;
 }
 .marker-btn--best {
-  border-color: rgba(52, 211, 153, 0.45);
+  border-color: color-mix(in srgb, var(--success) 45%, transparent);
   color: var(--success);
 }
 .marker-btn:hover {
@@ -4364,7 +4364,7 @@ table {
   border-radius: var(--r-full);
   color: var(--accent);
   background: var(--accent-soft);
-  border: 1px solid rgba(255, 59, 59, 0.3);
+  border: 1px solid var(--accent-ring);
 }
 .chat-panel__name {
   font-family: var(--font-display);
@@ -4983,7 +4983,7 @@ table {
   font-weight: 600;
   color: var(--text-muted);
 }
-.badge.is-unlocked { border-color: rgba(255, 59, 59, 0.4); }
+.badge.is-unlocked { border-color: var(--accent-ring); }
 .badge.is-unlocked .badge__icon { color: var(--accent); background: var(--accent-soft); }
 .badge.is-locked .badge__icon { color: var(--text-faint); background: var(--surface); }
 
@@ -5015,8 +5015,8 @@ table {
   transition: opacity var(--transition), transform var(--transition);
 }
 .toast.show { opacity: 1; transform: none; }
-.toast--xp { border-color: rgba(255, 59, 59, 0.4); }
-.toast--ach { border-color: rgba(255, 210, 74, 0.5); }
+.toast--xp { border-color: var(--accent-ring); }
+.toast--ach { border-color: var(--accent-ring); }
 .toast__icon {
   flex: none;
   display: grid;
@@ -5145,7 +5145,7 @@ table {
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: rgba(20, 26, 23, 0.38);
+  background: var(--scrim);
   opacity: 0;
   /* visibility:hidden takes the closed overlay out of compositing entirely.
      It flips after the fade so the transition still reads. (The backdrop-blur
@@ -5595,7 +5595,7 @@ table {
   display: grid;
   place-items: start center;
   padding: 8vh var(--space-4) var(--space-4);
-  background: rgba(20, 26, 23, 0.38);
+  background: var(--scrim);
   opacity: 0;
   /* See .account-modal: keep the closed full-screen layer out of compositing. */
   visibility: hidden;
@@ -5952,7 +5952,7 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   background-image: repeating-linear-gradient(
     90deg,
     transparent 0 6px,
-    rgba(255, 255, 255, 0.62) 6px 8px
+    color-mix(in srgb, var(--surface) 62%, transparent) 6px 8px
   );
 }
 
@@ -5962,7 +5962,7 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   background-image: repeating-linear-gradient(
     90deg,
     transparent 0 6px,
-    rgba(255, 255, 255, 0.62) 6px 8px
+    color-mix(in srgb, var(--surface) 62%, transparent) 6px 8px
   );
 }
 
@@ -5972,7 +5972,7 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   background-image: repeating-linear-gradient(
     90deg,
     transparent 0 6px,
-    rgba(255, 255, 255, 0.62) 6px 8px
+    color-mix(in srgb, var(--surface) 62%, transparent) 6px 8px
   );
 }
 
@@ -5989,7 +5989,7 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   background-image: repeating-linear-gradient(
     90deg,
     transparent 0 6px,
-    rgba(255, 255, 255, 0.62) 6px 8px
+    color-mix(in srgb, var(--surface) 62%, transparent) 6px 8px
   );
 }
 
@@ -6002,7 +6002,7 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   background-image: repeating-linear-gradient(
     90deg,
     transparent 0 6px,
-    rgba(255, 255, 255, 0.62) 6px 8px
+    color-mix(in srgb, var(--surface) 62%, transparent) 6px 8px
   );
 }
 
@@ -6016,7 +6016,7 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   background-image: repeating-linear-gradient(
     90deg,
     transparent 0 6px,
-    rgba(255, 255, 255, 0.62) 6px 8px
+    color-mix(in srgb, var(--surface) 62%, transparent) 6px 8px
   );
 }/* --- 7. Primary buttons ----------------------------------------------------
    The hover sheen sweep is gone: a specular glint is a dark-UI device, and on
@@ -7551,8 +7551,6 @@ h5 {
   --accent-ring: rgba(26, 92, 66, 0.30);
   --accent-ink: #ffffff;
   /* white ink on accent fills (AA-strong) */
-  --accent-2: #1f6b57;
-  /* pine companion — quiet, used sparingly */
   /* Color — status. "Passed / safe" is now the brand green itself (see above).
      All tiers clear AA body on bg, surface, and surface-2. */
   --success: #1a5c42;
@@ -7619,7 +7617,6 @@ h5 {
   --d-faint: #8a9e93;
   --d-accent: #36e08d;
   --d-accent-hover: #4df0a0;
-  --d-accent-2: #2bbf78;
   --d-accent-ink: #04130b;
   --d-warn: #f2b13c;
   --d-warn-ink: #3a2a05;
@@ -7648,7 +7645,6 @@ h5 {
     --accent: var(--d-accent);
     --accent-hover: var(--d-accent-hover);
     --accent-ink: var(--d-accent-ink);
-    --accent-2: var(--d-accent-2);
     --accent-soft: color-mix(in srgb, var(--d-accent) 12%, transparent);
     --accent-ring: color-mix(in srgb, var(--d-accent) 34%, transparent);
     --accent-glow: color-mix(in srgb, var(--d-accent) 13%, transparent);
@@ -7689,7 +7685,6 @@ h5 {
   --accent: var(--d-accent);
   --accent-hover: var(--d-accent-hover);
   --accent-ink: var(--d-accent-ink);
-  --accent-2: var(--d-accent-2);
   --accent-soft: color-mix(in srgb, var(--d-accent) 12%, transparent);
   --accent-ring: color-mix(in srgb, var(--d-accent) 34%, transparent);
   --accent-glow: color-mix(in srgb, var(--d-accent) 13%, transparent);
@@ -7819,7 +7814,7 @@ body::after {
 .audit-meter { display: grid; grid-template-columns: repeat(11, 1fr); gap: 3px; padding: 0 18px 14px; list-style: none; }
 .audit-meter li { height: 5px; border-radius: 1px; background: var(--border-strong); }
 .audit-meter li.is-warn { background: var(--warn); }
-.audit-meter li.is-sugg { background: var(--accent-2); }
+.audit-meter li.is-sugg { background: var(--text-faint); }
 .audit-meter li.is-ok { background: var(--accent); }
 
 .audit-card__counts { display: flex; gap: 18px; flex-wrap: wrap; padding: 0 18px 18px; margin: 0; font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.03em; color: var(--text-faint); list-style: none; }
