@@ -3937,8 +3937,11 @@ table {
   gap: var(--space-2);
 }
 
-/* Cue badges — bright fills with dark ink so they read over any video frame.
-   Brand red is avoided here so cues don't clash with "good/warn" semantics. */
+/* Cue badges. On the camera stage they are bright fills with dark ink, since
+   the stage always takes the dark palette (see the dark theme block); in the
+   Last rep card they follow the page theme. Each fill's ink is its own token,
+   so both cases clear AA. Brand red is avoided here so cues don't clash with
+   "good/warn" semantics. */
 .cue {
   display: inline-flex;
   align-items: center;
@@ -3953,7 +3956,7 @@ table {
 }
 .cue--warn {
   background: var(--warn);
-  color: #3a2a05;
+  color: var(--warn-ink);
 }
 
 .cam-placeholder {
@@ -7559,6 +7562,9 @@ h5 {
   --success-ring: rgba(26, 92, 66, 0.28);
   --warn-soft: rgba(135, 98, 13, 0.10);
   --danger-soft: rgba(194, 47, 38, 0.09);
+  /* Ink for text sitting ON a warn fill (the form-check cue). White clears AA
+     on this dark amber; the dark theme's bright amber takes a dark ink. */
+  --warn-ink: #ffffff;
   /* Spacing scale */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -7614,6 +7620,7 @@ h5 {
   --d-accent-2: #2bbf78;
   --d-accent-ink: #04130b;
   --d-warn: #f2b13c;
+  --d-warn-ink: #3a2a05;
   --d-danger: #ff6f64;
   --border-strong: #c2d1c8;
   --accent-glow: rgba(26, 92, 66, 0.10);
@@ -7646,6 +7653,7 @@ h5 {
     --success-soft: color-mix(in srgb, var(--d-accent) 12%, transparent);
     --success-ring: color-mix(in srgb, var(--d-accent) 32%, transparent);
     --warn: var(--d-warn);
+    --warn-ink: var(--d-warn-ink);
     --warn-soft: color-mix(in srgb, var(--d-warn) 13%, transparent);
     --danger: var(--d-danger);
     --danger-soft: color-mix(in srgb, var(--d-danger) 13%, transparent);
@@ -7656,8 +7664,12 @@ h5 {
   }
 }
 
-/* Explicit choice always wins over the system. */
-:root[data-theme="dark"] {
+/* Explicit choice always wins over the system.
+   The camera stage rides along in every theme: it frames a video and is black
+   whatever the page does, so on the light theme it used to inherit dark inks
+   ("Camera is off" measured 1.13:1, the live rep count matched the frame). */
+:root[data-theme="dark"],
+.camera__stage {
   color-scheme: dark;
   --bg: var(--d-bg);
   --bg-soft: var(--d-bg-soft);
@@ -7681,6 +7693,7 @@ h5 {
   --success-soft: color-mix(in srgb, var(--d-accent) 12%, transparent);
   --success-ring: color-mix(in srgb, var(--d-accent) 32%, transparent);
   --warn: var(--d-warn);
+  --warn-ink: var(--d-warn-ink);
   --warn-soft: color-mix(in srgb, var(--d-warn) 13%, transparent);
   --danger: var(--d-danger);
   --danger-soft: color-mix(in srgb, var(--d-danger) 13%, transparent);
