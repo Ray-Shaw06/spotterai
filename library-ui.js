@@ -148,22 +148,22 @@ function renderDetail() {
     ${patternAnimation(e.movementPattern, e.primaryMuscles, e)}
     <div class="lib-badges">${badge(PATTERN_LABEL[e.movementPattern] || e.movementPattern)}${(e.equipment || []).map((q) => badge(cap(q))).join("")}${e.difficulty ? badge(cap(e.difficulty)) : ""}</div>
     <div class="lib-cols2">
-      <div><h5 class="lib-h5">Primary muscles</h5>${list(e.primaryMuscles)}</div>
-      <div><h5 class="lib-h5">Secondary muscles</h5>${list(e.secondaryMuscles)}</div>
+      <div><h4 class="lib-h4">Primary muscles</h4>${list(e.primaryMuscles)}</div>
+      <div><h4 class="lib-h4">Secondary muscles</h4>${list(e.secondaryMuscles)}</div>
     </div>
-    <div class="lib-block"><h5 class="lib-h5">Setup</h5><p class="lib-p">${esc(cues.setup)}</p></div>
-    <div class="lib-block"><h5 class="lib-h5">How to perform</h5>${list(cues.howto)}</div>
-    <div class="lib-block"><h5 class="lib-h5">Common mistakes</h5>${list(cues.mistakes)}</div>
+    <div class="lib-block"><h4 class="lib-h4">Setup</h4><p class="lib-p">${esc(cues.setup)}</p></div>
+    <div class="lib-block"><h4 class="lib-h4">How to perform</h4>${list(cues.howto)}</div>
+    <div class="lib-block"><h4 class="lib-h4">Common mistakes</h4>${list(cues.mistakes)}</div>
     <div class="lib-block lib-block--safety">
-      <h5 class="lib-h5">Safety &amp; cautions</h5>
+      <h4 class="lib-h4">Safety &amp; cautions</h4>
       <p class="lib-p">${esc(cues.safety)} ${esc(modifyIf)} <span class="lib-muted">SpotterAI cannot diagnose pain.</span></p>
       ${(e.jointStress || []).length ? `<p class="lib-muted">Loads the: ${[...new Set(e.jointStress)].map(pretty).map((s) => s.toLowerCase()).join(", ")}.</p>` : ""}
     </div>
     <div class="lib-cols2">
-      <div><h5 class="lib-h5">Easier (regressions)</h5>${list(e.regressionOptions)}</div>
-      <div><h5 class="lib-h5">Harder (progressions)</h5>${list(e.progressionOptions)}</div>
+      <div><h4 class="lib-h4">Easier (regressions)</h4>${list(e.regressionOptions)}</div>
+      <div><h4 class="lib-h4">Harder (progressions)</h4>${list(e.progressionOptions)}</div>
     </div>
-    <div class="lib-block"><h5 class="lib-h5">Common substitutions</h5>${list(e.commonSubstitutions)}</div>
+    <div class="lib-block"><h4 class="lib-h4">Common substitutions</h4>${list(e.commonSubstitutions)}</div>
     ${where.length ? `<p class="lib-inplan">In your plan: ${esc(where.join(", "))}</p>` : ""}
     <div class="lib-actions">
       <button type="button" class="btn btn--ghost btn--sm" data-act="fav">${isFav ? "★ Favorited" : "☆ Favorite"}</button>
@@ -185,7 +185,7 @@ function renderSwap(e) {
   const where = inPlan(e.name);
 
   const swaps = (names) => `<div class="lib-swaps">${names.map((n) => `<button type="button" class="lib-swap" data-swap="${esc(n)}">${esc(cap(n))}</button>`).join("")}</div>`;
-  const group = (title, names, note) => (names && names.length ? `<div class="lib-block"><h5 class="lib-h5">${title}</h5>${note ? `<p class="lib-muted">${esc(note)}</p>` : ""}${swaps(names)}</div>` : "");
+  const group = (title, names, note) => (names && names.length ? `<div class="lib-block"><h4 class="lib-h4">${title}</h4>${note ? `<p class="lib-muted">${esc(note)}</p>` : ""}${swaps(names)}</div>` : "");
 
   detailEl.innerHTML = `
     <button type="button" class="detail-back" data-act="back">← Back to ${esc(e.name)}</button>

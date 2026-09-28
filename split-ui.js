@@ -61,7 +61,7 @@ function volumeBars(a) {
     </div>`;
   }).join("");
   return `<div class="split-card">
-    <div class="split-card__head"><h3 class="split-h">Weekly sets per muscle</h3><span class="split-legend">Target ${min}–${max} · <span class="vdot vdot--low"></span>low <span class="vdot vdot--ok"></span>ideal <span class="vdot vdot--high"></span>high</span></div>
+    <div class="split-card__head"><h2 class="split-h">Weekly sets per muscle</h2><span class="split-legend">Target ${min}–${max} · <span class="vdot vdot--low"></span>low <span class="vdot vdot--ok"></span>ideal <span class="vdot vdot--high"></span>high</span></div>
     <div class="vbars">${rows}</div>
   </div>`;
 }
@@ -77,7 +77,7 @@ function balanceCard(a) {
     </div>`;
   };
   return `<div class="split-card">
-    <h3 class="split-h">Balance</h3>
+    <h2 class="split-h">Balance</h2>
     <div class="bals">
       ${pair("Push vs pull", b.push, b.pull, "Push", "Pull")}
       ${pair("Upper vs lower", b.upper, b.lower, "Upper", "Lower")}
@@ -88,7 +88,7 @@ function balanceCard(a) {
 
 function flagsCard(a) {
   if (!a.flags.length) {
-    return `<div class="split-card"><h3 class="split-h">Findings</h3><p class="split-pass">✓ No imbalances flagged: every major muscle sits in a sensible weekly range.</p></div>`;
+    return `<div class="split-card"><h2 class="split-h">Findings</h2><p class="split-pass">✓ No imbalances flagged: every major muscle sits in a sensible weekly range.</p></div>`;
   }
   const order = { warning: 0, suggestion: 1, critical: -1 };
   const items = [...a.flags].sort((x, y) => (order[x.tier] ?? 2) - (order[y.tier] ?? 2)).map((f) => `
@@ -96,13 +96,13 @@ function flagsCard(a) {
       <span class="sflag__tier">${f.tier === "warning" ? "Address" : f.tier === "critical" ? "Important" : "Tweak"}</span>
       <div><strong>${esc(f.title)}</strong><p>${esc(f.detail)}</p></div>
     </li>`).join("");
-  return `<div class="split-card"><h3 class="split-h">Findings &amp; fixes</h3><ul class="sflags">${items}</ul></div>`;
+  return `<div class="split-card"><h2 class="split-h">Findings &amp; fixes</h2><ul class="sflags">${items}</ul></div>`;
 }
 
 function workoutsCard(a, routines) {
   if (!routines.length) {
     return `<div class="split-card split-empty">
-      <h3 class="split-h">Your saved workouts</h3>
+      <h2 class="split-h">Your saved workouts</h2>
       <p class="split-note">You haven't saved any workouts yet. Build a session on the <a href="#/dashboard" data-nav="dashboard">Dashboard</a> (add your own exercises), then hit <strong>“Save as routine”</strong> and it'll show up here to quick-start at the gym and feed this analysis.</p>
     </div>`;
   }
@@ -122,7 +122,7 @@ function workoutsCard(a, routines) {
     </div>`;
   }).join("");
   return `<div class="split-card">
-    <div class="split-card__head"><h3 class="split-h">Your saved workouts</h3><span class="split-legend">${routines.length} saved · run each ~1×/week</span></div>
+    <div class="split-card__head"><h2 class="split-h">Your saved workouts</h2><span class="split-legend">${routines.length} saved · run each ~1×/week</span></div>
     <div class="wcards">${cards}</div>
   </div>`;
 }
@@ -136,7 +136,7 @@ function render() {
 
   if (!workouts.length) {
     mount.innerHTML = `<div class="split-card split-empty">
-      <h3 class="split-h">Nothing to analyse yet</h3>
+      <h2 class="split-h">Nothing to analyse yet</h2>
       <p class="split-note">Save the workouts you run: build a session on the <a href="#/dashboard" data-nav="dashboard">Dashboard</a> and tap <strong>“Save as routine”</strong>, or <a href="#/" data-nav="home">build a plan</a>. Then come back to quick-start them and see how effective your split is.</p>
     </div>`;
     return;

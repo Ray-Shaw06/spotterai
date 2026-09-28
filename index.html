@@ -623,7 +623,7 @@
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" /></svg>
           </span>
           <div class="dash-welcome__body">
-            <h3 class="dash-welcome__title">Welcome to SpotterAI</h3>
+            <h2 class="dash-welcome__title">Welcome to SpotterAI</h2>
             <p class="dash-welcome__text">Your dashboard fills in as you train: rank, streak, volume, and history all build from what you log. Log your first workout below, or load a demo profile to explore a fully-populated account.</p>
             <div class="dash-welcome__actions">
               <button type="button" id="welcome-demo" class="btn btn--primary btn--sm">Load demo data</button>
@@ -648,7 +648,7 @@
         <!-- Quick log (natural language + voice) -->
         <div class="card quicklog" id="quicklog">
           <div class="quicklog__head">
-            <h3 class="card-title">Quick log <span class="quicklog__badge">AI</span></h3>
+            <h2 class="card-title">Quick log <span class="quicklog__badge">AI</span></h2>
           </div>
           <form id="quicklog-form" class="quicklog__form">
             <input id="quicklog-input" class="input quicklog__input" placeholder="Try “bench 3×5 at 60kg” or “ate a chicken burrito”…" aria-label="Log a workout or a meal in plain English, you confirm before it's saved" autocomplete="off" />
@@ -664,7 +664,7 @@
           <div class="card dash-card dash-workout-card dash-span">
             <div id="workout-idle">
               <div class="workout-idle__head">
-                <h3 class="card-title">Start a workout</h3>
+                <h2 class="card-title">Start a workout</h2>
                 <button type="button" id="start-empty" class="btn btn--ghost btn--sm">Blank workout</button>
               </div>
               <div id="routine-list" class="routine-list"></div>
@@ -703,7 +703,7 @@
               <!-- Lifting tools (plate calculator + 1RM estimate) -->
               <div id="session-tools" class="session-tools" hidden>
                 <div class="tool">
-                  <h4 class="tool__title">Plate calculator</h4>
+                  <h3 class="tool__title">Plate calculator</h3>
                   <div class="tool__row">
                     <label class="field-label-sm">Target<input id="plate-target" class="input input--sm" type="number" inputmode="decimal" min="0" placeholder="100" /></label>
                     <label class="field-label-sm">Bar<input id="plate-bar" class="input input--sm" type="number" inputmode="decimal" min="0" /></label>
@@ -711,7 +711,7 @@
                   <div id="plate-out" class="tool__out"></div>
                 </div>
                 <div class="tool">
-                  <h4 class="tool__title">1RM estimate</h4>
+                  <h3 class="tool__title">1RM estimate</h3>
                   <div class="tool__row">
                     <label class="field-label-sm">Weight<input id="orm-weight" class="input input--sm" type="number" inputmode="decimal" min="0" placeholder="80" /></label>
                     <label class="field-label-sm">Reps<input id="orm-reps" class="input input--sm" type="number" inputmode="numeric" min="1" placeholder="5" /></label>
@@ -752,7 +752,7 @@
 
             <!-- This week's volume -->
             <div class="card dash-card">
-              <h3 class="card-title">This week's volume</h3>
+              <h2 class="card-title">This week's volume</h2>
               <div id="dash-weekly"></div>
               <p class="dash-hint" id="dash-weekly-meta"></p>
             </div>
@@ -763,13 +763,13 @@
           <div class="dash-grid">
             <!-- History -->
             <div class="card dash-card">
-              <h3 class="card-title">History</h3>
+              <h2 class="card-title">History</h2>
               <ul id="workout-history" class="entry-list workout-list"></ul>
             </div>
 
             <!-- Achievements -->
             <div class="card dash-card dash-achievements-card">
-              <h3 class="card-title">Achievements</h3>
+              <h2 class="card-title">Achievements</h2>
               <div id="dash-achievements" class="badges"></div>
             </div>
           </div>
@@ -816,12 +816,12 @@
 
         <div class="dash-grid">
           <div class="card dash-card nut-summary-card">
-            <h3 class="card-title">Calories &amp; macros</h3>
+            <h2 class="card-title">Calories &amp; macros</h2>
             <div id="nut-summary" class="nut-summary"></div>
           </div>
 
           <div class="card dash-card">
-            <h3 class="card-title">Water</h3>
+            <h2 class="card-title">Water</h2>
             <div id="nut-water" class="water"></div>
           </div>
 
@@ -830,7 +830,7 @@
           </div>
 
           <div class="card dash-card nut-meals-card">
-            <h3 class="card-title">Goals &amp; targets</h3>
+            <h2 class="card-title">Goals &amp; targets</h2>
             <form id="nut-targets-form" class="dash-form nut-targets">
               <label class="field-label-sm">Calories<input name="kcal" class="input" type="number" min="0" inputmode="numeric" /></label>
               <label class="field-label-sm">Protein (g)<input name="protein" class="input" type="number" min="0" inputmode="numeric" /></label>
@@ -863,7 +863,7 @@
         <div class="dash-grid">
           <div class="card dash-card cal-card">
             <div class="cal-head">
-              <h3 class="card-title">Consistency</h3>
+              <h2 class="card-title">Consistency</h2>
               <div class="cal-nav">
                 <button id="cal-prev" type="button" class="btn btn--ghost btn--sm" aria-label="Previous month">&larr;</button>
                 <span id="cal-label" class="cal-label" aria-live="polite"></span>
@@ -878,13 +878,13 @@
             </p>
           </div>
           <div class="card dash-card">
-            <h3 class="card-title">Weekly volume</h3>
+            <h2 class="card-title">Weekly volume</h2>
             <div id="chart-weekly"></div>
             <p class="dash-hint">Total weight moved per week (last 8 weeks).</p>
           </div>
 
           <div class="card dash-card">
-            <h3 class="card-title">Bodyweight</h3>
+            <h2 class="card-title">Bodyweight</h2>
             <div id="chart-bodyweight"></div>
             <p id="bodyweight-meta" class="dash-hint"></p>
             <form id="add-weight-form" class="dash-form field-inline">
@@ -895,7 +895,7 @@
 
           <div class="card dash-card exprog-card">
             <div class="exprog__head">
-              <h3 class="card-title">Exercise progress</h3>
+              <h2 class="card-title">Exercise progress</h2>
               <select id="exercise-progress-pick" class="form-select exprog__pick" aria-label="Choose an exercise"></select>
             </div>
             <div id="chart-exercise"></div>
@@ -1013,7 +1013,7 @@
         <div class="lab-block">
           <div class="lab-block__head">
             <div>
-              <h3 class="lab-block__title">Live red-team report</h3>
+              <h2 class="lab-block__title">Live red-team report</h2>
               <p class="lab-block__sub">The evaluator run against a battery of good and intentionally-bad plans. Each case lists what it should catch and whether it did. The same suite runs in CI, so the auditor can't silently regress.</p>
             </div>
             <button type="button" id="eval-rerun" class="btn btn--ghost btn--sm">Re-run suite</button>
@@ -1113,7 +1113,7 @@
             </div>
 
             <div class="form-side__block">
-              <h3 class="form-side__heading">Camera setup</h3>
+              <h2 class="form-side__heading">Camera setup</h2>
               <p id="form-setup" class="form-side__setup">Stand side-on to the camera, full body in frame.</p>
               <ul id="form-camera-tips" class="form-side__list form-side__list--tight">
                 <li>Stand side-on, 2–3 m back, depth and torso lean are judged from the side.</li>
@@ -1123,12 +1123,12 @@
             </div>
 
             <div class="form-side__block">
-              <h3 class="form-side__heading">Last rep</h3>
+              <h2 class="form-side__heading">Last rep</h2>
               <div id="form-lastrep" class="form-lastrep"><span class="form-side__muted">Complete a rep to see feedback.</span></div>
             </div>
 
             <div class="form-side__block">
-              <h3 class="form-side__heading">What it checks</h3>
+              <h2 class="form-side__heading">What it checks</h2>
               <ul class="form-side__list">
                 <li>Auto rep counting from 3D joint angles, smoothed to cut jitter.</li>
                 <li>Form cues for squat, push-up, bench press, lunge, overhead press, biceps curl, pull-up, dip, RDL/hinge, and hip thrust.</li>
@@ -1138,7 +1138,7 @@
             </div>
 
             <div class="form-side__block">
-              <h3 class="form-side__heading">Limitations</h3>
+              <h2 class="form-side__heading">Limitations</h2>
               <p class="form-side__disclaimer">
                 Camera-based feedback is approximate. SpotterAI cannot fully assess load,
                 pain, fatigue, depth, bracing, or 3D joint mechanics from a single camera

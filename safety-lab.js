@@ -143,7 +143,7 @@ function render() {
     <div class="lab-block">
       <div class="lab-block__head">
         <div>
-          <h3 class="lab-block__title">Evaluator benchmark <span class="bench__tag">Bundled local benchmark, reproducible</span></h3>
+          <h2 class="lab-block__title">Evaluator benchmark <span class="bench__tag">Bundled local benchmark, reproducible</span></h2>
           <p class="lab-block__sub">SpotterAI runs known-good and intentionally risky plans through the same evaluator used in the app. These tests help catch regressions and make the guardrails more transparent. Computed live in your browser from the bundled suite; the same suite is gated in CI.</p>
         </div>
         <span class="bench__status bench__status--${b.passing ? "pass" : "fail"}">${b.passing ? "Passing" : "Needs review"}</span>
@@ -163,13 +163,13 @@ function render() {
 
   const rules = `
     <div class="lab-block">
-      <h3 class="lab-block__title">Why these rules exist</h3>
+      <h2 class="lab-block__title">Why these rules exist</h2>
       <p class="lab-block__sub">Every check in plain English: what it looks at, why it matters, what SpotterAI does, and where it's limited.</p>
       <div class="rule-grid">
         ${RULE_EXPLANATIONS.map(
           (r) => `
           <article class="rule-card">
-            <h4 class="rule-card__name">${esc(r.name)}</h4>
+            <h3 class="rule-card__name">${esc(r.name)}</h3>
             <p class="rule-card__row"><span class="rule-card__k">Checks</span> ${esc(r.checks)}</p>
             <p class="rule-card__row"><span class="rule-card__k">Why it matters</span> ${esc(r.why)}</p>
             <p class="rule-card__row"><span class="rule-card__k">What SpotterAI does</span> ${esc(r.action)}</p>
@@ -181,7 +181,7 @@ function render() {
 
   const principles = `
     <div class="lab-block">
-      <h3 class="lab-block__title">Training principles behind the checks</h3>
+      <h2 class="lab-block__title">Training principles behind the checks</h2>
       <ul class="principles">${TRAINING_PRINCIPLES.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
       <p class="principles__note">${esc(PRINCIPLES_NOTE)}</p>
     </div>`;
@@ -190,11 +190,11 @@ function render() {
     <div class="lab-block">
       <div class="lab-cols">
         <div class="lab-col lab-col--good">
-          <h4>What SpotterAI catches well</h4>
+          <h3>What SpotterAI catches well</h3>
           <ul>${CATCHES.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
         </div>
         <div class="lab-col lab-col--bad">
-          <h4>What SpotterAI may miss</h4>
+          <h3>What SpotterAI may miss</h3>
           <ul>${MISSES.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
         </div>
       </div>
@@ -202,13 +202,13 @@ function render() {
 
   const examples = `
     <div class="lab-block">
-      <h3 class="lab-block__title">Worked examples: bad plans it catches</h3>
+      <h2 class="lab-block__title">Worked examples: bad plans it catches</h2>
       <p class="lab-block__sub">Three intentionally bad inputs, what the evaluator flags, and the safer version it points toward.</p>
       <div class="badplan-grid">
         ${BAD_PLANS.map(
           (e) => `
           <article class="badplan">
-            <h4 class="badplan__title">${esc(e.title)}</h4>
+            <h3 class="badplan__title">${esc(e.title)}</h3>
             <p class="badplan__plan"><span class="badplan__tag badplan__tag--bad">Bad plan</span> ${esc(e.plan)}</p>
             <p class="badplan__label">What's caught &amp; why it matters</p>
             <ul class="badplan__caught">${e.caught.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
@@ -220,12 +220,12 @@ function render() {
 
   const privacyCol = (title, items, cls) => `
     <div class="privacy-col privacy-col--${cls}">
-      <h4>${title}</h4>
+      <h3>${title}</h3>
       <ul>${items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
     </div>`;
   const privacy = `
     <div class="lab-block">
-      <h3 class="lab-block__title">Privacy &amp; data</h3>
+      <h2 class="lab-block__title">Privacy &amp; data</h2>
       <p class="lab-block__sub">Fitness data is personal, so SpotterAI is explicit about what stays on your device and what is used for AI features.</p>
       <div class="privacy-grid">
         ${privacyCol("Stored locally by default", PRIVACY.local, "local")}
@@ -237,11 +237,11 @@ function render() {
 
   const tech = `
     <div class="lab-block">
-      <h3 class="lab-block__title">Technical architecture</h3>
+      <h2 class="lab-block__title">Technical architecture</h2>
       <p class="lab-block__sub">SpotterAI separates creative AI generation from deterministic safety checks. The AI drafts flexible plans; the evaluator applies consistent rules, structured exercise metadata, and regression-tested checks before a plan is recommended.</p>
       <div class="tech-grid">
         ${ARCH.map(
-          ([t, d]) => `<div class="tech"><h5>${esc(t)}</h5><p>${esc(d)}</p></div>`
+          ([t, d]) => `<div class="tech"><h3>${esc(t)}</h3><p>${esc(d)}</p></div>`
         ).join("")}
       </div>
     </div>`;
@@ -285,7 +285,7 @@ async function hydrateHistory() {
   el.innerHTML = `
     <div class="lab-block__head">
       <div>
-        <h3 class="lab-block__title">Benchmark history</h3>
+        <h2 class="lab-block__title">Benchmark history</h2>
         <p class="lab-block__sub">One row per change in evaluator behaviour, appended by CI since ${esc(rows[0].date)}. Nothing before that date is shown, because nothing before that date was recorded.</p>
       </div>
     </div>
@@ -327,7 +327,7 @@ async function hydrateProduction() {
   el.innerHTML = `
     <div class="lab-block__head">
       <div>
-        <h3 class="lab-block__title">On real plans <span class="bench__tag">Production telemetry, unverified</span></h3>
+        <h2 class="lab-block__title">On real plans <span class="bench__tag">Production telemetry, unverified</span></h2>
         <p class="lab-block__sub">How often each check flagged something across ${shaped.audits} audits${shaped.since ? `, since ${esc(shaped.since)}` : ""}. Anonymous counters only: no plan content, no accounts, nothing identifying anyone. Unlike the bundled benchmark above, which anyone can reproduce by running the suite from the repo, this endpoint is public and unauthenticated, so treat these numbers as a direction rather than a proof.</p>
       </div>
     </div>

@@ -504,9 +504,9 @@ function trustHistoryBlock() {
     )
     .join("");
   return `<div class="trust__block trust__history">
-      <h5>Audit history
+      <h4>Audit history
         <span class="trust__trend trust__trend--${up ? "up" : "down"}">${up ? "▲" : "▼"} ${up ? "+" : ""}${trend.delta} over ${trend.points} versions</span>
-      </h5>
+      </h4>
       <div class="trust__spark">${chart}</div>
       <ol class="trust__vers">${rows}</ol>
     </div>`;
@@ -550,9 +550,9 @@ function renderTrustReport(plan, inputs, audit) {
           ${row("Confidence", `${conf.level}: ${esc(conf.why)}`)}
         </dl>
         ${trustHistoryBlock()}
-        <div class="trust__block"><h5>User limitations considered</h5>${list(limitations, "No limitations were provided.")}</div>
-        <div class="trust__block"><h5>Main concerns</h5>${list(concerns, "No critical issues or warnings.")}</div>
-        <div class="trust__block"><h5>Recommended edits</h5>${list(edits, "No edits recommended.")}</div>
+        <div class="trust__block"><h4>User limitations considered</h4>${list(limitations, "No limitations were provided.")}</div>
+        <div class="trust__block"><h4>Main concerns</h4>${list(concerns, "No critical issues or warnings.")}</div>
+        <div class="trust__block"><h4>Recommended edits</h4>${list(edits, "No edits recommended.")}</div>
         <p class="trust__disclaimer">SpotterAI can catch common programming issues, but it cannot guarantee safety or replace a qualified coach, clinician, or medical professional.</p>
       </div>
     </details>`;
@@ -689,8 +689,8 @@ function renderPlan(plan) {
 
   const notes = `
     <div class="plan-notes">
-      ${plan.progression ? `<div class="plan-note"><h5>Progression</h5><p>${esc(plan.progression)}</p></div>` : ""}
-      ${plan.general_notes ? `<div class="plan-note"><h5>General notes</h5><p>${esc(plan.general_notes)}</p></div>` : ""}
+      ${plan.progression ? `<div class="plan-note"><h4>Progression</h4><p>${esc(plan.progression)}</p></div>` : ""}
+      ${plan.general_notes ? `<div class="plan-note"><h4>General notes</h4><p>${esc(plan.general_notes)}</p></div>` : ""}
     </div>`;
 
   planOutput.innerHTML = `

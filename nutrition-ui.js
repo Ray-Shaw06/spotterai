@@ -127,7 +127,7 @@ function renderNutritionSafety() {
       <div class="audit__head">
         <div class="audit__headline">
           <p class="audit__eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span> Nutrition safety · deterministic</p>
-          <h3 class="audit__verdict is-${verdict.tone}">${esc(verdict.text)}</h3>
+          <h2 class="audit__verdict is-${verdict.tone}">${esc(verdict.text)}</h2>
         </div>
       </div>
       <div class="audit__flags">${flagCards || `<p class="audit__clear">No safety flags on your current targets. These are conservative checks, not a personalized diet.</p>`}</div>
@@ -144,20 +144,20 @@ function renderNutritionSafety() {
             ${row("Fat target", trust.fatTarget ? `${trust.fatTarget} g` : "-")}
             ${row("Confidence", `${trust.confidence}: ${esc(trust.whyLimited)}`)}
           </dl>
-          <div class="trust__block"><h5>Safer target range</h5><span class="muted">${esc(trust.saferSuggestion)}</span></div>
-          <div class="trust__block"><h5>What data was used</h5>${list(trust.dataUsed, "-")}</div>
-          <div class="trust__block"><h5>What's missing</h5>${list(trust.dataMissing, "Nothing major.")}</div>
+          <div class="trust__block"><h3>Safer target range</h3><span class="muted">${esc(trust.saferSuggestion)}</span></div>
+          <div class="trust__block"><h3>What data was used</h3>${list(trust.dataUsed, "-")}</div>
+          <div class="trust__block"><h3>What's missing</h3>${list(trust.dataMissing, "Nothing major.")}</div>
           <p class="trust__disclaimer">${esc(NUTRITION_DISCLAIMER)}</p>
         </div>
       </details>
 
       <div class="nut-wontdo">
         <div class="nut-wontdo__col nut-wontdo__col--no">
-          <h5>What SpotterAI will not do with nutrition</h5>
+          <h3>What SpotterAI will not do with nutrition</h3>
           <ul>${NUTRITION_WONT_DO.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
         </div>
         <div class="nut-wontdo__col nut-wontdo__col--yes">
-          <h5>What it focuses on instead</h5>
+          <h3>What it focuses on instead</h3>
           <p>Sustainable habits: regular meals, protein consistency, hydration, moderate targets, and progress trends, not rapid weight loss or extreme restriction.</p>
         </div>
       </div>
@@ -237,7 +237,7 @@ function renderMeals(entries) {
       )
       .join("");
     return `<div class="meal">
-      <div class="meal__head"><h4 class="meal__name">${label}</h4><span class="meal__head-right">${act}<span class="meal__kcal">${kcal} kcal</span></span></div>
+      <div class="meal__head"><h2 class="meal__name">${label}</h2><span class="meal__head-right">${act}<span class="meal__kcal">${kcal} kcal</span></span></div>
       <ul class="meal__list">${rows || '<li class="muted meal__empty">No food logged.</li>'}</ul>
       <button type="button" class="meal__add" data-act="add-food" data-meal="${id}">+ Add food</button>
     </div>`;

@@ -60,7 +60,7 @@ function render() {
   if (!plan) {
     content.innerHTML = card(
       `<div class="today-empty">
-        <h3 class="today-card__title">Create your first plan to unlock Today</h3>
+        <h2 class="today-card__title">Create your first plan to unlock Today</h2>
         <p class="today-card__text">Today gives you a daily workout, nutrition focus, recovery check-in, and a coach note, once you have a plan to work from.</p>
         <a href="#/" data-nav="home" class="btn btn--primary" data-onboard>Build my plan</a>
       </div>`,
@@ -81,11 +81,11 @@ function render() {
     workoutCard = card(
       weekDone
         ? `<p class="today-card__eyebrow">Rest day: earned</p>
-           <h3 class="today-card__title">Week complete: ${stats.thisWeek.sessions}/${trainingDays(plan).length} sessions</h3>
+           <h2 class="today-card__title">Week complete: ${stats.thisWeek.sessions}/${trainingDays(plan).length} sessions</h2>
            <p class="today-card__text">You've done every planned session this week. More isn't better here. Recovery is where the adaptation happens. Next week picks up fresh.</p>
            <div class="today-card__actions"><button type="button" class="btn btn--ghost btn--sm today-qa" data-act="weight">Log recovery / bodyweight</button><button type="button" class="btn btn--ghost btn--sm today-qa" data-act="adapt">Adapt next week</button></div>`
         : `<p class="today-card__eyebrow">Today</p>
-           <h3 class="today-card__title">No workout planned today</h3>
+           <h2 class="today-card__title">No workout planned today</h2>
            <p class="today-card__text">Recovery is part of the plan. Light movement, good food, and sleep are doing real work.</p>
            <div class="today-card__actions"><button type="button" class="btn btn--ghost btn--sm today-qa" data-act="weight">Log recovery / bodyweight</button></div>`,
       "today-card--rest"
@@ -108,7 +108,7 @@ function render() {
       <div class="cmd today-card--workout">
         <div class="cmd__main">
           <p class="cmd__eyebrow">Today's session · ${esc(estDuration(workout, inputs))} · ${esc(plan.goal || "Training")}</p>
-          <h3 class="cmd__title">${esc(workout.focus || workout.day || "Workout")}</h3>
+          <h2 class="cmd__title">${esc(workout.focus || workout.day || "Workout")}</h2>
           <p class="cmd__warmup"><strong>Warm-up</strong> 5–10 min easy cardio, then 2–3 light ramp-up sets on your first lift.</p>
           ${workout.notes ? `<p class="cmd__note">${esc(workout.notes)}</p>` : ""}
           <div class="cmd__actions">
