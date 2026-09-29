@@ -48,7 +48,12 @@ test("the effective theme follows the system only while the preference is system
 // ---- DOM application --------------------------------------------------------
 
 function fakeDoc() {
-  const meta = { attrs: { name: "theme-color", content: "" }, setAttribute(k, v) { this.attrs[k] = v; } };
+  // index.html ships a light and a dark theme-color meta; _meta is the first.
+  const metas = ["(prefers-color-scheme: light)", "(prefers-color-scheme: dark)"].map((media) => ({
+    attrs: { name: "theme-color", media, content: "" },
+    setAttribute(k, v) { this.attrs[k] = v; },
+  }));
+  const meta = metas[0];
   const root = {
     attrs: {},
     setAttribute(k, v) { this.attrs[k] = v; },
@@ -58,8 +63,9 @@ function fakeDoc() {
   return {
     documentElement: root,
     _meta: meta,
+    _metas: metas,
     querySelector: (sel) => (sel.includes("theme-color") ? meta : null),
-    querySelectorAll: () => [],
+    querySelectorAll: (sel) => (sel.includes("theme-color") ? metas : []),
   };
 }
 
@@ -80,6 +86,17 @@ test("applying a preference sets the attribute and the browser chrome colour", (
   assert.equal(doc._meta.attrs.content, THEME_COLOR.dark);
 });
 
+test("every theme-color meta takes the effective colour, so the light and dark pair cannot disagree", () => {
+  // The pair is scoped by prefers-color-scheme so the chrome is right before
+  // any script runs. After a reader chooses, the choice wins over the OS: dark
+  // picked on a light OS must not leave the light-scoped meta in charge.
+  const doc = fakeDoc();
+  applyTheme("dark", { doc, media: { matches: false } });
+  assert.deepEqual(doc._metas.map((m) => m.attrs.content), [THEME_COLOR.dark, THEME_COLOR.dark]);
+  applyTheme("light", { doc, media: { matches: true } });
+  assert.deepEqual(doc._metas.map((m) => m.attrs.content), [THEME_COLOR.light, THEME_COLOR.light]);
+});
+
 // ---- wiring -----------------------------------------------------------------
 
 function fakeEnv({ stored = null, systemDark = false } = {}) {
@@ -93,7 +110,7 @@ function fakeEnv({ stored = null, systemDark = false } = {}) {
     removeEventListener(t) { delete this.handlers[t]; },
     click() { this.handlers.click?.({ currentTarget: this }); },
   }));
-  doc.querySelectorAll = () => buttons;
+  doc.querySelectorAll = (sel) => (sel.includes("theme-color") ? doc._metas : buttons);
   const mqHandlers = {};
   const media = {
     matches: systemDark,
@@ -170,4 +187,78 @@ test("the pre-paint inline script agrees with this module", () => {
   assert.match(inline, /=== *"dark" *\|\| *\w+ *=== *"light"/, "only explicit choices set the attribute");
   assert.match(inline, /setAttribute\(\s*"data-theme"/, "the inline script sets data-theme");
   assert.match(inline, /catch/, "blocked storage must not throw before paint");
+});
+
+test("the chrome colours are the page grounds, in both themes", () => {
+  // THEME_COLOR is what the browser paints around the page, so it has to be
+  // the colour the page itself is painted. The manifest had drifted to an
+  // older light ground (#f5f8f6) that nothing else used any more.
+  const css = readFileSync(join(root, "style.css"), "utf8");
+  assert.equal(css.match(/--bg:\s*(#[0-9a-fA-F]{6})\s*;/)?.[1], THEME_COLOR.light);
+  assert.equal(css.match(/--d-bg:\s*(#[0-9a-fA-F]{6})\s*;/)?.[1], THEME_COLOR.dark);
+});
+
+test("before any script runs, the browser chrome and canvas already follow the OS", () => {
+  // theme.js repaints the chrome once it runs, but it is a deferred module.
+  // Until then the static tags decide: one light theme-color was showing a
+  // light address bar above a dark page, and color-scheme "light" painted a
+  // light canvas under it while the stylesheet loaded.
+  const html = readFileSync(join(root, "index.html"), "utf8");
+  const metas = [...html.matchAll(/<meta name="theme-color"([^>]*)>/g)].map(([, attrs]) => ({
+    media: attrs.match(/media="([^"]+)"/)?.[1],
+    content: attrs.match(/content="([^"]+)"/)?.[1],
+  }));
+  assert.deepEqual(metas, [
+    { media: "(prefers-color-scheme: light)", content: THEME_COLOR.light },
+    { media: "(prefers-color-scheme: dark)", content: THEME_COLOR.dark },
+  ]);
+  assert.match(html, /<meta name="color-scheme" content="light dark" \/>/);
+});
+
+test("the pre-paint script pins the canvas to an explicit choice, and leaves system alone", () => {
+  // Run the real inline script against a stand-in document. "light dark"
+  // follows the OS, so a reader who chose the other theme would get the OS
+  // canvas for a moment on every cold start unless the script narrows it.
+  const html = readFileSync(join(root, "index.html"), "utf8");
+  const head = html.slice(0, html.indexOf('<link rel="stylesheet"'));
+  const source = [...head.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).find((s) => s.includes(THEME_KEY));
+  assert.ok(source, "the inline pre-paint script should be in <head>, before the stylesheet");
+
+  const run = (stored) => {
+    const attrs = {};
+    const scheme = { content: "light dark", setAttribute(k, v) { this[k] = v; } };
+    const document = {
+      documentElement: { setAttribute: (k, v) => { attrs[k] = v; } },
+      querySelector: (sel) => (sel.includes("color-scheme") ? scheme : null),
+    };
+    const localStorage = { getItem: (k) => (k === THEME_KEY ? stored : null) };
+    new Function("document", "localStorage", source)(document, localStorage);
+    return { theme: attrs["data-theme"] ?? null, scheme: scheme.content };
+  };
+  assert.deepEqual(run("dark"), { theme: "dark", scheme: "dark" });
+  assert.deepEqual(run("light"), { theme: "light", scheme: "light" });
+  assert.deepEqual(run("system"), { theme: null, scheme: "light dark" });
+  assert.deepEqual(run(null), { theme: null, scheme: "light dark" });
+});
+
+test("the pre-paint script survives blocked storage and a missing color-scheme tag", () => {
+  // It runs before anything else on the page, so a throw here is a blank
+  // stylesheet-less moment with nothing to report it. The theme attribute is
+  // set first on purpose: a page without the color-scheme tag still gets it.
+  const html = readFileSync(join(root, "index.html"), "utf8");
+  const head = html.slice(0, html.indexOf('<link rel="stylesheet"'));
+  const source = [...head.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).find((s) => s.includes(THEME_KEY));
+  const run = (localStorage, hasMeta) => {
+    const attrs = {};
+    const document = {
+      documentElement: { setAttribute: (k, v) => { attrs[k] = v; } },
+      querySelector: () => (hasMeta ? { setAttribute() {} } : null),
+    };
+    new Function("document", "localStorage", source)(document, localStorage);
+    return attrs["data-theme"] ?? null;
+  };
+  const blocked = { getItem() { throw new Error("blocked"); } };
+  assert.doesNotThrow(() => run(blocked, true));
+  assert.equal(run(blocked, true), null, "blocked storage falls back to following the OS");
+  assert.equal(run({ getItem: () => "dark" }, false), "dark", "a missing tag must not cost the reader their theme");
 });

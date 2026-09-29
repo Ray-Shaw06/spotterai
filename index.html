@@ -11,8 +11,13 @@
     name="description"
     content="Your AI fitness copilot: generate a workout plan, log training and nutrition, track progress, adapt over time, and audit every plan with transparent, code-based guardrails. Free to use, no signup, local-first."
   />
-  <meta name="theme-color" content="#f5f8f6" />
-  <meta name="color-scheme" content="light" />
+  <!-- Browser chrome, and the canvas painted before style.css arrives, follow
+       the OS until a script runs. theme.js then repaints both theme-color tags
+       for the reader's own choice; the inline script below narrows
+       color-scheme to it before first paint. -->
+  <meta name="theme-color" content="#eef2f0" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0a0e0c" media="(prefers-color-scheme: dark)" />
+  <meta name="color-scheme" content="light dark" />
 
   <!-- PWA: installable + offline (manifest + service worker) -->
   <link rel="manifest" href="manifest.json" />
@@ -68,8 +73,11 @@
        lines. Keep the key and the values in step with theme.js. */
     try {
       var p = localStorage.getItem("spotter.theme");
-      if (p === "dark" || p === "light") document.documentElement.setAttribute("data-theme", p);
-    } catch (e) { /* private mode: the light default is already correct */ }
+      if (p === "dark" || p === "light") {
+        document.documentElement.setAttribute("data-theme", p);
+        document.querySelector('meta[name="color-scheme"]').setAttribute("content", p);
+      }
+    } catch (e) { /* private mode: following the OS is already correct */ }
   </script>
   <link rel="stylesheet" href="style.css" />
 </head>

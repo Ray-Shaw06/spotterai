@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { THEME_COLOR } from "../theme.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const html = readFileSync(join(root, "index.html"), "utf8");
@@ -31,8 +32,14 @@ test("manifest defines a stable standalone app rooted at SpotterAI", () => {
   assert.equal(manifest.start_url, "/");
   assert.equal(manifest.scope, "/");
   assert.equal(manifest.display, "standalone");
-  assert.equal(manifest.theme_color, "#f5f8f6");
-  assert.equal(manifest.background_color, "#f5f8f6");
+});
+
+test("the installed app's title bar and splash are the light page ground", () => {
+  // The splash fades into the first paint, and the title bar sits on top of
+  // the page. Both were #f5f8f6, an older ground the stylesheet no longer
+  // used, so a launch showed one light colour and then another.
+  assert.equal(manifest.theme_color, THEME_COLOR.light);
+  assert.equal(manifest.background_color, THEME_COLOR.light);
 });
 
 test("manifest and iOS metadata use the branded cache-safe icons", () => {
