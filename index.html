@@ -183,6 +183,11 @@
           </p>
         </div>
 
+        <!-- The card below is hidden from screen readers (read out, it is
+             meter segments and icons), so this says what it shows. Its
+             numbers must match the card's; test/ui-copy.test.js checks. -->
+        <p class="sr-only" id="hero-sample-summary">Sample plan safety audit: 2 issues to review before training. 0 critical, 2 warnings, 1 suggestion, 8 of 11 checks passed. The warnings: high squat frequency, and pushing volume outweighs pulling. Quality score 84, demoted on purpose.</p>
+
         <!-- Product preview: a static mock of the flags-first audit output -->
         <div class="hero__visual" aria-hidden="true">
           <div class="audit-card">

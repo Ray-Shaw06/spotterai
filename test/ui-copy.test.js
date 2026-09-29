@@ -98,6 +98,34 @@ test("the hero audit mock obeys the evaluator's own summary invariant", () => {
   assert.match(verdict, new RegExp(`^${warnings} issues? to review before training`));
 });
 
+test("screen readers get the hero sample card as a summary with the card's own numbers", () => {
+  // The card is aria-hidden, rightly: read out, it is eleven meter segments,
+  // three icons and a dial. But nothing stood in its place, so a screen reader
+  // heard none of the one thing the landing page shows (2026-09-29 re-audit).
+  const hero = html.slice(html.indexOf('<section class="hero">'), html.indexOf("</section>", html.indexOf('<section class="hero">')));
+  const hidden = hero.indexOf('<div class="hero__visual" aria-hidden="true">');
+  assert.notEqual(hidden, -1, "the hero card is still the aria-hidden mock this test is about");
+
+  const summary = hero.match(/<p class="sr-only" id="hero-sample-summary">([^<]+)<\/p>/);
+  assert.ok(summary, "the hero needs a visually hidden summary of the sample card");
+  assert.ok(hero.indexOf(summary[0]) < hidden, "the summary must sit outside the aria-hidden card, or it is hidden too");
+
+  // Read the numbers off the card itself, so the two cannot drift apart.
+  const count = (label) => hero.match(new RegExp(`<strong>([\\d/]+)</strong>\\s*${label}`))?.[1];
+  const [passed, total] = count("passed").split("/");
+  const text = summary[1];
+  for (const phrase of [`${count("critical")} critical`, `${count("warnings")} warnings`, `${count("suggestions?")} suggestion`, `${passed} of ${total} checks passed`]) {
+    assert.ok(text.includes(phrase), `summary should say "${phrase}", as the card does: ${text}`);
+  }
+  // And each warning by the card's own title, so a changed flag cannot leave
+  // a screen reader hearing the old one.
+  const warnings = [...hero.matchAll(/<li class="is-warn">[\s\S]*?<span>([^<]+)<small>/g)].map((m) => m[1].trim());
+  assert.equal(warnings.length, Number(count("warnings")), "the card should list one row per warning");
+  for (const title of warnings) {
+    assert.ok(text.toLowerCase().includes(title.toLowerCase()), `summary should name the warning "${title}": ${text}`);
+  }
+});
+
 test("nav uses 'Safety Lab', not the old 'Evals' label", () => {
   assert.ok(html.includes("<span>Safety Lab</span>"), "Safety Lab nav label present");
   assert.ok(!html.includes("<span>Evals</span>"), "old Evals nav label gone");
