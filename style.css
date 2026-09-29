@@ -505,7 +505,7 @@ table {
      selector elsewhere sets `font-size: inherit`, which outranks a plain
      `.nav-link--more`; match its specificity so the label sizes like its
      sibling tabs instead of inheriting the 1rem shell size. */
-  .sidebar__nav button.nav-link--more { display: flex; font-size: 0.64rem; }
+  .sidebar__nav button.nav-link--more { display: flex; font-size: var(--fs-micro); }
   /* Keep 5 fixed tabs; the rest move into the More sheet. */
   .sidebar__nav .nav-link--sec { display: none; }
   .more-sheet:not([hidden]) {
@@ -565,7 +565,7 @@ table {
     gap: 3px;
     min-width: 56px;
     padding: 0.4rem 0.3rem;
-    font-size: 0.64rem;
+    font-size: var(--fs-micro);
     text-align: center;
     color: var(--text-faint);
   }
@@ -1029,7 +1029,7 @@ table {
   padding: var(--space-2) var(--space-3);
   text-align: left;
   border-bottom: 1px solid var(--border-soft);
-  font-size: 0.66rem;
+  font-size: var(--fs-micro);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-faint);
@@ -1045,7 +1045,12 @@ table {
 .bench-history td:first-child { font-family: var(--font-mono); color: var(--text); font-weight: 600; }
 .bench-history tr.is-regression { background: var(--warn-soft); }
 .bench-history tr.is-regression td { color: var(--warn); }
-.bench-history .is-warn { font-weight: 600; text-transform: uppercase; font-size: 0.66rem; letter-spacing: 0.04em; }
+.bench-history .is-warn { font-weight: 600; text-transform: uppercase; font-size: var(--fs-micro); letter-spacing: 0.04em; }
+@media (max-width: 480px) {
+  /* Four columns at 12px a side came to 310px in a 288px column at 320. */
+  .bench-history th,
+  .bench-history td { padding-inline: var(--space-2); }
+}
 
 .lab-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); }
 .lab-col { padding: var(--space-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-md); }
@@ -1062,7 +1067,7 @@ table {
 .badplan { padding: var(--space-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: var(--space-3); }
 .badplan__title { font-size: 1.05rem; font-weight: 600; }
 .badplan__plan { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; }
-.badplan__tag { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 7px; border-radius: var(--r-sm); margin-right: 6px; }
+.badplan__tag { display: inline-block; font-size: var(--fs-micro); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 7px; border-radius: var(--r-sm); margin-right: 6px; }
 .badplan__tag--bad { color: var(--danger); background: var(--danger-soft); }
 .badplan__tag--fix { color: var(--success); background: var(--success-soft); }
 .badplan__caught { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 5px; }
@@ -1896,7 +1901,7 @@ table {
 .summary-name { font-size: var(--fs-small); color: var(--text-muted); margin-bottom: var(--space-4); }
 .summary-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); margin-bottom: var(--space-4); }
 .summary-stat { padding: var(--space-3); text-align: center; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); }
-.summary-stat__l { font-size: 0.66rem; color: var(--text-muted); }
+.summary-stat__l { font-size: var(--fs-micro); color: var(--text-muted); }
 .summary-prs { padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); font-size: var(--fs-small); color: var(--text); background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: var(--r-sm); }
 .summary-row { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; margin-bottom: var(--space-2); }
 .summary-pain { margin: var(--space-3) 0; padding: var(--space-3) var(--space-4); font-size: var(--fs-small); color: var(--text); background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); border-radius: var(--r-sm); }
@@ -1935,12 +1940,12 @@ table {
 .vbar__fill--high { background: var(--danger); }
 .vbar__fill--none { background: transparent; }
 .vbar__val { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text); min-width: 56px; text-align: right; }
-.vbar__freq { color: var(--text-faint); font-size: 0.68rem; margin-left: 4px; }
+.vbar__freq { color: var(--text-faint); font-size: var(--fs-micro); margin-left: 4px; }
 
 .bals { display: flex; flex-direction: column; gap: var(--space-4); }
 .bal__head { display: flex; justify-content: space-between; font-size: var(--fs-small); color: var(--text-muted); margin-bottom: 5px; }
 .bal__bar { display: flex; height: 9px; border-radius: var(--r-full); overflow: hidden; background: var(--surface-2); }
-.bal__cap { display: block; margin-top: 5px; font-size: 0.68rem; color: var(--text-faint); }
+.bal__cap { display: block; margin-top: 5px; font-size: var(--fs-micro); color: var(--text-faint); }
 
 .sflags { list-style: none; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 .sflag { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--border); }
@@ -2004,7 +2009,7 @@ table {
 .fw-item.is-done .fw-check { border-color: var(--success); background: var(--success-soft); }
 .fw-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-2); margin: var(--space-4) 0; }
 .fw-stat { padding: var(--space-3); text-align: center; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); }
-.fw-stat__l { font-size: 0.64rem; color: var(--text-muted); }
+.fw-stat__l { font-size: var(--fs-micro); color: var(--text-muted); }
 .fw-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
 @media (max-width: 560px) { .fw-stats { grid-template-columns: repeat(3, 1fr); } }
 
@@ -2015,7 +2020,7 @@ table {
 /* Week at a glance — one chip per planned session */
 .week-strip { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: calc(-1 * var(--space-2)) 0 var(--space-4); }
 .week-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 5px; font-size: 0.74rem; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); }
-.week-chip__dot { display: inline-grid; place-items: center; width: 16px; height: 16px; font-size: 0.6rem; border-radius: 50%; border: 1px solid var(--border); color: var(--success); }
+.week-chip__dot { display: inline-grid; place-items: center; width: 16px; height: 16px; font-size: var(--fs-micro); border-radius: 50%; border: 1px solid var(--border); color: var(--success); }
 .week-chip--done { color: var(--text); }
 .week-chip--done .week-chip__dot { border-color: var(--success); background: var(--success-soft); }
 .week-chip--today { color: var(--accent); border-color: var(--accent-ring); background: var(--accent-soft); }
@@ -2998,7 +3003,7 @@ table {
   margin-bottom: var(--space-5);
 }
 .quicklog__badge {
-  font-size: 0.62rem;
+  font-size: var(--fs-micro);
   font-weight: 700;
   vertical-align: middle;
   color: var(--accent);
@@ -3464,7 +3469,7 @@ table {
 .eval-filter:hover { color: var(--text); border-color: var(--accent-ring); }
 .eval-filter.is-active { color: var(--accent); border-color: var(--accent-ring); background: var(--accent-soft); }
 .eval-filter__n { font-family: var(--font-mono); font-size: 0.72rem; }
-.eval-case__type { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; padding: 2px 7px; border-radius: var(--r-full); vertical-align: middle; margin-left: 6px; }
+.eval-case__type { display: inline-block; font-size: var(--fs-micro); font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; padding: 2px 7px; border-radius: var(--r-full); vertical-align: middle; margin-left: 6px; }
 .eval-case__type--good, .eval-case__type--guard { color: var(--success); background: var(--success-soft); }
 .eval-case__type--risky { color: var(--warn); background: var(--warn-soft); }
 .eval-case__type--edge { color: var(--text-muted); background: color-mix(in srgb, var(--text) 6%, transparent); }
@@ -5364,7 +5369,7 @@ table {
 /* Backfill. Sits under the routine list, deliberately quiet: this is the
    escape hatch for a forgotten day, not the primary way to start training. */
 .workout-backfill { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--border-soft); }
-.workout-backfill__label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); font-weight: 600; }
+.workout-backfill__label { display: block; font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); font-weight: 600; }
 .workout-backfill__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
 .workout-backfill__row .input { width: auto; flex: 0 1 11rem; }
 .workout-backfill__hint { margin-top: var(--space-2); font-size: 0.72rem; color: var(--text-faint); }
@@ -5473,7 +5478,7 @@ table {
 .set-table { width: 100%; border-collapse: collapse; margin-top: var(--space-2); }
 .set-table th {
   padding: 0.2rem 0.25rem;
-  font-size: 0.66rem;
+  font-size: var(--fs-micro);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -5640,7 +5645,7 @@ table {
 
 @media (max-width: 520px) {
   .set-in { min-width: 2.6rem; padding: 0.4rem 0.2rem; }
-  .set-prev { font-size: 0.68rem; }
+  .set-prev { font-size: var(--fs-micro); }
 }
 
 /* ----------------------------------------------------------------------------
@@ -5796,7 +5801,7 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
 .food-opt__main { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .food-opt__name { font-size: var(--fs-small); font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .food-opt__sub { font-size: 0.72rem; color: var(--text-faint); }
-.food-opt__tag { flex: none; font-size: 0.66rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; }
+.food-opt__tag { flex: none; font-size: var(--fs-micro); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; }
 .food-opt--quick { color: var(--accent); }
 .food-opt--quick .food-opt__name { color: var(--accent); }
 .food-opt--ai .food-opt__name { color: var(--accent); }
@@ -6053,7 +6058,7 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
     gap: 5px;
     padding: 0.62rem 0.25rem;
     font-family: var(--font-mono);
-    font-size: 0.56rem;
+    font-size: var(--fs-micro);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     text-align: center;
@@ -6162,7 +6167,7 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
 .cmd-ex::before {
   content: counter(cmdex, decimal-leading-zero);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   color: color-mix(in srgb, var(--accent) 65%, var(--text-faint));
 }
 .cmd-ex__name { flex: 1; min-width: 0; color: var(--text); }
@@ -6333,11 +6338,11 @@ body::before {
   font-family: var(--font-body);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
 }
 
 .flag__sev {
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -6347,7 +6352,7 @@ body::before {
 }
 
 .lib-badge {
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -6361,7 +6366,7 @@ body::before {
 
 .summary-prs__badge {
   display: inline-block;
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -6372,7 +6377,7 @@ body::before {
 
 .sflag__tier {
   flex: none;
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -6386,7 +6391,7 @@ body::before {
 
 .wcard__badge {
   flex: none;
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -6399,7 +6404,7 @@ body::before {
 
 .today-badge {
   flex: none;
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -6419,7 +6424,7 @@ body::before {
 @media (min-width: 961px) {
   .sidebar__nav .nav-link {
     font-family: var(--font-body);
-    font-size: 0.68rem;
+    font-size: var(--fs-micro);
     letter-spacing: 0.005em;
     text-transform: none;
     font-weight: 500;
@@ -6658,7 +6663,7 @@ body::before {
 }
 
 .repair__col-label {
-  font-size: 0.66rem;
+  font-size: var(--fs-micro);
   text-transform: none;
   letter-spacing: 0.005em;
   color: var(--text-faint);
@@ -6666,7 +6671,7 @@ body::before {
 }
 
 .repair__k {
-  font-size: 0.6rem;
+  font-size: var(--fs-micro);
   text-transform: none;
   letter-spacing: 0.005em;
   color: var(--text-faint);
@@ -6694,7 +6699,7 @@ body::before {
 
 .ex-table thead th {
   text-align: left;
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 600;
   text-transform: none;
   letter-spacing: 0.005em;
@@ -6724,7 +6729,7 @@ body::before {
 
 .adapt-changes__badge {
   display: inline-block;
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 700;
   text-transform: none;
   letter-spacing: 0.005em;
@@ -6790,7 +6795,7 @@ body::before {
 
 .eval-check__badge {
   flex: none;
-  font-size: 0.62rem;
+  font-size: var(--fs-micro);
   font-weight: 700;
   text-transform: none;
   padding: 2px 7px;
@@ -6893,7 +6898,7 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 0.66rem;
+  font-size: var(--fs-micro);
   text-transform: none;
   letter-spacing: 0.005em;
   color: var(--text-faint);
@@ -6912,7 +6917,7 @@ body::before {
 
 .cmd__eyebrow {
   font-family: var(--font-body);
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   letter-spacing: 0.005em;
   text-transform: none;
   color: var(--accent);
@@ -6920,7 +6925,7 @@ body::before {
 
 .cmd__manifest-label {
   font-family: var(--font-body);
-  font-size: 0.62rem;
+  font-size: var(--fs-micro);
   letter-spacing: 0.005em;
   text-transform: none;
   color: var(--text-faint);
@@ -7583,6 +7588,9 @@ h5 {
   --fs-h2: 1.55rem;
   --fs-body: 1rem;
   --fs-small: 0.875rem;
+  /* The smallest text: tags, captions, table heads. Nothing goes under it
+     (test/type-floor.test.js); 37 sizes between 9px and 10.9px used to. */
+  --fs-micro: 0.6875rem;
   /* Layout + motion */
   --container: 1120px;
   --transition: 240ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -7820,7 +7828,7 @@ body::after {
 .audit-card__foot {
   padding: 12px 18px; margin: 0; background: var(--surface-2);
   border-top: 1px solid var(--border); font-family: var(--font-mono);
-  font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint);
+  font-size: var(--fs-micro); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint);
 }
 
 /* --- Telemetry rail: the four numbers that are the actual proof ------------ */
@@ -7829,7 +7837,7 @@ body::after {
 .tele li:last-child { border-right: 0; }
 .tele b { display: block; font-size: 30px; font-weight: 700; line-height: 1; color: var(--text); }
 .tele b i { font-style: normal; color: var(--accent); }
-.tele span { display: block; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-faint); margin-top: 11px; }
+.tele span { display: block; font-family: var(--font-mono); font-size: var(--fs-micro); letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-faint); margin-top: 11px; }
 @media (max-width: 720px) {
   .tele { grid-template-columns: 1fr 1fr; }
   .tele li { padding-left: 16px; }

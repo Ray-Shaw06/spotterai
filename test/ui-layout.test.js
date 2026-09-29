@@ -258,3 +258,9 @@ test("on a narrow audit card the four counts sit two by two, so none is left alo
     /@container \(width < 420px\)\s*\{[^{}]*\.audit-card__counts\s*\{[^}]*grid-template-columns:\s*repeat\(2,/
   );
 });
+
+test("the benchmark history table fits a 320px phone", () => {
+  // Four columns with 12px of padding either side came to 310px in a 288px
+  // column once its headers reached the 11px floor.
+  assertInMedia("(max-width: 480px)", /\.bench-history th,\s*\.bench-history td\s*\{[^}]*padding-inline:\s*var\(--space-2\)/);
+});
