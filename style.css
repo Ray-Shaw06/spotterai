@@ -2039,7 +2039,7 @@ table {
 .week-chip--done .week-chip__dot { border-color: var(--success); background: var(--success-soft); }
 .week-chip--today { color: var(--accent); border-color: var(--accent-ring); background: var(--accent-soft); }
 .week-chip--today .week-chip__dot { border-color: var(--accent); box-shadow: 0 0 7px 0 var(--accent); }
-.week-chip--upcoming { opacity: 0.75; }
+.week-chip--upcoming { color: var(--text-faint); }
 .today-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
 .today-col { display: flex; flex-direction: column; gap: var(--space-4); }
 .today-card { padding: var(--space-5); }
@@ -3482,7 +3482,7 @@ table {
 .eval-filter { display: inline-flex; align-items: center; gap: 6px; padding: 0.4rem 0.85rem; font-size: var(--fs-small); font-weight: 500; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition); }
 .eval-filter:hover { color: var(--text); border-color: var(--accent-ring); }
 .eval-filter.is-active { color: var(--accent); border-color: var(--accent-ring); background: var(--accent-soft); }
-.eval-filter__n { font-family: var(--font-mono); font-size: 0.72rem; opacity: 0.85; }
+.eval-filter__n { font-family: var(--font-mono); font-size: 0.72rem; }
 .eval-case__type { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; padding: 2px 7px; border-radius: var(--r-full); vertical-align: middle; margin-left: 6px; }
 .eval-case__type--good, .eval-case__type--guard { color: var(--success); background: var(--success-soft); }
 .eval-case__type--risky { color: var(--warn); background: var(--warn-soft); }
@@ -7035,13 +7035,22 @@ body::before {
   font-variant-numeric: tabular-nums;
 }
 .cal-day__num { font-size: 12px; color: var(--text-muted); line-height: 1; }
-.cal-day--muted { opacity: 0.35; }
-.cal-day--future { opacity: 0.45; border-style: dashed; }
+.cal-day--future { border-style: dashed; }
 .cal-day--today { outline: 2px solid var(--accent); outline-offset: -2px; }
 .cal-day--trained { background: color-mix(in srgb, var(--accent) 12%, transparent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
 .cal-day--trained .cal-day__num { color: var(--text); font-weight: 600; }
 .cal-day--fuelled { border-color: color-mix(in srgb, var(--ok, var(--accent)) 45%, var(--border)); }
 .cal-day--trained.cal-day--fuelled { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+/* Days outside the month, and days still to come, step back through the faint
+   text tier, which clears AA on every ground. Opacity on the whole cell took
+   the date down with it: 1.73:1 outside the month, 2.06:1 for tomorrow. The
+   fill and border fade here instead, and the marks keep their meaning, faded. */
+.cal-day.cal-day--muted,
+.cal-day.cal-day--future { background: transparent; }
+.cal-day.cal-day--muted { border-color: color-mix(in srgb, var(--border) 50%, transparent); }
+.cal-day.cal-day--muted .cal-day__num,
+.cal-day.cal-day--future .cal-day__num { color: var(--text-faint); font-weight: 400; }
+.cal-day--muted .cal-day__marks { opacity: 0.4; }
 
 .cal-day__marks { display: flex; gap: 3px; height: 6px; align-items: center; }
 .cal-mark { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
