@@ -78,7 +78,7 @@ export function videoHTML(markers) {
     )
     .join("");
   return `<div class="form-report__block form-video">
-      <h4 class="form-report__heading">Session recording</h4>
+      <h3 class="form-report__heading">Session recording</h3>
       <video class="form-video__player" playsinline controls preload="metadata"></video>
       ${markers.length ? `<div class="form-video__markers">${buttons}</div>` : ""}
       <p class="form-report__note form-video__note">Recorded on this device only, never uploaded, gone when you leave or start a new set.</p>
@@ -97,7 +97,7 @@ export function reportHTML(summary, exerciseLabel, tips, opts = {}) {
 
   const head = `
     <header class="form-report__head">
-      <h3 class="form-report__title">Set report, ${esc(exerciseLabel)}</h3>
+      <h2 class="form-report__title">Set report, ${esc(exerciseLabel)}</h2>
       <p class="form-report__meta">${reps} rep${reps === 1 ? "" : "s"} · ${mmss(durationMs)}${
         opts.adaptive ? "" : ` · judged ${judgedReps} of ${reps}`
       }</p>
@@ -130,7 +130,7 @@ export function reportHTML(summary, exerciseLabel, tips, opts = {}) {
   const findings =
     warns.length || bestGood || clean
       ? `<div class="form-report__block">
-      <h4 class="form-report__heading">What the camera saw</h4>
+      <h3 class="form-report__heading">What the camera saw</h3>
       ${clean}
       ${warns.length || bestGood ? `<ul class="form-report__findings">${[bestGood ? findingLine(bestGood) : "", ...warns.map(findingLine)].join("")}</ul>` : ""}
     </div>`
@@ -138,7 +138,7 @@ export function reportHTML(summary, exerciseLabel, tips, opts = {}) {
 
   const tipsBlock = tips.length
     ? `<div class="form-report__block">
-      <h4 class="form-report__heading">Work on next</h4>
+      <h3 class="form-report__heading">Work on next</h3>
       <ul class="form-report__tips">${tips
         .map((t) => `<li><strong>${esc(t.finding)}</strong>, ${esc(t.tip)}</li>`)
         .join("")}</ul>
@@ -153,7 +153,7 @@ export function reportHTML(summary, exerciseLabel, tips, opts = {}) {
 
   return `${head}
     <div class="form-report__block">
-      <h4 class="form-report__heading">Rep by rep</h4>
+      <h3 class="form-report__heading">Rep by rep</h3>
       <div class="form-report__reps" role="list" aria-label="Rep-by-rep results">${chips}</div>
     </div>
     ${findings}

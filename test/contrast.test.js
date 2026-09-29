@@ -101,6 +101,7 @@ function palettes() {
       },
       accent: all["--accent"], accentInk: all["--accent-ink"],
       warn: all["--warn"], warnInk: all["--warn-ink"],
+      danger: all["--danger"], dangerInk: all["--danger-ink"],
     },
     dark: {
       grounds: {
@@ -112,6 +113,7 @@ function palettes() {
       },
       accent: pick(dark, "--d-accent"), accentInk: pick(dark, "--d-accent-ink"),
       warn: pick(dark, "--d-warn"), warnInk: dark["--d-warn-ink"],
+      danger: pick(dark, "--d-danger"), dangerInk: dark["--d-danger-ink"],
     },
   };
 }
@@ -145,6 +147,15 @@ for (const [name, p] of Object.entries(palettes())) {
     const r = contrast(p.warnInk, p.warn);
     assert.ok(r >= AA_BODY, `${name}: warn ink is ${r.toFixed(2)}:1 on the warn fill`);
   });
+
+  test(`${name} palette: ink on a filled danger button clears AA`, () => {
+    // "Clear all data" fills with --danger on hover. Its ink was a literal
+    // white, which clears AA on the light theme's red and measured 2.72:1 on
+    // the dark theme's brighter one.
+    assert.ok(p.dangerInk, `${name}: no danger ink token; a filled danger button needs an ink from its own palette`);
+    const r = contrast(p.dangerInk, p.danger);
+    assert.ok(r >= AA_BODY, `${name}: danger ink is ${r.toFixed(2)}:1 on the danger fill`);
+  });
 }
 
 /** [selectorList, body] for every rule in the sheet, comments stripped. */
@@ -156,14 +167,24 @@ function rules() {
   ]);
 }
 
-test("a rule that fills with --warn takes its text colour from --warn-ink", () => {
+test("a rule that fills with a status colour takes its text colour from that colour's ink", () => {
+  // Each fill has an ink tuned for it in both palettes. A literal ink is right
+  // for one theme at most: the warn cue (2.50:1) and the dark danger hover
+  // (2.72:1) both shipped that way, and token-only checks could not see them.
+  const INK = {
+    "--accent": "--accent-ink",
+    "--success": "--accent-ink",
+    "--warn": "--warn-ink",
+    "--danger": "--danger-ink",
+  };
   const wrong = [];
   for (const [selectors, body] of rules()) {
-    if (!/background(?:-color)?\s*:\s*var\(--warn\)\s*;/.test(body)) continue;
+    const fill = body.match(/background(?:-color)?\s*:\s*var\((--[a-z-]+)\)\s*;/)?.[1];
+    if (!INK[fill]) continue;
     const colour = body.match(/(?:^|[;\s])color\s*:\s*([^;]+);/)?.[1].trim();
-    if (colour && colour !== "var(--warn-ink)") wrong.push(`${selectors.join(", ")} { color: ${colour} }`);
+    if (colour && colour !== `var(${INK[fill]})`) wrong.push(`${selectors.join(", ")} { color: ${colour} } on ${fill}`);
   }
-  assert.deepEqual(wrong, [], "text on a warn fill must use --warn-ink so both palettes stay legible");
+  assert.deepEqual(wrong, [], "text on a status fill must use that fill's ink token");
 });
 
 test("text on the camera stage clears AA in both themes", () => {

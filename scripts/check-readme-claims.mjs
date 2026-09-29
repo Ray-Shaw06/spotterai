@@ -32,9 +32,16 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { CASES } from "../eval-suite.js";
 import { evaluatePlan } from "../evaluator.js";
+import { buildBenchmarkRecord } from "../lib/benchmark-record.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const readmePath = join(root, "README.md");
+const files = {
+  "README.md": readFileSync(join(root, "README.md"), "utf8"),
+  // The landing page's telemetry rail says its numbers are the ones a sceptic
+  // can reproduce with npm test and npm run eval. It said "887 Tests in CI"
+  // while the suite had 1031 (2026-09-27 audit), so it is held here too.
+  "index.html": readFileSync(join(root, "index.html"), "utf8"),
+};
 
 // ---- gather the truth -----------------------------------------------------
 
@@ -77,20 +84,23 @@ function rubricSize() {
 }
 
 const rubric = rubricSize();
+// The same record `npm run eval` prints, so the rail and the CLI cannot differ.
+const benchmark = buildBenchmarkRecord();
 const actual = {
   tests: actualTestCount(),
   evalCases: CASES.length,
   checksBaseline: rubric.baseline,
   checksMax: rubric.max,
   runtimeDeps: Object.keys(JSON.parse(readFileSync(join(root, "package.json"), "utf8")).dependencies ?? {}).length,
+  riskyCaught: benchmark.riskyCaught,
+  riskyTotal: benchmark.riskyTotal,
+  falsePositives: benchmark.falsePositives,
 };
 
-// ---- compare against what the README says ---------------------------------
+// ---- compare against what the README and the landing page say --------------
 
-const readme = readFileSync(readmePath, "utf8");
-
-/** Each claim names the phrase in the README, the live value it must equal,
- *  and how many times it is expected to appear. */
+/** Each claim names the file, the phrase in it, the live value it must equal,
+ *  and how many times it is expected to appear. README.md unless it says. */
 const claims = [
   {
     label: "test count",
@@ -124,15 +134,43 @@ const claims = [
     expected: actual.runtimeDeps,
     occurrences: 1,
   },
+  {
+    label: "landing rail: tests in CI",
+    file: "index.html",
+    pattern: /<b>(\d+)<\/b><span>Tests in CI<\/span>/g,
+    expected: actual.tests,
+    occurrences: 1,
+  },
+  {
+    label: "landing rail: risky plans caught",
+    file: "index.html",
+    pattern: /<b>(\d+)<i>\/\d+<\/i><\/b><span>Risky plans caught<\/span>/g,
+    expected: actual.riskyCaught,
+    occurrences: 1,
+  },
+  {
+    label: "landing rail: risky plans in the suite",
+    file: "index.html",
+    pattern: /<b>\d+<i>\/(\d+)<\/i><\/b><span>Risky plans caught<\/span>/g,
+    expected: actual.riskyTotal,
+    occurrences: 1,
+  },
+  {
+    label: "landing rail: false flags",
+    file: "index.html",
+    pattern: /<b>(\d+)<\/b><span>False flags<\/span>/g,
+    expected: actual.falsePositives,
+    occurrences: 1,
+  },
 ];
 
 const problems = [];
 
-for (const { label, pattern, expected, occurrences } of claims) {
-  const found = [...readme.matchAll(pattern)];
+for (const { label, file = "README.md", pattern, expected, occurrences } of claims) {
+  const found = [...files[file].matchAll(pattern)];
   if (found.length !== occurrences) {
     problems.push(
-      `${label}: expected ${occurrences} mention(s) in README.md, found ${found.length}. ` +
+      `${label}: expected ${occurrences} mention(s) in ${file}, found ${found.length}. ` +
         `If you reworded the sentence, update the pattern in ${"scripts/check-readme-claims.mjs"}.`,
     );
     continue;
@@ -141,7 +179,7 @@ for (const { label, pattern, expected, occurrences } of claims) {
     const claimed = Number(m[1]);
     if (claimed !== expected) {
       problems.push(
-        `${label}: README says ${claimed}, repo has ${expected}\n` +
+        `${label}: ${file} says ${claimed}, repo has ${expected}\n` +
           `      in: "${m[0]}"\n` +
           `      fix: "${m[0].replace(String(claimed), String(expected))}"`,
       );
@@ -150,7 +188,7 @@ for (const { label, pattern, expected, occurrences } of claims) {
 }
 
 if (problems.length) {
-  console.error("README claims are out of date:\n");
+  console.error("README and landing page claims are out of date:\n");
   for (const p of problems) console.error(`  ✗ ${p}`);
   console.error(
     `\n  Live values: ${actual.tests} tests, ${actual.evalCases} eval cases, ` +
@@ -162,5 +200,6 @@ if (problems.length) {
 
 console.log(
   `README claims check: OK (${actual.tests} tests, ${actual.evalCases} eval cases, ` +
-    `${actual.runtimeDeps} runtime dependencies, ${actual.checksBaseline}-${actual.checksMax} checks)`,
+    `${actual.runtimeDeps} runtime dependencies, ${actual.checksBaseline}-${actual.checksMax} checks; ` +
+    `landing rail ${actual.riskyCaught}/${actual.riskyTotal} caught, ${actual.falsePositives} false flags)`,
 );
