@@ -4040,6 +4040,9 @@ table {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  /* Without this the row's minimum is the menu's widest option, and on a
+     320px touch screen that pushed the whole form check 41px past the edge. */
+  min-width: 0;
 }
 .form-pick .form-select {
   flex: 1;
@@ -4121,7 +4124,7 @@ table {
 
 @media (max-width: 900px) {
   .form-check {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -6201,6 +6204,13 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   .rest-preset { padding: 0.55rem 0.8rem; }
   .rest-custom { padding: 0.55rem 0.35rem; }
   .more-sheet__link { min-height: 44px; }
+  /* Measured at 375px on 2026-09-29: Add food 29px, the Safety Lab filters
+     31px, custom water 32px, the sort menu 34px, every landing button 42px. */
+  .btn,
+  .meal__add,
+  .eval-filter,
+  .water-custom,
+  .eval-sort select { min-height: 44px; }
 
   /* Dense table controls keep their visual size so the set table still fits
      at 320px; the tap zone is extended instead, sized so neighbouring zones
@@ -7892,8 +7902,14 @@ body::after {
    the whole proof, and the last thing above the fold. The rail reserves the
    corner instead, so the launcher floats over margin rather than over data. */
 @media (min-width: 721px) {
-  /* Enough to clear the launcher, not so much that the label wraps — the
-     reserve is for a floating control, so the label must not pay for it. */
-  .tele li:last-child { padding-right: 150px; }
   .tele span { white-space: nowrap; }
+}
+@media (min-width: 901px) {
+  /* The reserve is a track of its own, so the four stats share what is left
+     equally. As padding on the last stat it set that column's minimum at
+     254px, and between 721 and 1000px the other three paid for it, down to
+     131px. Below 901px the hero stacks, the rail sits below the fold and the
+     launcher tucks away as you scroll to it, so there is nothing to clear.
+     minmax(0, ...) lets the reserve give way first if the text is enlarged. */
+  .tele { grid-template-columns: repeat(4, 1fr) minmax(0, 150px); }
 }
