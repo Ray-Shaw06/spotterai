@@ -280,6 +280,22 @@ test("the launcher's reserve on the stat rail is a track of its own, only where 
   assertInMedia("(min-width: 901px)", /\.tele\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*1fr\)\s+minmax\(0,\s*150px\)/);
 });
 
+test("nothing animates a property that reflows the page", () => {
+  // Width, height, margin and padding transitions run layout on every frame.
+  // The three that were here (rank, macro and water bars) never even ran:
+  // each render rebuilds its bar, and a new element has nothing to animate
+  // from. Offsets on positioned elements (the skip link's top) do not reflow
+  // anything around them, so they are not caught here.
+  const REFLOW = /(?<![\w-])(?:width|height|min-width|min-height|max-width|max-height|margin(?:-\w+)?|padding(?:-\w+)?|grid-template-\w+)\b/;
+  const offenders = [];
+  for (const [, selectors, body] of css.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    for (const [, value] of body.matchAll(/transition(?:-property)?\s*:\s*([^;]+)/g)) {
+      if (REFLOW.test(value)) offenders.push(`${selectors.trim().replace(/\s+/g, " ")} { transition: ${value.trim()} }`);
+    }
+  }
+  assert.deepEqual(offenders, [], "animate transform or opacity instead");
+});
+
 test("the form check fits a 320px phone: its column can shrink, and the exercise row gives way", () => {
   // On a 320px touch screen the exercise menu's widest option set the stacked
   // column at 345px, 41px past the screen edge (found 2026-09-29, on prod as

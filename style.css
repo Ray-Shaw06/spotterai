@@ -4792,7 +4792,6 @@ table {
   display: block;
   height: 100%;
   border-radius: var(--r-full);
-  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .rank-next { font-size: var(--fs-small); color: var(--text-muted); }
 
@@ -5984,7 +5983,6 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   display: block;
   height: 100%;
   border-radius: var(--r-full);
-  transition: width 400ms ease;
   /* Ticks cut out of the filled bar, so they read on accent and status fills. */
   background-image: repeating-linear-gradient(
     90deg,
@@ -5998,7 +5996,6 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   height: 100%;
   background: #6b8fa3;
   border-radius: var(--r-full);
-  transition: width 400ms ease;
   /* Ticks cut out of the filled bar, so they read on accent and status fills. */
   background-image: repeating-linear-gradient(
     90deg,
