@@ -414,7 +414,6 @@ table {
   height: 20px;
   border-radius: var(--r-full);
   background: var(--accent);
-  box-shadow: 0 0 10px 1px var(--accent);
 }
 .sidebar__nav .nav-link.is-active .nav-link__icon {
   opacity: 1;
@@ -714,22 +713,6 @@ table {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--accent);
-}
-.audit-card__pulse {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 0 var(--accent-ring);
-  animation: audit-pulse 2.4s ease-out infinite;
-}
-@keyframes audit-pulse {
-  0% { box-shadow: 0 0 0 0 var(--accent-ring); }
-  70% { box-shadow: 0 0 0 8px transparent; }
-  100% { box-shadow: 0 0 0 0 transparent; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .audit-card__pulse { animation: none; }
 }
 .audit-card__score {
   display: flex;
@@ -1161,7 +1144,6 @@ table {
 .ex-ground { stroke: var(--border); stroke-width: 2; stroke-linecap: round; }
 .ex-shadow { fill: rgba(20, 26, 23, 0.14); }
 .ex-anim__cap { font-size: 0.8rem; color: var(--text-muted); text-align: center; line-height: 1.4; }
-.ex-anim__dot { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--accent); vertical-align: middle; box-shadow: 0 0 8px 1px var(--accent); animation: ex-pulse 1.7s ease-in-out infinite; }
 
 .ex-fig { transform-box: view-box; }
 .ex-torso {
@@ -1188,7 +1170,6 @@ table {
   transform-origin: 70px 121px;
 }               /* knee */
 
-@keyframes ex-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
 /* Every demo plays a full rep cycle (direction: normal), not a ping-pong:
    a controlled eccentric, a beat at the stretch, a faster concentric "drive",
@@ -1854,7 +1835,7 @@ table {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ex-anim__svg *, .ex-anim__dot { animation: none !important; }
+  .ex-anim__svg * { animation: none !important; }
 }
 
 /* ----------------------------------------------------------------------------
@@ -2038,7 +2019,7 @@ table {
 .week-chip--done { color: var(--text); }
 .week-chip--done .week-chip__dot { border-color: var(--success); background: var(--success-soft); }
 .week-chip--today { color: var(--accent); border-color: var(--accent-ring); background: var(--accent-soft); }
-.week-chip--today .week-chip__dot { border-color: var(--accent); box-shadow: 0 0 7px 0 var(--accent); }
+.week-chip--today .week-chip__dot { border-color: var(--accent); }
 .week-chip--upcoming { color: var(--text-faint); }
 .today-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
 .today-col { display: flex; flex-direction: column; gap: var(--space-4); }
@@ -5930,14 +5911,12 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
    The dark build ran two always-on decorative loops: a violet scan sweep
    across the audit card and a 26s conic radar bloom behind the hero. Both are
    decoration, not state, and on paper they read as a printing defect. Removed
-   rather than recolored. `anim-gate.js` still stamps .is-offstage; the rule
-   below stays so the pulse it targets keeps pausing off-screen.
+   rather than recolored. The pulsing dot beside "deterministic" went the same
+   way on 2026-09-29: the card is a static sample, and a pulse claimed it was
+   live. anim-gate.js, which paused it off-screen, went with it.
    Motion that survives: state transitions only (150-250ms). */
 .audit-card {
   overflow: hidden;
-}
-.hero.is-offstage .audit-card__pulse {
-  animation-play-state: paused;
 }
 
 .hero {
@@ -6028,9 +6007,6 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   color: var(--accent-ink);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .audit-card__pulse { animation: none !important; }
-}
 
 .hero__title {
   letter-spacing: -0.04em;
@@ -7817,7 +7793,7 @@ body::after {
   letter-spacing: -0.04em; color: var(--text); font-variant-numeric: tabular-nums;
 }
 .audit-card__verdict-line { font-size: 19px; line-height: 1.25; letter-spacing: -0.02em; font-weight: 700; margin: 0 0 8px; }
-.audit-card__scorenote { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); letter-spacing: 0.05em; text-transform: uppercase; margin: 0; }
+.audit-card__scorenote { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); margin: 0; }
 
 /* Severity as a segmented meter: eleven checks, colour-coded, at a glance. */
 .audit-meter { display: grid; grid-template-columns: repeat(11, 1fr); gap: 3px; padding: 0 18px 14px; list-style: none; }
@@ -7836,11 +7812,9 @@ body::after {
 .audit-card__checks li {
   display: flex; gap: 12px; align-items: flex-start;
   padding: 12px 18px; border-bottom: 1px solid var(--border);
-  border-left: 2px solid transparent; font-size: 14px;
+  font-size: 14px;
 }
 .audit-card__checks li:last-child { border-bottom: 0; }
-.audit-card__checks li.is-warn { border-left-color: var(--warn); }
-.audit-card__checks li.is-ok { border-left-color: var(--accent); }
 .audit-card__checks .ico { width: 15px; height: 15px; flex: none; margin-top: 3px; }
 .audit-card__checks small { display: block; color: var(--text-faint); font-size: 12px; margin-top: 2px; }
 .audit-card__foot {

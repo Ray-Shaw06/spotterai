@@ -293,6 +293,6 @@ export function patternAnimation(pattern, muscles = [], exercise = null) {
           </g>
         </g>
       </svg>
-      <figcaption class="ex-anim__cap"><span class="ex-anim__dot" aria-hidden="true"></span>${caption}</figcaption>
+      <figcaption class="ex-anim__cap">${caption}</figcaption>
     </figure>`;
 }

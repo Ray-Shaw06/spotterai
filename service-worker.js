@@ -25,7 +25,6 @@ const BOOT_MODULES = [
   "ai-errors.js",
   "ai.js",
   "analytics.js",
-  "anim-gate.js",
   "app.js",
   "audit-telemetry-client.js",
   "audit-view.js",
