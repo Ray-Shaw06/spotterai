@@ -230,3 +230,34 @@ test("the dark palette is declared once and referenced twice", () => {
     "the explicit dark override should map from --d-* vars, not restate hex literals",
   );
 });
+
+test("text steps back through a text tier, never through opacity", () => {
+  // Every tier above is proven on every ground. Opacity is the one way around
+  // that proof: it blends a passing ink into its ground after the fact. The
+  // 2026-09-29 re-audit found the last AA misses exactly this way, each on a
+  // token that passes here: days outside the month at 1.73:1, days still to
+  // come at 2.06:1, the Safety Lab filter counts at 4.45:1.
+  //
+  // So partial opacity is kept for things that are not text, or not live.
+  const NOT_TEXT = [
+    [/:disabled\b|\[disabled\]/, "an inactive control, which WCAG exempts"],
+    [/\.is-loading\b/, "a busy option, inert until it loads"],
+    [/\.ex-shadow\b/, "the floor shadow under an exercise figure"],
+    [/\.nav-link__icon\b/, "a nav icon; its label names it at full contrast"],
+    [/\.empty-art\b/, "an empty-state illustration"],
+    [/\.privacy-col li::before/, "a list bullet drawn as a dot"],
+    [/\.cal-mark--fuel\b|\.cal-day__marks\b/, "calendar marker dots, named in the legend"],
+  ];
+  const KEYFRAME = /^(?:\d+(?:\.\d+)?%|from|to)$/;
+  const dimmed = [];
+  for (const [selectors, body] of rules()) {
+    if (selectors.every((s) => KEYFRAME.test(s))) continue;
+    for (const m of body.matchAll(/(?:^|[;\s])opacity\s*:\s*([\d.]+)/g)) {
+      const value = Number(m[1]);
+      if (value <= 0 || value >= 1) continue;
+      const bare = selectors.filter((s) => !NOT_TEXT.some(([pattern]) => pattern.test(s)));
+      if (bare.length) dimmed.push(`${bare.join(", ")} { opacity: ${value} }`);
+    }
+  }
+  assert.deepEqual(dimmed, [], "dim text with --text-muted or --text-faint, which this file proves on every ground");
+});

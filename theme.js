@@ -60,8 +60,11 @@ export function applyTheme(pref, { doc = document, media } = {}) {
 
   const systemDark = media ? media.matches : false;
   const effective = effectiveTheme(pref, systemDark);
-  const meta = doc.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", THEME_COLOR[effective]);
+  // index.html ships a light and a dark tag scoped by prefers-color-scheme.
+  // Paint both, or a choice that differs from the OS leaves the other in charge.
+  for (const meta of doc.querySelectorAll('meta[name="theme-color"]')) {
+    meta.setAttribute("content", THEME_COLOR[effective]);
+  }
   return effective;
 }
 

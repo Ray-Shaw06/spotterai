@@ -11,8 +11,13 @@
     name="description"
     content="Your AI fitness copilot: generate a workout plan, log training and nutrition, track progress, adapt over time, and audit every plan with transparent, code-based guardrails. Free to use, no signup, local-first."
   />
-  <meta name="theme-color" content="#f5f8f6" />
-  <meta name="color-scheme" content="light" />
+  <!-- Browser chrome, and the canvas painted before style.css arrives, follow
+       the OS until a script runs. theme.js then repaints both theme-color tags
+       for the reader's own choice; the inline script below narrows
+       color-scheme to it before first paint. -->
+  <meta name="theme-color" content="#eef2f0" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0a0e0c" media="(prefers-color-scheme: dark)" />
+  <meta name="color-scheme" content="light dark" />
 
   <!-- PWA: installable + offline (manifest + service worker) -->
   <link rel="manifest" href="manifest.json" />
@@ -68,8 +73,11 @@
        lines. Keep the key and the values in step with theme.js. */
     try {
       var p = localStorage.getItem("spotter.theme");
-      if (p === "dark" || p === "light") document.documentElement.setAttribute("data-theme", p);
-    } catch (e) { /* private mode: the light default is already correct */ }
+      if (p === "dark" || p === "light") {
+        document.documentElement.setAttribute("data-theme", p);
+        document.querySelector('meta[name="color-scheme"]').setAttribute("content", p);
+      }
+    } catch (e) { /* private mode: following the OS is already correct */ }
   </script>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -183,12 +191,17 @@
           </p>
         </div>
 
+        <!-- The card below is hidden from screen readers (read out, it is
+             meter segments and icons), so this says what it shows. Its
+             numbers must match the card's; test/ui-copy.test.js checks. -->
+        <p class="sr-only" id="hero-sample-summary">Sample plan safety audit: 2 issues to review before training. 0 critical, 2 warnings, 1 suggestion, 8 of 11 checks passed. The warnings: high squat frequency, and pushing volume outweighs pulling. Quality score 84, demoted on purpose.</p>
+
         <!-- Product preview: a static mock of the flags-first audit output -->
         <div class="hero__visual" aria-hidden="true">
           <div class="audit-card">
             <div class="audit-card__head">
               <span class="audit-card__title">Plan safety audit</span>
-              <span class="audit-card__live"><span class="audit-card__pulse"></span> deterministic</span>
+              <span class="audit-card__live">deterministic</span>
             </div>
             <div class="audit-card__score">
               <div class="dial">
@@ -221,8 +234,8 @@
               <li class="is-ok"><strong>8/11</strong> passed</li>
             </ul>
             <ul class="audit-card__checks">
-              <li class="is-warn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 8v5m0 3h.01M10.3 4 2 18h20L13.7 4a2 2 0 0 0-3.4 0z" /></svg> <span>High squat frequency<small>4 sessions/week — monitor fatigue</small></span></li>
-              <li class="is-warn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 8v5m0 3h.01M10.3 4 2 18h20L13.7 4a2 2 0 0 0-3.4 0z" /></svg> <span>Pushing volume outweighs pulling<small>22 vs 12 weekly sets — add rows</small></span></li>
+              <li class="is-warn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 8v5m0 3h.01M10.3 4 2 18h20L13.7 4a2 2 0 0 0-3.4 0z" /></svg> <span>High squat frequency<small>4 sessions/week, monitor fatigue</small></span></li>
+              <li class="is-warn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 8v5m0 3h.01M10.3 4 2 18h20L13.7 4a2 2 0 0 0-3.4 0z" /></svg> <span>Pushing volume outweighs pulling<small>22 vs 12 weekly sets, add rows</small></span></li>
               <li class="is-ok"><svg class="ico" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" /></svg> <span>Adequate rest between hard sessions<small>48h minimum met</small></span></li>
             </ul>
             <p class="audit-card__foot">Guardrails, not a guarantee</p>
@@ -239,7 +252,7 @@
         <li><b>11</b><span>Safety checks</span></li>
         <li><b>18<i>/18</i></b><span>Risky plans caught</span></li>
         <li><b>0</b><span>False flags</span></li>
-        <li><b>1045</b><span>Tests in CI</span></li>
+        <li><b>1065</b><span>Tests in CI</span></li>
       </ul>
     </div>
 
@@ -1552,21 +1565,13 @@
   <script type="module" src="theme.js"></script>
   <script type="module" src="router.js"></script>
   <script type="module" src="focus-trap.js"></script>
-  <script type="module" src="anim-gate.js"></script>
   <script type="module" src="auth-ui.js"></script>
   <script type="module" src="app.js"></script>
   <script type="module" src="onboarding-ui.js"></script>
   <script type="module" src="chat.js"></script>
-  <script type="module" src="tracker-ui.js"></script>
-  <script type="module" src="today-ui.js"></script>
-  <script type="module" src="first-week-ui.js"></script>
   <script type="module" src="pain-ui.js"></script>
-  <script type="module" src="library-ui.js"></script>
   <script type="module" src="workout-ui.js"></script>
   <script type="module" src="nutrition-ui.js"></script>
-  <script type="module" src="calendar-ui.js"></script>
-  <script type="module" src="quick-log.js"></script>
-  <script type="module" src="share-card.js"></script>
   <script type="module" src="reminders.js"></script>
   <script type="module" src="safety-lab.js"></script>
 

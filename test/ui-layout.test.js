@@ -258,3 +258,55 @@ test("on a narrow audit card the four counts sit two by two, so none is left alo
     /@container \(width < 420px\)\s*\{[^{}]*\.audit-card__counts\s*\{[^}]*grid-template-columns:\s*repeat\(2,/
   );
 });
+
+test("buttons, filter chips and the small nutrition controls reach 44px on touch screens", () => {
+  // Measured at 375px with the touch rules on (2026-09-29): "+ Add food" at
+  // 29px, the Safety Lab filters at 31px, the custom water field at 32px, the
+  // sort menu at 34px and every landing button at 42px. Add food is tapped
+  // several times a day, one-handed.
+  for (const selector of [".btn", ".meal__add", ".eval-filter", ".water-custom", ".eval-sort select"]) {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assertInMedia("(pointer: coarse)", new RegExp(`${escaped}(?![\\w-])[^{]*\\{[^}]*min-height:\\s*44px`));
+  }
+});
+
+test("the launcher's reserve on the stat rail is a track of its own, only where the rail can sit under it", () => {
+  // The reserve used to be 150px of padding on the last stat, which set that
+  // column's minimum at 254px; between 721 and 1000px the other three paid
+  // for it, down to 131px at 721. As its own track, the four stats share what
+  // is left equally. Below 901px the hero stacks, the rail sits below the fold
+  // and the launcher tucks away as you scroll to it, so nothing needs clearing.
+  assert.ok(!/\.tele li:last-child\s*\{[^}]*padding-right/.test(css), "no stat should pay for the launcher out of its own width");
+  assertInMedia("(min-width: 901px)", /\.tele\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*1fr\)\s+minmax\(0,\s*150px\)/);
+});
+
+test("nothing animates a property that reflows the page", () => {
+  // Width, height, margin and padding transitions run layout on every frame.
+  // The three that were here (rank, macro and water bars) never even ran:
+  // each render rebuilds its bar, and a new element has nothing to animate
+  // from. Offsets on positioned elements (the skip link's top) do not reflow
+  // anything around them, so they are not caught here.
+  const REFLOW = /(?<![\w-])(?:width|height|min-width|min-height|max-width|max-height|margin(?:-\w+)?|padding(?:-\w+)?|grid-template-\w+)\b/;
+  const offenders = [];
+  for (const [, selectors, body] of css.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    for (const [, value] of body.matchAll(/transition(?:-property)?\s*:\s*([^;]+)/g)) {
+      if (REFLOW.test(value)) offenders.push(`${selectors.trim().replace(/\s+/g, " ")} { transition: ${value.trim()} }`);
+    }
+  }
+  assert.deepEqual(offenders, [], "animate transform or opacity instead");
+});
+
+test("the form check fits a 320px phone: its column can shrink, and the exercise row gives way", () => {
+  // On a 320px touch screen the exercise menu's widest option set the stacked
+  // column at 345px, 41px past the screen edge (found 2026-09-29, on prod as
+  // well as this branch). The row holding it could not shrink below its
+  // content, and a 1fr track grows to fit whatever cannot shrink.
+  assertInMedia("(max-width: 900px)", /\.form-check\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  assert.match(rule(".form-pick"), /min-width:\s*0/, "the exercise row must be allowed to shrink, so the menu inside it can");
+});
+
+test("the benchmark history table fits a 320px phone", () => {
+  // Four columns with 12px of padding either side came to 310px in a 288px
+  // column once its headers reached the 11px floor.
+  assertInMedia("(max-width: 480px)", /\.bench-history th,\s*\.bench-history td\s*\{[^}]*padding-inline:\s*var\(--space-2\)/);
+});

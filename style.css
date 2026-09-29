@@ -414,7 +414,6 @@ table {
   height: 20px;
   border-radius: var(--r-full);
   background: var(--accent);
-  box-shadow: 0 0 10px 1px var(--accent);
 }
 .sidebar__nav .nav-link.is-active .nav-link__icon {
   opacity: 1;
@@ -506,7 +505,7 @@ table {
      selector elsewhere sets `font-size: inherit`, which outranks a plain
      `.nav-link--more`; match its specificity so the label sizes like its
      sibling tabs instead of inheriting the 1rem shell size. */
-  .sidebar__nav button.nav-link--more { display: flex; font-size: 0.64rem; }
+  .sidebar__nav button.nav-link--more { display: flex; font-size: var(--fs-micro); }
   /* Keep 5 fixed tabs; the rest move into the More sheet. */
   .sidebar__nav .nav-link--sec { display: none; }
   .more-sheet:not([hidden]) {
@@ -566,7 +565,7 @@ table {
     gap: 3px;
     min-width: 56px;
     padding: 0.4rem 0.3rem;
-    font-size: 0.64rem;
+    font-size: var(--fs-micro);
     text-align: center;
     color: var(--text-faint);
   }
@@ -714,22 +713,6 @@ table {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--accent);
-}
-.audit-card__pulse {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 0 var(--accent-ring);
-  animation: audit-pulse 2.4s ease-out infinite;
-}
-@keyframes audit-pulse {
-  0% { box-shadow: 0 0 0 0 var(--accent-ring); }
-  70% { box-shadow: 0 0 0 8px transparent; }
-  100% { box-shadow: 0 0 0 0 transparent; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .audit-card__pulse { animation: none; }
 }
 .audit-card__score {
   display: flex;
@@ -1046,7 +1029,7 @@ table {
   padding: var(--space-2) var(--space-3);
   text-align: left;
   border-bottom: 1px solid var(--border-soft);
-  font-size: 0.66rem;
+  font-size: var(--fs-micro);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-faint);
@@ -1062,7 +1045,12 @@ table {
 .bench-history td:first-child { font-family: var(--font-mono); color: var(--text); font-weight: 600; }
 .bench-history tr.is-regression { background: var(--warn-soft); }
 .bench-history tr.is-regression td { color: var(--warn); }
-.bench-history .is-warn { font-weight: 600; text-transform: uppercase; font-size: 0.66rem; letter-spacing: 0.04em; }
+.bench-history .is-warn { font-weight: 600; text-transform: uppercase; font-size: var(--fs-micro); letter-spacing: 0.04em; }
+@media (max-width: 480px) {
+  /* Four columns at 12px a side came to 310px in a 288px column at 320. */
+  .bench-history th,
+  .bench-history td { padding-inline: var(--space-2); }
+}
 
 .lab-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); }
 .lab-col { padding: var(--space-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-md); }
@@ -1079,7 +1067,7 @@ table {
 .badplan { padding: var(--space-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: var(--space-3); }
 .badplan__title { font-size: 1.05rem; font-weight: 600; }
 .badplan__plan { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; }
-.badplan__tag { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 7px; border-radius: var(--r-sm); margin-right: 6px; }
+.badplan__tag { display: inline-block; font-size: var(--fs-micro); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 7px; border-radius: var(--r-sm); margin-right: 6px; }
 .badplan__tag--bad { color: var(--danger); background: var(--danger-soft); }
 .badplan__tag--fix { color: var(--success); background: var(--success-soft); }
 .badplan__caught { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 5px; }
@@ -1161,7 +1149,6 @@ table {
 .ex-ground { stroke: var(--border); stroke-width: 2; stroke-linecap: round; }
 .ex-shadow { fill: rgba(20, 26, 23, 0.14); }
 .ex-anim__cap { font-size: 0.8rem; color: var(--text-muted); text-align: center; line-height: 1.4; }
-.ex-anim__dot { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--accent); vertical-align: middle; box-shadow: 0 0 8px 1px var(--accent); animation: ex-pulse 1.7s ease-in-out infinite; }
 
 .ex-fig { transform-box: view-box; }
 .ex-torso {
@@ -1188,7 +1175,6 @@ table {
   transform-origin: 70px 121px;
 }               /* knee */
 
-@keyframes ex-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
 /* Every demo plays a full rep cycle (direction: normal), not a ping-pong:
    a controlled eccentric, a beat at the stretch, a faster concentric "drive",
@@ -1854,7 +1840,7 @@ table {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ex-anim__svg *, .ex-anim__dot { animation: none !important; }
+  .ex-anim__svg * { animation: none !important; }
 }
 
 /* ----------------------------------------------------------------------------
@@ -1915,7 +1901,7 @@ table {
 .summary-name { font-size: var(--fs-small); color: var(--text-muted); margin-bottom: var(--space-4); }
 .summary-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); margin-bottom: var(--space-4); }
 .summary-stat { padding: var(--space-3); text-align: center; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); }
-.summary-stat__l { font-size: 0.66rem; color: var(--text-muted); }
+.summary-stat__l { font-size: var(--fs-micro); color: var(--text-muted); }
 .summary-prs { padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); font-size: var(--fs-small); color: var(--text); background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: var(--r-sm); }
 .summary-row { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.5; margin-bottom: var(--space-2); }
 .summary-pain { margin: var(--space-3) 0; padding: var(--space-3) var(--space-4); font-size: var(--fs-small); color: var(--text); background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); border-radius: var(--r-sm); }
@@ -1954,12 +1940,12 @@ table {
 .vbar__fill--high { background: var(--danger); }
 .vbar__fill--none { background: transparent; }
 .vbar__val { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text); min-width: 56px; text-align: right; }
-.vbar__freq { color: var(--text-faint); font-size: 0.68rem; margin-left: 4px; }
+.vbar__freq { color: var(--text-faint); font-size: var(--fs-micro); margin-left: 4px; }
 
 .bals { display: flex; flex-direction: column; gap: var(--space-4); }
 .bal__head { display: flex; justify-content: space-between; font-size: var(--fs-small); color: var(--text-muted); margin-bottom: 5px; }
 .bal__bar { display: flex; height: 9px; border-radius: var(--r-full); overflow: hidden; background: var(--surface-2); }
-.bal__cap { display: block; margin-top: 5px; font-size: 0.68rem; color: var(--text-faint); }
+.bal__cap { display: block; margin-top: 5px; font-size: var(--fs-micro); color: var(--text-faint); }
 
 .sflags { list-style: none; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 .sflag { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--border); }
@@ -2023,7 +2009,7 @@ table {
 .fw-item.is-done .fw-check { border-color: var(--success); background: var(--success-soft); }
 .fw-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-2); margin: var(--space-4) 0; }
 .fw-stat { padding: var(--space-3); text-align: center; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); }
-.fw-stat__l { font-size: 0.64rem; color: var(--text-muted); }
+.fw-stat__l { font-size: var(--fs-micro); color: var(--text-muted); }
 .fw-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
 @media (max-width: 560px) { .fw-stats { grid-template-columns: repeat(3, 1fr); } }
 
@@ -2034,12 +2020,12 @@ table {
 /* Week at a glance — one chip per planned session */
 .week-strip { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: calc(-1 * var(--space-2)) 0 var(--space-4); }
 .week-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 5px; font-size: 0.74rem; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); }
-.week-chip__dot { display: inline-grid; place-items: center; width: 16px; height: 16px; font-size: 0.6rem; border-radius: 50%; border: 1px solid var(--border); color: var(--success); }
+.week-chip__dot { display: inline-grid; place-items: center; width: 16px; height: 16px; font-size: var(--fs-micro); border-radius: 50%; border: 1px solid var(--border); color: var(--success); }
 .week-chip--done { color: var(--text); }
 .week-chip--done .week-chip__dot { border-color: var(--success); background: var(--success-soft); }
 .week-chip--today { color: var(--accent); border-color: var(--accent-ring); background: var(--accent-soft); }
-.week-chip--today .week-chip__dot { border-color: var(--accent); box-shadow: 0 0 7px 0 var(--accent); }
-.week-chip--upcoming { opacity: 0.75; }
+.week-chip--today .week-chip__dot { border-color: var(--accent); }
+.week-chip--upcoming { color: var(--text-faint); }
 .today-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
 .today-col { display: flex; flex-direction: column; gap: var(--space-4); }
 .today-card { padding: var(--space-5); }
@@ -3017,7 +3003,7 @@ table {
   margin-bottom: var(--space-5);
 }
 .quicklog__badge {
-  font-size: 0.62rem;
+  font-size: var(--fs-micro);
   font-weight: 700;
   vertical-align: middle;
   color: var(--accent);
@@ -3482,8 +3468,8 @@ table {
 .eval-filter { display: inline-flex; align-items: center; gap: 6px; padding: 0.4rem 0.85rem; font-size: var(--fs-small); font-weight: 500; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition); }
 .eval-filter:hover { color: var(--text); border-color: var(--accent-ring); }
 .eval-filter.is-active { color: var(--accent); border-color: var(--accent-ring); background: var(--accent-soft); }
-.eval-filter__n { font-family: var(--font-mono); font-size: 0.72rem; opacity: 0.85; }
-.eval-case__type { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; padding: 2px 7px; border-radius: var(--r-full); vertical-align: middle; margin-left: 6px; }
+.eval-filter__n { font-family: var(--font-mono); font-size: 0.72rem; }
+.eval-case__type { display: inline-block; font-size: var(--fs-micro); font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; padding: 2px 7px; border-radius: var(--r-full); vertical-align: middle; margin-left: 6px; }
 .eval-case__type--good, .eval-case__type--guard { color: var(--success); background: var(--success-soft); }
 .eval-case__type--risky { color: var(--warn); background: var(--warn-soft); }
 .eval-case__type--edge { color: var(--text-muted); background: color-mix(in srgb, var(--text) 6%, transparent); }
@@ -4054,6 +4040,9 @@ table {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  /* Without this the row's minimum is the menu's widest option, and on a
+     320px touch screen that pushed the whole form check 41px past the edge. */
+  min-width: 0;
 }
 .form-pick .form-select {
   flex: 1;
@@ -4135,7 +4124,7 @@ table {
 
 @media (max-width: 900px) {
   .form-check {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -4803,7 +4792,6 @@ table {
   display: block;
   height: 100%;
   border-radius: var(--r-full);
-  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .rank-next { font-size: var(--fs-small); color: var(--text-muted); }
 
@@ -5383,7 +5371,7 @@ table {
 /* Backfill. Sits under the routine list, deliberately quiet: this is the
    escape hatch for a forgotten day, not the primary way to start training. */
 .workout-backfill { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--border-soft); }
-.workout-backfill__label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); font-weight: 600; }
+.workout-backfill__label { display: block; font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); font-weight: 600; }
 .workout-backfill__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
 .workout-backfill__row .input { width: auto; flex: 0 1 11rem; }
 .workout-backfill__hint { margin-top: var(--space-2); font-size: 0.72rem; color: var(--text-faint); }
@@ -5492,7 +5480,7 @@ table {
 .set-table { width: 100%; border-collapse: collapse; margin-top: var(--space-2); }
 .set-table th {
   padding: 0.2rem 0.25rem;
-  font-size: 0.66rem;
+  font-size: var(--fs-micro);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -5659,7 +5647,7 @@ table {
 
 @media (max-width: 520px) {
   .set-in { min-width: 2.6rem; padding: 0.4rem 0.2rem; }
-  .set-prev { font-size: 0.68rem; }
+  .set-prev { font-size: var(--fs-micro); }
 }
 
 /* ----------------------------------------------------------------------------
@@ -5815,7 +5803,7 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
 .food-opt__main { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .food-opt__name { font-size: var(--fs-small); font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .food-opt__sub { font-size: 0.72rem; color: var(--text-faint); }
-.food-opt__tag { flex: none; font-size: 0.66rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; }
+.food-opt__tag { flex: none; font-size: var(--fs-micro); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; }
 .food-opt--quick { color: var(--accent); }
 .food-opt--quick .food-opt__name { color: var(--accent); }
 .food-opt--ai .food-opt__name { color: var(--accent); }
@@ -5930,14 +5918,12 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
    The dark build ran two always-on decorative loops: a violet scan sweep
    across the audit card and a 26s conic radar bloom behind the hero. Both are
    decoration, not state, and on paper they read as a printing defect. Removed
-   rather than recolored. `anim-gate.js` still stamps .is-offstage; the rule
-   below stays so the pulse it targets keeps pausing off-screen.
+   rather than recolored. The pulsing dot beside "deterministic" went the same
+   way on 2026-09-29: the card is a static sample, and a pulse claimed it was
+   live. anim-gate.js, which paused it off-screen, went with it.
    Motion that survives: state transitions only (150-250ms). */
 .audit-card {
   overflow: hidden;
-}
-.hero.is-offstage .audit-card__pulse {
-  animation-play-state: paused;
 }
 
 .hero {
@@ -5997,7 +5983,6 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   display: block;
   height: 100%;
   border-radius: var(--r-full);
-  transition: width 400ms ease;
   /* Ticks cut out of the filled bar, so they read on accent and status fills. */
   background-image: repeating-linear-gradient(
     90deg,
@@ -6011,7 +5996,6 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   height: 100%;
   background: #6b8fa3;
   border-radius: var(--r-full);
-  transition: width 400ms ease;
   /* Ticks cut out of the filled bar, so they read on accent and status fills. */
   background-image: repeating-linear-gradient(
     90deg,
@@ -6028,9 +6012,6 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   color: var(--accent-ink);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .audit-card__pulse { animation: none !important; }
-}
 
 .hero__title {
   letter-spacing: -0.04em;
@@ -6077,7 +6058,7 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
     gap: 5px;
     padding: 0.62rem 0.25rem;
     font-family: var(--font-mono);
-    font-size: 0.56rem;
+    font-size: var(--fs-micro);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     text-align: center;
@@ -6186,7 +6167,7 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
 .cmd-ex::before {
   content: counter(cmdex, decimal-leading-zero);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   color: color-mix(in srgb, var(--accent) 65%, var(--text-faint));
 }
 .cmd-ex__name { flex: 1; min-width: 0; color: var(--text); }
@@ -6220,6 +6201,13 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   .rest-preset { padding: 0.55rem 0.8rem; }
   .rest-custom { padding: 0.55rem 0.35rem; }
   .more-sheet__link { min-height: 44px; }
+  /* Measured at 375px on 2026-09-29: Add food 29px, the Safety Lab filters
+     31px, custom water 32px, the sort menu 34px, every landing button 42px. */
+  .btn,
+  .meal__add,
+  .eval-filter,
+  .water-custom,
+  .eval-sort select { min-height: 44px; }
 
   /* Dense table controls keep their visual size so the set table still fits
      at 320px; the tap zone is extended instead, sized so neighbouring zones
@@ -6357,11 +6345,11 @@ body::before {
   font-family: var(--font-body);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
 }
 
 .flag__sev {
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -6371,7 +6359,7 @@ body::before {
 }
 
 .lib-badge {
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -6385,7 +6373,7 @@ body::before {
 
 .summary-prs__badge {
   display: inline-block;
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -6396,7 +6384,7 @@ body::before {
 
 .sflag__tier {
   flex: none;
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -6410,7 +6398,7 @@ body::before {
 
 .wcard__badge {
   flex: none;
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -6423,7 +6411,7 @@ body::before {
 
 .today-badge {
   flex: none;
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -6443,7 +6431,7 @@ body::before {
 @media (min-width: 961px) {
   .sidebar__nav .nav-link {
     font-family: var(--font-body);
-    font-size: 0.68rem;
+    font-size: var(--fs-micro);
     letter-spacing: 0.005em;
     text-transform: none;
     font-weight: 500;
@@ -6682,7 +6670,7 @@ body::before {
 }
 
 .repair__col-label {
-  font-size: 0.66rem;
+  font-size: var(--fs-micro);
   text-transform: none;
   letter-spacing: 0.005em;
   color: var(--text-faint);
@@ -6690,7 +6678,7 @@ body::before {
 }
 
 .repair__k {
-  font-size: 0.6rem;
+  font-size: var(--fs-micro);
   text-transform: none;
   letter-spacing: 0.005em;
   color: var(--text-faint);
@@ -6718,7 +6706,7 @@ body::before {
 
 .ex-table thead th {
   text-align: left;
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 600;
   text-transform: none;
   letter-spacing: 0.005em;
@@ -6748,7 +6736,7 @@ body::before {
 
 .adapt-changes__badge {
   display: inline-block;
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   font-weight: 700;
   text-transform: none;
   letter-spacing: 0.005em;
@@ -6814,7 +6802,7 @@ body::before {
 
 .eval-check__badge {
   flex: none;
-  font-size: 0.62rem;
+  font-size: var(--fs-micro);
   font-weight: 700;
   text-transform: none;
   padding: 2px 7px;
@@ -6917,7 +6905,7 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 0.66rem;
+  font-size: var(--fs-micro);
   text-transform: none;
   letter-spacing: 0.005em;
   color: var(--text-faint);
@@ -6936,7 +6924,7 @@ body::before {
 
 .cmd__eyebrow {
   font-family: var(--font-body);
-  font-size: 0.68rem;
+  font-size: var(--fs-micro);
   letter-spacing: 0.005em;
   text-transform: none;
   color: var(--accent);
@@ -6944,7 +6932,7 @@ body::before {
 
 .cmd__manifest-label {
   font-family: var(--font-body);
-  font-size: 0.62rem;
+  font-size: var(--fs-micro);
   letter-spacing: 0.005em;
   text-transform: none;
   color: var(--text-faint);
@@ -7035,13 +7023,22 @@ body::before {
   font-variant-numeric: tabular-nums;
 }
 .cal-day__num { font-size: 12px; color: var(--text-muted); line-height: 1; }
-.cal-day--muted { opacity: 0.35; }
-.cal-day--future { opacity: 0.45; border-style: dashed; }
+.cal-day--future { border-style: dashed; }
 .cal-day--today { outline: 2px solid var(--accent); outline-offset: -2px; }
 .cal-day--trained { background: color-mix(in srgb, var(--accent) 12%, transparent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
 .cal-day--trained .cal-day__num { color: var(--text); font-weight: 600; }
 .cal-day--fuelled { border-color: color-mix(in srgb, var(--ok, var(--accent)) 45%, var(--border)); }
 .cal-day--trained.cal-day--fuelled { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+/* Days outside the month, and days still to come, step back through the faint
+   text tier, which clears AA on every ground. Opacity on the whole cell took
+   the date down with it: 1.73:1 outside the month, 2.06:1 for tomorrow. The
+   fill and border fade here instead, and the marks keep their meaning, faded. */
+.cal-day.cal-day--muted,
+.cal-day.cal-day--future { background: transparent; }
+.cal-day.cal-day--muted { border-color: color-mix(in srgb, var(--border) 50%, transparent); }
+.cal-day.cal-day--muted .cal-day__num,
+.cal-day.cal-day--future .cal-day__num { color: var(--text-faint); font-weight: 400; }
+.cal-day--muted .cal-day__marks { opacity: 0.4; }
 
 .cal-day__marks { display: flex; gap: 3px; height: 6px; align-items: center; }
 .cal-mark { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
@@ -7598,6 +7595,9 @@ h5 {
   --fs-h2: 1.55rem;
   --fs-body: 1rem;
   --fs-small: 0.875rem;
+  /* The smallest text: tags, captions, table heads. Nothing goes under it
+     (test/type-floor.test.js); 37 sizes between 9px and 10.9px used to. */
+  --fs-micro: 0.6875rem;
   /* Layout + motion */
   --container: 1120px;
   --transition: 240ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -7808,7 +7808,7 @@ body::after {
   letter-spacing: -0.04em; color: var(--text); font-variant-numeric: tabular-nums;
 }
 .audit-card__verdict-line { font-size: 19px; line-height: 1.25; letter-spacing: -0.02em; font-weight: 700; margin: 0 0 8px; }
-.audit-card__scorenote { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); letter-spacing: 0.05em; text-transform: uppercase; margin: 0; }
+.audit-card__scorenote { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); margin: 0; }
 
 /* Severity as a segmented meter: eleven checks, colour-coded, at a glance. */
 .audit-meter { display: grid; grid-template-columns: repeat(11, 1fr); gap: 3px; padding: 0 18px 14px; list-style: none; }
@@ -7827,17 +7827,15 @@ body::after {
 .audit-card__checks li {
   display: flex; gap: 12px; align-items: flex-start;
   padding: 12px 18px; border-bottom: 1px solid var(--border);
-  border-left: 2px solid transparent; font-size: 14px;
+  font-size: 14px;
 }
 .audit-card__checks li:last-child { border-bottom: 0; }
-.audit-card__checks li.is-warn { border-left-color: var(--warn); }
-.audit-card__checks li.is-ok { border-left-color: var(--accent); }
 .audit-card__checks .ico { width: 15px; height: 15px; flex: none; margin-top: 3px; }
 .audit-card__checks small { display: block; color: var(--text-faint); font-size: 12px; margin-top: 2px; }
 .audit-card__foot {
   padding: 12px 18px; margin: 0; background: var(--surface-2);
   border-top: 1px solid var(--border); font-family: var(--font-mono);
-  font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint);
+  font-size: var(--fs-micro); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint);
 }
 
 /* --- Telemetry rail: the four numbers that are the actual proof ------------ */
@@ -7846,7 +7844,7 @@ body::after {
 .tele li:last-child { border-right: 0; }
 .tele b { display: block; font-size: 30px; font-weight: 700; line-height: 1; color: var(--text); }
 .tele b i { font-style: normal; color: var(--accent); }
-.tele span { display: block; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-faint); margin-top: 11px; }
+.tele span { display: block; font-family: var(--font-mono); font-size: var(--fs-micro); letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-faint); margin-top: 11px; }
 @media (max-width: 720px) {
   .tele { grid-template-columns: 1fr 1fr; }
   .tele li { padding-left: 16px; }
@@ -7901,8 +7899,14 @@ body::after {
    the whole proof, and the last thing above the fold. The rail reserves the
    corner instead, so the launcher floats over margin rather than over data. */
 @media (min-width: 721px) {
-  /* Enough to clear the launcher, not so much that the label wraps — the
-     reserve is for a floating control, so the label must not pay for it. */
-  .tele li:last-child { padding-right: 150px; }
   .tele span { white-space: nowrap; }
+}
+@media (min-width: 901px) {
+  /* The reserve is a track of its own, so the four stats share what is left
+     equally. As padding on the last stat it set that column's minimum at
+     254px, and between 721 and 1000px the other three paid for it, down to
+     131px. Below 901px the hero stacks, the rail sits below the fold and the
+     launcher tucks away as you scroll to it, so there is nothing to clear.
+     minmax(0, ...) lets the reserve give way first if the text is enlarged. */
+  .tele { grid-template-columns: repeat(4, 1fr) minmax(0, 150px); }
 }
