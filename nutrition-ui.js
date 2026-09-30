@@ -126,8 +126,8 @@ function renderNutritionSafety() {
     <div class="card audit nut-safety">
       <div class="audit__head">
         <div class="audit__headline">
-          <p class="audit__eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span> Nutrition safety · deterministic</p>
           <h2 class="audit__verdict is-${verdict.tone}">${esc(verdict.text)}</h2>
+          <p class="head-meta">Nutrition safety · deterministic</p>
         </div>
       </div>
       <div class="audit__flags">${flagCards || `<p class="audit__clear">No safety flags on your current targets. These are conservative checks, not a personalized diet.</p>`}</div>

@@ -233,26 +233,13 @@ table {
   color: var(--accent);
 }
 
-/* Eyebrow label — editorial tracked caps */
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-}
-.eyebrow--center {
-  justify-content: center;
-}
-.eyebrow__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
+/* A fact about the heading above it: a session's length, the day of the
+   first week, that an audit is deterministic. These used to sit over the
+   heading as kickers; a heading stands on its own, so they come after it. */
+.head-meta {
+  margin: 4px 0 0;
+  font-size: var(--fs-small);
+  color: var(--text-muted);
 }
 
 /* Page meta line — quiet, informational (date, storage note, beta status).
@@ -5875,7 +5862,6 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
    No film grain — grain on paper reads as dirt, not texture. */
 
 
-.eyebrow,
 .audit-card__live {
   font-family: var(--font-mono);
   letter-spacing: 0.13em;
@@ -6270,14 +6256,6 @@ body::before {
 .wordmark {
   letter-spacing: -0.005em;
 }
-
-.eyebrow {
-  font-family: var(--font-body);
-  text-transform: none;
-  letter-spacing: 0.005em;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
 .audit-card__score,
 .bench__item dd {
   font-family: var(--font-mono);
@@ -6452,25 +6430,12 @@ body::before {
 .check__badge,
 .day-card__day,
 .eval-case__type,
-.eyebrow,
 .food-opt__tag,
 .set-table th,
 .sidebar__nav .nav-link {
   font-family: var(--font-body);
   text-transform: none;
   letter-spacing: 0.005em;
-}
-
-.audit__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-  text-transform: none;
-  letter-spacing: 0.005em;
-  color: var(--text-faint);
-  font-weight: 600;
-  font-family: var(--font-body);
 }
 
 .audit__score-label {
@@ -6591,15 +6556,6 @@ body::before {
   font-family: var(--font-body);
 }
 
-.fw-eyebrow {
-  font-size: 0.8rem;
-  text-transform: none;
-  letter-spacing: 0.005em;
-  color: var(--accent);
-  font-weight: 600;
-  font-family: var(--font-body);
-}
-
 .fw-k {
   display: inline-block;
   font-size: 0.8rem;
@@ -6660,18 +6616,6 @@ body::before {
   font-weight: 600;
 }
 
-.repair__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.7rem;
-  text-transform: none;
-  letter-spacing: 0.005em;
-  color: var(--accent);
-  font-weight: 600;
-  font-family: var(--font-body);
-}
-
 .repair__col-label {
   font-size: var(--fs-micro);
   text-transform: none;
@@ -6724,16 +6668,6 @@ body::before {
   letter-spacing: 0.005em;
   color: var(--accent);
   margin-bottom: var(--space-2);
-  font-family: var(--font-body);
-}
-
-.adapt-card__eyebrow {
-  font-size: 0.7rem;
-  text-transform: none;
-  letter-spacing: 0.005em;
-  color: var(--accent);
-  font-weight: 700;
-  margin-bottom: var(--space-1);
   font-family: var(--font-body);
 }
 
@@ -6923,14 +6857,6 @@ body::before {
   color: var(--text-faint);
   font-family: var(--font-body);
   font-weight: 600;
-}
-
-.cmd__eyebrow {
-  font-family: var(--font-body);
-  font-size: var(--fs-micro);
-  letter-spacing: 0.005em;
-  text-transform: none;
-  color: var(--accent);
 }
 
 .cmd__manifest-label {
@@ -7396,23 +7322,6 @@ h5 {
   letter-spacing: -0.028em;
   line-height: 1.04;
   font-weight: 800;
-}
-
-.eyebrow {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  font-size: 0.74rem;
-  letter-spacing: -0.01em;
-  text-transform: none;
-}
-
-.plan__eyebrow {
-  font-size: 0.74rem;
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: -0.01em;
-  color: var(--text-faint);
-  font-family: var(--font-mono);
 }
 
 /* The wordmark is the one place the instrument voice should be unmistakable. */

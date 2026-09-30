@@ -13,7 +13,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -76,4 +76,20 @@ test("depth comes from offset shadows, never a zero-offset glow", () => {
     }
   }
   assert.deepEqual(halos, [], "give the shadow an offset, or drop it");
+});
+
+test("no label sits above a heading", () => {
+  // A kicker over a heading says the heading could not stand alone. Eleven
+  // did, on the landing hero, audit cards, Today and the first week (live
+  // audit, 2026-09-29). Where the label carried facts ("Day 3 of 7", a
+  // session's length, "deterministic"), they now sit under the heading.
+  const files = ["index.html", ...readdirSync(root).filter((f) => f.endsWith(".js") && f !== "eslint.config.js")];
+  const found = [];
+  for (const file of files) {
+    const source = readFileSync(join(root, file), "utf8");
+    for (const m of source.matchAll(/<p class="([^"]*(?:eyebrow|kicker)[^"]*)"[^>]*>[\s\S]*?<\/p>\s*<h[1-6]\b/g)) {
+      found.push(`${file}: .${m[1].split(" ")[0]}`);
+    }
+  }
+  assert.deepEqual(found, [], "let the heading speak; put any facts the label carried under it");
 });
