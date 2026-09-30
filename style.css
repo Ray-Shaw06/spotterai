@@ -5215,7 +5215,7 @@ table {
 .account-empty { padding: var(--space-2); }
 .account-form { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .account-form .input { flex: 1; min-width: 120px; }
-.account-note { margin-top: var(--space-2); font-size: 0.74rem; color: var(--text-faint); }
+.account-note { margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text-faint); }
 .account-actions {
   display: flex;
   align-items: center;
@@ -5361,7 +5361,7 @@ table {
 .workout-backfill__label { display: block; font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); font-weight: 600; }
 .workout-backfill__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
 .workout-backfill__row .input { width: auto; flex: 0 1 11rem; }
-.workout-backfill__hint { margin-top: var(--space-2); font-size: 0.72rem; color: var(--text-faint); }
+.workout-backfill__hint { margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text-faint); }
 .session-backdate { margin-top: var(--space-2); padding: var(--space-2) var(--space-3); font-size: var(--fs-small); color: var(--text-muted); background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: var(--r-sm); }
 .session-backdate strong { color: var(--text); }
 .routine-list { display: flex; flex-direction: column; gap: var(--space-2); }
