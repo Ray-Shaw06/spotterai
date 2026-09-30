@@ -102,6 +102,7 @@ function palettes() {
       accent: all["--accent"], accentInk: all["--accent-ink"],
       warn: all["--warn"], warnInk: all["--warn-ink"],
       danger: all["--danger"], dangerInk: all["--danger-ink"],
+      fieldBorder: all["--field-border"],
     },
     dark: {
       grounds: {
@@ -114,6 +115,7 @@ function palettes() {
       accent: pick(dark, "--d-accent"), accentInk: pick(dark, "--d-accent-ink"),
       warn: pick(dark, "--d-warn"), warnInk: dark["--d-warn-ink"],
       danger: pick(dark, "--d-danger"), dangerInk: dark["--d-danger-ink"],
+      fieldBorder: dark["--d-field-border"],
     },
   };
 }
@@ -146,6 +148,18 @@ for (const [name, p] of Object.entries(palettes())) {
     assert.ok(p.warnInk, `${name}: no warn ink token; a filled warn cue needs an ink from its own palette`);
     const r = contrast(p.warnInk, p.warn);
     assert.ok(r >= AA_BODY, `${name}: warn ink is ${r.toFixed(2)}:1 on the warn fill`);
+  });
+
+  test(`${name} palette: form fields are outlined at 3:1 against every ground`, () => {
+    // WCAG 1.4.11. A field's outline is what says "type here". Fields were
+    // drawn in the divider token, 1.30:1 on the page (live audit, 2026-09-29),
+    // which in gym glare is no outline at all.
+    assert.ok(p.fieldBorder, `${name}: no field outline token`);
+    const failures = Object.entries(p.grounds)
+      .map(([groundName, ground]) => [groundName, contrast(p.fieldBorder, ground)])
+      .filter(([, r]) => r < 3)
+      .map(([groundName, r]) => `${groundName} = ${r.toFixed(2)}:1`);
+    assert.deepEqual(failures, [], `${name}: field outline below 3:1 on ${failures.join("; ")}`);
   });
 
   test(`${name} palette: ink on a filled danger button clears AA`, () => {
@@ -260,4 +274,18 @@ test("text steps back through a text tier, never through opacity", () => {
     }
   }
   assert.deepEqual(dimmed, [], "dim text with --text-muted or --text-faint, which this file proves on every ground");
+});
+
+test("a rule that outlines a form field uses the field outline token", () => {
+  // The divider tokens are right for hairlines between things and wrong for
+  // the edge of something you type into. Focus and hover states use their own
+  // colours and are not caught here.
+  const FIELD = /^(?:input|select|textarea)\b|\.(?:input|form-select|chat-input|water-custom|rest-custom)(?![\w-])/;
+  const subject = (selector) => selector.split(/\s*[\s>+~]\s*/).pop();
+  const wrong = [];
+  for (const [selectors, body] of rules()) {
+    if (!selectors.some((s) => FIELD.test(subject(s)))) continue;
+    for (const m of body.matchAll(/border(?:-color)?\s*:[^;]*var\(--border[\w-]*\)/g)) wrong.push(`${selectors.join(", ")} { ${m[0]} }`);
+  }
+  assert.deepEqual(wrong, [], "outline form fields with var(--field-border)");
 });

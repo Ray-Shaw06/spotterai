@@ -74,8 +74,8 @@ function dayCard(dayIndex) {
   return `
     <div class="card fw-card">
       <button type="button" class="fw-dismiss" data-fw="dismiss" aria-label="Dismiss first-week guide">×</button>
-      <p class="fw-eyebrow">Your first week · Day ${dayIndex + 1} of 7</p>
       <h2 class="fw-title">${d.title}</h2>
+      <p class="head-meta">Your first week · Day ${dayIndex + 1} of 7</p>
       <p class="fw-line">${d.line}</p>
       <ul class="fw-items">${items}</ul>
       <button type="button" class="btn btn--primary btn--sm" data-fw-act="${esc(d.cta.act)}">${esc(d.cta.label)}</button>
@@ -96,7 +96,6 @@ function reviewCard() {
   return `
     <div class="card fw-card fw-card--review">
       <button type="button" class="fw-dismiss" data-fw="dismiss" aria-label="Dismiss">×</button>
-      <p class="fw-eyebrow">Your first week</p>
       <h2 class="fw-title">Week 1 review: nice work showing up</h2>
       <div class="fw-stats">
         ${stat(`${r.workouts}${r.target ? "/" + r.target : ""}`, "workouts")}

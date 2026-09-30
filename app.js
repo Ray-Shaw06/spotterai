@@ -590,8 +590,8 @@ function renderRepair(plan, inputs, audit) {
   repairMount.innerHTML = `
     <div class="card repair">
       <div class="repair__head">
-        <p class="repair__eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span> Plan repair · deterministic</p>
         <h3 class="repair__title">A safer version is available</h3>
+        <p class="head-meta">Plan repair · deterministic</p>
         <p class="repair__sub">SpotterAI turned each flag into a concrete edit (preserving your goal and days), then re-audited the result.</p>
       </div>
       <div class="repair__compare">
@@ -696,7 +696,6 @@ function renderPlan(plan) {
   planOutput.innerHTML = `
     <header class="plan__head">
       <div>
-        <p class="plan__eyebrow">Your program</p>
         <h3 class="plan__title">${esc(plan.program_name)}</h3>
       </div>
       <dl class="plan__facts">

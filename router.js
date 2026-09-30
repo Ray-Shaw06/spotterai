@@ -49,9 +49,12 @@ function currentRoute() {
 // A module may only be listed here if it touches nothing outside its own route.
 // safety-lab.js deliberately is NOT listed: it wires `home-safety-teaser` on the
 // landing page, so deferring it would quietly break the home page. Nor are
-// workout-ui.js (other pages start sessions through its events), nutrition-ui.js
-// (the landing page's "Snap a meal" door needs it inside the tap, for iOS to
-// open the camera) or chat.js, pain-ui.js and onboarding-ui.js (shell dialogs).
+// workout-ui.js (it restores a live session's bar and rest timer on whatever
+// page you reload on, and Today, the calendar and routines start sessions
+// through its events) or chat.js, pain-ui.js and onboarding-ui.js (shell
+// dialogs). nutrition-ui.js joined on 2026-09-29: the landing page's "Snap a
+// meal" door has to open the camera inside the tap, so snap-door.js does that
+// at boot and loads this page's module straight after.
 //
 // Seven more joined on 2026-09-29, each checked for DOM and events outside its
 // page. tracker-ui.js draws on two pages and is listed under both: a module
@@ -62,6 +65,7 @@ const ROUTE_MODULES = {
   dashboard: () => Promise.all([import("./tracker-ui.js"), import("./quick-log.js"), import("./share-card.js")]),
   progress: () => Promise.all([import("./tracker-ui.js"), import("./calendar-ui.js")]),
   library: () => import("./library-ui.js"),
+  nutrition: () => import("./nutrition-ui.js"),
   "form-check": () => import("./form-coach.js"),
   import: () => import("./import-ui.js"),
   split: () => import("./split-ui.js"),

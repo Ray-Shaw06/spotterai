@@ -233,26 +233,13 @@ table {
   color: var(--accent);
 }
 
-/* Eyebrow label — editorial tracked caps */
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-}
-.eyebrow--center {
-  justify-content: center;
-}
-.eyebrow__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
+/* A fact about the heading above it: a session's length, the day of the
+   first week, that an audit is deterministic. These used to sit over the
+   heading as kickers; a heading stands on its own, so they come after it. */
+.head-meta {
+  margin: 4px 0 0;
+  font-size: var(--fs-small);
+  color: var(--text-muted);
 }
 
 /* Page meta line — quiet, informational (date, storage note, beta status).
@@ -3225,7 +3212,7 @@ table {
 .rest-preset.is-active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-ring); }
 .rest-custom {
   width: 5.6ch; padding: 0.3rem 0.35rem; font-size: 0.74rem; font-weight: 600; text-align: center; color: var(--text);
-  background: var(--surface-2); border: 1px dashed var(--border); border-radius: var(--r-full); font-variant-numeric: tabular-nums;
+  background: var(--surface-2); border: 1px dashed var(--field-border); border-radius: var(--r-full); font-variant-numeric: tabular-nums;
 }
 .rest-custom:focus { outline: none; border-style: solid; border-color: var(--accent); }
 .rest-custom::placeholder { color: var(--text-faint); font-weight: 500; }
@@ -3462,7 +3449,7 @@ table {
 .eval-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-4) 0; }
 .eval-controls .eval-filters { margin: 0; }
 .eval-sort { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-small); color: var(--text-muted); }
-.eval-sort select { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 5px 9px; font: inherit; font-size: var(--fs-small); cursor: pointer; }
+.eval-sort select { background: var(--surface-2); color: var(--text); border: 1px solid var(--field-border); border-radius: var(--r-sm); padding: 5px 9px; font: inherit; font-size: var(--fs-small); cursor: pointer; }
 .eval-error { padding: var(--space-5); background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); border-radius: var(--r-md); color: var(--text-muted); font-size: var(--fs-small); }
 .eval-filters { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-4) 0; }
 .eval-filter { display: inline-flex; align-items: center; gap: 6px; padding: 0.4rem 0.85rem; font-size: var(--fs-small); font-weight: 500; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition); }
@@ -4007,7 +3994,7 @@ table {
   background-repeat: no-repeat;
   background-position: right 0.7rem center;
   background-size: 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--field-border);
   border-radius: var(--r-md);
   cursor: pointer;
   transition: var(--transition);
@@ -4501,7 +4488,7 @@ table {
   line-height: 1.4;
   color: var(--text);
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--field-border);
   border-radius: var(--r-md);
   resize: none;
   transition: var(--transition);
@@ -4671,7 +4658,7 @@ table {
   font-size: var(--fs-small);
   color: var(--text);
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--field-border);
   border-radius: var(--r-md);
   transition: var(--transition);
 }
@@ -5228,7 +5215,7 @@ table {
 .account-empty { padding: var(--space-2); }
 .account-form { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .account-form .input { flex: 1; min-width: 120px; }
-.account-note { margin-top: var(--space-2); font-size: 0.74rem; color: var(--text-faint); }
+.account-note { margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text-faint); }
 .account-actions {
   display: flex;
   align-items: center;
@@ -5374,7 +5361,7 @@ table {
 .workout-backfill__label { display: block; font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); font-weight: 600; }
 .workout-backfill__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
 .workout-backfill__row .input { width: auto; flex: 0 1 11rem; }
-.workout-backfill__hint { margin-top: var(--space-2); font-size: 0.72rem; color: var(--text-faint); }
+.workout-backfill__hint { margin-top: var(--space-2); font-size: var(--fs-small); color: var(--text-faint); }
 .session-backdate { margin-top: var(--space-2); padding: var(--space-2) var(--space-3); font-size: var(--fs-small); color: var(--text-muted); background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: var(--r-sm); }
 .session-backdate strong { color: var(--text); }
 .routine-list { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -5762,7 +5749,7 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
 .water__custom { display: inline-flex; align-items: center; gap: var(--space-2); flex: 1 0 auto; }
 .water-custom {
   width: 5.5ch; padding: 0.4rem 0.5rem; font-size: var(--fs-small); text-align: center; color: var(--text);
-  background: var(--surface-2); border: 1px dashed var(--border); border-radius: var(--r-sm); font-variant-numeric: tabular-nums;
+  background: var(--surface-2); border: 1px dashed var(--field-border); border-radius: var(--r-sm); font-variant-numeric: tabular-nums;
   -moz-appearance: textfield;
 }
 .water-custom::-webkit-outer-spin-button, .water-custom::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -5875,7 +5862,6 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
    No film grain — grain on paper reads as dirt, not texture. */
 
 
-.eyebrow,
 .audit-card__live {
   font-family: var(--font-mono);
   letter-spacing: 0.13em;
@@ -6202,12 +6188,15 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   .rest-custom { padding: 0.55rem 0.35rem; }
   .more-sheet__link { min-height: 44px; }
   /* Measured at 375px on 2026-09-29: Add food 29px, the Safety Lab filters
-     31px, custom water 32px, the sort menu 34px, every landing button 42px. */
+     31px, custom water 32px, the sort menu 34px, every landing button 42px,
+     the library filter chips 32px and the exercise menus 41px. */
   .btn,
   .meal__add,
   .eval-filter,
   .water-custom,
-  .eval-sort select { min-height: 44px; }
+  .eval-sort select,
+  .lib-chip,
+  .form-select { min-height: 44px; }
 
   /* Dense table controls keep their visual size so the set table still fits
      at 320px; the tap zone is extended instead, sized so neighbouring zones
@@ -6266,14 +6255,6 @@ body::before {
 .sidebar__brand,
 .wordmark {
   letter-spacing: -0.005em;
-}
-
-.eyebrow {
-  font-family: var(--font-body);
-  text-transform: none;
-  letter-spacing: 0.005em;
-  font-size: 0.8rem;
-  font-weight: 600;
 }
 .audit-card__score,
 .bench__item dd {
@@ -6449,25 +6430,12 @@ body::before {
 .check__badge,
 .day-card__day,
 .eval-case__type,
-.eyebrow,
 .food-opt__tag,
 .set-table th,
 .sidebar__nav .nav-link {
   font-family: var(--font-body);
   text-transform: none;
   letter-spacing: 0.005em;
-}
-
-.audit__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-  text-transform: none;
-  letter-spacing: 0.005em;
-  color: var(--text-faint);
-  font-weight: 600;
-  font-family: var(--font-body);
 }
 
 .audit__score-label {
@@ -6588,15 +6556,6 @@ body::before {
   font-family: var(--font-body);
 }
 
-.fw-eyebrow {
-  font-size: 0.8rem;
-  text-transform: none;
-  letter-spacing: 0.005em;
-  color: var(--accent);
-  font-weight: 600;
-  font-family: var(--font-body);
-}
-
 .fw-k {
   display: inline-block;
   font-size: 0.8rem;
@@ -6657,18 +6616,6 @@ body::before {
   font-weight: 600;
 }
 
-.repair__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.7rem;
-  text-transform: none;
-  letter-spacing: 0.005em;
-  color: var(--accent);
-  font-weight: 600;
-  font-family: var(--font-body);
-}
-
 .repair__col-label {
   font-size: var(--fs-micro);
   text-transform: none;
@@ -6721,16 +6668,6 @@ body::before {
   letter-spacing: 0.005em;
   color: var(--accent);
   margin-bottom: var(--space-2);
-  font-family: var(--font-body);
-}
-
-.adapt-card__eyebrow {
-  font-size: 0.7rem;
-  text-transform: none;
-  letter-spacing: 0.005em;
-  color: var(--accent);
-  font-weight: 700;
-  margin-bottom: var(--space-1);
   font-family: var(--font-body);
 }
 
@@ -6920,14 +6857,6 @@ body::before {
   color: var(--text-faint);
   font-family: var(--font-body);
   font-weight: 600;
-}
-
-.cmd__eyebrow {
-  font-family: var(--font-body);
-  font-size: var(--fs-micro);
-  letter-spacing: 0.005em;
-  text-transform: none;
-  color: var(--accent);
 }
 
 .cmd__manifest-label {
@@ -7395,23 +7324,6 @@ h5 {
   font-weight: 800;
 }
 
-.eyebrow {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  font-size: 0.74rem;
-  letter-spacing: -0.01em;
-  text-transform: none;
-}
-
-.plan__eyebrow {
-  font-size: 0.74rem;
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: -0.01em;
-  color: var(--text-faint);
-  font-family: var(--font-mono);
-}
-
 /* The wordmark is the one place the instrument voice should be unmistakable. */
 .wordmark,
 .sidebar__brand {
@@ -7530,6 +7442,9 @@ h5 {
   --surface-2: #f5f8f6;
   --border: #dbe4de;
   --border-soft: #e4ebe7;
+  /* The edge of something you type into. The dividers above are hairlines
+     between things; a field needs 3:1 against every ground (WCAG 1.4.11). */
+  --field-border: #7e8d86;
   --sheen: transparent;
   --text: #0d1411;
   --text-muted: #4e5d55;
@@ -7612,6 +7527,7 @@ h5 {
   --d-surface-2: #161f1a;
   --d-border: #1e2a24;
   --d-border-strong: #2b3c34;
+  --d-field-border: #5d6d64;
   --d-text: #e9f0ec;
   --d-muted: #9cb0a5;
   --d-faint: #8a9e93;
@@ -7639,6 +7555,7 @@ h5 {
     --border: var(--d-border);
     --border-soft: var(--d-border);
     --border-strong: var(--d-border-strong);
+    --field-border: var(--d-field-border);
     --text: var(--d-text);
     --text-muted: var(--d-muted);
     --text-faint: var(--d-faint);
@@ -7679,6 +7596,7 @@ h5 {
   --border: var(--d-border);
   --border-soft: var(--d-border);
   --border-strong: var(--d-border-strong);
+  --field-border: var(--d-field-border);
   --text: var(--d-text);
   --text-muted: var(--d-muted);
   --text-faint: var(--d-faint);
