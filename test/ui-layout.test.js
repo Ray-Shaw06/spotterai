@@ -264,7 +264,9 @@ test("buttons, filter chips and the small nutrition controls reach 44px on touch
   // 29px, the Safety Lab filters at 31px, the custom water field at 32px, the
   // sort menu at 34px and every landing button at 42px. Add food is tapped
   // several times a day, one-handed.
-  for (const selector of [".btn", ".meal__add", ".eval-filter", ".water-custom", ".eval-sort select"]) {
+  // Library filter chips (32px) and the exercise menus (41px) were the last
+  // two on the 2026-09-29 live audit.
+  for (const selector of [".btn", ".meal__add", ".eval-filter", ".water-custom", ".eval-sort select", ".lib-chip", ".form-select"]) {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     assertInMedia("(pointer: coarse)", new RegExp(`${escaped}(?![\\w-])[^{]*\\{[^}]*min-height:\\s*44px`));
   }

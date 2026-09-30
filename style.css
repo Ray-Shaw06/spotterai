@@ -6202,12 +6202,15 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
   .rest-custom { padding: 0.55rem 0.35rem; }
   .more-sheet__link { min-height: 44px; }
   /* Measured at 375px on 2026-09-29: Add food 29px, the Safety Lab filters
-     31px, custom water 32px, the sort menu 34px, every landing button 42px. */
+     31px, custom water 32px, the sort menu 34px, every landing button 42px,
+     the library filter chips 32px and the exercise menus 41px. */
   .btn,
   .meal__add,
   .eval-filter,
   .water-custom,
-  .eval-sort select { min-height: 44px; }
+  .eval-sort select,
+  .lib-chip,
+  .form-select { min-height: 44px; }
 
   /* Dense table controls keep their visual size so the set table still fits
      at 320px; the tap zone is extended instead, sized so neighbouring zones
