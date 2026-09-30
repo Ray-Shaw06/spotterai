@@ -16,6 +16,7 @@ import { ring } from "./charts.js";
 import { evaluateNutrition, NUTRITION_DISCLAIMER, NUTRITION_WONT_DO } from "./nutrition-safety.js";
 import { store } from "./store.js";
 import { trackFunnel } from "./analytics.js";
+import { photoInput } from "./snap-door.js";
 import { aiFailureMessage, classifyAiFailure } from "./ai-errors.js";
 
 const $ = (id) => document.getElementById(id);
@@ -336,32 +337,26 @@ function mealForNow(hour = new Date().getHours()) {
 }
 
 /**
- * Open the camera straight into a meal photo.
+ * Carry on from a "Snap a meal" door, after snap-door.js has opened the camera.
  *
- * The one thing that must stay true here: `.click()` on the file input runs
- * inside the same user gesture as the button press, or the browser drops it.
- * The picker is a top-level sibling of the views, so it opens from the landing
- * page without waiting for the route switch — the hash change below is for
- * where the person lands AFTER saving, not a precondition.
+ * The camera's .click() has to happen inside the tap, and this module now
+ * loads on first visit, so snap-door.js owns that click and calls this once
+ * the module is here. The picker is a top-level sibling of the views, so it
+ * opens wherever the tap was; the hash change is for where the person lands
+ * after saving, not a precondition.
  */
-function openSnap(source) {
-  // init() owns the picker and the file input. Without them there is no camera
-  // to open, and a landing-page click must not throw on the way to finding out.
+export function continueSnap() {
   if (!el.picker || !el.photoInput) return;
-  trackFunnel("meal_photo_started", { source });
   openPicker(mealForNow());
-  el.photoInput.click();
   if (location.hash !== "#/nutrition") location.hash = "#/nutrition";
+  // A photo chosen before this module finished loading fired its change event
+  // with nobody listening. It is still on the input, so read it now.
+  const early = el.photoInput.files?.[0];
+  if (early) {
+    el.photoInput.value = "";
+    handlePhoto(early);
+  }
 }
-
-// Delegated at the document, because the landing page's door lives outside the
-// nutrition view entirely.
-document.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-snap-meal]");
-  if (!btn) return;
-  const source = btn.dataset.snapMeal;
-  openSnap(source === "landing" || source === "nutrition" ? source : "nutrition");
-});
 
 // ----------------------------------------------------------------------------
 // Barcode scanner (built-in BarcodeDetector + Open Food Facts — $0, no deps)
@@ -741,13 +736,9 @@ function init() {
     if (e.target === el.picker) closePicker();
   });
 
-  // Hidden file input that powers "Snap a meal" (opens the camera on mobile).
-  el.photoInput = document.createElement("input");
-  el.photoInput.type = "file";
-  el.photoInput.accept = "image/*";
-  el.photoInput.setAttribute("capture", "environment");
-  el.photoInput.hidden = true;
-  el.picker?.appendChild(el.photoInput);
+  // The hidden camera input behind "Snap a meal", shared with snap-door.js,
+  // which clicks it inside the tap on the landing page and here.
+  el.photoInput = photoInput();
   el.photoInput.addEventListener("change", (e) => {
     const f = e.target.files?.[0];
     e.target.value = "";

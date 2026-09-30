@@ -88,6 +88,7 @@ const BOOT_MODULES = [
   "safety-lab-production.js",
   "sentry-init.js",
   "share-card.js",
+  "snap-door.js",
   "split-analyzer.js",
   "split-ui.js",
   "store.js",
