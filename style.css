@@ -3225,7 +3225,7 @@ table {
 .rest-preset.is-active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-ring); }
 .rest-custom {
   width: 5.6ch; padding: 0.3rem 0.35rem; font-size: 0.74rem; font-weight: 600; text-align: center; color: var(--text);
-  background: var(--surface-2); border: 1px dashed var(--border); border-radius: var(--r-full); font-variant-numeric: tabular-nums;
+  background: var(--surface-2); border: 1px dashed var(--field-border); border-radius: var(--r-full); font-variant-numeric: tabular-nums;
 }
 .rest-custom:focus { outline: none; border-style: solid; border-color: var(--accent); }
 .rest-custom::placeholder { color: var(--text-faint); font-weight: 500; }
@@ -3462,7 +3462,7 @@ table {
 .eval-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-4) 0; }
 .eval-controls .eval-filters { margin: 0; }
 .eval-sort { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-small); color: var(--text-muted); }
-.eval-sort select { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 5px 9px; font: inherit; font-size: var(--fs-small); cursor: pointer; }
+.eval-sort select { background: var(--surface-2); color: var(--text); border: 1px solid var(--field-border); border-radius: var(--r-sm); padding: 5px 9px; font: inherit; font-size: var(--fs-small); cursor: pointer; }
 .eval-error { padding: var(--space-5); background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); border-radius: var(--r-md); color: var(--text-muted); font-size: var(--fs-small); }
 .eval-filters { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-4) 0; }
 .eval-filter { display: inline-flex; align-items: center; gap: 6px; padding: 0.4rem 0.85rem; font-size: var(--fs-small); font-weight: 500; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); cursor: pointer; transition: var(--transition); }
@@ -4007,7 +4007,7 @@ table {
   background-repeat: no-repeat;
   background-position: right 0.7rem center;
   background-size: 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--field-border);
   border-radius: var(--r-md);
   cursor: pointer;
   transition: var(--transition);
@@ -4501,7 +4501,7 @@ table {
   line-height: 1.4;
   color: var(--text);
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--field-border);
   border-radius: var(--r-md);
   resize: none;
   transition: var(--transition);
@@ -4671,7 +4671,7 @@ table {
   font-size: var(--fs-small);
   color: var(--text);
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--field-border);
   border-radius: var(--r-md);
   transition: var(--transition);
 }
@@ -5762,7 +5762,7 @@ button.food-row__main:hover .food-row__name { color: var(--accent); }
 .water__custom { display: inline-flex; align-items: center; gap: var(--space-2); flex: 1 0 auto; }
 .water-custom {
   width: 5.5ch; padding: 0.4rem 0.5rem; font-size: var(--fs-small); text-align: center; color: var(--text);
-  background: var(--surface-2); border: 1px dashed var(--border); border-radius: var(--r-sm); font-variant-numeric: tabular-nums;
+  background: var(--surface-2); border: 1px dashed var(--field-border); border-radius: var(--r-sm); font-variant-numeric: tabular-nums;
   -moz-appearance: textfield;
 }
 .water-custom::-webkit-outer-spin-button, .water-custom::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -7530,6 +7530,9 @@ h5 {
   --surface-2: #f5f8f6;
   --border: #dbe4de;
   --border-soft: #e4ebe7;
+  /* The edge of something you type into. The dividers above are hairlines
+     between things; a field needs 3:1 against every ground (WCAG 1.4.11). */
+  --field-border: #7e8d86;
   --sheen: transparent;
   --text: #0d1411;
   --text-muted: #4e5d55;
@@ -7612,6 +7615,7 @@ h5 {
   --d-surface-2: #161f1a;
   --d-border: #1e2a24;
   --d-border-strong: #2b3c34;
+  --d-field-border: #5d6d64;
   --d-text: #e9f0ec;
   --d-muted: #9cb0a5;
   --d-faint: #8a9e93;
@@ -7639,6 +7643,7 @@ h5 {
     --border: var(--d-border);
     --border-soft: var(--d-border);
     --border-strong: var(--d-border-strong);
+    --field-border: var(--d-field-border);
     --text: var(--d-text);
     --text-muted: var(--d-muted);
     --text-faint: var(--d-faint);
@@ -7679,6 +7684,7 @@ h5 {
   --border: var(--d-border);
   --border-soft: var(--d-border);
   --border-strong: var(--d-border-strong);
+  --field-border: var(--d-field-border);
   --text: var(--d-text);
   --text-muted: var(--d-muted);
   --text-faint: var(--d-faint);
