@@ -9,8 +9,8 @@
  * reads never leave the device unless the user has opted into sync.
  */
 
-import { AGE_RANGES } from "./onboarding.js";
-import { DAILY_ACTIVITY, NUTRITION_INTENTS } from "./lib/nutrition-targets.js";
+import { AGE_RANGES, GOAL_OPTIONS } from "./onboarding.js";
+import { DAILY_ACTIVITY, NUTRITION_INTENTS, calculateTargets, intentForGoal } from "./lib/nutrition-targets.js";
 
 const num = (v) => (v === "" || v == null ? NaN : Number(v));
 
@@ -50,5 +50,62 @@ export function validateBodyStats(input = {}) {
     ok: true,
     errors: [],
     value: { heightCm, ageRange, sex, dailyActivity, daysPerWeek, sessionLength: noTraining ? 0 : sessionLength, intent },
+  };
+}
+
+const LIMITATIONS =
+  "These are estimates, not measurements. Your own weight trend over several weeks is a better guide, and the weekly check-in adjusts from it.";
+
+/**
+ * The explained plan for a set of stats, or null when there is not enough to
+ * calculate one (the caller then falls back to the bodyweight-only suggestion).
+ * @param {{ bodyStats: object|null, kg: number|null }} input
+ */
+export function buildPlan({ bodyStats, kg } = {}) {
+  if (!bodyStats || !(Number(kg) > 0)) return null;
+  const t = calculateTargets({
+    kg: Number(kg),
+    cm: bodyStats.heightCm,
+    ageRange: bodyStats.ageRange,
+    sex: bodyStats.sex,
+    dailyActivity: bodyStats.dailyActivity,
+    daysPerWeek: bodyStats.daysPerWeek,
+    sessionLength: bodyStats.sessionLength,
+    intent: bodyStats.intent,
+  });
+  if (!t) return null;
+  return {
+    targets: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat },
+    tdee: t.tdee,
+    bmr: t.bmr,
+    bmi: t.bmi,
+    deficitKcal: t.deficitKcal,
+    effectiveDeficitKcal: t.effectiveDeficitKcal,
+    floorBound: t.floorBound,
+    intent: t.intent,
+    requestedIntent: t.requestedIntent,
+    confidence: t.confidence,
+    basis: t.basis,
+    notice: t.notice,
+    proteinPerKg: Math.round((t.protein / Number(kg)) * 10) / 10,
+    limitations: LIMITATIONS,
+  };
+}
+
+/** The maintenance calories to hand the auditor, or null when no plan can be built. */
+export function maintenanceFor(bodyStats, kg) {
+  return buildPlan({ bodyStats, kg })?.tdee ?? null;
+}
+
+/**
+ * Setup-sheet defaults from the training plan the user already has. Unknown goals
+ * land on recomp: nobody is guessed into a deficit.
+ */
+export function prefillFromInputs(inputs) {
+  const goal = GOAL_OPTIONS.find((g) => g.goal === inputs?.goal);
+  return {
+    daysPerWeek: Number(inputs?.daysPerWeek) || 3,
+    sessionLength: Number(inputs?.sessionLength) || 45,
+    intent: intentForGoal(goal?.value),
   };
 }
