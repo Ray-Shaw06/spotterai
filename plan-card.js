@@ -100,6 +100,26 @@ export function planFormHTML({ unit = "kg", values = {}, needWeight = false, err
     </form>`;
 }
 
+/** Whole feet and inches for a height in cm. Rounds once, so inches are always 0 to 11. */
+export function heightToFtIn(cm) {
+  const total = Math.round(Number(cm) / 2.54);
+  return { ft: Math.floor(total / 12), inch: total % 12 };
+}
+
+/** The current values of a form's elements: checked radios, selects, typed text. Pure, so a draft can be kept as the user types. */
+export function formValues(elements) {
+  const values = {};
+  for (const el of elements) {
+    if (!el.name) continue;
+    if (el.type === "radio") {
+      if (el.checked) values[el.name] = el.value;
+    } else {
+      values[el.name] = el.value;
+    }
+  }
+  return values;
+}
+
 /** Form values to the shape `validateBodyStats` takes; feet and inches become centimetres. */
 export function statsFromForm(values = {}, unit = "kg") {
   let heightCm = NaN;

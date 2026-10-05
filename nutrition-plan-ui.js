@@ -10,7 +10,7 @@
 import { store } from "./store.js";
 import { addBodyweight, bodyweightSeries, getBodyStats, getState, setBodyStats, setTargets } from "./tracker-store.js";
 import { buildPlan, prefillFromInputs, validateBodyStats } from "./nutrition-plan.js";
-import { planCardModel, planCardHTML, planFormHTML, statsFromForm } from "./plan-card.js";
+import { planCardModel, planCardHTML, planFormHTML, statsFromForm, heightToFtIn, formValues } from "./plan-card.js";
 
 const host = document.getElementById("nut-plan");
 
@@ -26,14 +26,8 @@ function latestKg() {
 /** Form values for the current stats, or sensible defaults from the training plan. */
 function valuesFor(stats, unit) {
   if (!stats) return { ...prefillFromInputs(store.inputs) };
-  const inches = stats.heightCm / 2.54;
-  return {
-    ...stats,
-    heightCm: stats.heightCm,
-    heightFt: Math.floor(inches / 12),
-    heightIn: Math.round(inches % 12),
-    unit,
-  };
+  const { ft, inch } = heightToFtIn(stats.heightCm);
+  return { ...stats, heightFt: ft, heightIn: inch, unit };
 }
 
 export function renderPlanCard({ force = false } = {}) {
@@ -67,22 +61,9 @@ function closeForm() {
   renderPlanCard({ force: true });
 }
 
-function readForm(form) {
-  const values = {};
-  for (const el of form.elements) {
-    if (!el.name) continue;
-    if (el.type === "radio") {
-      if (el.checked) values[el.name] = el.value;
-    } else {
-      values[el.name] = el.value;
-    }
-  }
-  return values;
-}
-
 function save(form) {
   const unit = getState().unit;
-  const values = readForm(form);
+  const values = formValues(form.elements);
   draft = values;
   errors = [];
 
@@ -116,6 +97,13 @@ host?.addEventListener("click", (e) => {
   else if (act === "cancel") closeForm();
   else if (act === "apply") applyPlan();
 });
+
+// Keep what the user has typed as they type, so any re-render restores it.
+for (const type of ["input", "change"]) {
+  host?.addEventListener(type, (e) => {
+    if (mode === "form" && e.target.form) draft = formValues(e.target.form.elements);
+  });
+}
 
 host?.addEventListener("submit", (e) => {
   e.preventDefault();

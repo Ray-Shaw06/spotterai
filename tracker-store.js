@@ -987,14 +987,20 @@ export function addBodyweight({ value, date } = {}) {
 }
 
 export function setTargets(t) {
-  state.targets = { ...state.targets, ...t };
-  state.targetsChangedOn = today();
+  const before = state.targets;
+  state.targets = { ...before, ...t };
+  // Only a change to what the check-in judges restarts its clock. Editing the water
+  // goal or workouts per week, or re-saving the same numbers, must not delay it.
+  if (["kcal", "protein", "carbs", "fat"].some((k) => state.targets[k] !== before[k])) state.targetsChangedOn = today();
   persist();
 }
 
 /** Body stats saved on this device, or null. */
 export function getBodyStats() {
-  return state.bodyStats || null;
+  // Re-validated on every read: stats can arrive from a backup or another device in any
+  // shape, and a corrupted age range must never read as an adult.
+  const r = validateBodyStats(state.bodyStats);
+  return r.ok ? r.value : null;
 }
 
 /** Validate and save body stats. Invalid input changes nothing. */

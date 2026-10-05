@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { planCardModel, planCardHTML, planFormHTML, statsFromForm } from "../plan-card.js";
+import { planCardModel, planCardHTML, planFormHTML, statsFromForm, heightToFtIn, formValues } from "../plan-card.js";
 import { buildPlan } from "../nutrition-plan.js";
 
 const STATS = { heightCm: 178, ageRange: "18–29", sex: "Male", dailyActivity: "some", daysPerWeek: 4, sessionLength: 60, intent: "cut" };
@@ -83,4 +83,28 @@ test("statsFromForm turns feet and inches into centimetres and numeric strings i
   assert.equal(statsFromForm({ heightFt: "5", heightIn: "10", ageRange: "18–29", sex: "Male", dailyActivity: "some", daysPerWeek: "4", sessionLength: "60", intent: "cut" }, "lb").heightCm, 178);
   assert.equal(statsFromForm({ heightCm: "178" }, "kg").heightCm, 178);
   assert.equal(statsFromForm({ heightFt: "", heightIn: "" }, "lb").heightCm, NaN);
+});
+
+test("feet and inches never show 12 inches, and every height round-trips within a centimetre", () => {
+  assert.deepEqual(heightToFtIn(182), { ft: 6, inch: 0 });
+  assert.deepEqual(heightToFtIn(121), { ft: 4, inch: 0 });
+  assert.deepEqual(heightToFtIn(178), { ft: 5, inch: 10 });
+  for (let cm = 100; cm <= 250; cm++) {
+    const { ft, inch } = heightToFtIn(cm);
+    assert.ok(inch >= 0 && inch <= 11, `${cm} cm -> ${ft} ft ${inch} in`);
+    const back = statsFromForm({ heightFt: ft, heightIn: inch }, "lb").heightCm;
+    assert.ok(Math.abs(back - cm) <= 1, `${cm} -> ${back}`);
+  }
+});
+
+test("formValues reads a form the way the draft needs: checked radios, selected values, typed text", () => {
+  const els = [
+    { name: "heightCm", type: "number", value: "178" },
+    { name: "ageRange", type: "radio", value: "18–29", checked: false },
+    { name: "ageRange", type: "radio", value: "30–44", checked: true },
+    { name: "sex", type: "radio", value: "", checked: true },
+    { name: "daysPerWeek", type: "select-one", value: "4" },
+    { name: "", type: "submit", value: "go" },
+  ];
+  assert.deepEqual(formValues(els), { heightCm: "178", ageRange: "30–44", sex: "", daysPerWeek: "4" });
 });

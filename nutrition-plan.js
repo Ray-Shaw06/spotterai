@@ -18,7 +18,9 @@ const num = (v) => (v === "" || v == null ? NaN : Number(v));
  * Check and normalise body stats from a form or a backup.
  * @returns {{ ok: boolean, errors: string[], value: object|null }}
  */
-export function validateBodyStats(input = {}) {
+export function validateBodyStats(rawInput = {}) {
+  // Anything that is not an object (a corrupted backup, a bad sync value) reads as empty.
+  const input = rawInput && typeof rawInput === "object" && !Array.isArray(rawInput) ? rawInput : {};
   const errors = [];
   const heightCm = num(input.heightCm);
   if (!Number.isFinite(heightCm) || heightCm < 100 || heightCm > 250) errors.push("heightCm: height must be between 100 and 250 cm");

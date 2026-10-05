@@ -156,3 +156,29 @@ test("currentMaintenance is the plan's maintenance for the latest weight, or nul
   setBodyStats(GOOD);
   assert.ok(Math.abs(currentMaintenance() - m) <= 15, "lb entry reads as the same 80 kg body");
 });
+
+test("only a change to calories or macros restarts the clock, not the water goal or workouts per week", () => {
+  blank();
+  mergeRemoteMeta({ targetsChangedOn: "2026-01-01" });
+  setTargets({ waterMl: 3000, weeklyWorkouts: 5 });
+  assert.equal(getTargetsChangedOn(), "2026-01-01", "water and workouts are not the targets the check-in judges");
+  setTargets({ kcal: 2200, protein: 140, carbs: 250, fat: 70 });
+  assert.equal(getTargetsChangedOn(), "2026-01-01", "re-saving identical values changes nothing");
+  setTargets({ kcal: 2301 });
+  assert.equal(getTargetsChangedOn(), dateDaysAgo(0));
+  mergeRemoteMeta({ targetsChangedOn: "2026-01-01" });
+  setTargets({ fat: 71 });
+  assert.equal(getTargetsChangedOn(), dateDaysAgo(0), "a macro change counts too");
+});
+
+test("stats that arrive malformed from a backup or sync read as none, never as a different person", () => {
+  blank();
+  for (const bad of [{ ...GOOD, ageRange: "Under 18 " }, { ...GOOD, ageRange: "18-29" }, { heightCm: 170 }, { ...GOOD, heightCm: 1e308 }, "text", 42, [], { ...GOOD, intent: "shred" }]) {
+    mergeRemoteMeta({ bodyStats: bad });
+    assert.strictEqual(getBodyStats(), null, JSON.stringify(bad));
+  }
+  assert.equal(importData({ workouts: [], nutrition: [], bodyStats: { heightCm: 170 } }), true);
+  assert.strictEqual(getBodyStats(), null);
+  assert.equal(importData({ workouts: [], nutrition: [], bodyStats: GOOD }), true);
+  assert.deepEqual(getBodyStats(), GOOD);
+});
