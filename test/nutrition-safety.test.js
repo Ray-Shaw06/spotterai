@@ -99,3 +99,13 @@ test("maintenance does not affect the absolute floors", () => {
   });
   assert.ok(flags.some((f) => f.tier === "critical" && /calorie/i.test(f.label)));
 });
+
+test("only a real positive number counts as an accurate maintenance; anything else is the per-kg estimate", () => {
+  const args = { targets: { kcal: 1300, protein: 150, fat: 45 }, bodyweight: 90, unit: "kg", goal: "Fat loss" };
+  const base = evaluateNutrition(args);
+  for (const bad of [Infinity, -Infinity, NaN, true, false, "abc", "", [], {}, -5, 0]) {
+    assert.deepEqual(evaluateNutrition({ ...args, maintenance: bad }), base, `maintenance ${String(bad)}`);
+  }
+  assert.ok(!/Infinity/.test(JSON.stringify(evaluateNutrition({ ...args, maintenance: Infinity }))));
+  assert.notDeepEqual(evaluateNutrition({ ...args, maintenance: "2364" }), base, "a numeric string is accepted");
+});
