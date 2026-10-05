@@ -27,6 +27,7 @@ const OWNED = {
   dashboard: ["tracker-ui.js", "quick-log.js", "share-card.js"],
   progress: ["tracker-ui.js", "calendar-ui.js"],
   library: ["library-ui.js"],
+  nutrition: ["nutrition-ui.js"],
   split: ["split-ui.js"],
   "form-check": ["form-coach.js"],
   import: ["import-ui.js"],
@@ -80,4 +81,13 @@ test("every page's modules are loaded by that page's route", () => {
     for (const m of modules) if (!(loaders[route] ?? []).includes(m)) missing.push(`#/${route} -> ${m}`);
   }
   assert.deepEqual(missing, [], "opening these pages would show them empty");
+});
+
+test("the camera door loads up front, so a tap can still open the camera", () => {
+  // iOS opens a file input only inside the tap that asked for it. The
+  // nutrition page loads on first visit now, so the landing page's "Snap a
+  // meal" door lives in a small module of its own that must stay at boot.
+  const boot = bootGraph();
+  assert.ok(boot.has("snap-door.js"), "snap-door.js must be a boot module");
+  assert.ok(!boot.has("nutrition-ui.js"), "and nutrition-ui.js must not be");
 });

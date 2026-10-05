@@ -31,6 +31,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 import { FUNNEL_EVENTS, trackFunnel } from "../analytics.js";
+import { initSnapDoor } from "../snap-door.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const html = readFileSync(join(root, "index.html"), "utf8");
@@ -228,30 +229,50 @@ test("started is tracked separately from succeeded, so abandonment is visible", 
   assert.match(nutritionUi, /trackFunnel\("meal_photo_succeeded"\)/);
 });
 
+/** Press a door on a stand-in document; returns what happened, in order. */
+function pressDoor(snapMeal) {
+  const happened = [];
+  const listeners = {};
+  const doc = {
+    body: { appendChild() {} },
+    createElement: () => ({ setAttribute() {}, click: () => happened.push("camera") }),
+    addEventListener: (type, fn) => { listeners[type] = fn; },
+    removeEventListener() {},
+  };
+  initSnapDoor({
+    doc,
+    load: () => { happened.push("load"); return new Promise(() => {}); },
+    track: (event, props) => happened.push(`${event}:${props.source}`),
+  });
+  listeners.click({ target: { closest: () => ({ dataset: { snapMeal } }) } });
+  return happened;
+}
+
 test("CRITICAL: the camera opens inside the click, not after an await", () => {
   // Browsers drop a programmatic .click() on a file input once the user gesture
   // has been handed back. An await, a setTimeout, or waiting on the route change
-  // before clicking would make every door silently do nothing.
-  const body = nutritionUi.match(/function openSnap\(source\)\s*\{([\s\S]*?)\n\}/)?.[1] || "";
-  assert.ok(body, "openSnap is gone");
-  assert.ok(!/await|setTimeout|then\(/.test(body), "openSnap defers before clicking the file input");
-  assert.ok(
-    body.indexOf("el.photoInput.click()") < body.indexOf("location.hash"),
-    "the route change happens before the camera opens"
-  );
+  // before clicking would make every door silently do nothing. The nutrition
+  // page loads on first visit now, so the door lives in snap-door.js, and it
+  // must click before it loads or waits for anything.
+  const happened = pressDoor("landing");
+  assert.ok(happened.indexOf("camera") !== -1, "the door never opened the camera");
+  assert.ok(happened.indexOf("camera") < happened.indexOf("load"), `the camera must open first: ${happened.join(" then ")}`);
 });
 
 test("a door pressed before the picker exists does nothing rather than throwing", () => {
   // The landing button lives outside the nutrition view, and init() only runs
-  // when #nut-page is present.
-  const body = nutritionUi.match(/function openSnap\(source\)\s*\{([\s\S]*?)\n\}/)?.[1] || "";
+  // when #nut-page is present, so the picker may not exist when the page's
+  // module arrives.
+  const body = nutritionUi.match(/export function continueSnap\(\)\s*\{([\s\S]*?)\n\}/)?.[1] || "";
   assert.match(body, /if \(!el\.picker \|\| !el\.photoInput\) return;/);
 });
 
 test("an unknown source falls back to a legal one", () => {
   // data-snap-meal is authored in HTML, where a typo is invisible until the
   // event silently stops being recorded.
-  assert.match(nutritionUi, /source === "landing" \|\| source === "nutrition" \? source : "nutrition"/);
+  const happened = pressDoor("landng");
+  assert.ok(happened.includes("meal_photo_started:nutrition"), happened.join(", "));
+  assert.ok(FUNNEL_EVENTS.meal_photo_started.source.includes("nutrition"));
 });
 
 // ---------------------------------------------------------------------------
