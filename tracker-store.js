@@ -15,6 +15,7 @@ import { trackerKey } from "./profile-store.js";
 import { deloadFromWeeklyVolume, epley1RM, suggestNextWeight } from "./progression.js";
 import { isCardioExercise } from "./exercise-catalog.js";
 import { handledGap } from "./welcome-back.js";
+import { validateBodyStats, maintenanceFor } from "./nutrition-plan.js";
 
 const DEFAULTS = {
   workouts: [], // { id, date 'YYYY-MM-DD', name, focus, exercises:[{name,sets,reps,weight}], volume, xp }
@@ -30,6 +31,8 @@ const DEFAULTS = {
   painReports: [], // { id, date, location, severity, timing, note, injuryKey }
   exercisePrefs: { favorites: [], disliked: [] }, // exercise names
   unit: "kg",
+  bodyStats: null, // { heightCm, ageRange, sex, dailyActivity, daysPerWeek, sessionLength, intent }, on this device
+  targetsChangedOn: null, // 'YYYY-MM-DD' of the last setTargets; the weekly check-in waits 28 days from it
 };
 
 const MEALS = ["breakfast", "lunch", "dinner", "snacks"];
@@ -119,6 +122,8 @@ export function importData(obj) {
     customFoods: Array.isArray(incoming.customFoods) ? incoming.customFoods : [],
     mealTemplates: Array.isArray(incoming.mealTemplates) ? incoming.mealTemplates : [],
     water: incoming.water && typeof incoming.water === "object" ? incoming.water : {},
+    bodyStats: incoming.bodyStats && typeof incoming.bodyStats === "object" ? incoming.bodyStats : null,
+    targetsChangedOn: typeof incoming.targetsChangedOn === "string" ? incoming.targetsChangedOn : null,
     updatedAt: incoming.updatedAt || Date.now(),
   };
   persist(false); // preserve the incoming timestamp
@@ -160,7 +165,7 @@ export const SYNCED_RECORD_KINDS = Object.freeze([
 export const DATED_RECORD_KINDS = Object.freeze(["workouts", "nutrition", "bodyweight", "painReports"]);
 
 /** Scalar / singleton keys that live in the parent users/<uid> document. */
-export const SYNCED_META_KEYS = Object.freeze(["targets", "water", "achievements", "exercisePrefs", "unit"]);
+export const SYNCED_META_KEYS = Object.freeze(["targets", "water", "achievements", "exercisePrefs", "unit", "bodyStats", "targetsChangedOn"]);
 
 /**
  * Stable document id for a record. Most kinds carry their own `id`; the
@@ -982,8 +987,54 @@ export function addBodyweight({ value, date } = {}) {
 }
 
 export function setTargets(t) {
-  state.targets = { ...state.targets, ...t };
+  const before = state.targets;
+  state.targets = { ...before, ...t };
+  // Only a change to what the check-in judges restarts its clock. Editing the water
+  // goal or workouts per week, or re-saving the same numbers, must not delay it.
+  if (["kcal", "protein", "carbs", "fat"].some((k) => state.targets[k] !== before[k])) state.targetsChangedOn = today();
   persist();
+}
+
+/** Body stats saved on this device, or null. */
+export function getBodyStats() {
+  // Re-validated on every read: stats can arrive from a backup or another device in any
+  // shape, and a corrupted age range must never read as an adult.
+  const r = validateBodyStats(state.bodyStats);
+  return r.ok ? r.value : null;
+}
+
+/** Validate and save body stats. Invalid input changes nothing. */
+export function setBodyStats(input) {
+  const r = validateBodyStats(input);
+  if (!r.ok) return { ok: false, errors: r.errors };
+  state.bodyStats = r.value;
+  persist();
+  return { ok: true, errors: [] };
+}
+
+/** Day the targets last changed, or null if never since this was tracked. */
+export function getTargetsChangedOn() {
+  return state.targetsChangedOn || null;
+}
+
+/**
+ * Maintenance calories from the saved stats and the latest weigh-in, for the
+ * safety auditor. Null until both exist, which leaves the auditor on its old
+ * per-kg estimate exactly as before.
+ */
+export function currentMaintenance() {
+  const series = bodyweightSeries();
+  const kg = series.length ? series[series.length - 1].kg : null;
+  return maintenanceFor(getBodyStats(), kg);
+}
+
+/** Bodyweight entries in kg regardless of the display unit, oldest first. */
+export function bodyweightSeries() {
+  const f = state.unit === "lb" ? 1 / 2.2046226218 : 1;
+  return (state.bodyweight || [])
+    .filter((b) => b && b.date && Number(b.value) > 0)
+    .map((b) => ({ date: b.date, kg: Number(b.value) * f }))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 
 /**

@@ -70,6 +70,15 @@ you logged; the app never decides a food is good or bad, and a day that misses i
 simply not counted. The calorie run is hidden whenever your targets trip a
 critical nutrition flag.
 
+On the Food diary, **Your nutrition plan** turns a few numbers (height, age range,
+sex if you want to say, how active your day is, how much you train, and an eating
+goal) into calorie and macro targets, shows the reasoning in plain English, and says
+how confident it is. The numbers stay on the device and only sync if you already opted
+into sync. Under-18 users are only ever offered maintenance. Once you have saved stats,
+the safety card checks your targets against your own calculated maintenance instead of
+a bodyweight-times-31 guess, which used to flag sane targets as aggressive cuts for
+heavier bodies.
+
 ---
 
 ---

@@ -7848,3 +7848,29 @@ body::after {
      minmax(0, ...) lets the reserve give way first if the text is enlarged. */
   .tele { grid-template-columns: repeat(4, 1fr) minmax(0, 150px); }
 }
+
+/* Nutrition plan card. A definition list of the four numbers, then plain
+   sentences. The setup form is inline and grouped in fieldsets; the radio
+   chips are real inputs, so the keyboard and screen readers get a radio group. */
+.plan__lead, .plan__basis, .plan__line, .plan__limits, .plan__notice { margin: var(--space-2) 0 0; font-size: var(--fs-small); color: var(--text-muted); line-height: 1.55; }
+.plan__basis { color: var(--text); }
+.plan__notice { color: var(--text); }
+.plan__nums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-5); margin: var(--space-3) 0 0; }
+.plan__num { display: flex; flex-direction: column; gap: 2px; margin: 0; }
+.plan__num dt { font-size: var(--fs-small); color: var(--text-muted); }
+.plan__num dd { margin: 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 1.25rem; font-weight: 600; color: var(--text); }
+@media (min-width: 560px) { .plan__nums { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.plan__form { display: flex; flex-direction: column; gap: var(--space-4); margin-top: var(--space-3); }
+.plan__group { border: 0; margin: 0; padding: 0; min-width: 0; }
+.plan__group legend { padding: 0; margin-bottom: var(--space-2); font-size: var(--fs-small); font-weight: 600; color: var(--text); }
+.plan__opt { font-weight: 400; color: var(--text-muted); margin-left: var(--space-1); }
+.plan__chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.plan-chip { position: relative; }
+.plan-chip input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.plan-chip span { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-4); border: 1px solid var(--field-border); border-radius: var(--r-lg); background: var(--surface); color: var(--text); font-size: var(--fs-small); }
+.plan-chip input:checked + span { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.plan-chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.plan__field { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--fs-small); color: var(--text); min-width: 0; }
+.plan__pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.plan__errors { margin: 0; padding: var(--space-3) var(--space-4); list-style: none; border: 1px solid var(--danger); border-radius: var(--r-lg); background: var(--danger-soft); color: var(--text); font-size: var(--fs-small); }
+.plan__errors li + li { margin-top: var(--space-1); }
