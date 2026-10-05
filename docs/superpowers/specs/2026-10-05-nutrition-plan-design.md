@@ -189,11 +189,12 @@ lean. It only changes which limit applies. Advanced is `trainingAge` from onboar
   step.
 
 **Surfaces.** A "Weekly check-in" card on the Food diary when `status` is `propose`
-or just after the user applies one; a single line on Today only when a proposal is
+or, right after the user applies one, a confirmation of the new target and when the next
+check-in can happen (the heading takes focus); a single line on Today only when a proposal is
 waiting. Apply or "Not now". Both are remembered per device, keyed by the latest
 weigh-in date, so the same evidence is not offered twice (same pattern as the
-welcome-back card's handled flag). `on_track` shows once as a quiet positive line, not
-a recurring card. `not_ready` shows nothing, except a prompt to weigh in when the
+welcome-back card's handled flag). `on_track` shows as a single quiet line for as long as it holds (not a card, no buttons;
+showing it only once would need state that re-renders it away). `not_ready` shows nothing, except a prompt to weigh in when the
 only thing missing is weigh-ins.
 
 **Tone.** Says what was observed and what is on offer, never that the user failed.

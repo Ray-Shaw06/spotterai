@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { checkInCardModel, checkInCardHTML, checkInTodayLine } from "../checkin-card.js";
+import { checkInCardModel, checkInCardHTML, checkInTodayLine, checkInAppliedModel } from "../checkin-card.js";
 
 const BANNED = ["missed", "failed", "fail", "behind", "lost", "broke", "clean", "junk", "bad", "cheat", "lazy", "slacking", "guilty", "you didn't"];
-const PROPOSE = { status: "propose", reason: "too_fast", direction: "raise", fromKcal: 2350, toKcal: 2475, targets: { kcal: 2475, protein: 144, carbs: 330, fat: 69 }, slopePctPerWeek: -1.42, windowDays: 28 };
+const PROPOSE = { status: "propose", reason: "too_fast", direction: "raise", intent: "cut", proteinHeld: true, fromKcal: 2350, toKcal: 2475, targets: { kcal: 2475, protein: 144, carbs: 330, fat: 69 }, slopePctPerWeek: -1.42, windowDays: 28 };
 const text = (html) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 const everyResult = [
   PROPOSE,
@@ -65,7 +65,7 @@ test("a flat scale beside a thin log says the log may be missing food and accuse
 });
 
 test("results with nothing useful to say render nothing", () => {
-  for (const r of [{ status: "inconclusive", reason: "straddles_band" }, { status: "inconclusive", reason: "at_limit" }, { status: "inconclusive", reason: "no_change_offered" }, { status: "inconclusive", reason: "audit" }, null, undefined]) {
+  for (const r of [{ status: "inconclusive", reason: "straddles_band" }, { status: "inconclusive", reason: "no_change_offered" }, { status: "inconclusive", reason: "audit" }, null, undefined]) {
     assert.equal(checkInCardModel(r), null, JSON.stringify(r));
     assert.equal(checkInCardHTML(null), "");
   }
@@ -95,7 +95,7 @@ test("no card copy shames, predicts, claims research, or uses an em dash", () =>
 
 test("a real heading on the proposal card and no eyebrow", () => {
   const html = checkInCardHTML(checkInCardModel(PROPOSE));
-  assert.match(html, /<h2 class="card-title">Weekly check-in<\/h2>/);
+  assert.match(html, /<h2 class="card-title"[^>]*>Weekly check-in<\/h2>/);
   assert.ok(!/eyebrow/.test(html));
 });
 
@@ -109,4 +109,41 @@ test("an unsafe saved target gets a plain note pointing to the safety check and 
   assert.match(t, /Your nutrition plan/);
   assert.ok(!/on track|fits your goal|no change needed/i.test(t), "never reassuring beside an unsafe target");
   assert.ok(!/<button/.test(html));
+});
+
+test("a target at the edge of what SpotterAI will change gets a plain note instead of silence", () => {
+  const m = checkInCardModel({ status: "inconclusive", reason: "at_limit" });
+  assert.equal(m.kind, "info");
+  const t = text(checkInCardHTML(m));
+  assert.match(t, /edge of what SpotterAI will change on its own/);
+  assert.ok(!/<button/.test(checkInCardHTML(m)));
+});
+
+test("after Apply the card confirms the new target and the next check-in, and its heading can take focus", () => {
+  const m = checkInAppliedModel(2650);
+  assert.equal(m.kind, "applied");
+  const html = checkInCardHTML(m);
+  assert.match(text(html), /Your calorie target is now 2,650/);
+  assert.match(text(html), /next check-in will be in about four weeks/);
+  assert.match(html, /<h2 class="card-title" tabindex="-1" data-checkin-heading>/);
+});
+
+test("protein copy is true: held exactly or kept as close as the split allows", () => {
+  assert.match(text(checkInCardHTML(checkInCardModel(PROPOSE))), /Protein stays the same/);
+  const capped = checkInCardModel({ ...PROPOSE, proteinHeld: false });
+  const t = text(checkInCardHTML(capped));
+  assert.ok(!/Protein stays the same/.test(t));
+  assert.match(t, /Protein is kept as close as the split allows/);
+});
+
+test("a cut whose weight is going up is told that is the opposite direction, not that it is slower than the range", () => {
+  const rising = checkInCardModel({ ...PROPOSE, reason: "stalled", direction: "lower", slopePctPerWeek: 0.4, intent: "cut" });
+  const t = text(checkInCardHTML(rising));
+  assert.match(t, /gone up about 0\.4% a week/);
+  assert.match(t, /opposite direction from your goal/);
+  assert.ok(!/slower than the usual range/.test(t));
+  const bulkFalling = text(checkInCardHTML(checkInCardModel({ ...PROPOSE, reason: "stalled", direction: "raise", slopePctPerWeek: -0.4, intent: "bulk" })));
+  assert.match(bulkFalling, /opposite direction from your goal/);
+  const flat = text(checkInCardHTML(checkInCardModel({ ...PROPOSE, reason: "stalled", direction: "lower", slopePctPerWeek: 0.02, intent: "cut" })));
+  assert.match(flat, /slower than the usual range/);
 });

@@ -23,6 +23,7 @@ const TITLE = '<h2 class="card-title">Your nutrition plan</h2>';
  * @returns {{ state: "setup" } | { state: "plan", targets, basis, proteinPerKg, confidence, limitations, notice, canApply }}
  */
 export function planCardModel({ bodyStats, plan, current = {} } = {}) {
+  if (bodyStats && !plan) return { state: "weight", cta: "Add my weight" };
   if (!bodyStats || !plan) return { state: "setup", cta: "Get my targets" };
   return {
     state: "plan",
@@ -37,6 +38,11 @@ export function planCardModel({ bodyStats, plan, current = {} } = {}) {
 }
 
 export function planCardHTML(m) {
+  if (m.state === "weight") {
+    return `${TITLE}
+      <p class="plan__lead">Add a weigh-in to see your plan. It is built from your saved stats and your current weight.</p>
+      <div class="today-card__actions"><button type="button" class="btn btn--primary btn--sm" data-plan-act="open">${esc(m.cta)}</button></div>`;
+  }
   if (m.state === "setup") {
     return `${TITLE}
       <p class="plan__lead">Answer a few questions and get calorie and protein targets built from your own numbers. They stay on this device.</p>
@@ -82,7 +88,7 @@ export function planFormHTML({ unit = "kg", values = {}, needWeight = false, err
       : `<label class="plan__field">Height, cm<input class="input" name="heightCm" type="number" min="100" max="250" inputmode="numeric" value="${esc(v.heightCm ?? "")}"></label>`;
   const days = Array.from({ length: 8 }, (_, i) => ({ value: i, label: i === 0 ? "None" : `${i} day${i === 1 ? "" : "s"}` }));
   const lengths = SESSION_LENGTHS.map((m) => ({ value: m, label: `${m} minutes` }));
-  const err = errors.length ? `<ul class="plan__errors" role="alert">${errors.map((e) => `<li>${esc(FIELD_MESSAGES(e))}</li>`).join("")}</ul>` : "";
+  const err = errors.length ? `<ul class="plan__errors" role="alert" tabindex="-1">${errors.map((e) => `<li>${esc(FIELD_MESSAGES(e))}</li>`).join("")}</ul>` : "";
   return `${TITLE}
     <form class="plan__form" novalidate>
       ${err}
@@ -104,6 +110,34 @@ export function planFormHTML({ unit = "kg", values = {}, needWeight = false, err
 export function heightToFtIn(cm) {
   const total = Math.round(Number(cm) / 2.54);
   return { ft: Math.floor(total / 12), inch: total % 12 };
+}
+
+const KG_PER_LB = 1 / 2.2046226218;
+
+/**
+ * A draft carried across a kg/lb switch: height and weight are converted so nothing the
+ * user typed is blanked. A draft with no unit tag, or already in this unit, is returned as is.
+ */
+export function draftForUnit(draft, unit) {
+  if (!draft || !draft._unit || draft._unit === unit) return draft;
+  const out = { ...draft, _unit: unit };
+  const has = (v) => v !== "" && v != null && Number.isFinite(Number(v));
+  if (unit === "lb") {
+    if (has(draft.heightCm)) {
+      const { ft, inch } = heightToFtIn(draft.heightCm);
+      out.heightFt = ft;
+      out.heightIn = inch;
+    }
+    delete out.heightCm;
+    if (has(draft.weight)) out.weight = (Number(draft.weight) / KG_PER_LB).toFixed(1);
+  } else {
+    const cm = statsFromForm({ heightFt: draft.heightFt, heightIn: draft.heightIn }, "lb").heightCm;
+    if (Number.isFinite(cm)) out.heightCm = cm;
+    delete out.heightFt;
+    delete out.heightIn;
+    if (has(draft.weight)) out.weight = (Number(draft.weight) * KG_PER_LB).toFixed(1);
+  }
+  return out;
 }
 
 /** The current values of a form's elements: checked radios, selects, typed text. Pure, so a draft can be kept as the user types. */

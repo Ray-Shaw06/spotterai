@@ -14,7 +14,7 @@
  */
 
 import { dayNumber, ymdFromNumber, weekdayOf, addDays } from "./lib/calendar-days.js";
-import { buildPlan } from "./nutrition-plan.js";
+import { buildPlan, validateBodyStats } from "./nutrition-plan.js";
 import { completeMacros } from "./lib/nutrition-targets.js";
 import { evaluateNutrition, NUTRITION_THRESHOLDS } from "./nutrition-safety.js";
 
@@ -70,6 +70,10 @@ const median = (xs) => {
  * @returns {Array<{day: number, kg: number}>} sorted by day
  */
 export function prepareWeighIns(series, today, windowDays = 28, notBefore = null) {
+  // NOTE on the outlier filter below: a reading more than 15% from the window's median is
+  // dropped as a typo. That also hides a genuine step of that size (illness, surgery); a real
+  // loss of 16% over four weeks is centred on the median and survives, so only a sudden jump
+  // is lost. It keeps typos of 10 to 14%. Accepted: silence is the safe failure here.
   const end = dayNumber(today);
   // `notBefore` keeps a longer window from reaching back into an earlier regime.
   const start = Math.max(end - windowDays + 1, notBefore == null ? -Infinity : notBefore);
@@ -203,7 +207,12 @@ function isUnsafeTarget({ series, targets, bodyStats }, asOf) {
  * A target that is already unsafe never reads as on track or silent: it either gets a
  * raise to a safe level (when the scale agrees it is too much) or `target_unsafe`.
  */
-export function checkIn(input = {}) {
+export function checkIn(rawInput = {}) {
+  // Stats are re-validated here, not only where they are stored: a corrupted age range must
+  // read as no stats, never as an adult.
+  const v = validateBodyStats(rawInput.bodyStats);
+  if (!v.ok) return { status: "not_ready", reason: "no_stats" };
+  const input = { ...rawInput, bodyStats: v.value };
   const result = evaluate(input);
   if (result.status === "propose") return result;
   if (input.today && isUnsafeTarget(input, weeklyAsOf(input.today))) return { status: "inconclusive", reason: "target_unsafe" };
@@ -288,5 +297,5 @@ function evaluate({ series, days, targets, bodyStats, trainingAge, today, target
   const blocking = unsafe ? flags.filter((f) => /calorie|deficit/i.test(f.label)) : flags;
   if (blocking.length) return { status: "inconclusive", reason: "audit" };
 
-  return { status: "propose", reason, direction, fromKcal: current, toKcal, targets: proposed, slopePctPerWeek: trend.slopePctPerWeek, windowDays };
+  return { status: "propose", reason, direction, intent, proteinHeld: proposed.protein === Number(targets.protein), fromKcal: current, toKcal, targets: proposed, slopePctPerWeek: trend.slopePctPerWeek, windowDays };
 }

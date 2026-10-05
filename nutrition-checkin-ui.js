@@ -7,16 +7,25 @@
  */
 
 import { currentCheckIn, applyProposal, dismissProposal } from "./nutrition-checkin.js";
-import { checkInCardModel, checkInCardHTML } from "./checkin-card.js";
+import { checkInCardModel, checkInCardHTML, checkInAppliedModel } from "./checkin-card.js";
 
 const host = document.getElementById("nut-checkin");
 const card = document.getElementById("nut-checkin-card");
 
 let shown = null; // the proposal currently on screen
 let staleNote = false;
+let applied = null; // { kcal, focus } from Apply until the user leaves the page
 
 export function renderCheckInCard() {
   if (!host) return;
+  if (applied) {
+    // Right after Apply the card confirms what changed and when the next check-in is.
+    host.innerHTML = checkInCardHTML(checkInAppliedModel(applied.kcal));
+    if (card) card.hidden = false;
+    if (applied.focus) host.querySelector("[data-checkin-heading]")?.focus?.();
+    applied.focus = false;
+    return;
+  }
   const result = currentCheckIn();
   shown = result.status === "propose" ? result : null;
   let html = checkInCardHTML(checkInCardModel(result));
@@ -29,14 +38,27 @@ export function renderCheckInCard() {
 host?.addEventListener("click", (e) => {
   const act = e.target.closest("[data-checkin-act]")?.dataset.checkinAct;
   if (act === "apply") {
+    // Read the new target BEFORE applying: writing the targets re-renders this card and clears `shown`.
+    const toKcal = shown?.toKcal;
     const r = applyProposal(shown);
     if (!r.ok) {
       staleNote = true;
       renderCheckInCard();
+    } else {
+      applied = { kcal: toKcal, focus: true };
+      renderCheckInCard();
     }
-    // On success the store's persist event re-renders this card.
   } else if (act === "dismiss") {
     dismissProposal();
     renderCheckInCard();
   }
 });
+
+// Leaving the page (or switching profile) ends the confirmation; the next visit shows the real state.
+for (const type of ["spotter:route", "spotter:profile"]) {
+  window.addEventListener(type, () => {
+    if (!applied) return;
+    applied = null;
+    renderCheckInCard();
+  });
+}

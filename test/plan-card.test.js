@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { planCardModel, planCardHTML, planFormHTML, statsFromForm, heightToFtIn, formValues } from "../plan-card.js";
-import { buildPlan } from "../nutrition-plan.js";
+import { planCardModel, planCardHTML, planFormHTML, statsFromForm, heightToFtIn, formValues, draftForUnit } from "../plan-card.js";
+import { buildPlan, validateWeight } from "../nutrition-plan.js";
 
 const STATS = { heightCm: 178, ageRange: "18–29", sex: "Male", dailyActivity: "some", daysPerWeek: 4, sessionLength: 60, intent: "cut" };
 const BANNED = ["missed", "failed", "fail", "behind", "lost", "broke", "clean", "junk", "bad", "cheat", "lazy", "slacking", "guilty"];
@@ -107,4 +107,53 @@ test("formValues reads a form the way the draft needs: checked radios, selected 
     { name: "", type: "submit", value: "go" },
   ];
   assert.deepEqual(formValues(els), { heightCm: "178", ageRange: "30–44", sex: "", daysPerWeek: "4" });
+});
+
+// --- Review minors: errors take focus, a missing weigh-in, weight range, unit switch mid-form ---
+
+
+test("the error list can take focus, so a failed save does not strand a keyboard user", () => {
+  const html = planFormHTML({ unit: "kg", values: {}, needWeight: false, errors: ["heightCm: height must be between 100 and 250 cm"] });
+  assert.match(html, /<ul class="plan__errors" role="alert" tabindex="-1">/);
+});
+
+test("saved stats with every weigh-in deleted asks for a weight instead of repeating the setup pitch", () => {
+  const m = planCardModel({ bodyStats: STATS, plan: null, current: { kcal: 2200 } });
+  assert.equal(m.state, "weight");
+  const html = planCardHTML(m);
+  assert.match(text(html), /Add a weigh-in to see your plan/);
+  assert.ok(!/kcal|Answer a few questions/.test(html));
+  assert.match(html, /data-plan-act="open"/);
+});
+
+test("validateWeight enforces a plausible range in either unit and names it", () => {
+  assert.equal(validateWeight("19.9", "kg").ok, false);
+  assert.equal(validateWeight("20", "kg").ok, true);
+  assert.equal(validateWeight("400", "kg").ok, true);
+  assert.equal(validateWeight("401", "kg").ok, false);
+  assert.equal(validateWeight("43.9", "lb").ok, false);
+  assert.equal(validateWeight("44", "lb").ok, true);
+  assert.equal(validateWeight("882", "lb").ok, true);
+  assert.equal(validateWeight("883", "lb").ok, false);
+  for (const bad of ["", "x", null, undefined, "-5", NaN]) assert.equal(validateWeight(bad, "kg").ok, false, String(bad));
+  assert.match(validateWeight("5", "kg").errors[0], /20 and 400 kg/);
+  assert.match(validateWeight("5", "lb").errors[0], /44 and 882 lb/);
+  assert.equal(validateWeight("80", "kg").value, 80);
+});
+
+test("switching kg and lb while the form is open keeps what was typed, converted", () => {
+  const toLb = draftForUnit({ heightCm: "182", weight: "80", ageRange: "30–44", _unit: "kg" }, "lb");
+  assert.equal(toLb.heightFt, 6);
+  assert.equal(toLb.heightIn, 0);
+  assert.equal(toLb.weight, "176.4");
+  assert.equal(toLb.ageRange, "30–44");
+  assert.equal(toLb._unit, "lb");
+  const toKg = draftForUnit({ heightFt: "5", heightIn: "10", weight: "176", _unit: "lb" }, "kg");
+  assert.equal(toKg.heightCm, 178);
+  assert.equal(toKg.weight, "79.8");
+  const same = { heightCm: "182", weight: "80", _unit: "kg" };
+  assert.deepEqual(draftForUnit(same, "kg"), same);
+  assert.deepEqual(draftForUnit({ heightCm: "182" }, "lb"), { heightCm: "182" }, "no unit tag means nothing to convert");
+  const blank = draftForUnit({ heightCm: "", weight: "", _unit: "kg" }, "lb");
+  assert.ok(blank.weight === "" && !blank.heightFt, "blank stays blank");
 });
