@@ -1005,10 +1005,10 @@ function init() {
     const del = e.target.closest('[data-act="del-routine"]');
     const plan = e.target.closest('[data-act="start-plan"]');
     if (start) {
-      const r = getRoutines().find((x) => x.id === start.closest(".routine").dataset.id);
+      const r = getRoutines().find((x) => x.id === start.closest(".saved-w").dataset.id);
       if (r) startSession(sessionFromRoutine(r));
     } else if (del) {
-      removeRoutine(del.closest(".routine").dataset.id);
+      removeRoutine(del.closest(".saved-w").dataset.id);
     } else if (plan) {
       const day = store.plan?.days?.[Number(plan.dataset.i)];
       if (day) startSession(sessionFromPlanDay(day));
