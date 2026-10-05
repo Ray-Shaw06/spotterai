@@ -51,7 +51,8 @@ their weight trend says the plan is off, which they approve.
 
 ### Phase 0: salvage the pure core (its own PR, ships first)
 
-Cherry-pick from `origin/nutrition-targets-from-stats`, no UI:
+Cherry-pick from `origin/nutrition-targets-from-stats`, no UI, **plus one change the
+research requires** (the cut-deficit cap in the decision below):
 
 - `lib/nutrition-targets.js`
 - `test/nutrition-targets.test.js`
@@ -227,24 +228,32 @@ A pinned test guards the copy, as with catch-up, welcome-back and the streak car
 - Auto-applying any change.
 - The branch's onboarding step and drift nudge as written.
 
-## Open decision (found by the research, needs Rehaan)
+## Decision: the cut deficit cap (decided 2026-10-05, Rehaan chose option 2)
 
-**The salvaged calculator cuts calories by a flat 20% of maintenance. Murphy & Koehler's
+**The salvaged calculator cut calories by a flat 20% of maintenance. Murphy & Koehler's
 meta-regression (2022) found a deficit of about 500 kcal/day prevented lean-mass gains
-in resistance training, and advise staying under it when the aim is to preserve muscle.**
-At maintenance above 2,500 kcal (common for men who lift) 20% is more than 500 kcal.
-The ISSN position stand pulls the other way: people with more body fat can take a
-larger deficit. Options for the cut default:
+in resistance training and advise staying under it when the aim is to preserve muscle.**
+At maintenance above 2,500 kcal (common for men who lift) 20% is more than 500 kcal. The
+ISSN position stand says people with more body fat can take a larger deficit.
 
-1. **Cap at 500 kcal/day for everyone** who lifts. Simplest and closest to the one
-   meta-analysis, but under-prescribes for heavier people with a lot to lose.
-2. **Cap at 500 for BMI under 30, keep 20% at BMI 30 and over.** Follows both sources;
-   the BMI split is a proxy and a design choice.
-3. **Keep a flat 20%.** Matches the branch as written; contradicts the research above
-   for larger lifters.
+**Chosen: cap the cut deficit at 500 kcal/day for BMI under 30; keep the flat 20% at
+BMI 30 and over.** The BMI split is a proxy and a design choice, labelled as one in the
+code and in rubric-sources.md. It follows both sources.
 
-Recommendation: option 2. Decide before Phase 0 opens, because it changes
-`calculateTargets` and its 48,600-combination sweep.
+Consequences for the plan:
+
+- Phase 0 is therefore not a pure cherry-pick: `calculateTargets` changes
+  (`deficit = bmi < 30 ? min(0.20 x TDEE, 500) : 0.20 x TDEE`, cut intent only; BMI from
+  the same `kg` and `cm` it already receives). Bulk and recomp are unchanged.
+- Its 48,600-combination sweep must still pass: every output through `evaluateNutrition`
+  with zero flags. A smaller cut only moves targets toward maintenance, so it should, but
+  the sweep is the proof, not this sentence.
+- The calorie floor `max(LOW_KCAL, BMR)` still applies after the cap.
+- The Phase 2 proposer may not deepen a cut past this starting deficit (already a rule).
+- `basis` copy ("maintenance minus 20% for a cut") must state the real figure for
+  the user's case, for example "about 500 kcal under maintenance".
+- Add a calculator test pinning the cap at both sides of BMI 30 and at the 2,500 kcal
+  crossover.
 
 ## Risks and open items
 

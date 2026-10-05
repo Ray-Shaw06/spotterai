@@ -228,11 +228,14 @@ their meta-regression found that a deficit of **about 500 kcal/day prevented lea
 mass gains**. Their advice: avoid deficits above 500 kcal/day when the aim is to
 preserve lean mass. [Murphy & Koehler 2022](https://pubmed.ncbi.nlm.nih.gov/34623696/)
 
-**The conflict.** The target calculator waiting on an unmerged branch cuts calories
-by a flat **20% of maintenance**. That exceeds 500 kcal/day once maintenance is
-above 2,500, which is common for men who lift. The ISSN statement above says people
-with more body fat can take a larger deficit, so a flat cap is not obviously right
-either. Resolving this is an open decision, listed in the spec.
+**The conflict, and the decision.** The target calculator waiting on an unmerged branch
+cuts calories by a flat **20% of maintenance**. That exceeds 500 kcal/day once
+maintenance is above 2,500, which is common for men who lift. The ISSN statement above
+says people with more body fat can take a larger deficit, so a flat 500 cap is not
+obviously right either. **Decided 2026-10-05: cap the cut deficit at 500 kcal/day for
+BMI under 30, and keep 20% at BMI 30 and over.** The split follows both sources; **the
+BMI cut-off is a proxy and a design choice (Practical)**, since BMI misreads muscular
+people and the app has no body-fat measure.
 
 ### Bulk: how fast is too fast
 
