@@ -8,7 +8,7 @@
  */
 
 import { store } from "./store.js";
-import { deriveStats, getWater, getState, dayCounts, daysSinceBodyweight, daysSinceLastWorkout, lastWorkoutDate, dateDaysAgo, nutritionDaySummaries } from "./tracker-store.js";
+import { deriveStats, getWater, getState, dayCounts, daysSinceBodyweight, daysSinceLastWorkout, lastWorkoutDate, dateDaysAgo, nutritionDaySummaries, currentMaintenance } from "./tracker-store.js";
 import { evaluateNutrition } from "./nutrition-safety.js";
 import { todaysWorkout, coachNote, trainingDays, weekStrip } from "./today.js";
 import { openItems, catchUpSummary } from "./catch-up.js";
@@ -138,7 +138,7 @@ function render() {
   const water = getWater(ymd());
   const waterTarget = targets.waterMl || 2500;
   const waterLeft = Math.max(0, waterTarget - water);
-  const nutAudit = evaluateNutrition({ targets, bodyweight: stats.bodyweight?.latest, unit: stats.unit, goal: inputs.goal || "" });
+  const nutAudit = evaluateNutrition({ targets, bodyweight: stats.bodyweight?.latest, unit: stats.unit, goal: inputs.goal || "", maintenance: currentMaintenance() });
   const nutFlags = nutAudit.flags.length
     ? `<p class="today-note today-note--warn">${esc(nutAudit.flags[0].label)}: ${esc(nutAudit.flags[0].fix)}</p>`
     : "";

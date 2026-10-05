@@ -9,7 +9,7 @@
  * Display areas re-render on change; inputs in the food picker are short-lived.
  */
 
-import { addCustomFood, addNutrition, addWater, copyMeal, deriveStats, nutritionDaySummaries, dateDaysAgo, getCustomFoods, getMealTemplates, getRecentFoods, getState, getWater, logMealTemplate, removeEntry, removeMealTemplate, resetAll, saveMealTemplate, setTargets, subscribe, updateNutrition } from "./tracker-store.js";
+import { addCustomFood, addNutrition, addWater, copyMeal, currentMaintenance, deriveStats, nutritionDaySummaries, dateDaysAgo, getCustomFoods, getMealTemplates, getRecentFoods, getState, getWater, logMealTemplate, removeEntry, removeMealTemplate, resetAll, saveMealTemplate, setTargets, subscribe, updateNutrition } from "./tracker-store.js";
 import { lookupBarcode, searchFoods, searchOpenFoodFacts } from "./foods.js";
 import { estimateFood, estimateMealPhoto } from "./ai.js";
 import { ring } from "./charts.js";
@@ -124,6 +124,7 @@ function renderNutritionSafety() {
     bodyweight: s.bodyweight?.latest ?? null,
     unit: s.unit,
     goal: store.inputs?.goal || "",
+    maintenance: currentMaintenance(),
   });
 
   const verdict = flags.some((f) => f.tier === "critical")

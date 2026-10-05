@@ -15,7 +15,7 @@ import { trackerKey } from "./profile-store.js";
 import { deloadFromWeeklyVolume, epley1RM, suggestNextWeight } from "./progression.js";
 import { isCardioExercise } from "./exercise-catalog.js";
 import { handledGap } from "./welcome-back.js";
-import { validateBodyStats } from "./nutrition-plan.js";
+import { validateBodyStats, maintenanceFor } from "./nutrition-plan.js";
 
 const DEFAULTS = {
   workouts: [], // { id, date 'YYYY-MM-DD', name, focus, exercises:[{name,sets,reps,weight}], volume, xp }
@@ -1009,6 +1009,17 @@ export function setBodyStats(input) {
 /** Day the targets last changed, or null if never since this was tracked. */
 export function getTargetsChangedOn() {
   return state.targetsChangedOn || null;
+}
+
+/**
+ * Maintenance calories from the saved stats and the latest weigh-in, for the
+ * safety auditor. Null until both exist, which leaves the auditor on its old
+ * per-kg estimate exactly as before.
+ */
+export function currentMaintenance() {
+  const series = bodyweightSeries();
+  const kg = series.length ? series[series.length - 1].kg : null;
+  return maintenanceFor(getBodyStats(), kg);
 }
 
 /** Bodyweight entries in kg regardless of the display unit, oldest first. */

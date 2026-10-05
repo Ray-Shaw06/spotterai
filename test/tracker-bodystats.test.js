@@ -23,6 +23,7 @@ const {
   setTargets,
   getTargetsChangedOn,
   bodyweightSeries,
+  currentMaintenance,
   metaSnapshot,
   mergeRemoteMeta,
   exportData,
@@ -139,4 +140,19 @@ test("bodyweightSeries is in kg, sorted by date, and skips junk", () => {
   assert.ok(Math.abs(s[0].kg - 100.02) < 0.05);
   blank({ unit: "kg", bodyweight: [{ id: "a", date: "2026-10-01", value: 80 }] });
   assert.deepEqual(bodyweightSeries(), [{ date: "2026-10-01", kg: 80 }]);
+});
+
+test("currentMaintenance is the plan's maintenance for the latest weight, or null without stats or weight", () => {
+  blank({ bodyweight: [{ id: "a", date: "2026-10-01", value: 80 }] });
+  assert.equal(currentMaintenance(), null, "no stats yet");
+  setBodyStats(GOOD);
+  const m = currentMaintenance();
+  assert.equal(typeof m, "number");
+  assert.ok(m > 1500 && m < 4500);
+  blank();
+  setBodyStats(GOOD);
+  assert.equal(currentMaintenance(), null, "no weight yet");
+  blank({ unit: "lb", bodyweight: [{ id: "a", date: "2026-10-01", value: 176.4 }] });
+  setBodyStats(GOOD);
+  assert.ok(Math.abs(currentMaintenance() - m) <= 15, "lb entry reads as the same 80 kg body");
 });

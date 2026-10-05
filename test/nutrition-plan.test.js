@@ -81,3 +81,25 @@ test("every string a plan can show is free of shaming words and em dashes", () =
   }
   assert.ok(checked > 100, "the sweep is not vacuous");
 });
+
+// --- accurate maintenance reaches the auditor (the live over-flagging bug) ---
+
+import { readFileSync } from "node:fs";
+import { evaluateNutrition } from "../nutrition-safety.js";
+
+test("a heavy sedentary body is no longer flagged as an aggressive cut once its real maintenance is known", () => {
+  const stats = { heightCm: 170, ageRange: "60+", sex: "Female", dailyActivity: "sitting", daysPerWeek: 0, sessionLength: 0, intent: "cut" };
+  const args = { targets: { kcal: 1900, protein: 160, fat: 53 }, bodyweight: 130, unit: "kg", goal: "Fat loss" };
+  assert.ok(evaluateNutrition(args).flags.some((f) => /deficit/i.test(f.label)), "the x31 heuristic flags it");
+  const accurate = evaluateNutrition({ ...args, maintenance: maintenanceFor(stats, 130) });
+  assert.equal(accurate.flags.length, 0);
+});
+
+test("both screens that show auditor flags pass the accurate maintenance", () => {
+  for (const file of ["nutrition-ui.js", "today-ui.js"]) {
+    const src = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+    const call = src.match(/evaluateNutrition\(\{[\s\S]*?\}\)/);
+    assert.ok(call, `${file} calls evaluateNutrition`);
+    assert.match(call[0], /maintenance/, `${file} passes maintenance`);
+  }
+});
