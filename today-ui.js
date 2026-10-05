@@ -8,10 +8,11 @@
  */
 
 import { store } from "./store.js";
-import { deriveStats, getWater, getState, dayCounts, daysSinceBodyweight, dateDaysAgo } from "./tracker-store.js";
+import { deriveStats, getWater, getState, dayCounts, daysSinceBodyweight, daysSinceLastWorkout, lastWorkoutDate, dateDaysAgo } from "./tracker-store.js";
 import { evaluateNutrition } from "./nutrition-safety.js";
 import { todaysWorkout, coachNote, trainingDays, weekStrip } from "./today.js";
 import { openItems, catchUpSummary } from "./catch-up.js";
+import { welcomeBack, handledGap, markGapHandled } from "./welcome-back.js";
 import { isCardioEntry } from "./lib/plan.js";
 
 const content = document.getElementById("today-content");
@@ -194,6 +195,26 @@ function render() {
       )
     : "";
 
+  // --- Welcome back: offered after a long gap, never applied on its own ----
+  const lastDate = lastWorkoutDate();
+  const back = welcomeBack({
+    gapDays: daysSinceLastWorkout(),
+    workoutsLogged: getState().workouts?.length || 0,
+    handled: !!lastDate && handledGap() === lastDate,
+  });
+  const welcomeCard = back
+    ? card(
+        `<p class="today-card__eyebrow">Welcome back</p>
+         <p class="today-card__title today-card__title--sm">${esc(back.title)}</p>
+         <p class="today-card__text">${esc(back.body)}</p>
+         <div class="today-card__actions">
+           <button type="button" class="btn btn--primary btn--sm today-qa" data-act="ease-back">${esc(back.cta)}</button>
+           <button type="button" class="btn btn--ghost btn--sm today-qa" data-act="ease-dismiss">${esc(back.dismiss)}</button>
+         </div>`,
+        "today-card--welcome"
+      )
+    : "";
+
   // --- Week at a glance ----------------------------------------------------
   const strip = weekStrip(plan, stats.thisWeek.sessions || 0);
   const stripHtml = strip.length
@@ -212,6 +233,7 @@ function render() {
   content.innerHTML = `
     ${quickActions(true)}
     ${stripHtml}
+    ${welcomeCard}
     ${catchUpCard}
     ${workoutCard}
     <div class="today-telemetry">${coachCard}${nutritionCard}${recoveryCard}</div>`;
@@ -236,6 +258,18 @@ content?.addEventListener("click", (e) => {
     if (kind === "meal") location.hash = "#/nutrition";
     else if (kind === "weight") location.hash = "#/progress";
     else location.hash = "#/dashboard";
+    return;
+  }
+  if (act === "ease-dismiss") {
+    markGapHandled(lastWorkoutDate());
+    render();
+    return;
+  }
+  if (act === "ease-back") {
+    // Hand off to the same adapt path as the Adapt button: the ramp runs inside
+    // adaptPlan, so it gets the safety close and the no-new-flags invariant.
+    location.hash = "#/";
+    window.dispatchEvent(new CustomEvent("spotter:ease-back"));
     return;
   }
   if (act === "start") {

@@ -24,6 +24,7 @@ import { lineChart } from "./charts.js";
 import { setPlan, store, planUpdatedAt } from "./store.js";
 import { getContext as getTrackerContext, buildAdaptContext, getState as getTrackerState } from "./tracker-store.js";
 import { adaptPlan } from "./adapt-engine.js";
+import { markGapHandled } from "./welcome-back.js";
 
 /**
  * What goes in the plan table's Reps column. A cardio entry has no rep count;
@@ -770,7 +771,7 @@ function adapt() {
 
   try {
     // Fully offline + deterministic: same evaluator re-audits every change.
-    const { plan, changes, summary, adapted } = adaptPlan(store.plan, context, store.inputs);
+    const { plan, changes, summary, adapted, ramped } = adaptPlan(store.plan, context, store.inputs);
     if (!adapted) {
       showAdaptError("Your plan already matches your recent training, nothing to change yet. Keep logging and try again in a week.");
       return;
@@ -778,6 +779,7 @@ function adapt() {
     // Replace the current plan (persist + let chat/workout see it), re-audit,
     // re-render, then surface what changed and why.
     publishPlan(plan, store.inputs);
+    if (ramped) markGapHandled(context.lastWorkoutDate);
     renderResults(plan, store.inputs, false, { note: summary });
     renderAdaptChanges(summary, changes);
   } catch {
@@ -792,6 +794,9 @@ function adapt() {
 // ----------------------------------------------------------------------------
 // Events
 // ----------------------------------------------------------------------------
+
+// The Today welcome-back card asks for the same adaptation the Adapt button runs.
+window.addEventListener("spotter:ease-back", () => adapt());
 
 // Guided onboarding finishes with a mapped input set and asks us to generate.
 window.addEventListener("spotter:generate", (e) => {

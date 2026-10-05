@@ -193,3 +193,99 @@ test("end-to-end: bumps version and produces a summary when it changes", () => {
   assert.ok(out.summary.length > 0);
   assert.ok(out.changes.length > 0);
 });
+
+// --- Return ramp ---------------------------------------------------------------
+
+const away = (gapDays, extra = {}) => ({ ...steadyContext(), gapDays, lastWorkoutDate: "2026-09-01", ...extra });
+const totalSets = (plan) => plan.days.flatMap((d) => d.exercises).reduce((n, e) => n + (Number(e.sets) || 0), 0);
+
+test("a 14-day gap eases working sets and says why, with the real number", () => {
+  const plan = basePlan();
+  const out = adaptPlan(plan, away(14), inputs);
+  assert.equal(out.ramped, true);
+  assert.ok(totalSets(out.plan) < totalSets(plan));
+  assert.ok(out.changes.some((c) => /Back after 14 days: eased \d+ working sets?/.test(c)), out.changes.join(" | "));
+  assert.match(out.summary, /eased you back in/);
+});
+
+test("a 30-day gap cuts deeper than a 14-day one", () => {
+  // 4-set work, because 3 sets rounds to 2 under both cuts and would not tell them apart.
+  const four = () => {
+    const p = basePlan();
+    for (const d of p.days) for (const e of d.exercises) e.sets = 4;
+    return p;
+  };
+  const light = adaptPlan(four(), away(14), inputs);
+  const deep = adaptPlan(four(), away(30), inputs);
+  assert.ok(totalSets(deep.plan) < totalSets(light.plan));
+});
+
+test("under ten days the ramp does not run", () => {
+  const out = adaptPlan(basePlan(), away(9), inputs);
+  assert.equal(out.ramped, false);
+});
+
+test("no logged base, no ramp", () => {
+  const out = adaptPlan(basePlan(), away(40, { workoutsLogged: 2 }), inputs);
+  assert.equal(out.ramped, false);
+});
+
+test("a gap already handled on this device is not trimmed twice", () => {
+  const plan = basePlan();
+  const out = adaptPlan(plan, away(30, { gapHandled: true }), inputs);
+  assert.equal(out.ramped, false);
+  assert.equal(totalSets(out.plan), totalSets(plan));
+});
+
+test("a handled gap still holds progression until you train again", () => {
+  const ctx = away(30, {
+    gapHandled: true,
+    exercises: { "barbell bench press": { sessions: 4, latest: { weight: 80, reps: 8 }, recentTopReps: [8, 8, 8] } },
+  });
+  const out = adaptPlan(basePlan(), ctx, inputs);
+  assert.ok(!out.changes.some((c) => /suggested|Progress toward|added a/.test(c)), out.changes.join(" | "));
+});
+
+test("no load increases while easing back in, even when every lift was hitting target", () => {
+  const ctx = away(21, {
+    exercises: { "barbell bench press": { sessions: 4, latest: { weight: 80, reps: 8 }, recentTopReps: [8, 8, 8] } },
+  });
+  const out = adaptPlan(basePlan(), ctx, inputs);
+  assert.equal(out.ramped, true);
+  assert.ok(!out.changes.some((c) => /suggested|Progress toward|added a/.test(c)), out.changes.join(" | "));
+  assert.ok(!(findExercise(out.plan, "Barbell Bench Press").notes || "").includes("Progress toward"));
+});
+
+test("the ramp replaces the adherence pullback and the deload instead of stacking on them", () => {
+  // Weeks of zero sessions would read as low adherence, and a spiking volume
+  // history would recommend a deload. Neither should pile on the ramp.
+  const ctx = away(25, { weeklySessions: [3, 3, 0, 0, 0, 0, 0, 0], weeklyVolume: [800, 1200, 1800, 2600] });
+  const out = adaptPlan(basePlan(), ctx, inputs);
+  assert.equal(out.ramped, true);
+  assert.ok(!out.changes.some((c) => /Deload week|Eased back \d+ accessory/.test(c)), out.changes.join(" | "));
+  const deep = adaptPlan(basePlan(), away(25), inputs);
+  assert.equal(totalSets(out.plan), totalSets(deep.plan), "same gap, same cut, whatever the history says");
+});
+
+test("the ramp never produces more critical or warning flags than the plan started with", () => {
+  const plan = basePlan();
+  const before = evaluatePlan(plan, inputs).summary;
+  for (const gap of [10, 14, 21, 45]) {
+    const out = adaptPlan(plan, away(gap), inputs);
+    const after = evaluatePlan(out.plan, inputs).summary;
+    assert.ok(after.critical <= before.critical, `gap ${gap}: critical ${before.critical} -> ${after.critical}`);
+    assert.ok(after.warning <= before.warning, `gap ${gap}: warning ${before.warning} -> ${after.warning}`);
+  }
+});
+
+test("a plan with nothing to trim reports no ramp rather than a fake one", () => {
+  const plan = basePlan();
+  for (const d of plan.days) for (const e of d.exercises) e.sets = 2;
+  const out = adaptPlan(plan, away(30), inputs);
+  assert.equal(out.ramped, false);
+});
+
+test("easing back never takes a lift below two sets", () => {
+  const out = adaptPlan(basePlan(), away(90), inputs);
+  for (const d of out.plan.days) for (const e of d.exercises) assert.ok(e.sets >= 2, `${e.name}: ${e.sets}`);
+});

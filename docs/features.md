@@ -55,6 +55,13 @@ schema, the audit and the adaptation, so a hard run logged yesterday eases
 today's leg accessories and flags the load on the main lift, and the auditor
 refuses to put sprints the day before a heavy squat session.
 
+After a long gap, the plan offers to ease you back in rather than resume at old
+loads. When the last logged workout is 10 or more days back (21 or more for the
+deeper version), Today shows a **welcome-back card**. One tap trims working sets
+and holds off adding weight, through the same adapt path and the same
+no-new-flags audit as the Adapt button. The app proposes and you approve; the
+thresholds are defaults for this app, not figures from research.
+
 ---
 
 ---

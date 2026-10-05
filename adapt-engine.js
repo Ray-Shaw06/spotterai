@@ -17,6 +17,12 @@
  * Ordered transforms, recovery before progression:
  *   1. Injuries / pain      — merged into inputs; the safety close (step 6) swaps
  *                             contraindicated movements deterministically.
+ *   1b. Return ramp        — a long gap since the last logged workout → trim working
+ *                             sets and hold progression (see welcome-back.js). It
+ *                             REPLACES steps 2, 3, 3b and 4 for that pass: weeks of
+ *                             nothing read as low adherence, and stacking a pullback,
+ *                             a deload and a cardio cut on top of the ramp would
+ *                             ease the same legs three times for one cause.
  *   2. Adherence pullback   — missed sessions → ease accessory volume.
  *   3b. Cardio fatigue      — hard running logged in the last 48h → ease leg
  *                             accessory volume and flag the load on the main lift.
@@ -39,6 +45,7 @@ import { repairPlan } from "./repair.js";
 import { evaluatePlan, computeWeeklyVolume, MUSCLE_KEYWORDS, THRESHOLDS, LEG_GROUPS, HARD_CARDIO_KEYWORDS } from "./evaluator.js";
 import { isCardioEntry } from "./lib/plan.js";
 import { sendAuditTelemetry } from "./audit-telemetry-client.js";
+import { rampLevel, RAMP_CUT } from "./welcome-back.js";
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const norm = (t) => String(t || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -232,6 +239,25 @@ function deloadVolume(work) {
   return cut;
 }
 
+/** Trim working sets by `fraction` after a long gap. Same floor as the deload:
+ *  nothing drops below 2 sets, and 2-set work is left alone. Cardio entries
+ *  carry no `sets`, so they pass through untouched. */
+function rampVolume(work, fraction) {
+  let cut = 0;
+  for (const day of work.days || []) {
+    for (const ex of day.exercises || []) {
+      const sets = Number(ex.sets) || 0;
+      if (sets <= 2) continue;
+      const reduced = Math.max(2, Math.round(sets * (1 - fraction)));
+      if (reduced < sets) {
+        cut += sets - reduced;
+        ex.sets = reduced;
+      }
+    }
+  }
+  return cut;
+}
+
 // ----------------------------------------------------------------------------
 // Entry point
 // ----------------------------------------------------------------------------
@@ -261,8 +287,24 @@ export function adaptPlan(plan, context, inputs = {}) {
   const changes = [];
   const pulledBack = new Set();
 
-  // 2. Adherence pullback.
-  const adh = adherence(context);
+  // 1b. Return ramp. Wins over the transforms below: see the header.
+  //     `gapHandled` means the trim already happened (or was declined) for this gap:
+  //     no second trim, but the ramp still holds progression and the other easing
+  //     transforms off until a new workout ends the gap.
+  const ramp = rampLevel(context.gapDays, context.workoutsLogged);
+  let ramped = false;
+  if (ramp && !context.gapHandled) {
+    const cut = rampVolume(work, RAMP_CUT[ramp]);
+    if (cut) {
+      ramped = true;
+      changes.push(
+        `Back after ${Math.round(Number(context.gapDays))} days: eased ${cut} working set${cut > 1 ? "s" : ""} and held off adding weight, so your first sessions rebuild the base.`
+      );
+    }
+  }
+
+  // 2. Adherence pullback. Skipped on a return: a long gap is not low adherence.
+  const adh = ramp ? { behind: false, avg: null, target: Number(context?.thisWeek?.target) || 0 } : adherence(context);
   if (adh.behind) {
     const trimmed = pullBack(work, changes, pulledBack);
     if (trimmed) {
@@ -273,7 +315,7 @@ export function adaptPlan(plan, context, inputs = {}) {
   }
 
   // 3. Deload.
-  const deload = deloadFromWeeklyVolume(context.weeklyVolume);
+  const deload = ramp ? null : deloadFromWeeklyVolume(context.weeklyVolume);
   const deloaded = !!(deload && deload.recommend);
   if (deloaded) {
     const cut = deloadVolume(work);
@@ -283,11 +325,11 @@ export function adaptPlan(plan, context, inputs = {}) {
   // 3b. Cardio fatigue. Skipped during a deload, which has already backed every
   //     lift off by ~40%: easing the legs again on top of that is a double cut,
   //     and the second one would not be justified by anything the user did.
-  const hardCardio = deloaded ? null : recentHardCardio(context);
+  const hardCardio = deloaded || ramp ? null : recentHardCardio(context);
   if (hardCardio) easeAfterCardio(work, hardCardio, changes, pulledBack);
 
-  // 4. Progression — only when we haven't just deloaded.
-  if (!deloaded) {
+  // 4. Progression — only when we haven't just deloaded or eased back in.
+  if (!deloaded && !ramp) {
     const vol = computeWeeklyVolume(work);
     for (const day of work.days || []) {
       for (const ex of day.exercises || []) {
@@ -358,6 +400,7 @@ export function adaptPlan(plan, context, inputs = {}) {
         ? "Re-checked your plan against your recent training and tightened a few things for safety."
         : "Your plan already fits your training, nothing to change yet.",
       adapted: fb.length > 0,
+      ramped: false, // the ramp's edits were discarded with the rest
     };
   }
 
@@ -369,16 +412,18 @@ export function adaptPlan(plan, context, inputs = {}) {
   return {
     plan: finalPlan,
     changes,
-    summary: buildSummary(changes, deloaded, adh),
+    summary: buildSummary(changes, deloaded, adh, ramped),
     adapted: changes.length > 0,
+    ramped,
   };
 }
 
 /** Deterministic 1-2 sentence overview from what actually changed. */
-function buildSummary(changes, deloaded, adh) {
+function buildSummary(changes, deloaded, adh, ramped = false) {
   if (!changes.length) return "Your plan already fits your training, nothing to change yet.";
   const parts = [];
-  if (deloaded) parts.push("scheduled a lighter deload week to let you recover");
+  if (ramped) parts.push("eased you back in after your time away");
+  else if (deloaded) parts.push("scheduled a lighter deload week to let you recover");
   else if (adh.behind) parts.push("eased the volume to match how much you've actually been training");
   parts.push("kept every change inside the same safety checks");
   return `Adapted from your logged training: ${parts.join(", ")}.`;
