@@ -14,6 +14,7 @@ import { ACHIEVEMENTS, XP, achievementXp, levelFor, rankFor, workoutXp } from ".
 import { trackerKey } from "./profile-store.js";
 import { deloadFromWeeklyVolume, epley1RM, suggestNextWeight } from "./progression.js";
 import { isCardioExercise } from "./exercise-catalog.js";
+import { handledGap } from "./welcome-back.js";
 
 const DEFAULTS = {
   workouts: [], // { id, date 'YYYY-MM-DD', name, focus, exercises:[{name,sets,reps,weight}], volume, xp }
@@ -608,6 +609,20 @@ export function daysSinceBodyweight(from = today()) {
   return Math.max(0, Math.round((ref - last) / 86400000));
 }
 
+/** Date of the most recent logged workout, or null. Backdated sessions count:
+ *  the date is when you trained, not when you typed it in. */
+export function lastWorkoutDate() {
+  const dates = (state.workouts || []).map((w) => w.date).filter(Boolean).sort();
+  return dates.length ? dates[dates.length - 1] : null;
+}
+
+/** Whole days since the last logged workout, or null when there has never been one. */
+export function daysSinceLastWorkout(from = today()) {
+  const last = lastWorkoutDate();
+  if (!last) return null;
+  return Math.max(0, Math.round((parseDay(from).getTime() - parseDay(last).getTime()) / 86400000));
+}
+
 /**
  * Log the most recent session again, sets, reps and weights intact, onto
  * `date`. The one-tap answer to "I did the same thing as last time and forgot
@@ -917,7 +932,13 @@ export function buildAdaptContext(plan) {
   }
 
   const cardio = recentCardio(7);
+  // A gap already eased (or turned down) on this device is not trimmed again, or
+  // every Adapt tap while you were still away would cut the plan once more.
+  const lastDate = lastWorkoutDate();
   return {
+    gapDays: daysSinceLastWorkout(),
+    gapHandled: !!lastDate && handledGap() === lastDate,
+    lastWorkoutDate: lastDate,
     workoutsLogged: ctx.workoutsLogged,
     thisWeek: ctx.thisWeek,
     weeklySessions: ctx.last8WeeksSessions,

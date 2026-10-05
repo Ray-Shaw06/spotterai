@@ -2037,6 +2037,7 @@ table {
 /* Catch-up: what is still unlogged. Quiet by design, this is a nudge and not
    an alarm, so it borrows the muted surface rather than the warning colour. */
 .today-card--catchup { border-color: var(--border); background: var(--surface-2); }
+.today-card--welcome { border-color: var(--border); background: var(--surface-2); }
 .today-card__title--sm { font-size: 1.05rem; }
 .catchup-list { list-style: none; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; }
 .catchup-item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--border-soft); }
