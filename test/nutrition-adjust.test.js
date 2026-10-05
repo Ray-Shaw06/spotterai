@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { trendOf, prepareWeighIns, checkIn, paceBandFor, WINDOW_DAYS, MAX_WINDOW_DAYS, MIN_WEIGHINS, MIN_WEEKDAYS, MIN_LOGGED_DAYS, MIN_DAYS_BETWEEN, STEP_PCT } from "../nutrition-adjust.js";
-import { addDays } from "../lib/calendar-days.js";
+import { addDays, weekdayOf } from "../lib/calendar-days.js";
 
 const TODAY = "2026-10-05";
 const series = (kgs, today = TODAY) => kgs.map((kg, i) => ({ date: addDays(today, -(kgs.length - 1 - i)), kg }));
@@ -70,7 +70,6 @@ test("weigh-ins all on one weekday still yield a trend; the weekday spread is a 
 // --- the check-in decision (Task 10) -------------------------------------------
 
 import { buildPlan } from "../nutrition-plan.js";
-import { weekdayOf } from "../lib/calendar-days.js";
 import { evaluateNutrition, NUTRITION_THRESHOLDS } from "../nutrition-safety.js";
 
 const STATS = { heightCm: 178, ageRange: "18–29", sex: "Male", dailyActivity: "some", daysPerWeek: 4, sessionLength: 60, intent: "cut" };
