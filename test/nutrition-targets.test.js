@@ -20,6 +20,7 @@ import {
   DRIFT_KCAL,
   completeMacros,
 } from "../lib/nutrition-targets.js";
+import { bmiOf, cutDeficitKcal, CUT_DEFICIT_PCT, CUT_DEFICIT_CAP_KCAL, CUT_CAP_BELOW_BMI } from "../lib/nutrition-targets.js";
 import { macroKcal } from "../lib/nutrition-math.js";
 import { evaluateNutrition, NUTRITION_THRESHOLDS } from "../nutrition-safety.js";
 
@@ -99,10 +100,13 @@ test("adults get no minor notice", () => {
 });
 
 test("the worked example from the spec reproduces exactly", () => {
+  // Cut is capped at a 500 kcal deficit under BMI 30 (BASE is BMI 25.2): maintenance
+  // 2588 - 500 = 2088, rounded to 2100. Protein 1.8 x 80 = 144 g, fat 25% = 58 g,
+  // carbs take the remainder. Before the cap this was a flat 20% (2075 kcal).
   const cut = calculateTargets({ ...BASE, intent: "cut" });
   assert.deepEqual(
     { kcal: cut.kcal, protein: cut.protein, carbs: cut.carbs, fat: cut.fat },
-    { kcal: 2075, protein: 144, carbs: 245, fat: 58 }
+    { kcal: 2100, protein: 144, carbs: 250, fat: 58 }
   );
   const recomp = calculateTargets({ ...BASE, intent: "recomp" });
   assert.deepEqual(
@@ -153,10 +157,11 @@ test("an unknown or missing intent falls back to recomp", () => {
 });
 
 test("the basis line explains the number without an em dash", () => {
-  const t = calculateTargets({ ...BASE, intent: "cut" });
-  assert.match(t.basis, /maintenance/i);
-  assert.match(t.basis, /20%/);
-  assert.ok(!t.basis.includes("—"), "no em dashes in user-facing copy");
+  for (const t of [calculateTargets({ ...BASE, intent: "cut" }), calculateTargets({ ...BASE, kg: 110, cm: 178, intent: "cut" })]) {
+    assert.match(t.basis, /maintenance/i);
+    assert.ok(!t.basis.includes("—"), "no em dashes in user-facing copy");
+  }
+  assert.match(calculateTargets({ ...BASE, kg: 110, cm: 178, intent: "cut" }).basis, /20%/, "BMI 30 and over keeps the flat 20%");
 });
 
 test("every training goal maps to a default eating intent", () => {
@@ -293,4 +298,68 @@ test("completeMacros returns null on unusable input rather than guessing", () =>
   assert.equal(completeMacros({ kcal: 0, protein: 100 }), null);
   assert.equal(completeMacros({ kcal: 2000 }), null);
   assert.equal(completeMacros({}), null);
+});
+
+// --- Cut deficit cap (spec decision 2026-10-05; evidence in docs/rubric-sources.md) ---
+
+const CAP_BASE = { kg: 90, cm: 185, ageRange: "18–29", sex: "Male", dailyActivity: "some", daysPerWeek: 4, sessionLength: 60 };
+
+test("the cap constants are the ones the spec fixes", () => {
+  assert.equal(CUT_DEFICIT_PCT, 0.2);
+  assert.equal(CUT_DEFICIT_CAP_KCAL, 500);
+  assert.equal(CUT_CAP_BELOW_BMI, 30);
+});
+
+test("bmiOf computes BMI and refuses unusable input", () => {
+  assert.ok(Math.abs(bmiOf(80, 180) - 24.69) < 0.01);
+  assert.equal(bmiOf(0, 180), null);
+  assert.equal(bmiOf(80, 0), null);
+  assert.equal(bmiOf(undefined, 180), null);
+});
+
+test("cutDeficitKcal caps at 500 under BMI 30 and takes 20% at BMI 30 and over", () => {
+  assert.equal(cutDeficitKcal({ tdee: 3200, bmi: 24 }), 500);
+  assert.equal(cutDeficitKcal({ tdee: 2400, bmi: 24 }), 480, "20% is already under the cap");
+  assert.equal(cutDeficitKcal({ tdee: 3200, bmi: 29.99 }), 500);
+  assert.equal(cutDeficitKcal({ tdee: 3200, bmi: 30 }), 640);
+  assert.equal(cutDeficitKcal({ tdee: 3200, bmi: null }), 500, "unknown BMI takes the cautious cap");
+});
+
+test("a cut above 2,500 kcal maintenance under BMI 30 is held to a 500 kcal deficit", () => {
+  const r = calculateTargets({ ...CAP_BASE, intent: "cut" });
+  assert.ok(r.tdee > 2500);
+  assert.ok(r.bmi < 30);
+  assert.equal(r.deficitKcal, 500);
+  assert.equal(r.kcal, 2575, "round25(3087 - 500)");
+});
+
+test("a cut at BMI 30 and over keeps the flat 20%", () => {
+  const r = calculateTargets({ ...CAP_BASE, kg: 100, cm: 175, intent: "cut" });
+  assert.ok(r.bmi >= 30);
+  assert.equal(r.deficitKcal, Math.round(r.tdee * 0.2));
+  assert.equal(r.kcal, 2525, "unchanged from before the cap");
+});
+
+test("recomp and bulk are untouched by the cap", () => {
+  assert.equal(calculateTargets({ ...CAP_BASE, intent: "recomp" }).kcal, 3075);
+  assert.equal(calculateTargets({ ...CAP_BASE, intent: "bulk" }).kcal, 3400);
+  assert.equal(calculateTargets({ ...CAP_BASE, intent: "recomp" }).deficitKcal, 0);
+});
+
+test("the calorie floor still wins after the cap", () => {
+  const r = calculateTargets({ kg: 45, cm: 155, ageRange: "18–29", sex: "Female", dailyActivity: "sitting", daysPerWeek: 0, sessionLength: 0, intent: "cut" });
+  assert.equal(r.kcal, 1200);
+});
+
+test("under 18 still never gets a deficit, whatever the cap", () => {
+  const r = calculateTargets({ ...CAP_BASE, ageRange: "Under 18", intent: "cut" });
+  assert.equal(r.intent, "recomp");
+  assert.equal(r.requestedIntent, "cut");
+  assert.equal(r.deficitKcal, 0);
+  assert.equal(r.notice, MINOR_NOTICE);
+});
+
+test("the basis line states the real deficit", () => {
+  assert.match(calculateTargets({ ...CAP_BASE, intent: "cut" }).basis, /500 kcal under/);
+  assert.match(calculateTargets({ ...CAP_BASE, kg: 100, cm: 175, intent: "cut" }).basis, /20%/);
 });
