@@ -9,11 +9,13 @@
  * Display areas re-render on change; inputs in the food picker are short-lived.
  */
 
-import { addCustomFood, addNutrition, addWater, copyMeal, deriveStats, getCustomFoods, getMealTemplates, getRecentFoods, getState, getWater, logMealTemplate, removeEntry, removeMealTemplate, resetAll, saveMealTemplate, setTargets, subscribe, updateNutrition } from "./tracker-store.js";
+import { addCustomFood, addNutrition, addWater, copyMeal, deriveStats, nutritionDaySummaries, dateDaysAgo, getCustomFoods, getMealTemplates, getRecentFoods, getState, getWater, logMealTemplate, removeEntry, removeMealTemplate, resetAll, saveMealTemplate, setTargets, subscribe, updateNutrition } from "./tracker-store.js";
 import { lookupBarcode, searchFoods, searchOpenFoodFacts } from "./foods.js";
 import { estimateFood, estimateMealPhoto } from "./ai.js";
 import { ring } from "./charts.js";
 import { evaluateNutrition, NUTRITION_DISCLAIMER, NUTRITION_WONT_DO } from "./nutrition-safety.js";
+import { streaksFor } from "./nutrition-streaks.js";
+import { consistencyCardHTML } from "./consistency-card.js";
 import { store } from "./store.js";
 import { trackFunnel } from "./analytics.js";
 import { photoInput } from "./snap-door.js";
@@ -27,6 +29,8 @@ const el = {
   todayBtn: $("nut-today"),
   dateLabel: $("nut-date"),
   summary: $("nut-summary"),
+  streaks: $("nut-streaks"),
+  streaksCard: $("nut-streaks-card"),
   meals: $("nut-meals"),
   water: $("nut-water"),
   weekChart: $("nut-week-chart"),
@@ -89,6 +93,24 @@ function render() {
   renderMeals(entries);
   renderWater();
   renderNutritionSafety();
+  renderStreaks();
+}
+
+// --- Consistency: runs counted from your own targets and log ---------------
+function renderStreaks() {
+  if (!el.streaks) return;
+  const s = deriveStats();
+  const streaks = streaksFor({
+    days: nutritionDaySummaries(),
+    targets: getState().targets,
+    today: dateDaysAgo(0),
+    bodyweight: s.bodyweight?.latest ?? null,
+    unit: s.unit,
+    goal: store.inputs?.goal || "",
+  });
+  const html = consistencyCardHTML(streaks);
+  el.streaks.innerHTML = html;
+  if (el.streaksCard) el.streaksCard.hidden = !html; // a new user sees no card at all
 }
 
 // --- Nutrition safety guardrails + Trust Report ----------------------------

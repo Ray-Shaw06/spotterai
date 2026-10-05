@@ -62,6 +62,14 @@ and holds off adding weight, through the same adapt path and the same
 no-new-flags audit as the Adapt button. The app proposes and you approve; the
 thresholds are defaults for this app, not figures from research.
 
+On the Food diary, a **Consistency** card shows three runs counted from your own
+log: protein target hit, calories in range, and meals logged. Each shows the
+current run, your best run, and how many of the last seven days counted, so one
+gap never erases the picture. Every number is a target you set compared with what
+you logged; the app never decides a food is good or bad, and a day that misses is
+simply not counted. The calorie run is hidden whenever your targets trip a
+critical nutrition flag.
+
 ---
 
 ---
