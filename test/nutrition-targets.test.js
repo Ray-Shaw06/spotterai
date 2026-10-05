@@ -367,3 +367,24 @@ test("the basis line states the real deficit", () => {
   assert.match(calculateTargets({ ...CAP_BASE, intent: "cut" }).basis, /500 kcal under/);
   assert.match(calculateTargets({ ...CAP_BASE, kg: 100, cm: 175, intent: "cut" }).basis, /20%/);
 });
+
+test("when the calorie floor binds, the reported deficit is the real one and the copy says so", () => {
+  // 45 kg, 155 cm, sedentary, no training: maintenance 1365, 20% would be 273,
+  // but the floor holds the target at 1200, a real deficit of about 165.
+  const r = calculateTargets({ kg: 45, cm: 155, ageRange: "18–29", sex: "Female", dailyActivity: "sitting", daysPerWeek: 0, sessionLength: 0, intent: "cut" });
+  assert.equal(r.floorBound, true);
+  assert.equal(r.kcal, 1200);
+  assert.equal(r.effectiveDeficitKcal, r.tdee - r.kcal);
+  assert.ok(r.effectiveDeficitKcal < Math.round(r.tdee * 0.2), "less than the 20% it asked for");
+  assert.match(r.basis, /lowest/i);
+  assert.ok(!/20%/.test(r.basis), "must not claim a 20% cut it did not make");
+});
+
+test("effectiveDeficitKcal tracks the target actually set, and is zero outside a cut", () => {
+  const capped = calculateTargets({ ...CAP_BASE, intent: "cut" });
+  assert.equal(capped.floorBound, false);
+  assert.ok(Math.abs(capped.effectiveDeficitKcal - 500) <= 25, "within a rounding step of the cap");
+  assert.equal(calculateTargets({ ...CAP_BASE, intent: "recomp" }).effectiveDeficitKcal, 0);
+  assert.equal(calculateTargets({ ...CAP_BASE, intent: "bulk" }).effectiveDeficitKcal, 0);
+  assert.equal(calculateTargets({ ...CAP_BASE, ageRange: "Under 18", intent: "cut" }).effectiveDeficitKcal, 0);
+});
