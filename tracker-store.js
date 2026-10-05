@@ -32,7 +32,8 @@ const DEFAULTS = {
   exercisePrefs: { favorites: [], disliked: [] }, // exercise names
   unit: "kg",
   bodyStats: null, // { heightCm, ageRange, sex, dailyActivity, daysPerWeek, sessionLength, intent }, on this device
-  targetsChangedOn: null, // 'YYYY-MM-DD' of the last setTargets; the weekly check-in waits 28 days from it
+  targetsChangedOn: null, // 'YYYY-MM-DD' of the last change to calories or macros; the weekly check-in waits 28 days from it
+  checkInHandledOn: null, // 'YYYY-MM-DD' the user last applied or turned down a check-in proposal; starts a 28-day quiet period
 };
 
 const MEALS = ["breakfast", "lunch", "dinner", "snacks"];
@@ -124,6 +125,7 @@ export function importData(obj) {
     water: incoming.water && typeof incoming.water === "object" ? incoming.water : {},
     bodyStats: incoming.bodyStats && typeof incoming.bodyStats === "object" ? incoming.bodyStats : null,
     targetsChangedOn: typeof incoming.targetsChangedOn === "string" ? incoming.targetsChangedOn : null,
+    checkInHandledOn: typeof incoming.checkInHandledOn === "string" ? incoming.checkInHandledOn : null,
     updatedAt: incoming.updatedAt || Date.now(),
   };
   persist(false); // preserve the incoming timestamp
@@ -165,7 +167,7 @@ export const SYNCED_RECORD_KINDS = Object.freeze([
 export const DATED_RECORD_KINDS = Object.freeze(["workouts", "nutrition", "bodyweight", "painReports"]);
 
 /** Scalar / singleton keys that live in the parent users/<uid> document. */
-export const SYNCED_META_KEYS = Object.freeze(["targets", "water", "achievements", "exercisePrefs", "unit", "bodyStats", "targetsChangedOn"]);
+export const SYNCED_META_KEYS = Object.freeze(["targets", "water", "achievements", "exercisePrefs", "unit", "bodyStats", "targetsChangedOn", "checkInHandledOn"]);
 
 /**
  * Stable document id for a record. Most kinds carry their own `id`; the
@@ -992,6 +994,18 @@ export function setTargets(t) {
   // Only a change to what the check-in judges restarts its clock. Editing the water
   // goal or workouts per week, or re-saving the same numbers, must not delay it.
   if (["kcal", "protein", "carbs", "fat"].some((k) => state.targets[k] !== before[k])) state.targetsChangedOn = today();
+  persist();
+}
+
+/** Day the user last applied or turned down a check-in proposal, or null. Per profile, synced, exported. */
+export function getCheckInHandledOn() {
+  return state.checkInHandledOn || null;
+}
+
+/** Start the check-in quiet period. Only a real 'YYYY-MM-DD' date is stored. */
+export function setCheckInHandledOn(date) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date ?? ""))) return;
+  state.checkInHandledOn = date;
   persist();
 }
 

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { checkInCardModel, checkInCardHTML, checkInTodayLine, handledCheckIn, markCheckInHandled, HANDLED_KEY } from "../checkin-card.js";
+import { checkInCardModel, checkInCardHTML, checkInTodayLine } from "../checkin-card.js";
 
 const BANNED = ["missed", "failed", "fail", "behind", "lost", "broke", "clean", "junk", "bad", "cheat", "lazy", "slacking", "guilty", "you didn't"];
 const PROPOSE = { status: "propose", reason: "too_fast", direction: "raise", fromKcal: 2350, toKcal: 2475, targets: { kcal: 2475, protein: 144, carbs: 330, fat: 69 }, slopePctPerWeek: -1.42, windowDays: 28 };
@@ -96,23 +96,4 @@ test("a real heading on the proposal card and no eyebrow", () => {
   const html = checkInCardHTML(checkInCardModel(PROPOSE));
   assert.match(html, /<h2 class="card-title">Weekly check-in<\/h2>/);
   assert.ok(!/eyebrow/.test(html));
-});
-
-function fakeEnv() {
-  const store = new Map();
-  return { localStorage: { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)) } };
-}
-
-test("the handled date is remembered, survives throwing storage, and is never empty-stored", () => {
-  const env = fakeEnv();
-  assert.equal(handledCheckIn(env), null);
-  markCheckInHandled("2026-10-05", env);
-  assert.equal(handledCheckIn(env), "2026-10-05");
-  assert.equal(env.localStorage.getItem(HANDLED_KEY), "2026-10-05");
-  markCheckInHandled(null, env);
-  assert.equal(handledCheckIn(env), "2026-10-05");
-  const throwing = { localStorage: { getItem() { throw new Error("blocked"); }, setItem() { throw new Error("blocked"); } } };
-  assert.equal(handledCheckIn(throwing), null);
-  assert.doesNotThrow(() => markCheckInHandled("2026-10-05", throwing));
-  assert.equal(handledCheckIn({}), null);
 });

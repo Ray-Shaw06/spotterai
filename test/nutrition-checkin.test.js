@@ -17,10 +17,9 @@ globalThis.window = { addEventListener() {}, removeEventListener() {}, dispatchE
 globalThis.CustomEvent = class { constructor(type, init) { this.type = type; this.detail = init?.detail; } };
 
 const { currentCheckIn, applyProposal, dismissProposal } = await import("../nutrition-checkin.js");
-const { importData, setBodyStats, setTargets, getState, getTargetsChangedOn, dateDaysAgo } = await import("../tracker-store.js");
+const { importData, setBodyStats, setTargets, getState, getTargetsChangedOn, getCheckInHandledOn, dateDaysAgo } = await import("../tracker-store.js");
 const { buildPlan } = await import("../nutrition-plan.js");
 const { addDays } = await import("../lib/calendar-days.js");
-const { handledCheckIn } = await import("../checkin-card.js");
 
 const STATS = { heightCm: 178, ageRange: "18–29", sex: "Male", dailyActivity: "some", daysPerWeek: 4, sessionLength: 60, intent: "cut" };
 
@@ -61,7 +60,7 @@ test("applying writes the targets once, restarts the clock, and goes quiet", () 
   assert.deepEqual(applyProposal(proposal), { ok: true });
   assert.deepEqual({ ...getState().targets, waterMl: undefined, weeklyWorkouts: undefined }, { ...proposal.targets, waterMl: undefined, weeklyWorkouts: undefined });
   assert.equal(getTargetsChangedOn(), today);
-  assert.equal(handledCheckIn(), today);
+  assert.equal(getCheckInHandledOn(), today);
   assert.deepEqual(currentCheckIn(), { status: "not_ready", reason: "too_soon" });
 });
 
@@ -72,7 +71,7 @@ test("a stale proposal is refused and leaves the user's own edit alone", () => {
   const before = getState().targets.kcal;
   assert.deepEqual(applyProposal(proposal), { ok: false, reason: "stale" });
   assert.equal(getState().targets.kcal, before);
-  assert.equal(handledCheckIn(), null);
+  assert.equal(getCheckInHandledOn(), null);
 });
 
 test("changing the stats after the card was built also makes it stale", () => {
@@ -87,7 +86,7 @@ test("not now starts the same quiet period without changing any target", () => {
   const { today } = seed();
   const kcal = getState().targets.kcal;
   dismissProposal();
-  assert.equal(handledCheckIn(), today);
+  assert.equal(getCheckInHandledOn(), today);
   assert.equal(getState().targets.kcal, kcal);
   assert.deepEqual(currentCheckIn(), { status: "not_ready", reason: "too_soon" });
 });

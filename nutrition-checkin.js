@@ -7,9 +7,8 @@
  */
 
 import { store } from "./store.js";
-import { bodyweightSeries, dateDaysAgo, getBodyStats, getState, getTargetsChangedOn, nutritionDaySummaries, setTargets } from "./tracker-store.js";
+import { bodyweightSeries, dateDaysAgo, getBodyStats, getCheckInHandledOn, getState, getTargetsChangedOn, nutritionDaySummaries, setCheckInHandledOn, setTargets } from "./tracker-store.js";
 import { checkIn } from "./nutrition-adjust.js";
-import { handledCheckIn, markCheckInHandled } from "./checkin-card.js";
 
 /** The check-in for right now, from the real stored data. */
 export function currentCheckIn(today = dateDaysAgo(0)) {
@@ -23,7 +22,7 @@ export function currentCheckIn(today = dateDaysAgo(0)) {
     unit: state.unit,
     today,
     targetsChangedOn: getTargetsChangedOn(),
-    lastProposalOn: handledCheckIn(),
+    lastProposalOn: getCheckInHandledOn(),
   });
 }
 
@@ -37,11 +36,11 @@ export function applyProposal(proposal, today = dateDaysAgo(0)) {
   const now = currentCheckIn(today);
   if (now.status !== "propose" || now.fromKcal !== proposal.fromKcal || now.toKcal !== proposal.toKcal) return { ok: false, reason: "stale" };
   setTargets(now.targets);
-  markCheckInHandled(today);
+  setCheckInHandledOn(today);
   return { ok: true };
 }
 
 /** "Not now": the same 28-day quiet period, no target changed. */
 export function dismissProposal(today = dateDaysAgo(0)) {
-  markCheckInHandled(today);
+  setCheckInHandledOn(today);
 }

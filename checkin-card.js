@@ -11,8 +11,6 @@
  * The app proposes; only the user's tap changes anything.
  */
 
-export const HANDLED_KEY = "spotterai.checkIn.handled";
-
 const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const fmt = (n) => Number(n).toLocaleString("en-US");
 
@@ -61,22 +59,4 @@ export function checkInCardHTML(model) {
 /** One line for Today, only when a proposal is waiting. Names no number and makes no prediction. */
 export function checkInTodayLine(result) {
   return result?.status === "propose" ? "Your weekly check-in has a suggestion." : null;
-}
-
-/** The date of the last proposal this device handled (applied or turned down), or null. */
-export function handledCheckIn(env = globalThis) {
-  try {
-    return env.localStorage?.getItem(HANDLED_KEY) || null;
-  } catch {
-    return null; // storage can throw outright in locked-down contexts
-  }
-}
-
-/** Start the quiet period: remember that a proposal was handled on `date`. */
-export function markCheckInHandled(date, env = globalThis) {
-  try {
-    if (date) env.localStorage?.setItem(HANDLED_KEY, String(date));
-  } catch {
-    /* storage disabled; the same proposal may be offered again next visit */
-  }
 }
