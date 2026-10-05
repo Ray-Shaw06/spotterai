@@ -60,6 +60,7 @@ const BOOT_MODULES = [
   "form-session.js",
   "gamify.js",
   "import-ui.js",
+  "lib/calendar-days.js",
   "lib/nutrition-targets.js",
   "lib/plan.js",
   "lib/sentry.js",
