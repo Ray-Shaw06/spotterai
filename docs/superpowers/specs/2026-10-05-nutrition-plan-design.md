@@ -101,7 +101,7 @@ meta-doc write path and the export schema in the implementation plan before codi
 ### Phase 2: weekly check-in
 
 Every number in this phase is sourced and graded in
-[`docs/rubric-sources.md`, "Nutrition pace"](../../rubric-sources.md#nutrition-pace-planned-the-weekly-check-in-not-yet-in-code),
+[`docs/rubric-sources.md`, "Nutrition pace"](../../rubric-sources.md#nutrition-pace-the-weekly-check-in),
 researched 2026-10-05 from primary records. Read that section before changing any
 constant. Where a number is a design choice rather than a finding, it is labelled
 one there and must be labelled one in the code, tests and any user-facing text.

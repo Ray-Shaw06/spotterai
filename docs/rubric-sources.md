@@ -173,9 +173,9 @@ The 6-set line for "this is a leg day" is ours; the shape of the rule is not.
 
 ---
 
-## Nutrition pace (planned: the weekly check-in, not yet in code)
+## Nutrition pace (the weekly check-in)
 
-*Researched 2026-10-05. Every source below was read as a primary record (abstract
+*Researched 2026-10-05; built in `nutrition-adjust.js`, where each constant is marked Directional, Practical or Derived. Every source below was read as a primary record (abstract
 or open full text), not from a summary. Where a page could not be read, that is
 said here and nothing is claimed from it.*
 

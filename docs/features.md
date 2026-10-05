@@ -79,6 +79,16 @@ the safety card checks your targets against your own calculated maintenance inst
 a bodyweight-times-31 guess, which used to flag sane targets as aggressive cuts for
 heavier bodies.
 
+A **weekly check-in** compares your weight trend with the pace your goal usually
+expects and, only when the trend is clearly outside it, suggests one small calorie
+change (about 5% of your target). It needs four weeks of data first: at least 12
+weigh-ins on four different days of the week and 20 logged days. It reads a trend line
+through four weeks (six if it was not clear), not any single weigh-in, because the scale
+moves by about half a percent day to day. It never suggests going below your starting
+plan, below a safe calorie floor, or lowering calories for anyone under 18, and it only
+makes a suggestion the safety check passes. You tap to apply or say "Not now"; either
+starts a four-week quiet period. It says what it saw and never predicts an outcome.
+
 ---
 
 ---
