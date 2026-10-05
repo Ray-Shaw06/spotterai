@@ -30,9 +30,9 @@ function seed({ ratePct = -1.5, stats = STATS } = {}) {
   const plan = buildPlan({ bodyStats: stats || STATS, kg: 90 });
   const bodyweight = [];
   const nutrition = [];
-  for (let i = 0; i < 28; i++) {
-    const date = addDays(today, -(27 - i));
-    bodyweight.push({ id: `w${i}`, date, value: Math.round(90 * (1 + (ratePct / 100) * (i / 7)) * 10) / 10 });
+  for (let i = 0; i < 45; i++) {
+    const date = addDays(today, -(44 - i));
+    bodyweight.push({ id: `w${i}`, date, value: Math.round(90 * (1 + (ratePct / 100) * ((i - 17) / 7)) * 10) / 10 });
     nutrition.push({ id: `n${i}`, date, name: "Day", kcal: plan.targets.kcal, protein: plan.targets.protein, carbs: plan.targets.carbs, fat: plan.targets.fat });
   }
   importData({ workouts: [], nutrition, bodyweight, targets: plan.targets, unit: "kg" });

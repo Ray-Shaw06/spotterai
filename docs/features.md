@@ -87,7 +87,10 @@ through four weeks (six if it was not clear), not any single weigh-in, because t
 moves by about half a percent day to day. It never suggests going below your starting
 plan, below a safe calorie floor, or lowering calories for anyone under 18, and it only
 makes a suggestion the safety check passes. You tap to apply or say "Not now"; either
-starts a four-week quiet period. It says what it saw and never predicts an outcome.
+starts a four-week quiet period for that profile. It runs once a week, as of the most
+recent Sunday. If your saved target is already lower than SpotterAI would set, it never
+calls that on track: it offers to raise it when your weight is falling too fast, and says
+so plainly when it is not. It says what it saw and never predicts an outcome.
 
 ---
 

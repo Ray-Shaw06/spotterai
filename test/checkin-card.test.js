@@ -20,6 +20,7 @@ const everyResult = [
   { status: "inconclusive", reason: "at_limit" },
   { status: "inconclusive", reason: "no_change_offered" },
   { status: "inconclusive", reason: "audit" },
+  { status: "inconclusive", reason: "target_unsafe" },
 ];
 
 test("a proposal names the observed trend and the one step offered, with Apply and Not now", () => {
@@ -96,4 +97,16 @@ test("a real heading on the proposal card and no eyebrow", () => {
   const html = checkInCardHTML(checkInCardModel(PROPOSE));
   assert.match(html, /<h2 class="card-title">Weekly check-in<\/h2>/);
   assert.ok(!/eyebrow/.test(html));
+});
+
+test("an unsafe saved target gets a plain note pointing to the safety check and the plan, never reassurance", () => {
+  const m = checkInCardModel({ status: "inconclusive", reason: "target_unsafe" });
+  assert.equal(m.kind, "info");
+  const html = checkInCardHTML(m);
+  const t = text(html);
+  assert.match(t, /lower than SpotterAI would set/);
+  assert.match(t, /safety check/);
+  assert.match(t, /Your nutrition plan/);
+  assert.ok(!/on track|fits your goal|no change needed/i.test(t), "never reassuring beside an unsafe target");
+  assert.ok(!/<button/.test(html));
 });

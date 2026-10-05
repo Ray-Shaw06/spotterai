@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { trendOf, prepareWeighIns, checkIn, paceBandFor, WINDOW_DAYS, MAX_WINDOW_DAYS, MIN_WEIGHINS, MIN_WEEKDAYS, MIN_LOGGED_DAYS, MIN_DAYS_BETWEEN, STEP_PCT } from "../nutrition-adjust.js";
+import { trendOf, prepareWeighIns, checkIn, paceBandFor, AR1_INFLATION, PHI_AR1, WINDOW_DAYS, MAX_WINDOW_DAYS, MIN_WEIGHINS, MIN_WEEKDAYS, MIN_LOGGED_DAYS, MIN_DAYS_BETWEEN, STEP_PCT } from "../nutrition-adjust.js";
 import { addDays, weekdayOf } from "../lib/calendar-days.js";
 
-const TODAY = "2026-10-05";
+// A Sunday: the check-in snaps to the most recent Sunday, so a Sunday keeps the window where the tests put it.
+const TODAY = "2026-10-04";
 const series = (kgs, today = TODAY) => kgs.map((kg, i) => ({ date: addDays(today, -(kgs.length - 1 - i)), kg }));
 /** A weight that falls `pctPerWeek` of its starting value each week, one weigh-in a day for `days` days. */
 const line = (start, pctPerWeek, days = 28) => series(Array.from({ length: days }, (_, d) => start * (1 + (pctPerWeek / 100) * (d / 7))));
@@ -250,3 +251,117 @@ function seededRng(seed) {
 function gaussFrom(rng) {
   return Math.sqrt(-2 * Math.log(1 - rng())) * Math.cos(2 * Math.PI * rng());
 }
+
+// --- Fixes from the Phase 2 review -------------------------------------------------
+
+
+test("the trend interval is widened for autocorrelated scale noise", () => {
+  assert.equal(PHI_AR1, 0.4);
+  assert.ok(Math.abs(AR1_INFLATION - Math.sqrt(1.4 / 0.6)) < 1e-12);
+  const pts = prepareWeighIns(series(Array.from({ length: 28 }, (_, d) => 80 + (d % 3) * 0.5 + (d % 2 ? 0.4 : -0.4))), TODAY, 28);
+  const t = trendOf(pts);
+  // independent OLS to get the plain standard error
+  const n = pts.length, md = pts.reduce((a, p) => a + p.day, 0) / n, mk = pts.reduce((a, p) => a + p.kg, 0) / n;
+  const sxx = pts.reduce((a, p) => a + (p.day - md) ** 2, 0);
+  const b = pts.reduce((a, p) => a + (p.day - md) * (p.kg - mk), 0) / sxx;
+  const rss = pts.reduce((a, p) => a + (p.kg - (mk + b * (p.day - md))) ** 2, 0);
+  const seWeekPct = (Math.sqrt(rss / (n - 2) / sxx) * 7 / mk) * 100;
+  assert.ok(Math.abs((t.upper - t.lower) / 2 - 1.645 * AR1_INFLATION * seWeekPct) < 1e-9);
+});
+
+test("the check is weekly: every day of a week gives the answer of the Sunday that ends it", () => {
+  const sunday = "2026-10-04";
+  const base = world({ rate: -1.5, days: 28 });
+  const dayResults = [];
+  for (let k = 0; k < 7; k++) {
+    // same data, a later 'today' inside the following week
+    dayResults.push(JSON.stringify(checkIn({ ...base.args, today: addDays(sunday, k) })));
+  }
+  assert.equal(new Set(dayResults).size, 1, "Sunday through Saturday agree");
+  // weigh-ins after the Sunday do not count until the next Sunday
+  const extra = { ...base.args, today: addDays(sunday, 3), series: [...base.args.series, { date: addDays(sunday, 2), kg: 200 }] };
+  assert.equal(JSON.stringify(checkIn(extra)), dayResults[0]);
+});
+
+test("one noisy weigh-in near BMI 30 cannot flip the starting plan", () => {
+  const tall = { ...STATS, heightCm: 190 };
+  const make = (lastKg) => {
+    const w = world({ stats: tall, kg0: 107.5, rate: 0 });
+    const series2 = w.args.series.map((p, i, a) => (i === a.length - 1 ? { ...p, kg: lastKg } : { ...p, kg: 107.5 }));
+    return checkIn({ ...w.args, series: series2 });
+  };
+  const low = make(107.0);
+  const high = make(109.0); // BMI 30.2 on its own; the 7-day mean is still under 30
+  assert.deepEqual([high.status, high.reason], [low.status, low.reason]);
+  assert.equal(low.status, "inconclusive");
+  assert.equal(low.reason, "at_limit");
+});
+
+test("the 42-day extension never reaches back before the last target change", () => {
+  const high = world().plan.targets.kcal + 300;
+  const older = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+  const recent = [14, 16, 19, 21, 24, 26, 29, 31, 34, 36, 39, 41];
+  let usedOld = 0;
+  for (let seed = 1; seed <= 60; seed++) {
+    const rng = seededRng(seed);
+    const noisy = () => 0.45 * gaussFrom(rng);
+    const wo = world({ rate: 0, days: 42, weighDays: [...older, ...recent], kcalOver: high, noise: noisy });
+    const open = checkIn(wo.args);
+    const rng2 = seededRng(seed);
+    const clipped = checkIn({ ...wo.args, targetsChangedOn: addDays(TODAY, -30) });
+    if (open.status === "propose" && open.windowDays === 42) usedOld++;
+    assert.ok(!(clipped.status === "propose" && clipped.windowDays === 42), `seed ${seed}: the old regime leaked into the window`);
+    void rng2;
+  }
+  assert.ok(usedOld > 0, "the control: without a recent change the extension is used");
+});
+
+/** The plan at the weight the check actually uses: the mean of the last week of weigh-ins. */
+const planAtRecent = (w) => {
+  const last = w.args.series.slice(-7).map((p) => p.kg);
+  return buildPlan({ bodyStats: w.args.bodyStats, kg: last.reduce((a, b) => a + b, 0) / last.length });
+};
+
+test("a target already below what SpotterAI would set is never called on track", () => {
+  const w = world({ rate: -0.6, kcalOver: 1100 });
+  const r = checkIn(w.args);
+  assert.deepEqual([r.status, r.reason], ["inconclusive", "target_unsafe"]);
+});
+
+test("an unsafe target with weight falling too fast is offered a raise to a safe level, not silence", () => {
+  const w = world({ rate: -1.5, kcalOver: 1100 });
+  const r = checkIn(w.args);
+  assert.equal(r.status, "propose");
+  assert.equal(r.direction, "raise");
+  const now = planAtRecent(w);
+  const floor = Math.max(NUTRITION_THRESHOLDS.LOW_KCAL, now.bmr, now.tdee * 0.7);
+  assert.ok(r.toKcal >= floor, `${r.toKcal} vs floor ${floor}`);
+  const calorieFlags = evaluateNutrition({ targets: r.targets, bodyweight: 90, unit: "kg", goal: "Fat loss", maintenance: now.tdee }).flags.filter((f) => /calorie|deficit/i.test(f.label));
+  assert.equal(calorieFlags.length, 0);
+});
+
+test("an unsafe target is never lowered further, whatever the scale says", () => {
+  const r = checkIn(world({ rate: 0.4, kcalOver: 1100 }).args);
+  assert.notEqual(r.status === "propose" && r.direction === "lower", true);
+  assert.equal(r.status, "inconclusive");
+});
+
+test("an unsafe target still gets its note when there is too little data, or during a quiet period", () => {
+  assert.equal(checkIn(world({ kcalOver: 1100, weighDays: [0, 1, 2] }).args).reason, "target_unsafe");
+  assert.equal(checkIn(world({ kcalOver: 1100, lastProposalOn: addDays(TODAY, -3) }).args).reason, "target_unsafe");
+});
+
+test("a minor on a saved deficit is never told they are on track, and a too-fast loss is offered maintenance", () => {
+  const minor = { ...STATS, ageRange: "Under 18", intent: "recomp" };
+  const base = world({ stats: minor, kg0: 60, rate: -0.1 });
+  const low = Math.round((base.plan.tdee * 0.8) / 25) * 25;
+  assert.equal(checkIn(world({ stats: minor, kg0: 60, rate: -0.1, kcalOver: low }).args).reason, "target_unsafe");
+  const fastWorld = world({ stats: minor, kg0: 60, rate: -1.0, kcalOver: low });
+  const fast = checkIn(fastWorld.args);
+  assert.equal(fast.status, "propose");
+  assert.ok(fast.toKcal >= Math.round((planAtRecent(fastWorld).tdee * 0.95) / 25) * 25, "raised to within 5% of maintenance");
+});
+
+test("a safe target is unaffected by the unsafe-target rules", () => {
+  assert.equal(run({ rate: -0.6 }).status, "on_track");
+});

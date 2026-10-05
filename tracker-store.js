@@ -15,6 +15,7 @@ import { trackerKey } from "./profile-store.js";
 import { deloadFromWeeklyVolume, epley1RM, suggestNextWeight } from "./progression.js";
 import { isCardioExercise } from "./exercise-catalog.js";
 import { handledGap } from "./welcome-back.js";
+import { dayNumber } from "./lib/calendar-days.js";
 import { validateBodyStats, maintenanceFor } from "./nutrition-plan.js";
 
 const DEFAULTS = {
@@ -1038,8 +1039,12 @@ export function getTargetsChangedOn() {
  */
 export function currentMaintenance() {
   const series = bodyweightSeries();
-  const kg = series.length ? series[series.length - 1].kg : null;
-  return maintenanceFor(getBodyStats(), kg);
+  if (!series.length) return maintenanceFor(getBodyStats(), null);
+  // The mean of the last week of weigh-ins, the same weight the weekly check-in plans from,
+  // so the number shown beside a proposal and the one that made it cannot disagree.
+  const cutoff = dayNumber(series[series.length - 1].date) - 7;
+  const week = series.filter((p) => dayNumber(p.date) > cutoff);
+  return maintenanceFor(getBodyStats(), week.reduce((a, p) => a + p.kg, 0) / week.length);
 }
 
 /** Bodyweight entries in kg regardless of the display unit, oldest first. */

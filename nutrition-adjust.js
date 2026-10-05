@@ -13,13 +13,24 @@
  * Nothing here may be presented to a user as research backing.
  */
 
-import { dayNumber, ymdFromNumber, weekdayOf } from "./lib/calendar-days.js";
+import { dayNumber, ymdFromNumber, weekdayOf, addDays } from "./lib/calendar-days.js";
 import { buildPlan } from "./nutrition-plan.js";
 import { completeMacros } from "./lib/nutrition-targets.js";
 import { evaluateNutrition, NUTRITION_THRESHOLDS } from "./nutrition-safety.js";
 
 /** One-sided 95% limit on the slope. DERIVED: the simulation fixes the rule's false-flag rate with it. */
 export const Z95 = 1.645;
+
+/**
+ * Scale noise is autocorrelated. Schneditz 2023 reports an SD of day-to-day change
+ * of 0.53% over a one-day gap and 0.69% over seven days; for AR(1) noise
+ * Var(change over k days) = 2 s^2 (1 - phi^k), so (0.53 / 0.69)^2 = 1 - phi, phi = 0.4.
+ * A least-squares slope on such noise is more variable than the independent-noise
+ * formula says, by about sqrt((1 + phi) / (1 - phi)), so the interval is widened by
+ * that factor. DERIVED (scripts/simulate-weight-trend.mjs shows the effect).
+ */
+export const PHI_AR1 = 0.4;
+export const AR1_INFLATION = Math.sqrt((1 + PHI_AR1) / (1 - PHI_AR1));
 
 // --- Window and gate. WINDOW and the weigh-in counts are DERIVED (simulation); the rest PRACTICAL. ---
 export const WINDOW_DAYS = 28;
@@ -58,9 +69,10 @@ const median = (xs) => {
  * @param {number} windowDays
  * @returns {Array<{day: number, kg: number}>} sorted by day
  */
-export function prepareWeighIns(series, today, windowDays = 28) {
+export function prepareWeighIns(series, today, windowDays = 28, notBefore = null) {
   const end = dayNumber(today);
-  const start = end - windowDays + 1;
+  // `notBefore` keeps a longer window from reaching back into an earlier regime.
+  const start = Math.max(end - windowDays + 1, notBefore == null ? -Infinity : notBefore);
   const byDay = new Map();
   for (const p of series || []) {
     const kg = Number(p?.kg);
@@ -88,7 +100,7 @@ export function trendOf(points) {
   const sxx = points.reduce((a, p) => a + (p.day - md) ** 2, 0);
   const slope = points.reduce((a, p) => a + (p.day - md) * (p.kg - mk), 0) / sxx; // kg per day
   const rss = points.reduce((a, p) => a + (p.kg - (mk + slope * (p.day - md))) ** 2, 0);
-  const se = Math.sqrt(rss / (n - 2) / sxx);
+  const se = Math.sqrt(rss / (n - 2) / sxx) * AR1_INFLATION;
   const toPct = (kgPerDay) => ((kgPerDay * 7) / mk) * 100;
   return {
     slopePctPerWeek: toPct(slope),
@@ -140,46 +152,99 @@ function responseFor(intent, side) {
 
 const weekdaysIn = (points) => new Set(points.map((p) => weekdayOf(ymdFromNumber(p.day)))).size;
 
+const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+
+/** A minor whose saved target is under this share of maintenance is treated as on a deficit. PRACTICAL. */
+const MINOR_MIN_OF_MAINTENANCE = 0.95;
+
 /**
- * The weekly check-in. Pure; applies nothing.
+ * The lowest target SpotterAI would set for this person: the one `evaluateNutrition`
+ * would not flag on calories. Adults: not under max(1200, BMR) and not more than the
+ * auditor's "aggressive deficit" below maintenance. Minors: maintenance, since the
+ * app never offers one a deficit.
+ */
+function lowestSafeKcal(plan, isMinor) {
+  if (isMinor) return round25(plan.tdee * MINOR_MIN_OF_MAINTENANCE);
+  const exact = Math.max(NUTRITION_THRESHOLDS.LOW_KCAL, plan.bmr, plan.tdee * (1 - NUTRITION_THRESHOLDS.AGGRESSIVE_DEFICIT));
+  return Math.ceil(exact / 25) * 25;
+}
+
+/** The weekly day the check runs as of: the most recent Sunday, so it is one decision a week, not one per page view. */
+function weeklyAsOf(today) {
+  return addDays(today, -weekdayOf(today));
+}
+
+/** Weight for the plan: the mean of the last week's weigh-ins, so one noisy reading cannot flip a BMI-based rule. */
+function recentKg(points, asOfN) {
+  const lastWeek = points.filter((p) => p.day > asOfN - 7);
+  return mean((lastWeek.length ? lastWeek : points.slice(-1)).map((p) => p.kg));
+}
+
+/** Is the saved calorie target already below what SpotterAI would set? Needs only a recent weight, not a full window. */
+function isUnsafeTarget({ series, targets, bodyStats }, asOf) {
+  if (!bodyStats) return false;
+  const points = prepareWeighIns(series, asOf, WINDOW_DAYS);
+  if (!points.length) return false;
+  const plan = buildPlan({ bodyStats, kg: recentKg(points, dayNumber(asOf)) });
+  if (!plan) return false;
+  const current = Number(targets?.kcal) || 0;
+  return current > 0 && current < lowestSafeKcal(plan, bodyStats.ageRange === "Under 18");
+}
+
+/**
+ * The weekly check-in. Pure; applies nothing. Evaluated as of the most recent Sunday,
+ * so the answer is the same all week and an on-pace user is tested weekly, not on
+ * every page view (the simulation shows the difference).
  * @returns one of
  *   { status: "not_ready", reason: "no_stats"|"too_soon"|"few_weighins"|"few_weekdays"|"few_logs" }
- *   { status: "inconclusive", reason: "straddles_band"|"log_scale_disagree"|"at_limit"|"no_change_offered"|"audit" }
+ *   { status: "inconclusive", reason: "straddles_band"|"log_scale_disagree"|"at_limit"|"no_change_offered"|"audit"|"target_unsafe" }
  *   { status: "on_track", slopePctPerWeek }
  *   { status: "propose", reason, direction, fromKcal, toKcal, targets, slopePctPerWeek, windowDays }
+ * A target that is already unsafe never reads as on track or silent: it either gets a
+ * raise to a safe level (when the scale agrees it is too much) or `target_unsafe`.
  */
-export function checkIn({ series, days, targets, bodyStats, trainingAge, today, targetsChangedOn = null, lastProposalOn = null } = {}) {
+export function checkIn(input = {}) {
+  const result = evaluate(input);
+  if (result.status === "propose") return result;
+  if (input.today && isUnsafeTarget(input, weeklyAsOf(input.today))) return { status: "inconclusive", reason: "target_unsafe" };
+  return result;
+}
+
+function evaluate({ series, days, targets, bodyStats, trainingAge, today, targetsChangedOn = null, lastProposalOn = null } = {}) {
   if (!bodyStats) return { status: "not_ready", reason: "no_stats" };
 
-  const since = (date) => dayNumber(today) - dayNumber(date);
+  const asOf = weeklyAsOf(today);
+  const asOfN = dayNumber(asOf);
+  const since = (date) => asOfN - dayNumber(date);
   if ((targetsChangedOn && since(targetsChangedOn) < MIN_DAYS_BETWEEN) || (lastProposalOn && since(lastProposalOn) < MIN_DAYS_BETWEEN)) {
     return { status: "not_ready", reason: "too_soon" };
   }
 
-  const w28 = prepareWeighIns(series, today, WINDOW_DAYS);
+  const w28 = prepareWeighIns(series, asOf, WINDOW_DAYS);
   if (w28.length < MIN_WEIGHINS) return { status: "not_ready", reason: "few_weighins" };
   if (weekdaysIn(w28) < MIN_WEEKDAYS) return { status: "not_ready", reason: "few_weekdays" };
 
-  const todayN = dayNumber(today);
   const loggedKcal = [];
   for (let i = 0; i < WINDOW_DAYS; i++) {
-    const d = days?.[ymdFromNumber(todayN - i)];
+    const d = days?.[ymdFromNumber(asOfN - i)];
     if (d) loggedKcal.push(Number(d.kcal) || 0);
   }
   if (loggedKcal.length < MIN_LOGGED_DAYS) return { status: "not_ready", reason: "few_logs" };
 
   const latestKg = w28[w28.length - 1].kg;
-  const plan = buildPlan({ bodyStats, kg: latestKg });
+  const plan = buildPlan({ bodyStats, kg: recentKg(w28, asOfN) });
   if (!plan) return { status: "not_ready", reason: "no_stats" };
   const intent = plan.intent;
+  const isMinor = bodyStats.ageRange === "Under 18";
   const band = paceBandFor({ intent, bmi: plan.bmi, trainingAge });
 
   let trend = trendOf(w28);
   let windowDays = WINDOW_DAYS;
   let side = classify(trend, band);
   if (side === "straddle") {
-    // Not clear in 28 days: use up to 42 if there is enough to say more, never guess.
-    const w42 = prepareWeighIns(series, today, MAX_WINDOW_DAYS);
+    // Not clear in 28 days: use up to 42 if there is enough to say more, never guess,
+    // and never reach back before the last target change (an earlier regime).
+    const w42 = prepareWeighIns(series, asOf, MAX_WINDOW_DAYS, targetsChangedOn ? dayNumber(targetsChangedOn) : null);
     if (w42.length >= MIN_WEIGHINS_EXTENDED) {
       trend = trendOf(w42);
       windowDays = MAX_WINDOW_DAYS;
@@ -191,17 +256,21 @@ export function checkIn({ series, days, targets, bodyStats, trainingAge, today, 
 
   const { reason, direction } = responseFor(intent, side);
   const current = Number(targets?.kcal) || 0;
+  const safeMin = lowestSafeKcal(plan, isMinor);
+  const unsafe = current < safeMin;
 
-  // Under 18: only ever more food, never a decrease.
-  if (bodyStats.ageRange === "Under 18" && direction === "lower") return { status: "inconclusive", reason: "no_change_offered" };
+  // Under 18: only ever more food, never a decrease. A target that is already unsafe is never lowered either.
+  if ((isMinor || unsafe) && direction === "lower") return { status: "inconclusive", reason: isMinor && !unsafe ? "no_change_offered" : "at_limit" };
 
   // A flat scale beside a log that sits well under target is usually a log missing food.
-  const avgLogged = loggedKcal.reduce((a, b) => a + b, 0) / loggedKcal.length;
+  const avgLogged = mean(loggedKcal);
   if (reason === "stalled" && avgLogged < current * LOG_DISAGREE_BELOW) return { status: "inconclusive", reason: "log_scale_disagree" };
 
   const step = Math.max(25, round25(current * STEP_PCT));
   let toKcal = direction === "raise" ? current + step : current - step;
   if (direction === "raise") {
+    // From an unsafe target the raise goes at least to the lowest safe level: a 5% step from 1,100 is still unsafe.
+    if (unsafe) toKcal = Math.max(toKcal, safeMin);
     toKcal = Math.min(toKcal, round25(plan.tdee * MAX_ABOVE_MAINTENANCE[intent]));
     if (toKcal <= current) return { status: "inconclusive", reason: "at_limit" };
   } else {
@@ -215,7 +284,9 @@ export function checkIn({ series, days, targets, bodyStats, trainingAge, today, 
   if (!macros) return { status: "inconclusive", reason: "audit" };
   const proposed = { kcal: toKcal, protein: macros.protein, carbs: macros.carbs, fat: macros.fat };
   const flags = evaluateNutrition({ targets: proposed, bodyweight: latestKg, unit: "kg", goal: GOAL_TEXT[intent], maintenance: plan.tdee }).flags;
-  if (flags.length) return { status: "inconclusive", reason: "audit" };
+  // A safe target must come out with no flags at all. From an unsafe one, only a calorie flag blocks the way back to safety.
+  const blocking = unsafe ? flags.filter((f) => /calorie|deficit/i.test(f.label)) : flags;
+  if (blocking.length) return { status: "inconclusive", reason: "audit" };
 
   return { status: "propose", reason, direction, fromKcal: current, toKcal, targets: proposed, slopePctPerWeek: trend.slopePctPerWeek, windowDays };
 }

@@ -128,15 +128,22 @@ checkIn({ bodyweights, days, targets, bodyStats, intent, trainingAge, unit, toda
    scale is the measurement and the log is not.
 
 **Signal.** A least-squares line through the window's weigh-ins gives a trend in
-percent of bodyweight per week and a one-sided 95% confidence limit on it.
+percent of bodyweight per week and a one-sided 95% confidence limit on it, **widened by
+1.53 for autocorrelated scale noise** (phi 0.4, Schneditz 2023) and **evaluated once a
+week as of the most recent Sunday**. The 42-day extension never reaches back before the
+last target change, and the plan is built from the mean of the last week of weigh-ins,
+so one noisy reading cannot flip a BMI-based rule. (All three were added after the Phase 2
+review; see rubric-sources.md for the corrected false-flag figures.)
 **The check-in speaks only when the whole interval lies outside the user's pace band.**
 If the 28-day interval straddles a band edge, extend the window to as much as 42
 days (24 weigh-ins) before settling on `inconclusive`. Simulation
 (`scripts/simulate-weight-trend.mjs`, results in rubric-sources.md) shows this
-flags a genuinely on-pace user at most 0.4% of the time with a 28-day window, versus
-1.0% to 13.3% for the earlier "two weekly means agree" rule, which is dropped. The
-price is sensitivity: it catches about 60% of true stalls at typical scale noise and
-about 27% at pessimistic noise. That is accepted. Silence is the safe failure.
+flags a user clearly inside the band at most about 0.3% of the time per check, and one
+just inside an edge at most about 2.5%, versus 1.0% to 13.3% for the earlier "two weekly
+means agree" rule, which is dropped. Checked weekly for twelve weeks, a clearly on-pace
+user is flagged at least once about 0.1% (typical noise) to 2% (pessimistic) of the time.
+The price is sensitivity: it catches about 35% of true stalls at typical scale noise and
+about 15% at pessimistic noise. That is accepted. Silence is the safe failure.
 
 **Pace bands** (percent of bodyweight per week; grade from rubric-sources.md):
 
@@ -170,6 +177,11 @@ lean. It only changes which limit applies. Advanced is `trainingAge` from onboar
 - Under-18: never a deficit. A minor can only be proposed maintenance or more.
   This is product policy consistent with, not prescribed by, the AAP's 2023
   guideline (professional, family-based treatment).
+- A saved target already below what SpotterAI would set (under the calorie floor, more than
+  the auditor's aggressive-deficit threshold under maintenance, or for a minor under 95% of
+  maintenance) is **never read as on track**: a too-fast loss is offered a raise to a safe
+  level, anything else says the target is lower than SpotterAI would set, and it is never
+  lowered. The quiet period is per profile and synced.
 - Never auto-applied.
 - **Copy never converts a calorie change into a weight prediction** ("100 fewer
   calories is X kg"). The 3,500 kcal rule over-predicts and the dynamic response is

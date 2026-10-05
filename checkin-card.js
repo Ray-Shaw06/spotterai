@@ -41,6 +41,9 @@ export function checkInCardModel(result) {
   if (result.status === "inconclusive" && result.reason === "log_scale_disagree") {
     return { kind: "info", body: "Your food log and your scale are telling different stories, so there is nothing to suggest yet. The log may be missing some food. A few fully logged days will make the next check-in clearer." };
   }
+  if (result.status === "inconclusive" && result.reason === "target_unsafe") {
+    return { kind: "info", body: "Your current calorie target is lower than SpotterAI would set on its own, so there is no check-in to offer. The safety check on this page has the details, and Your nutrition plan shows a target built from your numbers." };
+  }
   return null;
 }
 
