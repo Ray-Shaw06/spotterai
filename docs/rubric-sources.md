@@ -1,6 +1,6 @@
 # Where the thresholds come from
 
-*Last reviewed 2026-08-31, against evaluator v1.4.0.*
+*Last reviewed 2026-08-31, against evaluator v1.4.0. Nutrition pace section added 2026-10-05.*
 
 Every number in `THRESHOLDS` (`evaluator.js`) is listed here with the evidence
 behind it and an honest grade of how well that evidence actually supports the
@@ -170,6 +170,218 @@ built directly on:
 This is why the check targets **legs specifically** rather than flagging any
 cardio near any lifting, and why easy aerobic work is explicitly not flagged.
 The 6-set line for "this is a leg day" is ours; the shape of the rule is not.
+
+---
+
+## Nutrition pace (planned: the weekly check-in, not yet in code)
+
+*Researched 2026-10-05. Every source below was read as a primary record (abstract
+or open full text), not from a summary. Where a page could not be read, that is
+said here and nothing is claimed from it.*
+
+The weekly check-in compares a user's weight trend with the pace their goal
+expects, and proposes one small calorie change when the trend is confidently
+outside it. This section is the evidence for each number that decision uses, graded
+with the same scale as above. **The headline finding is unflattering to anyone
+hoping for tidy numbers:** the best-evidenced pace figures come from lean athletes
+in short trials, almost none come from the recreational lifters this app serves,
+and two of the numbers have no literature at all and are derived from measurement
+noise instead.
+
+### Cut: how fast is too fast
+
+**Directional.** Fastest acceptable loss: **1.0% of bodyweight per week**, and
+**0.5% per week** for lean users.
+
+- Garthe et al. randomised 24 elite athletes doing resistance training to a slow
+  (0.7%/wk target) or fast (1.4%/wk target) loss. Fat mass fell similarly
+  (5.6% vs 5.5% of bodyweight) but lean mass **rose 2.1%** on the slow plan and was
+  unchanged on the fast one (p < .01). [Garthe 2011, IJSNEM](https://pubmed.ncbi.nlm.nih.gov/21558571/)
+  Note what it did and did not show: n = 24, 5 to 9 weeks, elite athletes, and the
+  fast group achieved about 1.0%/wk, not the 1.4% planned.
+- Helms, Aragon & Fitschen recommend losses of about **0.5 to 1% per week** to
+  maximise muscle retention in contest preparation, resting chiefly on Garthe and
+  explicitly noting that direct evidence in this population is limited. [Helms 2014, JISSN](https://pubmed.ncbi.nlm.nih.gov/24864135/)
+- Roberts et al. prefer **0.5% per week or slower** for lean competitors,
+  because slower loss attenuates fat-free mass loss. [Roberts 2020, J Hum Kinet](https://pubmed.ncbi.nlm.nih.gov/32148575/)
+- The ISSN position stand: slower rates better preserve lean mass in **leaner**
+  subjects, and the higher the baseline body fat the more aggressive a deficit
+  may be. [Aragon 2017, JISSN](https://pubmed.ncbi.nlm.nih.gov/28630601/)
+- For the general public, CDC advises about **1 to 2 pounds a week** (about
+  0.45 to 0.9 kg; page reviewed 2025-01-17). [CDC, Steps for Losing Weight](https://www.cdc.gov/healthy-weight-growth/losing-weight/index.html)
+  The 2013 AHA/ACC/TOS guideline prescribes a **500 or 750 kcal/day** deficit
+  (Grade A) and does not state a per-week rate in the text I could read.
+  [AHA/ACC/TOS 2013](https://pmc.ncbi.nlm.nih.gov/articles/PMC5819889/)
+
+The 1.0% ceiling is the top of the athlete range and sits inside the CDC range
+for a typical adult. The **0.5% limit for lean users** follows the direction the
+literature gives (leaner means slower), but **the BMI cut-off we would use to call
+someone "lean" is ours.** The app has no body-fat measurement, and BMI misreads
+muscular people.
+
+### Cut: the size of the deficit
+
+**Supported, with a conflict to resolve.** Murphy & Koehler pooled randomised
+trials of resistance training in an energy deficit. Lean-mass gains were impaired
+versus no deficit (effect size -0.57, p = 0.02), strength gains were not, and
+their meta-regression found that a deficit of **about 500 kcal/day prevented lean
+mass gains**. Their advice: avoid deficits above 500 kcal/day when the aim is to
+preserve lean mass. [Murphy & Koehler 2022](https://pubmed.ncbi.nlm.nih.gov/34623696/)
+
+**The conflict.** The target calculator waiting on an unmerged branch cuts calories
+by a flat **20% of maintenance**. That exceeds 500 kcal/day once maintenance is
+above 2,500, which is common for men who lift. The ISSN statement above says people
+with more body fat can take a larger deficit, so a flat cap is not obviously right
+either. Resolving this is an open decision, listed in the spec.
+
+### Bulk: how fast is too fast
+
+**Directional, and weaker than the cut side.**
+
+- Iraki et al. recommend a surplus of about 10 to 20% and a gain of **0.25 to 0.5%
+  of bodyweight per week** for novice and intermediate lifters, and more
+  conservative for advanced ones (they give about 0.25% per week with a 5 to 10%
+  surplus). It is a narrative review, not a trial. [Iraki 2019, Sports](https://pubmed.ncbi.nlm.nih.gov/31247944/)
+- Helms et al. randomised 21 trained lifters (17 completed, 8 weeks) to maintenance,
+  a 5% surplus or a 15% surplus. Faster body-mass gain mostly increased skinfold
+  thickness, meaning fat, rather than adding strength or muscle thickness.
+  Small, short, and the authors limit it to its own conditions. [Helms 2023, Sports Med Open](https://pubmed.ncbi.nlm.nih.gov/37914977/)
+- Slater et al. state plainly that **the energy surplus that maximises muscle gain
+  is unknown** and that the common estimates have never been validated in a
+  resistance-training population. [Slater 2019, Front Nutr](https://pubmed.ncbi.nlm.nih.gov/31482093/)
+
+So 0.5% per week is a defensible ceiling and the three sources agree on its
+direction, but nobody has measured the optimum. It must not be presented as one.
+
+### Maintain, and the slow edge of each band
+
+**Practical, and derived from noise, not cited.** There is no literature that sets
+"stalled" at a number. The slow edges (cut: a loss under 0.25%/wk; bulk: a gain
+under 0.1%/wk) and the maintenance band (within +/-0.25%/wk) are set at about the
+smallest trend a four-week window of weigh-ins can resolve, per the simulation
+below. They are labelled as design choices wherever they appear.
+
+### How much the scale lies
+
+**Supported.** This is what makes a trend rule necessary, and it sets how long the
+window must be.
+
+- One healthy adult weighed under standard conditions for 9,521 days: the SD of
+  day-to-day change was **0.53%** of body mass, rising to **0.69% across a
+  seven-day gap**, constant over the whole record. [Schneditz 2023](https://pubmed.ncbi.nlm.nih.gov/37955103/)
+- In 1,421 adults in a weight-maintenance trial, weight followed a within-week
+  rhythm of **0.35%**: higher at the weekend, lowest around Friday. Christmas added
+  a mean 1.35% that was not fully lost. [Turicchi 2020, PLOS ONE](https://pubmed.ncbi.nlm.nih.gov/32353079/)
+  An earlier study of 80 adults found the same Sunday-Monday peak.
+  [Orsama 2014](https://pubmed.ncbi.nlm.nih.gov/24504358/)
+- In free-living adults who were in energy balance, a two-week weight change had an
+  SD of **1.2 kg** and was **84% fat-free mass** (mostly water), with an energy
+  density of about **2,380 kcal/kg**, not the 7,700 usually assumed for fat.
+  [Bhutani 2017](https://pubmed.ncbi.nlm.nih.gov/28676555/)
+
+Taken together: a single weigh-in is noise of 0.4 to 1% of bodyweight, which is as
+large as a whole week's real change on a good cut. Short windows cannot be read.
+
+### Why a prediction cannot be turned into a calorie number
+
+**Supported, and a rule for the copy.** Hall et al.'s dynamic model shows the weight
+response to a change in intake is slow (half-times around a year) and slows as you
+get lighter, and a review of the "3,500 kcal per pound" rule finds it consistently
+over-predicts loss because it ignores falling energy expenditure and adaptive
+thermogenesis. [Hall 2011, Lancet](https://pubmed.ncbi.nlm.nih.gov/21872751/),
+[Egan & Collins 2022](https://pubmed.ncbi.nlm.nih.gov/35103583/),
+[Trexler 2014](https://pubmed.ncbi.nlm.nih.gov/24571926/)
+(I could not read Hall & Chow's 2013 letter on the rule and do not cite its
+content.) **The check-in must therefore never say "100 fewer calories will cost you
+X kilos".** It reports the observed trend and offers a small step.
+
+### Can the log vouch for what was eaten?
+
+**Supported, and it changes one gate.** In a classic study, obese people who
+reported not losing weight on under 1,200 kcal/day were eating **47% more than they
+reported** and overestimating activity by 51%, with normal measured expenditure.
+It was 10 people with a history of "diet resistance", so it is evidence that logs
+can be badly wrong, not a measure of how wrong typical logs are.
+[Lichtman 1992, NEJM](https://pubmed.ncbi.nlm.nih.gov/1454084/) The check-in
+therefore trusts the **scale** as the measurement and treats the food log as
+fallible. When the two disagree, the message is that the log may be missing
+something, never that the user is wrong.
+
+### Does the rate of loss decide whether you keep it off?
+
+**Supported, and it argues against over-reading the bands.** In 204 adults with
+obesity randomised to a 12-week or a 36-week programme aimed at the same 15% loss,
+both groups had regained about 71% by three years. [Purcell 2014, Lancet Diabetes
+Endocrinol](https://pubmed.ncbi.nlm.nih.gov/25459211/) The bands above are about
+protecting lean mass and avoiding an aggressive deficit, not about a promise that
+slow loss lasts longer.
+
+### Under 18
+
+**Policy, not a number.** The in-app rule is that anyone under 18 is never offered
+a deficit. The AAP's 2023 guideline puts treatment of paediatric obesity in
+intensive, face-to-face programmes delivered by trained professionals with family
+involvement, and says nothing endorsing self-directed dieting. [AAP guideline summary, HealthyChildren](https://www.healthychildren.org/English/news/Pages/evaluating-and-treating-obesity-in-children-and-adolescents.aspx),
+[guideline record](https://pubmed.ncbi.nlm.nih.gov/36622115/) (the full text was
+behind a 403, so only AAP's own summary page is relied on). Our rule is a
+conservative product choice consistent with that, not something the guideline
+prescribes.
+
+### Eating disorders: why there is no streak for hitting a lower number
+
+**Directional.** Both Helms 2014 and Roberts 2020 warn that physique-sport
+participants have a higher risk of eating and body-image disorders and should have
+access to mental-health professionals. This is the evidence behind the app's
+deficit floors, the lack of any reward for a lower target, and the rule that the
+check-in never auto-applies.
+
+### The step size and the window: derived, not cited
+
+**Practical.** A step of about **5% of the calorie target, rounded to 25 kcal**
+(100 to 150 kcal at typical intakes) is a design choice with three constraints
+behind it: it stays under Murphy & Koehler's 500 kcal/day ceiling; it cannot be
+finer than the food log can be trusted (Lichtman); and the response is slow (Hall),
+so one step is made and then given at least four weeks.
+
+The window is derived from the noise above by simulation
+(`node scripts/simulate-weight-trend.mjs`). A least-squares line through the
+weigh-ins, with a one-sided 95% confidence limit on its slope, and a rule that fires
+only when the **whole** interval lies outside the band:
+
+| Per-weigh-in noise | Window, weigh-ins | False flag when truly on pace | Catches a true stall | Catches a true overshoot |
+|---|---|---|---|---|
+| 0.5% (typical) | 21 days, 12 | 0.1% | 43% | 73% |
+| 0.5% (typical) | 28 days, 12 | 0.0% | 60% | 90% |
+| 0.5% (typical) | 42 days, 24 | 0.0% | 99% | 100% |
+| 1.0% (pessimistic) | 28 days, 12 | 0.4% | 27% | 47% |
+| 1.0% (pessimistic) | 42 days, 24 | 0.0% | 68% | 95% |
+
+Simulated, cut band 0.25 to 1.0%/wk, 6,000 trials per cell, seeded. This is the
+statistics of a decision rule given published noise levels, **not a finding about
+physiology**, and it is never cited as one.
+
+Two things follow. **The rule almost never fires wrongly**: with a 28-day window it
+flagged a genuinely on-pace user at most 0.4% of the time, even at the pessimistic
+noise level (1.3% with only 21 days at that noise). That is the property a
+calorie-changing feature most needs. **But it is slow and conservative**: at typical
+noise a 28-day window catches 60% of true stalls, and at pessimistic noise only
+27%. That is accepted on purpose. Silence is the safe failure; a wrong calorie
+change is not.
+
+An earlier draft of the design used three weekly means that had to agree. The same
+script shows it flagging an on-pace user wrongly **1.0% to 13.3%** of the time
+(21 days, 6 to 12 weigh-ins, 0.5% to 1.0% noise), and it cannot judge the 16% of
+sparse weighers who skip a week. That draft was dropped for this reason.
+
+### What this does not establish
+
+- Almost every rate figure comes from athletes or from small, short trials.
+  Nothing here tests these bands on recreational lifters in the real world.
+- Fat mass sets how fast a deficit can safely run (Alpert's limit of about 290
+  kJ per kg of fat per day, [Alpert 2005](https://pubmed.ncbi.nlm.nih.gov/15615615/)),
+  and the app cannot measure it, so a BMI proxy is the best available stand-in.
+- Hall's model and the adaptation literature predict that a long cut slows. A stall
+  late in a cut is not necessarily non-adherence, and the check-in must not imply it.
 
 ---
 

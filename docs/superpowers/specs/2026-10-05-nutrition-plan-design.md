@@ -1,7 +1,7 @@
 # Nutrition plan: explained targets and a weekly check-in
 
 **Date:** 2026-10-05
-**Status:** Draft for review. Nothing in this spec is built.
+**Status:** Draft for review. Nothing in this spec is built. Pace bands researched and graded 2026-10-05 (see Phase 2).
 **Owner:** Rehaan. Decisions below were made with Rehaan in the 2026-10-05 brainstorm.
 
 ## One sentence
@@ -99,56 +99,89 @@ meta-doc write path and the export schema in the implementation plan before codi
 
 ### Phase 2: weekly check-in
 
+Every number in this phase is sourced and graded in
+[`docs/rubric-sources.md`, "Nutrition pace"](../../rubric-sources.md#nutrition-pace-planned-the-weekly-check-in-not-yet-in-code),
+researched 2026-10-05 from primary records. Read that section before changing any
+constant. Where a number is a design choice rather than a finding, it is labelled
+one there and must be labelled one in the code, tests and any user-facing text.
+
 Pure module `nutrition-adjust.js`:
 
 ```
-checkIn({ bodyweights, days, targets, bodyStats, intent, unit, today, lastChangedOn })
-  -> { status: "not_ready" | "on_track" | "propose", ... }
+checkIn({ bodyweights, days, targets, bodyStats, intent, trainingAge, unit, today, lastChangedOn })
+  -> { status: "not_ready" | "inconclusive" | "on_track" | "propose", ... }
 ```
 
 **Evidence gate** (all required, else `not_ready` and no card):
 
-1. At least 21 days since targets last changed.
-2. Weigh-ins in each of the last three 7-day windows.
-3. At least 10 of the last 14 days logged, and the average logged calories within
-   15% of the target. If the user has not been eating to the target the right answer is
-   "log a bit more", never "change the target". This is a distinct `not_ready` reason
-   with its own copy.
+1. At least **28 days** since the targets last changed. The body's response to an
+   intake change is slow and decelerating (Hall 2011), so one step is made and then
+   given time.
+2. At least **12 weigh-ins in the last 28 days**, on at least four different weekdays,
+   because weight has a weekday rhythm of about 0.35% (Turicchi 2020, Orsama 2014)
+   and weigh-ins bunched on one weekday would read the rhythm as a trend.
+3. At least 20 of the last 28 days logged. If the user has been logging and the scale
+   and the log disagree (logged intake well below target while weight is not
+   falling) the status is `inconclusive` with a distinct, non-accusing message: the
+   log may be missing some food. Food logs can be badly wrong (Lichtman 1992), so the
+   scale is the measurement and the log is not.
 
-**Signal.** Mean weight per 7-day window gives two consecutive weekly changes
-(week 1 to 2, week 2 to 3), each as a percent of bodyweight. A proposal needs both
-changes to agree on direction relative to the intent's band. One noisy week, or
-water weight, cannot trigger it.
+**Signal.** A least-squares line through the window's weigh-ins gives a trend in
+percent of bodyweight per week and a one-sided 95% confidence limit on it.
+**The check-in speaks only when the whole interval lies outside the user's pace band.**
+If the 28-day interval straddles a band edge, extend the window to as much as 42
+days (24 weigh-ins) before settling on `inconclusive`. Simulation
+(`scripts/simulate-weight-trend.mjs`, results in rubric-sources.md) shows this
+flags a genuinely on-pace user at most 0.4% of the time with a 28-day window, versus
+1.0% to 13.3% for the earlier "two weekly means agree" rule, which is dropped. The
+price is sensitivity: it catches about 60% of true stalls at typical scale noise and
+about 27% at pessimistic noise. That is accepted. Silence is the safe failure.
 
-**Pace bands. DEFAULTS, NOT SOURCED.** Cut about -0.25% to -1.0% of bodyweight per
-week, bulk about +0.1% to +0.5%, recomp about +/-0.25%. These are conventional
-figures from my own knowledge of coaching practice and are not in
-`docs/rubric-sources.md`. They live as named constants with a comment saying so,
-exactly as the return-ramp thresholds do. Before this ships, either source them
-(add to `rubric-sources.md` with the citation) or keep the "defaults" label in the
-code, tests and docs. Do not cite them as evidence in any user-facing copy.
+**Pace bands** (percent of bodyweight per week; grade from rubric-sources.md):
+
+| Intent | Too fast | On pace | Grade |
+|---|---|---|---|
+| Cut | faster than **1.0%** (**0.5%** for lean users) | losing **0.25% to 1.0%** | fast limit Directional (Garthe, Helms, Roberts, ISSN, CDC); lean cut-off and 0.25% slow edge are Practical |
+| Bulk | faster than **0.5%** (novice/intermediate), **0.25%** (advanced) | gaining **0.1% to the limit** | fast limit Directional and weaker (Iraki, Helms 2023, Slater says the optimum is unknown); 0.1% slow edge is Practical |
+| Recomp | beyond +/-0.25% in either direction counts as moving | within **+/-0.25%** | Practical, noise-derived |
+
+"Lean" is `BMI < 25` from the stats the user gave. That is a proxy: the app has no
+body-fat measure and BMI misreads muscular people, so the copy never calls anyone
+lean. It only changes which limit applies. Advanced is `trainingAge` from onboarding.
 
 **Proposal rules.**
 
-- One step of about 100 kcal, rounded to 25, at most one proposal per 14 days.
-- Direction: a stalled or reversing cut proposes slightly fewer calories; a bulk gaining
-  too fast or a cut losing too fast proposes more; a stalled bulk proposes more.
-  Anything losing faster than the band only ever proposes **more** food.
-- New calories must stay at or above `max(LOW_KCAL, BMR)`, the same floor the
-  calculator uses.
-- Macros are re-derived by the calculator (`completeMacros` with protein held at its
-  per-kg value), never hand-adjusted.
-- The proposed targets must pass `evaluateNutrition` with no critical or warning flags,
-  evaluated with the accurate `maintenance`. If they do not, there is no proposal.
+- One step of **5% of the calorie target, rounded to 25 kcal**. A design choice, not
+  a finding: it sits under the 500 kcal/day deficit ceiling (Murphy & Koehler 2022),
+  is no finer than the log can be trusted (Lichtman 1992), and is followed by at
+  least 28 days before another proposal.
+- Direction: too fast on a cut proposes **more** food; a confident stall on a cut
+  proposes slightly less **only if** that does not deepen the deficit beyond the
+  starting plan. Never chase a plateau downward: adaptation slows a long cut
+  (Trexler 2014, Egan & Collins 2022), so a late flat trend is not non-adherence and
+  is shown as information, not answered with a deeper cut. Bulks mirror the cut.
+- New calories stay at or above `max(LOW_KCAL, BMR)` and below the deficit ceiling in
+  the open decision below.
+- Macros are re-derived by the calculator (`completeMacros`, protein held at its
+  per-kg value).
+- The proposal must pass `evaluateNutrition` with no critical or warning flags,
+  using the accurate `maintenance`. If it does not, there is no proposal.
 - Under-18: never a deficit. A minor can only be proposed maintenance or more.
+  This is product policy consistent with, not prescribed by, the AAP's 2023
+  guideline (professional, family-based treatment).
 - Never auto-applied.
+- **Copy never converts a calorie change into a weight prediction** ("100 fewer
+  calories is X kg"). The 3,500 kcal rule over-predicts and the dynamic response is
+  slow (Hall 2011, Egan & Collins 2022). It reports the observed trend and offers a
+  step.
 
 **Surfaces.** A "Weekly check-in" card on the Food diary when `status` is `propose`
 or just after the user applies one; a single line on Today only when a proposal is
 waiting. Apply or "Not now". Both are remembered per device, keyed by the latest
 weigh-in date, so the same evidence is not offered twice (same pattern as the
 welcome-back card's handled flag). `on_track` shows once as a quiet positive line, not
-a recurring card.
+a recurring card. `not_ready` shows nothing, except a prompt to weigh in when the
+only thing missing is weigh-ins.
 
 **Tone.** Says what was observed and what is on offer, never that the user failed.
 A pinned test guards the copy, as with catch-up, welcome-back and the streak card.
@@ -172,8 +205,13 @@ A pinned test guards the copy, as with catch-up, welcome-back and the streak car
   proposal through `evaluateNutrition`, asserting no proposal is ever flagged and none
   goes below the floor. Prove non-vacuous first (assert that a meaningful share of the
   sweep actually produces proposals).
-- Gate edges, band edges, the "log more" branch, one-step-per-14-days, kg and lb, minors,
-  weigh-in gaps, a week with no weigh-in.
+- **Statistical guarantee as a test:** a seeded simulation using the documented noise
+  levels (0.4%, 0.5%, 1.0% per weigh-in, plus the 0.35% weekday rhythm) asserts the rule
+  flags a truly on-pace user at most 1% of the time with the 28-day gate satisfied. If
+  someone loosens the gate or the confidence level, that test fails.
+- Gate edges, band edges, the "log and scale disagree" branch, one-step-per-28-days,
+  kg and lb, minors, weigh-ins bunched on one weekday, a window with no weigh-in,
+  plateau-chasing refused.
 - Tone: banned-word test over every string, including the minor notice.
 - Timezones: the date suite under UTC, America/Los_Angeles, Asia/Bangkok,
   Pacific/Auckland.
@@ -189,12 +227,35 @@ A pinned test guards the copy, as with catch-up, welcome-back and the streak car
 - Auto-applying any change.
 - The branch's onboarding step and drift nudge as written.
 
+## Open decision (found by the research, needs Rehaan)
+
+**The salvaged calculator cuts calories by a flat 20% of maintenance. Murphy & Koehler's
+meta-regression (2022) found a deficit of about 500 kcal/day prevented lean-mass gains
+in resistance training, and advise staying under it when the aim is to preserve muscle.**
+At maintenance above 2,500 kcal (common for men who lift) 20% is more than 500 kcal.
+The ISSN position stand pulls the other way: people with more body fat can take a
+larger deficit. Options for the cut default:
+
+1. **Cap at 500 kcal/day for everyone** who lifts. Simplest and closest to the one
+   meta-analysis, but under-prescribes for heavier people with a lot to lose.
+2. **Cap at 500 for BMI under 30, keep 20% at BMI 30 and over.** Follows both sources;
+   the BMI split is a proxy and a design choice.
+3. **Keep a flat 20%.** Matches the branch as written; contradicts the research above
+   for larger lifters.
+
+Recommendation: option 2. Decide before Phase 0 opens, because it changes
+`calculateTargets` and its 48,600-combination sweep.
+
 ## Risks and open items
 
-- **Pace bands are unsourced.** Decide before Phase 2 ships: source them or keep the
-  defaults label everywhere. Never claim research backing without a citation.
-- **Weigh-in noise.** Three weekly means and a two-week agreement rule cut noise but
-  do not remove it. The copy must say "your trend over three weeks", not a diagnosis.
+- **The evidence is thinner than the numbers look.** Almost every rate figure comes from
+  lean athletes in short trials of 17 to 24 people; none tests these bands on recreational
+  lifters. The bulk optimum is explicitly unknown (Slater 2019). The graded section says so;
+  user-facing copy must never claim research backing for a band, only describe it as a
+  conventional range.
+- **Sensitivity is low by design.** The rule misses most true stalls at pessimistic scale
+  noise. The copy for `inconclusive` and `not_ready` must not imply the user is doing
+  something wrong, and must not promise a check-in will arrive.
 - **Half-logged days** read as under-eating and cannot be told apart. The adherence
   gate reduces the harm but cannot eliminate it. State it in the card's limitations.
 - **Stats in sync.** Adding `bodyStats` to the meta doc must not break older clients
