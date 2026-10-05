@@ -8,11 +8,13 @@
  */
 
 import { store } from "./store.js";
-import { deriveStats, getWater, getState, dayCounts, daysSinceBodyweight, daysSinceLastWorkout, lastWorkoutDate, dateDaysAgo } from "./tracker-store.js";
+import { deriveStats, getWater, getState, dayCounts, daysSinceBodyweight, daysSinceLastWorkout, lastWorkoutDate, dateDaysAgo, nutritionDaySummaries } from "./tracker-store.js";
 import { evaluateNutrition } from "./nutrition-safety.js";
 import { todaysWorkout, coachNote, trainingDays, weekStrip } from "./today.js";
 import { openItems, catchUpSummary } from "./catch-up.js";
 import { welcomeBack, handledGap, markGapHandled } from "./welcome-back.js";
+import { streaksFor } from "./nutrition-streaks.js";
+import { streakListHTML } from "./consistency-card.js";
 import { isCardioEntry } from "./lib/plan.js";
 
 const content = document.getElementById("today-content");
@@ -149,6 +151,10 @@ function render() {
      </div>
      <p class="today-card__text">Habit focus: hit protein across at least 2 meals, and sip water through the day.</p>
      ${nutFlags}
+     ${streakListHTML(
+       streaksFor({ days: nutritionDaySummaries(), targets, today: ymd(), bodyweight: stats.bodyweight?.latest, unit: stats.unit, goal: inputs.goal || "" }),
+       { compact: true }
+     )}
      <div class="today-card__actions"><button type="button" class="btn btn--ghost btn--sm today-qa" data-act="meal">Log a meal</button></div>`,
     "today-card--nutrition"
   );

@@ -1071,6 +1071,21 @@ export function nutritionGoalsMet(totals, targets) {
   return proteinOk && kcalOk;
 }
 
+/** Logged nutrition totals keyed by date, for every day with at least one entry.
+ *  Backdated entries land on the date they are for, so a backfill repairs a run. */
+export function nutritionDaySummaries() {
+  const days = {};
+  for (const e of state.nutrition || []) {
+    if (!e.date) continue;
+    const d = (days[e.date] ||= { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+    d.kcal += e.kcal || 0;
+    d.protein += e.protein || 0;
+    d.carbs += e.carbs || 0;
+    d.fat += e.fat || 0;
+  }
+  return days;
+}
+
 /** Everything the calendar needs about one day. Pure. */
 export function dayStatus(dateKey) {
   const sessions = state.workouts.filter((w) => w.date === dateKey);

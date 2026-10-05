@@ -2038,6 +2038,25 @@ table {
    an alarm, so it borrows the muted surface rather than the warning colour. */
 .today-card--catchup { border-color: var(--border); background: var(--surface-2); }
 .today-card--welcome { border-color: var(--border); background: var(--surface-2); }
+/* Consistency streaks. One list, not a grid of cards: each row is a plain
+   statement of a run, plus seven ticks for the last week. The ticks echo the
+   ruler marks the hero already uses; a missed day is an empty tick, never red. */
+.streaks__lede { margin: var(--space-1) 0 var(--space-2); font-size: var(--fs-small); color: var(--text-muted); }
+.streaks { list-style: none; margin: 0; padding: 0; }
+.streak { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-4); row-gap: var(--space-1); padding: var(--space-3) 0; border-top: 1px solid var(--border-soft); }
+.streak:first-child { border-top: 0; }
+.streak__label { margin: 0; font-size: var(--fs-small); font-weight: 600; color: var(--text); }
+.streak__run { margin: 2px 0 0; font-size: var(--fs-small); color: var(--text-muted); }
+.streak__run--on { color: var(--text); }
+.streak__n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; color: var(--success); font-size: 1.05rem; }
+.streak__meta { grid-column: 1 / -1; margin: 0; font-size: var(--fs-small); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.streak__week { display: inline-flex; gap: 5px; align-items: flex-end; }
+.streak__tick { width: 6px; height: 16px; border-radius: var(--r-sm); border: 1px solid var(--field-border); background: transparent; }
+.streak__tick--on { background: var(--success); border-color: var(--success); }
+.streaks--compact { margin-top: var(--space-3); }
+.streaks--compact .streak { padding: var(--space-2) 0; }
+@media (max-width: 360px) { .streak__week { gap: 4px; } }
+
 .today-card__title--sm { font-size: 1.05rem; }
 .catchup-list { list-style: none; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-direction: column; }
 .catchup-item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--border-soft); }
