@@ -1,0 +1,390 @@
+/**
+ * Tests for stats-based nutrition targets — Mifflin-St Jeor, a split
+ * lifestyle/training activity factor, and macros that stay inside the
+ * boundaries nutrition-safety.js enforces.
+ */
+
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  estimateBmr,
+  activityMultiplier,
+  estimateTdee,
+  calculateTargets,
+  intentForGoal,
+  targetsDrift,
+  AGE_MIDPOINTS,
+  DAILY_ACTIVITY,
+  NUTRITION_INTENTS,
+  MINOR_NOTICE,
+  DRIFT_KCAL,
+  completeMacros,
+  bmiOf,
+  cutDeficitKcal,
+  CUT_DEFICIT_PCT,
+  CUT_DEFICIT_CAP_KCAL,
+  CUT_CAP_BELOW_BMI,
+} from "../lib/nutrition-targets.js";
+import { macroKcal } from "../lib/nutrition-math.js";
+import { evaluateNutrition, NUTRITION_THRESHOLDS } from "../nutrition-safety.js";
+
+test("BMR follows Mifflin-St Jeor for a known male case", () => {
+  // 10(80) + 6.25(178) - 5(24) + 5 = 1797.5
+  assert.equal(estimateBmr({ kg: 80, cm: 178, age: 24, sex: "Male" }), 1797.5);
+});
+
+test("BMR follows Mifflin-St Jeor for a known female case", () => {
+  // 10(65) + 6.25(165) - 5(37) - 161 = 1335.25
+  assert.equal(estimateBmr({ kg: 65, cm: 165, age: 37, sex: "Female" }), 1335.25);
+});
+
+test("unknown sex lands exactly between the male and female results", () => {
+  const male = estimateBmr({ kg: 80, cm: 178, age: 24, sex: "Male" });
+  const female = estimateBmr({ kg: 80, cm: 178, age: 24, sex: "Female" });
+  const unknown = estimateBmr({ kg: 80, cm: 178, age: 24, sex: "Prefer not to say" });
+  assert.equal(unknown, (male + female) / 2);
+  assert.equal(estimateBmr({ kg: 80, cm: 178, age: 24 }), unknown);
+});
+
+test("BMR is null without height, weight, or age", () => {
+  assert.equal(estimateBmr({ cm: 178, age: 24, sex: "Male" }), null);
+  assert.equal(estimateBmr({ kg: 80, age: 24, sex: "Male" }), null);
+  assert.equal(estimateBmr({ kg: 80, cm: 178, sex: "Male" }), null);
+  assert.equal(estimateBmr({}), null);
+});
+
+test("the activity multiplier is a lifestyle base plus a capped training add-on", () => {
+  // desk job, 4 x 60 min = 4 h -> 1.20 + 0.06*4 = 1.44
+  assert.equal(activityMultiplier({ dailyActivity: "sitting", daysPerWeek: 4, sessionLength: 60 }), 1.44);
+  // on feet all day, no training -> the bare base
+  assert.equal(activityMultiplier({ dailyActivity: "onfeet", daysPerWeek: 0, sessionLength: 0 }), 1.5);
+});
+
+test("the training add-on caps at 0.35 so huge volume cannot run away", () => {
+  const capped = activityMultiplier({ dailyActivity: "sitting", daysPerWeek: 7, sessionLength: 180 });
+  assert.equal(capped, 1.2 + 0.35);
+});
+
+test("the multiplier clamps to the 1.2 to 1.9 band", () => {
+  const max = activityMultiplier({ dailyActivity: "onfeet", daysPerWeek: 7, sessionLength: 240 });
+  assert.ok(max <= 1.9, `expected <= 1.9, got ${max}`);
+  const min = activityMultiplier({});
+  assert.ok(min >= 1.2, `expected >= 1.2, got ${min}`);
+});
+
+test("TDEE is BMR times the multiplier, and null when BMR is unavailable", () => {
+  const stats = { kg: 80, cm: 178, age: 24, sex: "Male", dailyActivity: "sitting", daysPerWeek: 4, sessionLength: 60 };
+  assert.equal(estimateTdee(stats), 1797.5 * 1.44);
+  assert.equal(estimateTdee({ cm: 178, age: 24 }), null);
+});
+
+test("age midpoints cover every AGE_RANGES chip, using en dashes", () => {
+  assert.deepEqual(Object.keys(AGE_MIDPOINTS), ["Under 18", "18–29", "30–44", "45–59", "60+"]);
+  assert.equal(AGE_MIDPOINTS["18–29"], 24);
+});
+
+test("the three daily-activity options ascend", () => {
+  const bases = DAILY_ACTIVITY.map((d) => d.base);
+  assert.deepEqual(bases, [1.2, 1.35, 1.5]);
+});
+
+const BASE = { kg: 80, cm: 178, ageRange: "18–29", sex: "Male", dailyActivity: "sitting", daysPerWeek: 4, sessionLength: 60 };
+
+test("SAFETY: under 18 never gets a deficit, whatever intent was asked for", () => {
+  const t = calculateTargets({ ...BASE, ageRange: "Under 18", intent: "cut" });
+  assert.equal(t.intent, "recomp", "the applied intent is forced to maintenance");
+  assert.equal(t.requestedIntent, "cut", "what the user asked for is still reported");
+  assert.equal(t.notice, MINOR_NOTICE);
+  const maintenance = calculateTargets({ ...BASE, ageRange: "Under 18", intent: "recomp" });
+  assert.equal(t.kcal, maintenance.kcal, "a requested cut yields maintenance calories");
+});
+
+test("adults get no minor notice", () => {
+  assert.equal(calculateTargets({ ...BASE, intent: "cut" }).notice, null);
+});
+
+test("the worked example from the spec reproduces exactly", () => {
+  // Cut is capped at a 500 kcal deficit under BMI 30 (BASE is BMI 25.2): maintenance
+  // 2588 - 500 = 2088, rounded to 2100. Protein 1.8 x 80 = 144 g, fat 25% = 58 g,
+  // carbs take the remainder. Before the cap this was a flat 20% (2075 kcal).
+  const cut = calculateTargets({ ...BASE, intent: "cut" });
+  assert.deepEqual(
+    { kcal: cut.kcal, protein: cut.protein, carbs: cut.carbs, fat: cut.fat },
+    { kcal: 2100, protein: 144, carbs: 250, fat: 58 }
+  );
+  const recomp = calculateTargets({ ...BASE, intent: "recomp" });
+  assert.deepEqual(
+    { kcal: recomp.kcal, protein: recomp.protein, carbs: recomp.carbs, fat: recomp.fat },
+    { kcal: 2600, protein: 144, carbs: 344, fat: 72 }
+  );
+  const bulk = calculateTargets({ ...BASE, intent: "bulk" });
+  assert.deepEqual(
+    { kcal: bulk.kcal, protein: bulk.protein, carbs: bulk.carbs, fat: bulk.fat },
+    { kcal: 2850, protein: 128, carbs: 406, fat: 79 }
+  );
+});
+
+test("cut is below recomp is below bulk for identical stats", () => {
+  const k = (intent) => calculateTargets({ ...BASE, intent }).kcal;
+  assert.ok(k("cut") < k("recomp"), "cut under recomp");
+  assert.ok(k("recomp") < k("bulk"), "recomp under bulk");
+});
+
+test("calories never fall below the greater of the safety floor and BMR", () => {
+  const t = calculateTargets({ ...BASE, kg: 45, cm: 150, ageRange: "60+", sex: "Female", intent: "cut" });
+  assert.ok(t.kcal >= NUTRITION_THRESHOLDS.LOW_KCAL, `${t.kcal} >= ${NUTRITION_THRESHOLDS.LOW_KCAL}`);
+  assert.ok(t.kcal >= t.bmr - 25, `${t.kcal} not below BMR ${t.bmr} beyond rounding`);
+});
+
+test("macros reconstruct the calorie total within 2%", () => {
+  for (const intent of ["cut", "recomp", "bulk"]) {
+    const t = calculateTargets({ ...BASE, intent });
+    const drift = Math.abs(macroKcal(t) / t.kcal - 1);
+    assert.ok(drift < 0.02, `${intent} drifted ${(drift * 100).toFixed(2)}%`);
+  }
+});
+
+test("an unstated sex is reported as Medium confidence, a stated one as High", () => {
+  assert.equal(calculateTargets({ ...BASE, intent: "cut" }).confidence, "High");
+  assert.equal(calculateTargets({ ...BASE, sex: "Prefer not to say", intent: "cut" }).confidence, "Medium");
+  assert.equal(calculateTargets({ ...BASE, sex: null, intent: "cut" }).confidence, "Medium");
+});
+
+test("null without height or weight, so callers can fall back", () => {
+  assert.equal(calculateTargets({ ...BASE, cm: null, intent: "cut" }), null);
+  assert.equal(calculateTargets({ ...BASE, kg: null, intent: "cut" }), null);
+});
+
+test("an unknown or missing intent falls back to recomp", () => {
+  assert.equal(calculateTargets({ ...BASE, intent: "nonsense" }).intent, "recomp");
+  assert.equal(calculateTargets({ ...BASE }).intent, "recomp");
+});
+
+test("the basis line explains the number without an em dash", () => {
+  for (const t of [calculateTargets({ ...BASE, intent: "cut" }), calculateTargets({ ...BASE, kg: 110, cm: 178, intent: "cut" })]) {
+    assert.match(t.basis, /maintenance/i);
+    assert.ok(!t.basis.includes("—"), "no em dashes in user-facing copy");
+  }
+  assert.match(calculateTargets({ ...BASE, kg: 110, cm: 178, intent: "cut" }).basis, /20%/, "BMI 30 and over keeps the flat 20%");
+});
+
+test("every training goal maps to a default eating intent", () => {
+  assert.equal(intentForGoal("fatloss"), "cut");
+  assert.equal(intentForGoal("muscle"), "bulk");
+  assert.equal(intentForGoal("strength"), "recomp");
+  assert.equal(intentForGoal("general"), "recomp");
+  assert.equal(intentForGoal("consistency"), "recomp");
+});
+
+test("an unknown goal defaults to recomp rather than guessing a deficit", () => {
+  assert.equal(intentForGoal("something-else"), "recomp");
+  assert.equal(intentForGoal(undefined), "recomp");
+});
+
+test("drift fires at the threshold and not one calorie under it", () => {
+  assert.equal(targetsDrift({ kcal: 2000 }, { kcal: 2000 + DRIFT_KCAL }).drifted, true);
+  assert.equal(targetsDrift({ kcal: 2000 }, { kcal: 2000 + DRIFT_KCAL - 1 }).drifted, false);
+  assert.equal(targetsDrift({ kcal: 2000 }, { kcal: 2000 - DRIFT_KCAL }).drifted, true, "drops count too");
+});
+
+test("drift reports a signed delta so the UI can say up or down", () => {
+  assert.equal(targetsDrift({ kcal: 2000 }, { kcal: 2150 }).deltaKcal, 150);
+  assert.equal(targetsDrift({ kcal: 2000 }, { kcal: 1850 }).deltaKcal, -150);
+});
+
+test("drift is inert when either side is missing", () => {
+  assert.deepEqual(targetsDrift(null, { kcal: 2000 }), { drifted: false, deltaKcal: 0 });
+  assert.deepEqual(targetsDrift({ kcal: 2000 }, null), { drifted: false, deltaKcal: 0 });
+});
+
+// ---------------------------------------------------------------------------
+// Cross-system sweep. This module PRESCRIBES targets; nutrition-safety.js
+// AUDITS them. Neither file's own unit tests can catch the two disagreeing, so
+// this sweep runs the whole realistic stat space through both. It is what
+// caught the auditor's per-kg maintenance heuristic overestimating by up to 41%
+// for heavier bodies. Do NOT weaken these assertions to make a change pass: a
+// failure here means the calculator and the auditor genuinely disagree, which
+// is a finding, not a broken test.
+// ---------------------------------------------------------------------------
+
+test("SWEEP: no calculated target ever trips its own auditor", () => {
+  const weights = [45, 55, 65, 75, 85, 95, 110, 130, 150];
+  const heights = [150, 160, 170, 180, 190, 200];
+  const ages = Object.keys(AGE_MIDPOINTS);
+  const sexes = ["Male", "Female", "Prefer not to say", null];
+  const activities = DAILY_ACTIVITY.map((d) => d.value);
+  const volumes = [[2, 30], [3, 45], [4, 60], [5, 60], [6, 90]];
+  const intents = NUTRITION_INTENTS.map((i) => i.value);
+  const goalFor = { cut: "Fat loss", bulk: "Hypertrophy", recomp: "General" };
+
+  let checked = 0;
+  const failures = [];
+
+  for (const kg of weights)
+    for (const cm of heights)
+      for (const ageRange of ages)
+        for (const sex of sexes)
+          for (const dailyActivity of activities)
+            for (const [daysPerWeek, sessionLength] of volumes)
+              for (const intent of intents) {
+                const stats = { kg, cm, ageRange, sex, dailyActivity, daysPerWeek, sessionLength, intent };
+                const t = calculateTargets(stats);
+                assert.ok(t, `expected targets for ${JSON.stringify(stats)}`);
+                checked++;
+
+                const { flags } = evaluateNutrition({
+                  targets: { kcal: t.kcal, protein: t.protein, fat: t.fat },
+                  bodyweight: kg,
+                  unit: "kg",
+                  goal: goalFor[t.intent],
+                  maintenance: estimateTdee({ kg, cm, age: AGE_MIDPOINTS[ageRange], sex, dailyActivity, daysPerWeek, sessionLength }),
+                });
+
+                if (flags.length && failures.length < 5) {
+                  failures.push({ ...stats, kcal: t.kcal, protein: t.protein, fat: t.fat, flags: flags.map((f) => f.label) });
+                }
+              }
+
+  assert.equal(checked, 48600, "the sweep covers the whole grid");
+  assert.deepEqual(failures, [], `calculated targets were flagged:\n${JSON.stringify(failures, null, 2)}`);
+});
+
+test("SWEEP: every calculated target holds the per-kg and macro boundaries", () => {
+  const T = NUTRITION_THRESHOLDS;
+  for (const kg of [45, 65, 85, 110, 150])
+    for (const cm of [150, 170, 190])
+      for (const ageRange of Object.keys(AGE_MIDPOINTS))
+        for (const intent of ["cut", "recomp", "bulk"]) {
+          const t = calculateTargets({ kg, cm, ageRange, sex: "Female", dailyActivity: "sitting", daysPerWeek: 3, sessionLength: 45, intent });
+          const label = `${kg}kg ${cm}cm ${ageRange} ${intent}`;
+          assert.ok(t.protein / kg >= T.PROTEIN_PER_KG_LOW, `${label}: protein ${(t.protein / kg).toFixed(2)} g/kg under floor`);
+          assert.ok((t.fat * 9) / t.kcal >= T.FAT_PCT_VERY_LOW, `${label}: fat too low`);
+          assert.ok(t.kcal >= T.LOW_KCAL, `${label}: kcal under floor`);
+          assert.ok(Math.abs(macroKcal(t) / t.kcal - 1) < 0.02, `${label}: macros do not reconstruct kcal`);
+        }
+});
+
+// ---------------------------------------------------------------------------
+// completeMacros: the no-height fallback. When height is missing the calculator
+// cannot run, and onboarding falls back to nutrition-safety's conservative
+// bodyweight-only suggestion, which supplies a calorie and a protein figure but
+// no carbs or fat. Left alone that reproduced the exact defect this feature
+// exists to remove: macros that do not add up to their own calorie target.
+// ---------------------------------------------------------------------------
+
+test("completeMacros fills carbs and fat so they reconstruct the calorie total", () => {
+  const t = { kcal: 2100, ...completeMacros({ kcal: 2100, protein: 150 }) };
+  const drift = Math.abs(macroKcal(t) / t.kcal - 1);
+  assert.ok(drift < 0.02, `drifted ${(drift * 100).toFixed(2)}%`);
+});
+
+test("completeMacros holds the same fat and carb boundaries as the calculator", () => {
+  const T = NUTRITION_THRESHOLDS;
+  for (const kcal of [1200, 1500, 1800, 2100, 2600, 3200, 4000])
+    for (const protein of [80, 120, 160, 200, 260]) {
+      const m = completeMacros({ kcal, protein });
+      const label = `${kcal} kcal / ${protein}g protein`;
+      assert.ok((m.fat * 9) / kcal >= T.FAT_PCT_VERY_LOW, `${label}: fat under the 15% floor`);
+      assert.ok(m.carbs >= 0, `${label}: negative carbs`);
+      const drift = Math.abs(macroKcal({ ...m }) / kcal - 1);
+      assert.ok(drift < 0.02, `${label}: drifted ${(drift * 100).toFixed(2)}%`);
+    }
+});
+
+test("completeMacros agrees with the calculator's own split for the same inputs", () => {
+  // Same protein grams the calculator would choose, so the two paths must match.
+  const full = calculateTargets({ ...BASE, intent: "cut" });
+  const viaComplete = completeMacros({ kcal: full.kcal, protein: full.protein });
+  assert.deepEqual(viaComplete, { protein: full.protein, carbs: full.carbs, fat: full.fat });
+});
+
+test("completeMacros returns null on unusable input rather than guessing", () => {
+  assert.equal(completeMacros({ kcal: 0, protein: 100 }), null);
+  assert.equal(completeMacros({ kcal: 2000 }), null);
+  assert.equal(completeMacros({}), null);
+});
+
+// --- Cut deficit cap (spec decision 2026-10-05; evidence in docs/rubric-sources.md) ---
+
+const CAP_BASE = { kg: 90, cm: 185, ageRange: "18–29", sex: "Male", dailyActivity: "some", daysPerWeek: 4, sessionLength: 60 };
+
+test("the cap constants are the ones the spec fixes", () => {
+  assert.equal(CUT_DEFICIT_PCT, 0.2);
+  assert.equal(CUT_DEFICIT_CAP_KCAL, 500);
+  assert.equal(CUT_CAP_BELOW_BMI, 30);
+});
+
+test("bmiOf computes BMI and refuses unusable input", () => {
+  assert.ok(Math.abs(bmiOf(80, 180) - 24.69) < 0.01);
+  assert.equal(bmiOf(0, 180), null);
+  assert.equal(bmiOf(80, 0), null);
+  assert.equal(bmiOf(undefined, 180), null);
+});
+
+test("cutDeficitKcal caps at 500 under BMI 30 and takes 20% at BMI 30 and over", () => {
+  assert.equal(cutDeficitKcal({ tdee: 3200, bmi: 24 }), 500);
+  assert.equal(cutDeficitKcal({ tdee: 2400, bmi: 24 }), 480, "20% is already under the cap");
+  assert.equal(cutDeficitKcal({ tdee: 3200, bmi: 29.99 }), 500);
+  assert.equal(cutDeficitKcal({ tdee: 3200, bmi: 30 }), 640);
+  assert.equal(cutDeficitKcal({ tdee: 3200, bmi: null }), 500, "unknown BMI takes the cautious cap");
+});
+
+test("a cut above 2,500 kcal maintenance under BMI 30 is held to a 500 kcal deficit", () => {
+  const r = calculateTargets({ ...CAP_BASE, intent: "cut" });
+  assert.ok(r.tdee > 2500);
+  assert.ok(r.bmi < 30);
+  assert.equal(r.deficitKcal, 500);
+  assert.equal(r.kcal, 2575, "round25(3087 - 500)");
+});
+
+test("a cut at BMI 30 and over keeps the flat 20%", () => {
+  const r = calculateTargets({ ...CAP_BASE, kg: 100, cm: 175, intent: "cut" });
+  assert.ok(r.bmi >= 30);
+  assert.equal(r.deficitKcal, Math.round(r.tdee * 0.2));
+  assert.equal(r.kcal, 2525, "unchanged from before the cap");
+});
+
+test("recomp and bulk are untouched by the cap", () => {
+  assert.equal(calculateTargets({ ...CAP_BASE, intent: "recomp" }).kcal, 3075);
+  assert.equal(calculateTargets({ ...CAP_BASE, intent: "bulk" }).kcal, 3400);
+  assert.equal(calculateTargets({ ...CAP_BASE, intent: "recomp" }).deficitKcal, 0);
+});
+
+test("the calorie floor still wins after the cap", () => {
+  const r = calculateTargets({ kg: 45, cm: 155, ageRange: "18–29", sex: "Female", dailyActivity: "sitting", daysPerWeek: 0, sessionLength: 0, intent: "cut" });
+  assert.equal(r.kcal, 1200);
+});
+
+test("under 18 still never gets a deficit, whatever the cap", () => {
+  const r = calculateTargets({ ...CAP_BASE, ageRange: "Under 18", intent: "cut" });
+  assert.equal(r.intent, "recomp");
+  assert.equal(r.requestedIntent, "cut");
+  assert.equal(r.deficitKcal, 0);
+  assert.equal(r.notice, MINOR_NOTICE);
+});
+
+test("the basis line states the real deficit", () => {
+  assert.match(calculateTargets({ ...CAP_BASE, intent: "cut" }).basis, /500 kcal under/);
+  assert.match(calculateTargets({ ...CAP_BASE, kg: 100, cm: 175, intent: "cut" }).basis, /20%/);
+});
+
+test("when the calorie floor binds, the reported deficit is the real one and the copy says so", () => {
+  // 45 kg, 155 cm, sedentary, no training: maintenance 1365, 20% would be 273,
+  // but the floor holds the target at 1200, a real deficit of about 165.
+  const r = calculateTargets({ kg: 45, cm: 155, ageRange: "18–29", sex: "Female", dailyActivity: "sitting", daysPerWeek: 0, sessionLength: 0, intent: "cut" });
+  assert.equal(r.floorBound, true);
+  assert.equal(r.kcal, 1200);
+  assert.equal(r.effectiveDeficitKcal, r.tdee - r.kcal);
+  assert.ok(r.effectiveDeficitKcal < Math.round(r.tdee * 0.2), "less than the 20% it asked for");
+  assert.match(r.basis, /lowest/i);
+  assert.ok(!/20%/.test(r.basis), "must not claim a 20% cut it did not make");
+});
+
+test("effectiveDeficitKcal tracks the target actually set, and is zero outside a cut", () => {
+  const capped = calculateTargets({ ...CAP_BASE, intent: "cut" });
+  assert.equal(capped.floorBound, false);
+  assert.ok(Math.abs(capped.effectiveDeficitKcal - 500) <= 25, "within a rounding step of the cap");
+  assert.equal(calculateTargets({ ...CAP_BASE, intent: "recomp" }).effectiveDeficitKcal, 0);
+  assert.equal(calculateTargets({ ...CAP_BASE, intent: "bulk" }).effectiveDeficitKcal, 0);
+  assert.equal(calculateTargets({ ...CAP_BASE, ageRange: "Under 18", intent: "cut" }).effectiveDeficitKcal, 0);
+});

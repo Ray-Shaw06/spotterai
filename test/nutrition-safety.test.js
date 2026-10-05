@@ -65,3 +65,37 @@ test("the 'what we won't do' list covers extreme restriction + rapid weight loss
   assert.ok(NUTRITION_WONT_DO.some((x) => /extreme calorie/i.test(x)));
   assert.ok(NUTRITION_WONT_DO.some((x) => /rapid weight loss/i.test(x)));
 });
+
+test("an accurate maintenance figure replaces the per-kg heuristic in the deficit check", () => {
+  // 130 kg, 170 cm, 60+, sedentary female: the x31 heuristic claims 4030 kcal
+  // maintenance, Mifflin-St Jeor says ~2364. A sane 1900 kcal target is a
+  // fast cut against the heuristic and a moderate one against reality.
+  const args = { targets: { kcal: 1900, protein: 160, fat: 53 }, bodyweight: 130, unit: "kg", goal: "Fat loss" };
+  const heuristic = evaluateNutrition(args);
+  assert.ok(heuristic.flags.some((f) => /deficit/i.test(f.label)), "heuristic flags it");
+
+  const accurate = evaluateNutrition({ ...args, maintenance: 2364 });
+  assert.equal(accurate.flags.length, 0, "accurate maintenance clears the spurious flag");
+});
+
+test("a genuine aggressive deficit still flags against accurate maintenance", () => {
+  const { flags } = evaluateNutrition({
+    targets: { kcal: 1400, protein: 160, fat: 40 }, bodyweight: 130, unit: "kg", goal: "Fat loss", maintenance: 2364,
+  });
+  assert.ok(flags.some((f) => /deficit/i.test(f.label)), "40% under real maintenance still flags");
+});
+
+test("omitting maintenance reproduces the per-kg behaviour exactly", () => {
+  const args = { targets: { kcal: 1300, protein: 150, fat: 45 }, bodyweight: 90, unit: "kg", goal: "Fat loss" };
+  assert.deepEqual(evaluateNutrition({ ...args, maintenance: null }), evaluateNutrition(args));
+  assert.deepEqual(evaluateNutrition({ ...args, maintenance: 0 }), evaluateNutrition(args));
+  assert.ok(evaluateNutrition(args).flags.some((f) => /deficit/i.test(f.label)), "still flags without the arg");
+});
+
+test("maintenance does not affect the absolute floors", () => {
+  // A very low target is critical no matter how low real maintenance is.
+  const { flags } = evaluateNutrition({
+    targets: { kcal: 900, protein: 120, fat: 40 }, bodyweight: 50, unit: "kg", maintenance: 1300,
+  });
+  assert.ok(flags.some((f) => f.tier === "critical" && /calorie/i.test(f.label)));
+});
