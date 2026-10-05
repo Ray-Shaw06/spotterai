@@ -40,7 +40,7 @@ const els = {
 function esc(t) {
   const d = document.createElement("div");
   d.textContent = t == null ? "" : String(t);
-  return d.innerHTML;
+  return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 const ICONS = {

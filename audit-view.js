@@ -24,7 +24,7 @@ export const TIER_ORDER = { critical: 0, warning: 1, suggestion: 2, pass: 3, not
 export function esc(text) {
   const div = document.createElement("div");
   div.textContent = text == null ? "" : String(text);
-  return div.innerHTML;
+  return div.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 /**

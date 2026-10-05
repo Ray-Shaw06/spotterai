@@ -59,7 +59,7 @@ const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matc
 function esc(t) {
   const d = document.createElement("div");
   d.textContent = t == null ? "" : String(t);
-  return d.innerHTML;
+  return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 function ymd(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

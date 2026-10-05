@@ -26,7 +26,7 @@ const closeBtn = document.getElementById("pain-close");
 function esc(t) {
   const d = document.createElement("div");
   d.textContent = t == null ? "" : String(t);
-  return d.innerHTML;
+  return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 const TIMING_LABEL = { warmup: "During warm-up", during_set: "During a set", after: "After workout", ongoing: "Ongoing" };

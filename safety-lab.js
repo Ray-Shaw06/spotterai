@@ -23,7 +23,7 @@ const mount = document.getElementById("safety-lab");
 function esc(t) {
   const d = document.createElement("div");
   d.textContent = t == null ? "" : String(t);
-  return d.innerHTML;
+  return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 // A case is "risky" if it expects the evaluator to flag something.
