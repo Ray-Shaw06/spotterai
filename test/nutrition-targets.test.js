@@ -19,8 +19,12 @@ import {
   MINOR_NOTICE,
   DRIFT_KCAL,
   completeMacros,
+  bmiOf,
+  cutDeficitKcal,
+  CUT_DEFICIT_PCT,
+  CUT_DEFICIT_CAP_KCAL,
+  CUT_CAP_BELOW_BMI,
 } from "../lib/nutrition-targets.js";
-import { bmiOf, cutDeficitKcal, CUT_DEFICIT_PCT, CUT_DEFICIT_CAP_KCAL, CUT_CAP_BELOW_BMI } from "../lib/nutrition-targets.js";
 import { macroKcal } from "../lib/nutrition-math.js";
 import { evaluateNutrition, NUTRITION_THRESHOLDS } from "../nutrition-safety.js";
 
