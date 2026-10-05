@@ -15,6 +15,8 @@ import { openItems, catchUpSummary } from "./catch-up.js";
 import { welcomeBack, handledGap, markGapHandled } from "./welcome-back.js";
 import { streaksFor } from "./nutrition-streaks.js";
 import { streakListHTML } from "./consistency-card.js";
+import { currentCheckIn } from "./nutrition-checkin.js";
+import { checkInTodayLine } from "./checkin-card.js";
 import { isCardioEntry } from "./lib/plan.js";
 
 const content = document.getElementById("today-content");
@@ -50,6 +52,13 @@ function quickActions(hasPlan) {
     <button type="button" class="btn btn--ghost btn--sm today-qa" data-act="pain">Report pain</button>
     ${hasPlan ? `<button type="button" class="btn btn--ghost btn--sm today-qa" data-act="adapt">Adapt my plan</button>` : ""}
   </div>`;
+}
+
+/** One line when a weekly check-in suggestion is waiting; the card itself lives on the Food diary. */
+function checkInLineHTML() {
+  const line = checkInTodayLine(currentCheckIn());
+  if (!line) return "";
+  return `<p class="today-note today-note--info">${esc(line)} <button type="button" class="btn btn--ghost btn--sm today-qa" data-act="checkin">See it</button></p>`;
 }
 
 function render() {
@@ -151,6 +160,7 @@ function render() {
      </div>
      <p class="today-card__text">Habit focus: hit protein across at least 2 meals, and sip water through the day.</p>
      ${nutFlags}
+     ${checkInLineHTML()}
      ${streakListHTML(
        streaksFor({ days: nutritionDaySummaries(), targets, today: ymd(), bodyweight: stats.bodyweight?.latest, unit: stats.unit, goal: inputs.goal || "" }),
        { compact: true }
@@ -276,6 +286,10 @@ content?.addEventListener("click", (e) => {
     // adaptPlan, so it gets the safety close and the no-new-flags invariant.
     location.hash = "#/";
     window.dispatchEvent(new CustomEvent("spotter:ease-back"));
+    return;
+  }
+  if (act === "checkin") {
+    location.hash = "#/nutrition";
     return;
   }
   if (act === "start") {

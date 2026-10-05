@@ -18,6 +18,7 @@
  */
 
 import { evaluateNutrition } from "./nutrition-safety.js";
+import { dayNumber, ymdFromNumber } from "./lib/calendar-days.js";
 
 /** Calories count as in range within this share of the target, either side.
  *  The same band `nutritionGoalsMet` uses; a test pins the two together. */
@@ -25,23 +26,7 @@ export const KCAL_BAND = 0.1;
 
 export const KINDS = Object.freeze(["protein", "calories", "logged"]);
 
-const DAY_MS = 86400000;
 const WINDOW = 7;
-
-/** Day numbers by pure calendar arithmetic: the Y-M-D parts go through Date.UTC
- *  and come back out through the UTC getters, so no timezone and no DST change
- *  can move a date. Parsing "YYYY-MM-DD" with `new Date()` or rounding a local
- *  noon both put some day in the wrong place at some offset (2026-08-14 lesson,
- *  and this module's own first draft, which only passed west of UTC). */
-function dayNumber(ymd) {
-  const [y, m, d] = String(ymd).split("-").map(Number);
-  return Date.UTC(y, m - 1, d) / DAY_MS;
-}
-
-function ymdFromNumber(n) {
-  const d = new Date(n * DAY_MS);
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-}
 
 /** Did this day count for this kind? `day` is that date's logged totals, or undefined. */
 export function dayMet(kind, day, targets = {}) {

@@ -130,3 +130,98 @@ for (const sigma of [0.5, 1.0]) {
     console.log(`${String(sigma).padEnd(5)}%  ${String(n).padStart(3)}       | ${pct(r.wrong)}     | ${pct(r.usable)}`);
   }
 }
+
+// =============================================================================
+// Added after the Phase 2 review: scale noise is autocorrelated, on-pace users sit
+// near band edges, and the app re-checks every day, not once.
+//
+// AR(1) noise. Schneditz 2023 reports an SD of day-to-day change of 0.53% over a
+// one-day gap and 0.69% over seven days. For AR(1) noise, Var(change over k days)
+// = 2 s^2 (1 - phi^k), so (0.53 / 0.69)^2 = 1 - phi gives phi of about 0.4.
+// A least-squares slope fitted to such noise is more variable than the
+// independent-noise formula says, by about sqrt((1 + phi) / (1 - phi)); the rule
+// widens its interval by that factor (AR1_INFLATION in nutrition-adjust.js).
+// =============================================================================
+
+const PHI = 0.4;
+const AR1_INFLATION = Math.sqrt((1 + PHI) / (1 - PHI));
+
+function dailyNoise(length, sigma, phi) {
+  const out = [];
+  let e = sigma * gauss();
+  for (let d = 0; d < length; d++) {
+    out.push(e);
+    e = phi * e + Math.sqrt(1 - phi * phi) * sigma * gauss();
+  }
+  return out;
+}
+
+function weighInsAR({ ratePerWeek, sigma, phi, n, window, rhythm = 0.35 }) {
+  const days = pickDays(window, n);
+  const noise = dailyNoise(window, sigma, phi);
+  const start = Math.floor(rng() * 7);
+  const y = days.map((d) => (ratePerWeek * d) / 7 + (rhythm / 2) * Math.cos((2 * Math.PI * ((d + start) % 7)) / 7) + noise[d]);
+  return { days, y };
+}
+
+function flaggedRate({ truth, sigma, phi, inflation, n = 12, window = 28 }) {
+  let slow = 0;
+  let fast = 0;
+  for (let t = 0; t < TRIALS; t++) {
+    const { slope, se } = slopePerWeek(weighInsAR({ ratePerWeek: truth, sigma, phi, n, window }));
+    if (slope - Z95_ONE_SIDED * inflation * se > CUT_BAND.floor) slow++;
+    if (slope + Z95_ONE_SIDED * inflation * se < CUT_BAND.ceil) fast++;
+  }
+  return { slow: slow / TRIALS, fast: fast / TRIALS };
+}
+
+console.log("\nSingle check, 28 days, 12 weigh-ins. AR(1) phi 0.4 noise. 'wrong' = flagged although truly on pace (slow edge -0.25, fast edge -1.0).");
+console.log("noise   widening | on pace mid-band -0.6 | near slow edge -0.3 | near fast edge -0.95 | catches stall 0.0 | catches overshoot -1.4");
+for (const sigma of [0.5, 1.0]) {
+  for (const inflation of [1, AR1_INFLATION]) {
+    const cells = [-0.6, -0.3, -0.95].map((truth) => {
+      const r = flaggedRate({ truth, sigma, phi: PHI, inflation });
+      return pct(r.slow + r.fast);
+    });
+    const stall = flaggedRate({ truth: 0, sigma, phi: PHI, inflation });
+    const over = flaggedRate({ truth: -1.4, sigma, phi: PHI, inflation });
+    console.log(`${String(sigma).padEnd(5)}%  x${inflation.toFixed(2)}    | ${cells.join("                 | ")}            | ${pct(stall.slow)}          | ${pct(over.fast)}`);
+  }
+}
+
+// The app re-checks whenever the page renders, so an on-pace user is tested again every
+// day. Chance of AT LEAST ONE wrong flag from day 28 to day 112, weighing about five
+// days a week, 100 kg cut (the lean limit does not apply).
+function repeatedChecks({ truth, sigma, phi, inflation, step = 1 }) {
+  const horizon = 112;
+  const trials = 1500;
+  let any = 0;
+  for (let t = 0; t < trials; t++) {
+    const noise = dailyNoise(horizon, sigma, phi);
+    const start = Math.floor(rng() * 7);
+    const all = [];
+    for (let d = 0; d < horizon; d++) {
+      if (rng() < 5 / 7) all.push({ d, y: (truth * d) / 7 + (0.35 / 2) * Math.cos((2 * Math.PI * ((d + start) % 7)) / 7) + noise[d] });
+    }
+    let flagged = false;
+    for (let today = 27; today < horizon && !flagged; today += step) {
+      const w = all.filter((p) => p.d > today - 28 && p.d <= today);
+      if (w.length < 12) continue;
+      const { slope, se } = slopePerWeek({ days: w.map((p) => p.d), y: w.map((p) => p.y) });
+      if (slope - Z95_ONE_SIDED * inflation * se > CUT_BAND.floor || slope + Z95_ONE_SIDED * inflation * se < CUT_BAND.ceil) flagged = true;
+    }
+    if (flagged) any++;
+  }
+  return any / trials;
+}
+
+console.log("\nRe-checking from day 28 to day 112: chance of at least one wrong flag for a user truly on pace.");
+console.log("A weekly check is the same rule evaluated once a week (the app snaps to one day a week).");
+console.log("noise   widening | daily: true -0.6, true -0.35 | weekly: true -0.6, true -0.35");
+for (const sigma of [0.5, 1.0]) {
+  for (const inflation of [1, AR1_INFLATION]) {
+    const d = [-0.6, -0.35].map((truth) => pct(repeatedChecks({ truth, sigma, phi: PHI, inflation })));
+    const w = [-0.6, -0.35].map((truth) => pct(repeatedChecks({ truth, sigma, phi: PHI, inflation, step: 7 })));
+    console.log(`${String(sigma).padEnd(5)}%  x${inflation.toFixed(2)}    | ${d.join("  ")}              | ${w.join("  ")}`);
+  }
+}

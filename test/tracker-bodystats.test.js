@@ -24,6 +24,8 @@ const {
   getTargetsChangedOn,
   bodyweightSeries,
   currentMaintenance,
+  getCheckInHandledOn,
+  setCheckInHandledOn,
   metaSnapshot,
   mergeRemoteMeta,
   exportData,
@@ -181,4 +183,32 @@ test("stats that arrive malformed from a backup or sync read as none, never as a
   assert.strictEqual(getBodyStats(), null);
   assert.equal(importData({ workouts: [], nutrition: [], bodyStats: GOOD }), true);
   assert.deepEqual(getBodyStats(), GOOD);
+});
+
+test("the check-in quiet period lives in per-profile tracker state, syncs, and exports", () => {
+  assert.ok(SYNCED_META_KEYS.includes("checkInHandledOn"));
+  blank();
+  assert.strictEqual(getCheckInHandledOn(), null);
+  setCheckInHandledOn("2026-10-05");
+  assert.equal(getCheckInHandledOn(), "2026-10-05");
+  assert.equal(metaSnapshot().checkInHandledOn, "2026-10-05");
+  const backup = JSON.parse(exportData());
+  blank();
+  assert.strictEqual(getCheckInHandledOn(), null, "another profile or a fresh state starts clear");
+  importData(backup);
+  assert.equal(getCheckInHandledOn(), "2026-10-05");
+  blank();
+  mergeRemoteMeta({ checkInHandledOn: "2026-09-01" });
+  assert.equal(getCheckInHandledOn(), "2026-09-01");
+  setCheckInHandledOn(null);
+  assert.equal(getCheckInHandledOn(), "2026-09-01", "an empty date is never stored");
+  setCheckInHandledOn("not a date");
+  assert.equal(getCheckInHandledOn(), "2026-09-01", "only a real date is stored");
+});
+
+test("handling a proposal does not touch the targets or their changed date", () => {
+  blank();
+  mergeRemoteMeta({ targetsChangedOn: "2026-01-01" });
+  setCheckInHandledOn("2026-10-05");
+  assert.equal(getTargetsChangedOn(), "2026-01-01");
 });

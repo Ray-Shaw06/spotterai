@@ -15,6 +15,7 @@ import { trackerKey } from "./profile-store.js";
 import { deloadFromWeeklyVolume, epley1RM, suggestNextWeight } from "./progression.js";
 import { isCardioExercise } from "./exercise-catalog.js";
 import { handledGap } from "./welcome-back.js";
+import { dayNumber } from "./lib/calendar-days.js";
 import { validateBodyStats, maintenanceFor } from "./nutrition-plan.js";
 
 const DEFAULTS = {
@@ -32,7 +33,8 @@ const DEFAULTS = {
   exercisePrefs: { favorites: [], disliked: [] }, // exercise names
   unit: "kg",
   bodyStats: null, // { heightCm, ageRange, sex, dailyActivity, daysPerWeek, sessionLength, intent }, on this device
-  targetsChangedOn: null, // 'YYYY-MM-DD' of the last setTargets; the weekly check-in waits 28 days from it
+  targetsChangedOn: null, // 'YYYY-MM-DD' of the last change to calories or macros; the weekly check-in waits 28 days from it
+  checkInHandledOn: null, // 'YYYY-MM-DD' the user last applied or turned down a check-in proposal; starts a 28-day quiet period
 };
 
 const MEALS = ["breakfast", "lunch", "dinner", "snacks"];
@@ -124,6 +126,7 @@ export function importData(obj) {
     water: incoming.water && typeof incoming.water === "object" ? incoming.water : {},
     bodyStats: incoming.bodyStats && typeof incoming.bodyStats === "object" ? incoming.bodyStats : null,
     targetsChangedOn: typeof incoming.targetsChangedOn === "string" ? incoming.targetsChangedOn : null,
+    checkInHandledOn: typeof incoming.checkInHandledOn === "string" ? incoming.checkInHandledOn : null,
     updatedAt: incoming.updatedAt || Date.now(),
   };
   persist(false); // preserve the incoming timestamp
@@ -165,7 +168,7 @@ export const SYNCED_RECORD_KINDS = Object.freeze([
 export const DATED_RECORD_KINDS = Object.freeze(["workouts", "nutrition", "bodyweight", "painReports"]);
 
 /** Scalar / singleton keys that live in the parent users/<uid> document. */
-export const SYNCED_META_KEYS = Object.freeze(["targets", "water", "achievements", "exercisePrefs", "unit", "bodyStats", "targetsChangedOn"]);
+export const SYNCED_META_KEYS = Object.freeze(["targets", "water", "achievements", "exercisePrefs", "unit", "bodyStats", "targetsChangedOn", "checkInHandledOn"]);
 
 /**
  * Stable document id for a record. Most kinds carry their own `id`; the
@@ -995,6 +998,18 @@ export function setTargets(t) {
   persist();
 }
 
+/** Day the user last applied or turned down a check-in proposal, or null. Per profile, synced, exported. */
+export function getCheckInHandledOn() {
+  return state.checkInHandledOn || null;
+}
+
+/** Start the check-in quiet period. Only a real 'YYYY-MM-DD' date is stored. */
+export function setCheckInHandledOn(date) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date ?? ""))) return;
+  state.checkInHandledOn = date;
+  persist();
+}
+
 /** Body stats saved on this device, or null. */
 export function getBodyStats() {
   // Re-validated on every read: stats can arrive from a backup or another device in any
@@ -1024,8 +1039,12 @@ export function getTargetsChangedOn() {
  */
 export function currentMaintenance() {
   const series = bodyweightSeries();
-  const kg = series.length ? series[series.length - 1].kg : null;
-  return maintenanceFor(getBodyStats(), kg);
+  if (!series.length) return maintenanceFor(getBodyStats(), null);
+  // The mean of the last week of weigh-ins, the same weight the weekly check-in plans from,
+  // so the number shown beside a proposal and the one that made it cannot disagree.
+  const cutoff = dayNumber(series[series.length - 1].date) - 7;
+  const week = series.filter((p) => dayNumber(p.date) > cutoff);
+  return maintenanceFor(getBodyStats(), week.reduce((a, p) => a + p.kg, 0) / week.length);
 }
 
 /** Bodyweight entries in kg regardless of the display unit, oldest first. */

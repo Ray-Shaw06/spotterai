@@ -173,9 +173,9 @@ The 6-set line for "this is a leg day" is ours; the shape of the rule is not.
 
 ---
 
-## Nutrition pace (planned: the weekly check-in, not yet in code)
+## Nutrition pace (the weekly check-in)
 
-*Researched 2026-10-05. Every source below was read as a primary record (abstract
+*Researched 2026-10-05; built in `nutrition-adjust.js`, where each constant is marked Directional, Practical or Derived. Every source below was read as a primary record (abstract
 or open full text), not from a summary. Where a page could not be read, that is
 said here and nothing is claimed from it.*
 
@@ -349,32 +349,53 @@ so one step is made and then given at least four weeks.
 The window is derived from the noise above by simulation
 (`node scripts/simulate-weight-trend.mjs`). A least-squares line through the
 weigh-ins, with a one-sided 95% confidence limit on its slope, and a rule that fires
-only when the **whole** interval lies outside the band:
+only when the **whole** interval lies outside the band.
 
-| Per-weigh-in noise | Window, weigh-ins | False flag when truly on pace | Catches a true stall | Catches a true overshoot |
+**Scale noise is autocorrelated, and the first draft of this section ignored it.**
+Schneditz 2023 reports a day-to-day SD of 0.53% over a one-day gap and 0.69% over
+seven days; for AR(1) noise that gives a correlation of about 0.4 between consecutive
+days. A fitted slope on such noise is more variable than the independent-noise formula
+says, by about sqrt((1 + 0.4) / (1 - 0.4)) = 1.53. The rule widens its interval by that
+factor, and it is evaluated **once a week** (as of the most recent Sunday), not on every
+page view. The measurements below are with both, using AR(1) noise, 12 weigh-ins in
+28 days, a cut band of 0.25 to 1.0%/wk. "Wrong" means flagged although truly on pace.
+
+| Per-weigh-in noise | Truly mid-band (-0.6) | Just inside an edge (-0.3, -0.95) | Catches a true stall | Catches a true overshoot (-1.4) |
 |---|---|---|---|---|
-| 0.5% (typical) | 21 days, 12 | 0.1% | 43% | 73% |
-| 0.5% (typical) | 28 days, 12 | 0.0% | 60% | 90% |
-| 0.5% (typical) | 42 days, 24 | 0.0% | 99% | 100% |
-| 1.0% (pessimistic) | 28 days, 12 | 0.4% | 27% | 47% |
-| 1.0% (pessimistic) | 42 days, 24 | 0.0% | 68% | 95% |
+| 0.5% (typical) | 0.0% wrong | 1.5% to 1.8% wrong | 35% | 70% |
+| 1.0% (pessimistic) | 0.3% wrong | 2.4% to 2.5% wrong | 15% | 27% |
 
-Simulated, cut band 0.25 to 1.0%/wk, 6,000 trials per cell, seeded. This is the
-statistics of a decision rule given published noise levels, **not a finding about
-physiology**, and it is never cited as one.
+Without the widening the same rule was wrong 5% to 8% of the time for a user just
+inside an edge. Simulated, 6,000 trials per cell, seeded. This is the statistics of a
+decision rule given published noise levels, **not a finding about physiology**, and it
+is never cited as one.
 
-Two things follow. **The rule almost never fires wrongly**: with a 28-day window it
-flagged a genuinely on-pace user at most 0.4% of the time, even at the pessimistic
-noise level (1.3% with only 21 days at that noise). That is the property a
-calorie-changing feature most needs. **But it is slow and conservative**: at typical
-noise a 28-day window catches 60% of true stalls, and at pessimistic noise only
-27%. That is accepted on purpose. Silence is the safe failure; a wrong calorie
-change is not.
+**What a user would actually experience over twelve weeks** (the chance of at least one
+wrong flag from week 4 to week 16, checked weekly with the widening):
 
-An earlier draft of the design used three weekly means that had to agree. The same
-script shows it flagging an on-pace user wrongly **1.0% to 13.3%** of the time
-(21 days, 6 to 12 weigh-ins, 0.5% to 1.0% noise), and it cannot judge the 16% of
-sparse weighers who skip a week. That draft was dropped for this reason.
+| Per-weigh-in noise | Truly mid-band (-0.6) | Just inside the slow edge (-0.35) |
+|---|---|---|
+| 0.5% | 0.1% | 8% |
+| 1.0% | 2.1% | 21% |
+
+Checking on every page view instead would have made these 0.1% / 19% and 7% / 40%.
+**A user whose true pace sits right at a band edge is, by definition, hard to tell from
+one just outside it, so the rule will sometimes fire on them.** That is accepted: the
+proposal is one small step, bounded by the starting plan and the calorie floor, and
+approved by the user.
+
+Three things follow. **The rule rarely fires on someone clearly on pace** (at most
+about 2% over twelve weeks even at pessimistic noise). **It is slow and conservative**:
+it catches roughly a third of true stalls at typical noise and about a seventh at
+pessimistic noise. That is accepted on purpose. Silence is the safe failure; a wrong
+calorie change is not. **And it is not silent for everyone:** a saved target already below
+what SpotterAI would set is never read as "on track". It is offered a raise to a safe
+level when the scale agrees the loss is too fast, and is otherwise told so plainly.
+
+An earlier draft used three weekly means that had to agree. The same script shows it
+flagging an on-pace user wrongly 1.0% to 13.3% of the time (21 days, 6 to 12 weigh-ins,
+0.5% to 1.0% noise, independent noise), and it cannot judge the 16% of sparse weighers
+who skip a week. That draft was dropped.
 
 ### What this does not establish
 

@@ -17,6 +17,7 @@ import { evaluateNutrition, NUTRITION_DISCLAIMER, NUTRITION_WONT_DO } from "./nu
 import { streaksFor } from "./nutrition-streaks.js";
 import { consistencyCardHTML } from "./consistency-card.js";
 import { renderPlanCard } from "./nutrition-plan-ui.js";
+import { renderCheckInCard } from "./nutrition-checkin-ui.js";
 import { store } from "./store.js";
 import { trackFunnel } from "./analytics.js";
 import { photoInput } from "./snap-door.js";
@@ -96,6 +97,7 @@ function render() {
   renderNutritionSafety();
   renderStreaks();
   renderPlanCard();
+  renderCheckInCard();
 }
 
 // --- Consistency: runs counted from your own targets and log ---------------
