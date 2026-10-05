@@ -21,7 +21,7 @@ export const NUTRITION_THRESHOLDS = {
 
 const lbToKg = (lb) => lb * 0.45359237;
 
-export function evaluateNutrition({ targets = {}, bodyweight = null, unit = "kg", goal = "" } = {}) {
+export function evaluateNutrition({ targets = {}, bodyweight = null, unit = "kg", goal = "", maintenance = null } = {}) {
   const T = NUTRITION_THRESHOLDS;
   const kcal = Number(targets.kcal) || 0;
   const protein = Number(targets.protein) || 0;
@@ -41,9 +41,15 @@ export function evaluateNutrition({ targets = {}, bodyweight = null, unit = "kg"
     }
   }
 
-  // 2. Aggressive deficit vs a rough estimated maintenance (needs bodyweight).
+  // 2. Aggressive deficit vs estimated maintenance (needs bodyweight).
+  //    `maintenance` is the caller's accurate figure when it has the stats to
+  //    compute one (Mifflin-St Jeor via lib/nutrition-targets.js). The per-kg
+  //    heuristic is a linear fallback that overestimates badly for heavier
+  //    bodies, since fat mass burns far less than lean mass, so prefer real
+  //    numbers whenever they exist.
   if (kg && kcal) {
-    const maint = Math.round(kg * T.MAINTENANCE_KCAL_PER_KG);
+    const supplied = Number(maintenance);
+    const maint = Math.round(supplied > 0 ? supplied : kg * T.MAINTENANCE_KCAL_PER_KG);
     if (kcal < maint * (1 - T.AGGRESSIVE_DEFICIT)) {
       F("warning", "Aggressive deficit", `Your target (${kcal} kcal) is more than ${Math.round(T.AGGRESSIVE_DEFICIT * 100)}% below your rough estimated maintenance (~${maint} kcal), a fast cut that's hard to sustain.`, "Aim for roughly a 10–20% deficit for steadier fat loss and better adherence.");
     }
