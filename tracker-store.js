@@ -14,7 +14,6 @@ import { ACHIEVEMENTS, XP, achievementXp, levelFor, rankFor, workoutXp } from ".
 import { trackerKey } from "./profile-store.js";
 import { deloadFromWeeklyVolume, epley1RM, suggestNextWeight } from "./progression.js";
 import { isCardioExercise } from "./exercise-catalog.js";
-import { handledGap } from "./welcome-back.js";
 import { dayNumber } from "./lib/calendar-days.js";
 import { validateBodyStats, maintenanceFor } from "./nutrition-plan.js";
 
@@ -34,6 +33,7 @@ const DEFAULTS = {
   unit: "kg",
   bodyStats: null, // { heightCm, ageRange, sex, dailyActivity, daysPerWeek, sessionLength, intent }, on this device
   targetsChangedOn: null, // 'YYYY-MM-DD' of the last change to calories or macros; the weekly check-in waits 28 days from it
+  welcomeHandledFor: null, // last-workout 'YYYY-MM-DD' of the gap whose ease-back offer was applied or turned down
   checkInHandledOn: null, // 'YYYY-MM-DD' the user last applied or turned down a check-in proposal; starts a 28-day quiet period
 };
 
@@ -127,6 +127,7 @@ export function importData(obj) {
     bodyStats: incoming.bodyStats && typeof incoming.bodyStats === "object" ? incoming.bodyStats : null,
     targetsChangedOn: typeof incoming.targetsChangedOn === "string" ? incoming.targetsChangedOn : null,
     checkInHandledOn: typeof incoming.checkInHandledOn === "string" ? incoming.checkInHandledOn : null,
+    welcomeHandledFor: typeof incoming.welcomeHandledFor === "string" ? incoming.welcomeHandledFor : null,
     updatedAt: incoming.updatedAt || Date.now(),
   };
   persist(false); // preserve the incoming timestamp
@@ -168,7 +169,7 @@ export const SYNCED_RECORD_KINDS = Object.freeze([
 export const DATED_RECORD_KINDS = Object.freeze(["workouts", "nutrition", "bodyweight", "painReports"]);
 
 /** Scalar / singleton keys that live in the parent users/<uid> document. */
-export const SYNCED_META_KEYS = Object.freeze(["targets", "water", "achievements", "exercisePrefs", "unit", "bodyStats", "targetsChangedOn", "checkInHandledOn"]);
+export const SYNCED_META_KEYS = Object.freeze(["targets", "water", "achievements", "exercisePrefs", "unit", "bodyStats", "targetsChangedOn", "checkInHandledOn", "welcomeHandledFor"]);
 
 /**
  * Stable document id for a record. Most kinds carry their own `id`; the
@@ -945,7 +946,7 @@ export function buildAdaptContext(plan) {
   const lastDate = lastWorkoutDate();
   return {
     gapDays: daysSinceLastWorkout(),
-    gapHandled: !!lastDate && handledGap() === lastDate,
+    gapHandled: !!lastDate && getWelcomeHandledFor() === lastDate,
     lastWorkoutDate: lastDate,
     workoutsLogged: ctx.workoutsLogged,
     thisWeek: ctx.thisWeek,
@@ -995,6 +996,18 @@ export function setTargets(t) {
   // Only a change to what the check-in judges restarts its clock. Editing the water
   // goal or workouts per week, or re-saving the same numbers, must not delay it.
   if (["kcal", "protein", "carbs", "fat"].some((k) => state.targets[k] !== before[k])) state.targetsChangedOn = today();
+  persist();
+}
+
+/** The last-workout date of the gap whose ease-back offer was handled, or null. Per profile, synced, exported. */
+export function getWelcomeHandledFor() {
+  return state.welcomeHandledFor || null;
+}
+
+/** Remember that the gap ending at `lastWorkoutDate` was applied or turned down. A new workout moves the date, so the next long gap is a fresh offer. */
+export function setWelcomeHandledFor(lastWorkoutDate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(lastWorkoutDate ?? ""))) return;
+  state.welcomeHandledFor = lastWorkoutDate;
   persist();
 }
 

@@ -26,6 +26,9 @@ const {
   currentMaintenance,
   getCheckInHandledOn,
   setCheckInHandledOn,
+  getWelcomeHandledFor,
+  setWelcomeHandledFor,
+  buildAdaptContext,
   metaSnapshot,
   mergeRemoteMeta,
   exportData,
@@ -211,4 +214,35 @@ test("handling a proposal does not touch the targets or their changed date", () 
   mergeRemoteMeta({ targetsChangedOn: "2026-01-01" });
   setCheckInHandledOn("2026-10-05");
   assert.equal(getTargetsChangedOn(), "2026-01-01");
+});
+
+test("the welcome-back flag is per-profile tracker state: it syncs, exports, and one profile cannot silence another", () => {
+  assert.ok(SYNCED_META_KEYS.includes("welcomeHandledFor"));
+  blank();
+  assert.strictEqual(getWelcomeHandledFor(), null);
+  setWelcomeHandledFor("2026-08-31");
+  assert.equal(getWelcomeHandledFor(), "2026-08-31");
+  assert.equal(metaSnapshot().welcomeHandledFor, "2026-08-31");
+  const backup = JSON.parse(exportData());
+  blank(); // a different profile's state starts clear
+  assert.strictEqual(getWelcomeHandledFor(), null);
+  importData(backup);
+  assert.equal(getWelcomeHandledFor(), "2026-08-31");
+  blank();
+  mergeRemoteMeta({ welcomeHandledFor: "2026-07-01" });
+  assert.equal(getWelcomeHandledFor(), "2026-07-01");
+  setWelcomeHandledFor(null);
+  setWelcomeHandledFor("not a date");
+  assert.equal(getWelcomeHandledFor(), "2026-07-01", "only a real date is stored");
+});
+
+test("an ease-back already handled for this gap reaches the adapt engine as gapHandled", () => {
+  const w = (id, date) => ({ id, date, name: "S", exercises: [], volume: 100 });
+  blank({ workouts: [w("a", dateDaysAgo(60)), w("b", dateDaysAgo(50)), w("c", dateDaysAgo(40))] });
+  const plan = { days: [{ day: "Mon", focus: "Push", exercises: [{ name: "Bench Press", sets: 3, reps: "8" }] }] };
+  assert.equal(buildAdaptContext(plan).gapHandled, false);
+  setWelcomeHandledFor(dateDaysAgo(40));
+  assert.equal(buildAdaptContext(plan).gapHandled, true);
+  setWelcomeHandledFor(dateDaysAgo(41));
+  assert.equal(buildAdaptContext(plan).gapHandled, false, "handled for an older gap does not cover this one");
 });

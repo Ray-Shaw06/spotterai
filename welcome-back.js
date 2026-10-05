@@ -31,8 +31,6 @@ export const MIN_WORKOUTS = 3;
 /** Share of working sets trimmed per level. */
 export const RAMP_CUT = Object.freeze({ light: 0.25, deep: 0.4 });
 
-export const HANDLED_KEY = "spotterai.welcomeBack.handled";
-
 /** "light", "deep", or null when this gap does not call for easing. */
 export function rampLevel(gapDays, workoutsLogged) {
   const gap = Number(gapDays);
@@ -64,23 +62,4 @@ export function welcomeBack({ gapDays, workoutsLogged, handled = false } = {}) {
     cta: "Ease me back in",
     dismiss: "Not now",
   };
-}
-
-/** The last-workout date this device already handled (applied or dismissed), or null. */
-export function handledGap(env = globalThis) {
-  try {
-    return env.localStorage?.getItem(HANDLED_KEY) || null;
-  } catch {
-    return null; // storage can throw outright in locked-down contexts
-  }
-}
-
-/** Remember that the gap ending at `lastWorkoutDate` has been dealt with. A new
- *  workout moves the date, so the next long gap is a fresh offer. */
-export function markGapHandled(lastWorkoutDate, env = globalThis) {
-  try {
-    if (lastWorkoutDate) env.localStorage?.setItem(HANDLED_KEY, String(lastWorkoutDate));
-  } catch {
-    /* storage disabled; the offer simply shows again next visit */
-  }
 }
