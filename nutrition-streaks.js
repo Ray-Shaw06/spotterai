@@ -28,13 +28,19 @@ export const KINDS = Object.freeze(["protein", "calories", "logged"]);
 const DAY_MS = 86400000;
 const WINDOW = 7;
 
-/** Date-only strings parse as UTC; noon local sidesteps the off-by-one that put
- *  every Monday workout in the previous week (2026-08-14 lesson). */
-const dayNumber = (ymd) => Math.round(new Date(`${ymd}T12:00:00`).getTime() / DAY_MS);
+/** Day numbers by pure calendar arithmetic: the Y-M-D parts go through Date.UTC
+ *  and come back out through the UTC getters, so no timezone and no DST change
+ *  can move a date. Parsing "YYYY-MM-DD" with `new Date()` or rounding a local
+ *  noon both put some day in the wrong place at some offset (2026-08-14 lesson,
+ *  and this module's own first draft, which only passed west of UTC). */
+function dayNumber(ymd) {
+  const [y, m, d] = String(ymd).split("-").map(Number);
+  return Date.UTC(y, m - 1, d) / DAY_MS;
+}
 
 function ymdFromNumber(n) {
   const d = new Date(n * DAY_MS);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
 /** Did this day count for this kind? `day` is that date's logged totals, or undefined. */
