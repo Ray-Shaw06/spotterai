@@ -4,13 +4,10 @@ import assert from "node:assert/strict";
 import {
   rampLevel,
   welcomeBack,
-  handledGap,
-  markGapHandled,
   RAMP_MIN_DAYS,
   DEEP_RAMP_DAYS,
   MIN_WORKOUTS,
   RAMP_CUT,
-  HANDLED_KEY,
 } from "../welcome-back.js";
 
 test("the thresholds are the ones the card copy promises", () => {
@@ -69,33 +66,4 @@ test("no string shames the user", () => {
     const text = Object.values(card).join(" ").toLowerCase();
     for (const word of banned) assert.ok(!text.includes(word), `"${word}" in: ${text}`);
   }
-});
-
-function fakeEnv() {
-  const store = new Map();
-  return { localStorage: { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)) } };
-}
-
-test("handling a gap is remembered by the last workout date", () => {
-  const env = fakeEnv();
-  assert.equal(handledGap(env), null);
-  markGapHandled("2026-09-01", env);
-  assert.equal(handledGap(env), "2026-09-01");
-  assert.equal(env.localStorage.getItem(HANDLED_KEY), "2026-09-01");
-  // A new workout moves the date, so the stored value no longer matches.
-  assert.notEqual(handledGap(env), "2026-10-02");
-});
-
-test("storage that throws or is missing is not an error", () => {
-  const throwing = { localStorage: { getItem() { throw new Error("blocked"); }, setItem() { throw new Error("blocked"); } } };
-  assert.equal(handledGap(throwing), null);
-  assert.doesNotThrow(() => markGapHandled("2026-09-01", throwing));
-  assert.equal(handledGap({}), null);
-  assert.doesNotThrow(() => markGapHandled("2026-09-01", {}));
-});
-
-test("an empty date is never stored", () => {
-  const env = fakeEnv();
-  markGapHandled(null, env);
-  assert.equal(handledGap(env), null);
 });

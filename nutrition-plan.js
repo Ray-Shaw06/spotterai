@@ -55,6 +55,18 @@ export function validateBodyStats(rawInput = {}) {
   };
 }
 
+/**
+ * A weight someone could actually have, in the unit they are using. The setup form is
+ * novalidate, so this is the check: 20 to 400 kg, 44 to 882 lb.
+ * @returns {{ ok: boolean, errors: string[], value: number|null }}
+ */
+export function validateWeight(value, unit = "kg") {
+  const [lo, hi] = unit === "lb" ? [44, 882] : [20, 400];
+  const n = value === "" || value == null ? NaN : Number(value);
+  if (!Number.isFinite(n) || n < lo || n > hi) return { ok: false, errors: [`weight: enter a weight between ${lo} and ${hi} ${unit === "lb" ? "lb" : "kg"}`], value: null };
+  return { ok: true, errors: [], value: n };
+}
+
 const LIMITATIONS =
   "These are estimates, not measurements. Your own weight trend over several weeks is a better guide, and the weekly check-in adjusts from it.";
 

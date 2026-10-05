@@ -9,8 +9,8 @@
 
 import { store } from "./store.js";
 import { addBodyweight, bodyweightSeries, getBodyStats, getState, setBodyStats, setTargets } from "./tracker-store.js";
-import { buildPlan, prefillFromInputs, validateBodyStats } from "./nutrition-plan.js";
-import { planCardModel, planCardHTML, planFormHTML, statsFromForm, heightToFtIn, formValues } from "./plan-card.js";
+import { buildPlan, prefillFromInputs, validateBodyStats, validateWeight } from "./nutrition-plan.js";
+import { planCardModel, planCardHTML, planFormHTML, statsFromForm, heightToFtIn, formValues, draftForUnit } from "./plan-card.js";
 
 const host = document.getElementById("nut-plan");
 
@@ -39,7 +39,7 @@ export function renderPlanCard({ force = false } = {}) {
   const unit = getState().unit;
   const stats = getBodyStats();
   if (mode === "form") {
-    host.innerHTML = planFormHTML({ unit, values: draft ?? valuesFor(stats, unit), needWeight: bodyweightSeries().length === 0, errors });
+    host.innerHTML = planFormHTML({ unit, values: draftForUnit(draft, unit) ?? valuesFor(stats, unit), needWeight: bodyweightSeries().length === 0, errors });
     return;
   }
   const plan = buildPlan({ bodyStats: stats, kg: latestKg() });
@@ -64,22 +64,26 @@ function closeForm() {
 function save(form) {
   const unit = getState().unit;
   const values = formValues(form.elements);
-  draft = values;
+  draft = { ...values, _unit: unit };
   errors = [];
 
   const needWeight = bodyweightSeries().length === 0;
-  if (needWeight && !(Number(values.weight) > 0)) errors.push("weight: enter your current weight");
+  const weight = validateWeight(values.weight, unit);
+  if (needWeight && !weight.ok) errors.push(...weight.errors);
 
   const stats = statsFromForm(values, unit);
   const check = validateBodyStats(stats);
   if (!check.ok) errors.push(...check.errors);
   if (errors.length) {
     renderPlanCard({ force: true });
-    host.querySelector(".plan__errors")?.scrollIntoView?.({ block: "nearest" });
+    // Put focus on the errors (they are announced too), so a keyboard user keeps their place.
+    const list = host.querySelector(".plan__errors");
+    list?.focus?.();
+    list?.scrollIntoView?.({ block: "nearest" });
     return;
   }
   setBodyStats(stats);
-  if (needWeight) addBodyweight({ value: Number(values.weight) });
+  if (needWeight) addBodyweight({ value: weight.value });
   closeForm();
 }
 
@@ -101,11 +105,19 @@ host?.addEventListener("click", (e) => {
 // Keep what the user has typed as they type, so any re-render restores it.
 for (const type of ["input", "change"]) {
   host?.addEventListener(type, (e) => {
-    if (mode === "form" && e.target.form) draft = formValues(e.target.form.elements);
+    if (mode === "form" && e.target.form) draft = { ...formValues(e.target.form.elements), _unit: getState().unit };
   });
 }
 
 host?.addEventListener("submit", (e) => {
   e.preventDefault();
   save(e.target);
+});
+
+// A different profile is a different person: an open form or a half-typed draft must not follow the switch.
+window.addEventListener("spotter:profile", () => {
+  mode = "view";
+  draft = null;
+  errors = [];
+  renderPlanCard({ force: true });
 });

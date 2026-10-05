@@ -365,3 +365,25 @@ test("a minor on a saved deficit is never told they are on track, and a too-fast
 test("a safe target is unaffected by the unsafe-target rules", () => {
   assert.equal(run({ rate: -0.6 }).status, "on_track");
 });
+
+// --- Review minors (Phase 2) -------------------------------------------------------
+
+test("the check-in re-validates the stats it is given: a corrupted age range is no stats, never an adult", () => {
+  const good = world({ rate: 1.0, stats: { ...STATS, intent: "bulk" } });
+  for (const ageRange of ["under 18", "Under 18 ", "Under18", "17", "", null, undefined]) {
+    const r = checkIn({ ...good.args, bodyStats: { ...good.args.bodyStats, ageRange } });
+    assert.deepEqual(r, { status: "not_ready", reason: "no_stats" }, JSON.stringify(ageRange));
+  }
+  assert.notEqual(checkIn(good.args).status, "not_ready");
+});
+
+test("a proposal says whether protein was held exactly, and the intent it was judged against", () => {
+  const held = checkIn(world({ rate: -1.5 }).args);
+  assert.equal(held.proteinHeld, true);
+  assert.equal(held.intent, "cut");
+  // 300 g is over the 40%-of-calories cap, so the macro split cannot keep it
+  const capped = checkIn(world({ rate: -1.5, protein: 300 }).args);
+  assert.equal(capped.status, "propose");
+  assert.equal(capped.proteinHeld, false);
+  assert.ok(capped.targets.protein < 300);
+});

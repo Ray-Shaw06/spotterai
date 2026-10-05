@@ -8,11 +8,11 @@
  */
 
 import { store } from "./store.js";
-import { deriveStats, getWater, getState, dayCounts, daysSinceBodyweight, daysSinceLastWorkout, lastWorkoutDate, dateDaysAgo, nutritionDaySummaries, currentMaintenance } from "./tracker-store.js";
+import { deriveStats, getWater, getState, dayCounts, daysSinceBodyweight, daysSinceLastWorkout, lastWorkoutDate, dateDaysAgo, nutritionDaySummaries, currentMaintenance, getWelcomeHandledFor, setWelcomeHandledFor } from "./tracker-store.js";
 import { evaluateNutrition } from "./nutrition-safety.js";
 import { todaysWorkout, coachNote, trainingDays, weekStrip } from "./today.js";
 import { openItems, catchUpSummary } from "./catch-up.js";
-import { welcomeBack, handledGap, markGapHandled } from "./welcome-back.js";
+import { welcomeBack } from "./welcome-back.js";
 import { streaksFor } from "./nutrition-streaks.js";
 import { streakListHTML } from "./consistency-card.js";
 import { currentCheckIn } from "./nutrition-checkin.js";
@@ -216,7 +216,7 @@ function render() {
   const back = welcomeBack({
     gapDays: daysSinceLastWorkout(),
     workoutsLogged: getState().workouts?.length || 0,
-    handled: !!lastDate && handledGap() === lastDate,
+    handled: !!lastDate && getWelcomeHandledFor() === lastDate,
   });
   const welcomeCard = back
     ? card(
@@ -277,7 +277,7 @@ content?.addEventListener("click", (e) => {
     return;
   }
   if (act === "ease-dismiss") {
-    markGapHandled(lastWorkoutDate());
+    setWelcomeHandledFor(lastWorkoutDate());
     render();
     return;
   }

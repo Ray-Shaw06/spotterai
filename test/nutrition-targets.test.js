@@ -388,3 +388,50 @@ test("effectiveDeficitKcal tracks the target actually set, and is zero outside a
   assert.equal(calculateTargets({ ...CAP_BASE, intent: "bulk" }).effectiveDeficitKcal, 0);
   assert.equal(calculateTargets({ ...CAP_BASE, ageRange: "Under 18", intent: "cut" }).effectiveDeficitKcal, 0);
 });
+
+// --- Review minors: rounding order, the exact floor, the 2,500 crossover, input guards ---
+
+test("SWEEP: the cap holds, a cut never lands below the old flat-20% target, and every target is at or above the exact floor", () => {
+  const sexes = ["Male", "Female", null];
+  const volumes = [[0, 0], [3, 45], [5, 60]];
+  let checked = 0;
+  for (const kg of [45, 55, 65, 75, 85, 95, 110, 130])
+    for (const cm of [150, 160, 170, 180, 190])
+      for (const ageRange of Object.keys(AGE_MIDPOINTS))
+        for (const sex of sexes)
+          for (const dailyActivity of DAILY_ACTIVITY.map((d) => d.value))
+            for (const [daysPerWeek, sessionLength] of volumes)
+              for (const intent of ["cut", "recomp", "bulk"]) {
+                const stats = { kg, cm, ageRange, sex, dailyActivity, daysPerWeek, sessionLength, intent };
+                const t = calculateTargets(stats);
+                const age = AGE_MIDPOINTS[ageRange];
+                const label = JSON.stringify(stats);
+                const floor = Math.max(NUTRITION_THRESHOLDS.LOW_KCAL, estimateBmr({ kg, cm, age, sex }));
+                assert.ok(t.kcal >= floor, `${label}: ${t.kcal} is under the exact floor ${floor}`);
+                if (t.intent === "cut") {
+                  if (bmiOf(kg, cm) < CUT_CAP_BELOW_BMI) assert.ok(t.deficitKcal <= CUT_DEFICIT_CAP_KCAL, `${label}: deficit ${t.deficitKcal}`);
+                  const oldFlat = Math.round(Math.max(floor, estimateTdee({ kg, cm, age, sex, dailyActivity, daysPerWeek, sessionLength }) * 0.8) / 25) * 25;
+                  assert.ok(t.kcal >= oldFlat, `${label}: ${t.kcal} is below the old flat-20% target ${oldFlat}`);
+                }
+                checked++;
+              }
+  assert.ok(checked > 10000, `${checked} cases`);
+});
+
+test("the 2,500 kcal crossover: 20% equals the cap exactly there and the deficit never exceeds it either side", () => {
+  assert.equal(cutDeficitKcal({ tdee: 2499, bmi: 24 }), 500, "rounds 499.8");
+  assert.equal(cutDeficitKcal({ tdee: 2500, bmi: 24 }), 500);
+  assert.equal(cutDeficitKcal({ tdee: 2501, bmi: 24 }), 500);
+  assert.equal(cutDeficitKcal({ tdee: 2000, bmi: 24 }), 400);
+});
+
+test("cutDeficitKcal refuses a tdee it cannot use", () => {
+  for (const bad of [NaN, -5, 0, Infinity, undefined, null, "x"]) assert.equal(cutDeficitKcal({ tdee: bad, bmi: 24 }), 0, String(bad));
+  assert.equal(cutDeficitKcal(), 0);
+});
+
+test("a skipped sex and age no longer lets a target round under BMR", () => {
+  const t = calculateTargets({ kg: 80, cm: 180, ageRange: null, sex: null, dailyActivity: "sitting", daysPerWeek: 0, sessionLength: 0, intent: "cut" });
+  const bmr = estimateBmr({ kg: 80, cm: 180, age: AGE_MIDPOINTS["30–44"], sex: null });
+  assert.ok(t.kcal >= bmr, `${t.kcal} vs BMR ${bmr}`);
+});

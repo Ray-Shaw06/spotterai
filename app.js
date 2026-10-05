@@ -22,9 +22,8 @@ import { buildAuditEntry, recordAudit, getAuditHistory, auditTrend } from "./tru
 import { sendAuditTelemetry } from "./audit-telemetry-client.js";
 import { lineChart } from "./charts.js";
 import { setPlan, store, planUpdatedAt } from "./store.js";
-import { getContext as getTrackerContext, buildAdaptContext, getState as getTrackerState } from "./tracker-store.js";
+import { getContext as getTrackerContext, buildAdaptContext, getState as getTrackerState, setWelcomeHandledFor } from "./tracker-store.js";
 import { adaptPlan } from "./adapt-engine.js";
-import { markGapHandled } from "./welcome-back.js";
 
 /**
  * What goes in the plan table's Reps column. A cardio entry has no rep count;
@@ -779,7 +778,7 @@ function adapt() {
     // Replace the current plan (persist + let chat/workout see it), re-audit,
     // re-render, then surface what changed and why.
     publishPlan(plan, store.inputs);
-    if (ramped) markGapHandled(context.lastWorkoutDate);
+    if (ramped) setWelcomeHandledFor(context.lastWorkoutDate);
     renderResults(plan, store.inputs, false, { note: summary });
     renderAdaptChanges(summary, changes);
   } catch {

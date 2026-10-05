@@ -399,6 +399,10 @@ who skip a week. That draft was dropped.
 
 ### What this does not establish
 
+- The weigh-in cleaning drops any reading more than 15% from the window's median as a typo.
+  That also hides a genuine step of that size (illness, surgery), and still keeps typos of 10
+  to 14%. A real 16% loss over four weeks is centred on the median and survives.
+
 - Almost every rate figure comes from athletes or from small, short trials.
   Nothing here tests these bands on recreational lifters in the real world.
 - Fat mass sets how fast a deficit can safely run (Alpert's limit of about 290

@@ -48,8 +48,9 @@ export function evaluateNutrition({ targets = {}, bodyweight = null, unit = "kg"
   //    bodies, since fat mass burns far less than lean mass, so prefer real
   //    numbers whenever they exist.
   if (kg && kcal) {
-    const supplied = Number(maintenance);
-    const maint = Math.round(supplied > 0 ? supplied : kg * T.MAINTENANCE_KCAL_PER_KG);
+    // Only a real number (or numeric string) counts: Infinity, true, NaN and junk fall back to the per-kg estimate.
+    const supplied = typeof maintenance === "number" || typeof maintenance === "string" ? Number(maintenance) : NaN;
+    const maint = Math.round(Number.isFinite(supplied) && supplied > 0 ? supplied : kg * T.MAINTENANCE_KCAL_PER_KG);
     if (kcal < maint * (1 - T.AGGRESSIVE_DEFICIT)) {
       F("warning", "Aggressive deficit", `Your target (${kcal} kcal) is more than ${Math.round(T.AGGRESSIVE_DEFICIT * 100)}% below your rough estimated maintenance (~${maint} kcal), a fast cut that's hard to sustain.`, "Aim for roughly a 10–20% deficit for steadier fat loss and better adherence.");
     }
