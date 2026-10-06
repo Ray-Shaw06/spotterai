@@ -16,7 +16,7 @@
  * Bump CACHE when shipping changes so old caches are cleaned on activate.
  */
 
-const CACHE = "spotterai-v91";
+const CACHE = "spotterai-v92";
 // Explicit local module graph rooted at every <script type="module"> in index.html.
 // test/service-worker-behavior.test.js derives the graph independently so a new
 // boot import cannot be shipped without being added here.
@@ -122,8 +122,8 @@ const BOOT_MODULES = [
 // launch silently fell back to system faces. Now that they are same-origin
 // there is no reason for that to still be true.
 const FONTS = [
-  "fonts/inter-latin.woff2",
-  "fonts/inter-latin-ext.woff2",
+  "fonts/public-sans-latin.woff2",
+  "fonts/public-sans-latin-ext.woff2",
   "fonts/jetbrains-mono-latin.woff2",
   "fonts/jetbrains-mono-latin-ext.woff2",
 ];

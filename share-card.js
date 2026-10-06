@@ -67,14 +67,14 @@ function drawCard(stats, score) {
   // Wordmark
   x.textAlign = "left";
   x.fillStyle = "#fff";
-  x.font = "700 56px 'Sora', Inter, sans-serif";
+  x.font = "700 56px 'Sora', "Public Sans", sans-serif";
   x.fillText("SpotterAI", 96, 158);
   x.fillStyle = ACCENT;
   x.beginPath();
   x.arc(372, 138, 9, 0, Math.PI * 2);
   x.fill();
   x.fillStyle = "rgba(255,255,255,0.55)";
-  x.font = "400 28px Inter, sans-serif";
+  x.font = "400 28px "Public Sans", sans-serif";
   x.fillText("Your AI fitness copilot: plan, track, adapt, audit", 96, 204);
 
   // Central ring — safety score if there's a plan, else rank progress
@@ -84,29 +84,29 @@ function drawCard(stats, score) {
     ringArc(x, cx, cy, 168, score / 100, bandColor(score), 26);
     x.textAlign = "center";
     x.fillStyle = "#fff";
-    x.font = "700 130px 'Sora', Inter, sans-serif";
+    x.font = "700 130px 'Sora', "Public Sans", sans-serif";
     x.fillText(String(score), cx, cy + 30);
     x.fillStyle = "rgba(255,255,255,0.5)";
-    x.font = "500 30px Inter, sans-serif";
+    x.font = "500 30px "Public Sans", sans-serif";
     x.fillText("/ 100 · plan safety", cx, cy + 84);
   } else {
     ringArc(x, cx, cy, 168, stats.rank.progress, stats.rank.tier.color, 26);
     x.textAlign = "center";
     x.fillStyle = "#fff";
-    x.font = "700 120px 'Sora', Inter, sans-serif";
+    x.font = "700 120px 'Sora', "Public Sans", sans-serif";
     x.fillText(`L${stats.level}`, cx, cy + 28);
     x.fillStyle = "rgba(255,255,255,0.5)";
-    x.font = "500 30px Inter, sans-serif";
+    x.font = "500 30px "Public Sans", sans-serif";
     x.fillText(`${stats.totalXP.toLocaleString()} XP`, cx, cy + 84);
   }
 
   // Rank line
   x.textAlign = "center";
   x.fillStyle = stats.rank.tier.color;
-  x.font = "700 56px 'Sora', Inter, sans-serif";
+  x.font = "700 56px 'Sora', "Public Sans", sans-serif";
   x.fillText(stats.rank.tier.name, cx, 740);
   x.fillStyle = "rgba(255,255,255,0.6)";
-  x.font = "400 30px Inter, sans-serif";
+  x.font = "400 30px "Public Sans", sans-serif";
   x.fillText(`Level ${stats.level} · ${stats.totalXP.toLocaleString()} XP`, cx, 786);
 
   // Stat tiles
@@ -130,10 +130,10 @@ function drawCard(stats, score) {
     x.stroke();
     x.textAlign = "center";
     x.fillStyle = "#fff";
-    x.font = "700 50px 'Sora', Inter, sans-serif";
+    x.font = "700 50px 'Sora', "Public Sans", sans-serif";
     x.fillText(val, tx + tileW / 2, 922);
     x.fillStyle = "rgba(255,255,255,0.5)";
-    x.font = "400 24px Inter, sans-serif";
+    x.font = "400 24px "Public Sans", sans-serif";
     x.fillText(label, tx + tileW / 2, 962);
     tx += tileW + gap;
   }
@@ -141,7 +141,7 @@ function drawCard(stats, score) {
   // Footer
   x.textAlign = "center";
   x.fillStyle = "rgba(255,255,255,0.35)";
-  x.font = "400 24px Inter, sans-serif";
+  x.font = "400 24px "Public Sans", sans-serif";
   x.fillText("Audited by a code-based safety evaluator · $0, no backend", cx, 1028);
 
   return c;

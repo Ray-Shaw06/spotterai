@@ -192,7 +192,7 @@ The long version — every feature, the full rubric, the file layout — is in
 - **On-device CV:** MediaPipe Tasks Vision for the form check — no server, no
   key, nothing uploaded.
 - **Design:** a hand-built token system (colour, spacing, radius, type scale) in
-  CSS variables. Inter + JetBrains Mono, self-hosted as variable woff2 rather
+  CSS variables. Public Sans + JetBrains Mono, self-hosted as variable woff2 rather
   than linked from Google Fonts, which used to be the last render-blocking
   resource on cold boot. Light by default, opt-in dark, both AA-verified.
 - **Zero-cost by construction:** no database, no scheduled functions, no paid

@@ -38,7 +38,7 @@ const UA =
 
 /** Weight ranges must stay in step with what style.css actually asks for. */
 const FAMILIES = {
-  Inter: { query: "Inter:wght@400..700", weight: "400 700" },
+  "Public Sans": { query: "Public+Sans:wght@100..900", weight: "100 900" },
   "JetBrains Mono": { query: "JetBrains+Mono:wght@500..700", weight: "500 700" },
 };
 
