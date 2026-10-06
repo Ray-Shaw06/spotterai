@@ -12,9 +12,10 @@
           "key": "Permissions-Policy",
           "value": "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
         },
+        { "key": "Reporting-Endpoints", "value": "csp-endpoint=\"/api/csp-report\"" },
         {
           "key": "Content-Security-Policy-Report-Only",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com https://storage.googleapis.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://world.openfoodfacts.org https://images.openfoodfacts.org; media-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://cdn.jsdelivr.net https://storage.googleapis.com https://world.openfoodfacts.org; worker-src 'self' blob:; frame-src 'self' https://*.firebaseapp.com https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com https://storage.googleapis.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://world.openfoodfacts.org https://images.openfoodfacts.org; media-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://cdn.jsdelivr.net https://storage.googleapis.com https://world.openfoodfacts.org; worker-src 'self' blob:; frame-src 'self' https://*.firebaseapp.com https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /api/csp-report; report-to csp-endpoint"
         }
       ]
     }
@@ -45,6 +46,9 @@
       "maxDuration": 10
     },
     "api/rest-push.js": {
+      "maxDuration": 10
+    },
+    "api/csp-report.js": {
       "maxDuration": 10
     }
   }
