@@ -27,7 +27,7 @@ const el = {
 function esc(t) {
   const d = document.createElement("div");
   d.textContent = t == null ? "" : String(t);
-  return d.innerHTML;
+  return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 function mealByHour() {

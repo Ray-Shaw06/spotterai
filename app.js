@@ -102,7 +102,7 @@ let samplePlansPromise = null;
 function esc(text) {
   const div = document.createElement("div");
   div.textContent = text == null ? "" : String(text);
-  return div.innerHTML;
+  return div.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 /** Show exactly one state panel, hide the others. */

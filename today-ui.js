@@ -25,7 +25,7 @@ const dateEl = document.getElementById("today-date");
 function esc(t) {
   const d = document.createElement("div");
   d.textContent = t == null ? "" : String(t);
-  return d.innerHTML;
+  return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 const ymd = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 

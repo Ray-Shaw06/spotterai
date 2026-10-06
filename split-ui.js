@@ -20,7 +20,7 @@ const RATING_LABEL = { balanced: "Well-sized", "too-long": "Very long", "full-bo
 function esc(t) {
   const d = document.createElement("div");
   d.textContent = t == null ? "" : String(t);
-  return d.innerHTML;
+  return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 const cap = (s) => String(s || "").charAt(0).toUpperCase() + String(s || "").slice(1);
 
