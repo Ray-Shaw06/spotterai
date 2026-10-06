@@ -2,7 +2,12 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // A signed-in user owns their own document AND everything beneath it.
+    function owns(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // A signed-in user owns their own document AND everything beneath it for
+    // READ and DELETE. Writes are narrower, below.
     //
     // The nested recursive wildcard is load-bearing. `match /users/{uid}` on its
     // own does NOT cascade into subcollections, so once sync moved from a single
@@ -14,13 +19,36 @@ service cloud.firestore {
     // so it reads the same regardless of how the recursive wildcard treats a
     // zero-segment match across rules versions: the parent document and its
     // descendants are each granted explicitly.
+    //
+    // WHAT WRITES ARE LIMITED TO. Firestore already caps a document at 1 MiB, so
+    // these are not about size. They stop a signed-in account being used as free
+    // general-purpose storage: arbitrary collections, arbitrarily deep paths,
+    // and documents with thousands of fields. Only the collections the app
+    // syncs (SYNCED_RECORD_KINDS in tracker-store.js; a test pins this list to
+    // it) may be written, one level deep, and no top-level key whitelist is
+    // applied to the parent document because merge-writes validate the RESULTING
+    // document and an older account may carry legacy fields.
+    //
+    // ADDING A SYNCED KIND means adding it here AND deploying the rules, or its
+    // writes come back permission-denied.
     match /users/{uid} {
-      allow read, write: if request.auth != null
-        && request.auth.uid == uid;
+      allow read, delete: if owns(uid);
+      allow create, update: if owns(uid)
+        && request.resource.data.keys().size() <= 30;
 
-      match /{document=**} {
-        allow read, write: if request.auth != null
-          && request.auth.uid == uid;
+      match /{kind}/{id} {
+        allow read, delete: if owns(uid);
+        allow create, update: if owns(uid)
+          && kind in ['workouts', 'nutrition', 'bodyweight', 'painReports',
+                      'routines', 'mealTemplates', 'customExercises', 'customFoods']
+          && id.size() <= 200
+          && request.resource.data.keys().size() <= 100;
+      }
+
+      // Reads and deletes anywhere deeper stay owner-only (cleanup of any
+      // legacy data). Nothing deeper is ever WRITTEN, so no write rule.
+      match /{kind}/{id}/{rest=**} {
+        allow read, delete: if owns(uid);
       }
     }
 
