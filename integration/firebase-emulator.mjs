@@ -19,7 +19,7 @@ import {
   assertSucceeds,
   assertFails,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 
 import {
   FIREBASE_EMULATOR_PROJECT_ID,
@@ -73,7 +73,7 @@ test("every non-user collection is denied, even for a signed-in user", async () 
 // The suite above stayed green the whole time, because it only ever touched the
 // parent document.
 // ---------------------------------------------------------------------------
-const RECORD_COLLECTIONS = ["workouts", "nutrition", "bodyweight", "routines", "customExercises"];
+const RECORD_COLLECTIONS = ["workouts", "nutrition", "bodyweight", "painReports", "routines", "mealTemplates", "customExercises", "customFoods"];
 
 test("a signed-in user owns every per-record subcollection under their own uid", async () => {
   const alice = testEnv.authenticatedContext("alice").firestore();
@@ -99,8 +99,16 @@ test("an unauthenticated request cannot reach a per-record subcollection", async
   await assertFails(setDoc(doc(anon, "users/alice/workouts/rec-1"), { id: "rec-1" }));
 });
 
-test("ownership holds arbitrarily deep, not just one level down", async () => {
+test("writes are limited to the synced collections, one level deep; reads and deletes stay owner-only", async () => {
   const alice = testEnv.authenticatedContext("alice").firestore();
-  await assertSucceeds(setDoc(doc(alice, "users/alice/workouts/rec-1/sets/set-1"), { reps: 5 }));
-  await assertFails(setDoc(doc(alice, "users/bob/workouts/rec-1/sets/set-1"), { reps: 5 }));
+  // The app never writes these, so an account cannot be used as free storage.
+  await assertFails(setDoc(doc(alice, "users/alice/scratch/rec-1"), { x: 1 }));
+  await assertFails(setDoc(doc(alice, "users/alice/workouts/rec-1/sets/set-1"), { reps: 5 }));
+  await assertFails(setDoc(doc(alice, "users/alice/workouts/rec-1"), Object.fromEntries(Array.from({ length: 101 }, (_, i) => [`f${i}`, i]))));
+  await assertFails(setDoc(doc(alice, "users/alice"), Object.fromEntries(Array.from({ length: 31 }, (_, i) => [`f${i}`, i]))));
+  // A normal record is fine, and the owner can still delete and read.
+  await assertSucceeds(setDoc(doc(alice, "users/alice/workouts/rec-2"), { id: "rec-2", _syncedAt: 1 }));
+  await assertSucceeds(deleteDoc(doc(alice, "users/alice/workouts/rec-2")));
+  // Another user still cannot reach any depth.
+  await assertFails(getDoc(doc(testEnv.authenticatedContext("bob").firestore(), "users/alice/workouts/rec-1/sets/set-1")));
 });
