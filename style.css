@@ -2945,9 +2945,7 @@ table {
   flex-direction: column;
   gap: var(--space-4);
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 60%),
-    var(--surface);
+  background: var(--surface);
 }
 .adapt-card__text {
   font-size: 0.9rem;
@@ -4748,9 +4746,7 @@ table {
   padding: var(--space-4) var(--space-5);
   border: 1.5px solid var(--rank, var(--accent));
   border-radius: var(--r-lg);
-  background:
-    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--rank, var(--accent)) 22%, transparent), transparent 72%),
-    var(--surface-2);
+  background: var(--surface-2);
 }
 .rank-badge__tier {
   font-family: var(--font-display);
@@ -7641,19 +7637,9 @@ h5 {
   --shadow-lg: 0 24px 60px -36px rgba(0, 0, 0, 0.85);
 }
 
-/* One accent bloom, anchored where the readout sits. Not texture for its own
-   sake: it puts the light source on the thing the page is about. */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background: radial-gradient(760px 520px at 78% 16%, var(--accent-glow), transparent 68%);
-}
 /* .sidebar is left out on purpose: it positions itself (sticky on desktop,
    fixed top bar + bottom tab bar on phones), and .app-shell already lifts it
-   above the bloom. Listing it here overrode both and hid the tab bar. */
+   above the page background. Listing it here overrode both and hid the tab bar. */
 .app-shell, main, .app-main { position: relative; z-index: 1; }
 
 .card,
@@ -7687,8 +7673,7 @@ body::after {
   align-items: center;
   flex-wrap: wrap;
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 76%, transparent);
-  backdrop-filter: blur(8px);
+  background: var(--surface);
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.05em;

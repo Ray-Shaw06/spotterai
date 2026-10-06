@@ -162,7 +162,7 @@ export async function shareProgress() {
     const file = new File([blob], "spotterai-progress.png", { type: "image/png" });
     if (navigator.canShare?.({ files: [file] })) {
       try {
-        await navigator.share({ files: [file], title: "My SpotterAI progress", text: "My training progress on SpotterAI 💪" });
+        await navigator.share({ files: [file], title: "My SpotterAI progress", text: "My training progress on SpotterAI" });
         return;
       } catch {
         /* user cancelled or share failed → fall back to download */
