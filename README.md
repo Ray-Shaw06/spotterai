@@ -1,4 +1,4 @@
-# SpotterAI 🟢
+# SpotterAI
 
 [![CI](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml/badge.svg)](https://github.com/Ray-Shaw06/spotterai/actions/workflows/ci.yml)
 &nbsp;[![codecov](https://codecov.io/gh/Ray-Shaw06/spotterai/branch/main/graph/badge.svg)](https://codecov.io/gh/Ray-Shaw06/spotterai)
@@ -24,7 +24,7 @@
 ## Don't take this README's word for it
 
 Every quality claim below is a command you can run. The fastest check needs
-**nothing installed at all** — Node 22 and the repo:
+**nothing installed at all**: Node 22 and the repo:
 
 ```bash
 git clone https://github.com/Ray-Shaw06/spotterai && cd spotterai
@@ -40,7 +40,7 @@ run on every pull request ([`ci.yml`](.github/workflows/ci.yml)):
 | **Lint** | No undeclared identifiers, no dead imports, no undocumented silent `catch {}`. This repo has no build step and no type checker, so `no-undef` is the only thing standing between a typo in a browser module and a `ReferenceError` on someone's phone. Config and the reasoning for every rule: [`eslint.config.js`](eslint.config.js). | `npm run lint` |
 | **Tests** | **1287 tests**, holding **line coverage above 85%** ([live figure](https://codecov.io/gh/Ray-Shaw06/spotterai)), on Node's built-in runner. | `npm test` |
 | **Evaluator benchmark** | The safety evaluator catches **18 of 18** known-risky plans and false-flags **0 of 5** known-good ones. A regression fails the build rather than quietly moving a dashboard. | `npm run eval` |
-| **README claims** | The numbers on this page are derived from the repo, not typed by hand — [the check](scripts/check-readme-claims.mjs) fails CI if the prose drifts from reality. | `npm run check:readme` |
+| **README claims** | The numbers on this page are derived from the repo, not typed by hand: [the check](scripts/check-readme-claims.mjs) fails CI if the prose drifts from reality. | `npm run check:readme` |
 
 There is one more check that is not a CI gate, because it cannot honestly be
 one: [`npm run visual:baseline`](scripts/visual-snapshot.mjs) then
@@ -53,7 +53,7 @@ regressions that looked correct in the diff and were only wrong at one
 viewport.
 
 **The honest limits,** so you can weigh the above properly: there is **no type
-checker** (vanilla ES modules, no build step — lint plus tests carry that load),
+checker** (vanilla ES modules, no build step, lint plus tests carry that load),
 there is **no automated browser/E2E suite** (the visual harness above is a
 refactor net, not behaviour coverage, and the [manual QA checklist](#manual-qa-checklist)
 is genuinely run by hand), and coverage is a *report* above its floor rather
@@ -165,7 +165,7 @@ version of the question "does anyone actually want this."
 ## What's in it
 
 - **Plan → Train → Log → Adapt → Re-audit.** Generate a week, train it, log it,
-  and the plan adapts from what actually happened — then gets re-audited.
+  and the plan adapts from what actually happened, then gets re-audited.
 - **The evaluator** ([`evaluator.js`](evaluator.js)): pure code, fixed rubric,
   no AI. Flags first, each with a reason, a fix and a safer alternative.
 - **Plan repair** ([`repair.js`](repair.js)): turns each flag into a concrete
@@ -177,7 +177,7 @@ version of the question "does anyone actually want this."
 - **Coach chat, nutrition guardrails, a gamified tracker,** local profiles, and
   optional Firebase sync.
 
-The long version — every feature, the full rubric, the file layout — is in
+The long version (every feature, the full rubric, the file layout) is in
 [docs/features.md](docs/features.md).
 
 ## Tech stack
@@ -189,7 +189,7 @@ The long version — every feature, the full rubric, the file layout — is in
   Plan adaptation runs entirely client-side. AI keys stay server-only.
 - **Local-first:** `localStorage` for everything, with JSON export/import.
   Firebase Auth + Firestore sync is optional and off until configured.
-- **On-device CV:** MediaPipe Tasks Vision for the form check — no server, no
+- **On-device CV:** MediaPipe Tasks Vision for the form check, no server, no
   key, nothing uploaded.
 - **Design:** a hand-built token system (colour, spacing, radius, type scale) in
   CSS variables. Public Sans + JetBrains Mono, self-hosted as variable woff2 rather
