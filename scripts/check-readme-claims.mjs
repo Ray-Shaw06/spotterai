@@ -142,6 +142,13 @@ const claims = [
     occurrences: 1,
   },
   {
+    label: "landing page: tests in the How it's built list",
+    file: "index.html",
+    pattern: /<strong>(\d+) tests:<\/strong>/g,
+    expected: actual.tests,
+    occurrences: 1,
+  },
+  {
     label: "landing rail: risky plans caught",
     file: "index.html",
     pattern: /<b>(\d+)<i>\/\d+<\/i><\/b><span>Risky plans caught<\/span>/g,
