@@ -101,6 +101,30 @@ export function parseReports(raw) {
   return out.slice(0, MAX_REPORTS_PER_REQUEST);
 }
 
+/**
+ * Vercel parses JSON, urlencoded and text bodies, but not the content types
+ * browsers actually use for CSP reports (application/csp-report,
+ * application/reports+json). For those req.body arrives empty, so fall back to
+ * reading the raw stream, capped so an oversized body is never buffered.
+ */
+async function readBody(req) {
+  const b = req.body;
+  const empty = b === undefined || b === null || b === "" || (typeof b === "object" && !Buffer.isBuffer(b) && !Array.isArray(b) && Object.keys(b).length === 0);
+  if (!empty || typeof req[Symbol.asyncIterator] !== "function") return b;
+  const chunks = [];
+  let size = 0;
+  try {
+    for await (const chunk of req) {
+      size += chunk.length;
+      if (size > MAX_BODY_CHARS) return b;
+      chunks.push(Buffer.from(chunk));
+    }
+  } catch {
+    return b;
+  }
+  return chunks.length ? Buffer.concat(chunks) : b;
+}
+
 async function handler(req, res) {
   const method = String(req.method || "GET").toUpperCase();
   if (method !== "POST") {
@@ -109,7 +133,7 @@ async function handler(req, res) {
   }
   if (enforceRateLimit("cspReport", req, res)) return;
 
-  for (const v of parseReports(req.body)) {
+  for (const v of parseReports(await readBody(req))) {
     // The message is the dedupe key: the same blocked thing on the same page is
     // one event however many browsers report it.
     await sharedReporter().captureException(`CSP ${v.directive} blocked ${v.blocked} on ${v.page || "?"}`, {

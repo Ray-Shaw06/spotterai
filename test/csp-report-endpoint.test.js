@@ -101,6 +101,27 @@ test("a reporter outage cannot fail the request: the reporter swallows, we still
   assert.equal(res.statusCode, 204);
 });
 
+test("an unparsed body (application/csp-report on Vercel) is read from the raw stream", async () => {
+  __resetRateLimitForTests();
+  const seen = [];
+  __setReporterForTests({ captureException: async (msg) => {
+    seen.push(msg);
+    return true;
+  } });
+  const payload = JSON.stringify({ "csp-report": { "document-uri": "https://spotterai.xyz/", "effective-directive": "img-src", "blocked-uri": "https://stream.example/p.png" } });
+  const req = {
+    method: "POST",
+    headers: { "x-real-ip": "5.5.5.5", "content-type": "application/csp-report" },
+    body: undefined,
+    async *[Symbol.asyncIterator]() { yield Buffer.from(payload); },
+  };
+  const res = makeRes();
+  await handler(req, res);
+  assert.equal(res.statusCode, 204);
+  assert.equal(seen.length, 1);
+  assert.match(seen[0], /img-src blocked https:\/\/stream\.example\/p\.png/);
+});
+
 test("vercel.json points the report-only CSP at this endpoint and declares the route", () => {
   const cfg = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
   const set = Object.fromEntries(cfg.headers[0].headers.map((h) => [h.key, h.value]));
