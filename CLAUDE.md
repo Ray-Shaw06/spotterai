@@ -6,7 +6,7 @@ Browser and skill rules live in `~/.claude/CLAUDE.md`. Follow those.
 
 ## Skill routing
 
-When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
+Invoke a skill via the Skill tool when the request clearly matches one. For small edits and quick questions, just do the work.
 
 Key routing rules:
 - Product ideas/brainstorming → invoke /office-hours
